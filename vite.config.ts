@@ -1,0 +1,33 @@
+import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vite';
+import { VitePWA } from 'vite-plugin-pwa';
+
+export default defineConfig({
+  base: '/Mastercook-2.0/',
+  plugins: [
+    react(),
+    VitePWA({
+      // L'app nuova si attiva da sola alla riapertura; il blocco di versione del server impedisce
+      // comunque a una versione vecchia di scrivere.
+      registerType: 'autoUpdate',
+      includeAssets: ['favicon.png', 'apple-touch-icon.png', 'icona.svg'],
+      manifest: {
+        name: 'Mastercook',
+        short_name: 'Mastercook',
+        description: 'Pasti, spesa, casa e scadenze della famiglia',
+        lang: 'it',
+        theme_color: '#2f6b4f',
+        background_color: '#fbf7f0',
+        display: 'standalone',
+        start_url: '/Mastercook-2.0/',
+        scope: '/Mastercook-2.0/',
+        icons: [
+          { src: 'icona-192.png', sizes: '192x192', type: 'image/png' },
+          { src: 'icona-512.png', sizes: '512x512', type: 'image/png' },
+          { src: 'icona-maschera-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+        ],
+      },
+      workbox: { navigateFallback: 'index.html', cleanupOutdatedCaches: true },
+    }),
+  ],
+});

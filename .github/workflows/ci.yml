@@ -34,3 +34,18 @@ jobs:
         run: npm test
       - name: Test del database (Postgres reale)
         run: npm run test:db
+      - name: Build
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: https://esempio.supabase.co
+          VITE_SUPABASE_CHIAVE: chiave-pubblica-di-prova
+      - name: Browser per i test dell'interfaccia
+        run: npx playwright install --with-deps chromium
+      - name: Test dell'interfaccia (telefono e tablet)
+        run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: rapporto-playwright
+          path: test-results
+          retention-days: 7

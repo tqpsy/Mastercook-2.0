@@ -170,7 +170,7 @@ export class Sincronizzatore {
         return 'rete';
       }
       if (pagina.errore) {
-        this.aggiorna({ bloccato: 'non_autorizzato' });
+        this.aggiorna({ bloccato: pagina.errore === 'non_autenticato' ? 'accesso_scaduto' : 'non_autorizzato' });
         return 'bloccata';
       }
       const righe = pagina.righe;

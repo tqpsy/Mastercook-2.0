@@ -678,3 +678,11 @@ grant execute on function public.applica_comando(jsonb), public.entra_con_invito
 revoke all on all functions in schema interno from public;
 grant usage on schema interno to authenticated;
 grant execute on function interno.sono_membro(uuid), interno.sono_amministratore(uuid) to authenticated;
+
+-- Avvisi in tempo reale: ogni scrittura registra un comando, quindi basta pubblicare quella tabella.
+-- La pubblicazione esiste solo su Supabase; nei test si salta.
+do $$ begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    alter publication supabase_realtime add table public.comando;
+  end if;
+end $$;

@@ -48,6 +48,10 @@ const EFFETTI: Record<string, Effetto> = {
     testo: d.testo ?? null,
   })),
   rimuovi_vincolo: elimina('vincolo_alimentare'),
+  crea_invito: aggiungi('invito', (d) => ({ usi: 0, usi_massimi: d.usi_massimi ?? 5, revocato: false, scade_il: null })),
+  revoca_invito: (righe, d) => {
+    righe.invito = (righe.invito ?? []).map((r) => (r.id === d.id ? { ...r, revocato: true, in_attesa: true } : r));
+  },
   modifica_famiglia: (righe, d, famiglia) => modifica('famiglia')(righe, { ...d, id: famiglia }, famiglia),
 };
 
