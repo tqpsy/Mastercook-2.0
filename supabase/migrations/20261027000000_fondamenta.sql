@@ -675,7 +675,7 @@ grant execute on function public.applica_comando(jsonb), public.entra_con_invito
   public.scarica_modifiche(uuid, bigint, integer), public.mie_famiglie() to authenticated;
 
 -- Le funzioni interne si eseguono solo dai punti d'ingresso; le regole per riga usano le due di controllo.
-revoke all on all functions in schema interno from public;
+revoke all on all functions in schema interno from public, anon, authenticated;
 grant usage on schema interno to authenticated;
 grant execute on function interno.sono_membro(uuid), interno.sono_amministratore(uuid) to authenticated;
 

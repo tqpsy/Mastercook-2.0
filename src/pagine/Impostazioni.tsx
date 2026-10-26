@@ -1,8 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { righeAttive, useFamiglia, useVista } from '../dati/contesto';
+import { esporta } from '../dati/esportazione';
 import { VERSIONE_APP } from '../dati/tipi';
+import { type FamigliaMia, mieFamiglie, trasportoSupabase } from '../piattaforma/supabase';
+import { Ripristino } from '../ui/Ripristino';
 
-export function Impostazioni({ email, esci }: { email: string; esci: () => void }) {
+export function Impostazioni({ email, esci, apriFamiglia }: { email: string; esci: () => void; apriFamiglia: (famiglia: string) => void }) {
   const { ruolo, utenteId } = useFamiglia();
   const vista = useVista();
   const famiglia = righeAttive(vista, 'famiglia')[0];
@@ -17,6 +20,7 @@ export function Impostazioni({ email, esci }: { email: string; esci: () => void 
 
       {amministratore && <Inviti />}
       <Accessi amministratore={amministratore} io={utenteId} />
+      <IMieiDati nomeFamiglia={String(famiglia?.nome ?? 'famiglia')} apriFamiglia={apriFamiglia} />
 
       <h2>Questo dispositivo</h2>
       <div className="scheda">
@@ -156,6 +160,82 @@ function Accessi({ amministratore, io }: { amministratore: boolean; io: string }
             );
           })}
         </ul>
+      </div>
+    </>
+  );
+}
+
+function IMieiDati({ nomeFamiglia, apriFamiglia }: { nomeFamiglia: string; apriFamiglia: (famiglia: string) => void }) {
+  const { famiglia, utenteId } = useFamiglia();
+  const vista = useVista();
+  const io = righeAttive(vista, 'membro').find((m) => m.utente_id === utenteId);
+  const [stato, setStato] = useState<string | null>(null);
+  const [altre, setAltre] = useState<FamigliaMia[]>([]);
+  const [ripristino, setRipristino] = useState(false);
+
+  useEffect(() => {
+    let valido = true;
+    mieFamiglie()
+      .then((f) => valido && setAltre(f))
+      .catch(() => undefined);
+    return () => {
+      valido = false;
+    };
+  }, []);
+
+  async function scarica() {
+    setStato('Preparo il file…');
+    try {
+      const file = await esporta(trasportoSupabase, famiglia);
+      const blob = new Blob([JSON.stringify(file, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      const giorno = new Date().toISOString().slice(0, 10);
+      a.download = `mastercook-${nomeFamiglia.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${giorno}.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      setStato(`Scaricato: ${file.conteggi.membro} persone, ${file.conteggi.vincolo_alimentare} tra allergie ed esigenze.`);
+    } catch {
+      setStato('Serve la connessione per esportare: il file si prepara dal server, così è completo.');
+    }
+  }
+
+  return (
+    <>
+      <h2>I tuoi dati</h2>
+      <div className="scheda">
+        <p className="tenue">Scarica una copia completa dei dati della famiglia in un file che puoi conservare. Si può ripristinare in qualsiasi momento.</p>
+        <button className="bottone pieno" onClick={scarica}>
+          Scarica un’esportazione
+        </button>
+        {stato && <p className="tenue" style={{ marginTop: 10 }}>{stato}</p>}
+        <button className="bottone pieno" style={{ marginTop: 10 }} onClick={() => setRipristino((x) => !x)}>
+          Ripristina da un file
+        </button>
+        {ripristino && (
+          <div style={{ marginTop: 12 }}>
+            <Ripristino nomeUtente={String(io?.nome ?? '')} fatto={apriFamiglia} />
+          </div>
+        )}
+        {altre.length > 1 && (
+          <>
+            <h3 style={{ marginTop: 18 }}>Le tue famiglie</h3>
+            <ul className="elenco">
+              {altre.map((f) => (
+                <li key={f.famiglia_id} className="riga">
+                  <span className="cresce">{f.nome}</span>
+                  {f.famiglia_id === famiglia ? (
+                    <span className="tenue">aperta</span>
+                  ) : (
+                    <button className="bottone piccolo" onClick={() => apriFamiglia(f.famiglia_id)}>
+                      Apri
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
       </div>
     </>
   );

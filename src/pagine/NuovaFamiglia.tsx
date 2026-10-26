@@ -3,6 +3,7 @@ import { VERSIONE_APP } from '../dati/tipi';
 import { spiegaMotivo } from '../dati/messaggi';
 import { trasportoSupabase } from '../piattaforma/supabase';
 import { idDispositivo } from '../dati/contesto';
+import { Ripristino } from '../ui/Ripristino';
 
 /** Prima volta: si crea la famiglia. Richiede la rete, perché la famiglia nasce sul server. */
 export function NuovaFamiglia({ nomeSuggerito, creata }: { nomeSuggerito: string; creata: (famiglia: string) => void }) {
@@ -53,6 +54,12 @@ export function NuovaFamiglia({ nomeSuggerito, creata }: { nomeSuggerito: string
           {attendi ? 'Creo…' : 'Crea la famiglia'}
         </button>
       </form>
+      <details style={{ marginTop: 28 }}>
+        <summary className="tenue">Hai un file di esportazione? Ripristinalo</summary>
+        <div style={{ marginTop: 12 }}>
+          <Ripristino nomeUtente={nome.trim()} fatto={creata} />
+        </div>
+      </details>
     </main>
   );
 }

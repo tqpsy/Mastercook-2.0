@@ -1,0 +1,5 @@
+# Configurazione minima per la CLI di Supabase (usata dal workflow che applica le migrazioni).
+project_id = "mastercook"
+
+[db]
+major_version = 17

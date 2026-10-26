@@ -171,7 +171,7 @@ function ConAccesso() {
     case 'pronta':
       return (
         <FamigliaAperta key={`${fase.sessione.utenteId}:${fase.sessione.famiglia}:${fase.sessione.ruolo}`} sessione={fase.sessione}>
-          <Guscio email={auth?.user.email ?? ''} />
+          <Guscio email={auth?.user.email ?? ''} apriFamiglia={apri} />
         </FamigliaAperta>
       );
   }
@@ -179,7 +179,7 @@ function ConAccesso() {
 
 type Scheda = 'oggi' | 'famiglia' | 'impostazioni';
 
-function Guscio({ email }: { email: string }) {
+function Guscio({ email, apriFamiglia }: { email: string; apriFamiglia: (famiglia: string) => void }) {
   const [scheda, setScheda] = useState<Scheda>('oggi');
   const { sync, utenteId, archivio } = useFamiglia();
   const schede = useMemo(
@@ -214,7 +214,7 @@ function Guscio({ email }: { email: string }) {
       <main className="pagina">
         {scheda === 'oggi' && <Oggi />}
         {scheda === 'famiglia' && <Famiglia />}
-        {scheda === 'impostazioni' && <Impostazioni email={email} esci={esciDaQui} />}
+        {scheda === 'impostazioni' && <Impostazioni email={email} esci={esciDaQui} apriFamiglia={apriFamiglia} />}
       </main>
       <nav className="schede">
         {schede.map((s) => (
