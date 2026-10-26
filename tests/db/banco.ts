@@ -76,6 +76,8 @@ export async function nuovoBanco(): Promise<Banco> {
   const url = new URL(INDIRIZZO);
   url.pathname = `/${nome}`;
   const pool = new pg.Pool({ connectionString: url.toString(), max: 12 });
+  // Alla chiusura il database viene cancellato con le connessioni ancora aperte nel pool.
+  pool.on('error', () => undefined);
   await pool.query(readFileSync(join(RADICE, 'supabase', 'tests', 'supabase-finto.sql'), 'utf8'));
   for (const f of fileMigrazioni()) await pool.query(readFileSync(f, 'utf8'));
 

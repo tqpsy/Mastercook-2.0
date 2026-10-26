@@ -7,7 +7,7 @@ export default defineConfig({
       {
         test: {
           name: 'db',
-          include: ['tests/db/**/*.test.ts'],
+          include: ['tests/db/**/*.test.ts', 'tests/sync/**/*.test.ts'],
           environment: 'node',
           testTimeout: 30_000,
           hookTimeout: 60_000,
