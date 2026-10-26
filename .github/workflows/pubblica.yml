@@ -1,8 +1,8 @@
 name: Pubblica
 
 # A ogni modifica di main: applica le migrazioni al database Supabase, poi pubblica l'app su GitHub Pages.
-# Segreti richiesti (Settings → Secrets → Actions): SUPABASE_ACCESS_TOKEN, SUPABASE_DB_PASSWORD, SUPABASE_PROJECT_REF.
-# Variabili pubbliche (Settings → Variables → Actions): SUPABASE_URL, SUPABASE_CHIAVE.
+# Segreti richiesti (Settings → Secrets → Actions): SUPABASE_ACCESS_TOKEN, SUPABASE_DB_PASSWORD. Il progetto (mxotaznwiuysvwswbrrs) è pubblico, è nell'indirizzo.
+# Variabili pubbliche facoltative (Settings → Variables → Actions): SUPABASE_URL, SUPABASE_CHIAVE; senza, si usa il progetto di Luca.
 
 on:
   push:
@@ -31,7 +31,7 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
-          supabase link --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}" --password "$SUPABASE_DB_PASSWORD"
+          supabase link --project-ref "${{ vars.SUPABASE_PROJECT_REF || 'mxotaznwiuysvwswbrrs' }}" --password "$SUPABASE_DB_PASSWORD"
           supabase db push --password "$SUPABASE_DB_PASSWORD"
 
   app:
@@ -49,8 +49,8 @@ jobs:
       - run: npm ci
       - run: npm run build
         env:
-          VITE_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
-          VITE_SUPABASE_CHIAVE: ${{ vars.SUPABASE_CHIAVE }}
+          VITE_SUPABASE_URL: ${{ vars.SUPABASE_URL || 'https://mxotaznwiuysvwswbrrs.supabase.co' }}
+          VITE_SUPABASE_CHIAVE: ${{ vars.SUPABASE_CHIAVE || 'sb_publishable_h6O3wJJvEUMACnNjc1r2Ww_EuS4vKG0' }}
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

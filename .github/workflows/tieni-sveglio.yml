@@ -14,5 +14,5 @@ jobs:
     steps:
       - name: Lettura leggera
         run: |
-          curl -fsS "${{ vars.SUPABASE_URL }}/rest/v1/compatibilita?select=versione_minima_app" \
-            -H "apikey: ${{ vars.SUPABASE_CHIAVE }}" -H "Authorization: Bearer ${{ vars.SUPABASE_CHIAVE }}"
+          curl -fsS "${{ vars.SUPABASE_URL || 'https://mxotaznwiuysvwswbrrs.supabase.co' }}/rest/v1/compatibilita?select=versione_minima_app" \
+            -H "apikey: ${{ vars.SUPABASE_CHIAVE || 'sb_publishable_h6O3wJJvEUMACnNjc1r2Ww_EuS4vKG0' }}" -H "Authorization: Bearer ${{ vars.SUPABASE_CHIAVE || 'sb_publishable_h6O3wJJvEUMACnNjc1r2Ww_EuS4vKG0' }}"
