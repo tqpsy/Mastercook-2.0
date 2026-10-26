@@ -1,0 +1,51 @@
+name: Controlli
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  controlli:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      MC_DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Tipi
+        run: npm run typecheck
+      - name: Test del dominio
+        run: npm test
+      - name: Test del database (Postgres reale)
+        run: npm run test:db
+      - name: Build
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: https://esempio.supabase.co
+          VITE_SUPABASE_CHIAVE: chiave-pubblica-di-prova
+      - name: Browser per i test dell'interfaccia
+        run: npx playwright install --with-deps chromium
+      - name: Test dell'interfaccia (telefono e tablet)
+        run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: rapporto-playwright
+          path: test-results
+          retention-days: 7
