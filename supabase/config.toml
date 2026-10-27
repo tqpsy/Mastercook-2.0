@@ -3,3 +3,8 @@ project_id = "mastercook"
 
 [db]
 major_version = 17
+
+# La funzione controlla da sola chi chiama (legge la famiglia con il token dell'utente, sotto RLS):
+# così funziona sia con le chiavi JWT sia con le nuove chiavi pubbliche di Supabase.
+[functions.foto-frigo]
+verify_jwt = false

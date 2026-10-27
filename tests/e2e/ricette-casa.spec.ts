@@ -228,3 +228,40 @@ test('crudi: il guanciale cotto va bene, la bresaola no finché non la segnate �
     .poll(() => sql(`select ricetta_id, emoji from icona_ricetta where famiglia_id in (select famiglia_id from utente_famiglia where utente_id = $1)`, [luca.id]))
     .toEqual([{ ricetta_id: 'sys:riso_basmati_spezie', emoji: '🍛' }]);
 });
+
+test('foto del frigo: prima l’avviso su Google, poi si controlla e in casa entra solo ciò che si conferma', async ({ browser }, info) => {
+  const luca = await nuovoUtente('Luca');
+  const { page } = await apri(browser, luca, info.project.use);
+  await creaFamiglia(page, 'Casa Foto');
+  await page.getByRole('button', { name: 'Casa', exact: true }).click();
+  await page.getByRole('button', { name: '📷 Foto del frigo' }).click();
+  const foglio = page.getByRole('dialog', { name: 'Foto del frigo' });
+  await expect(foglio.getByRole('note')).toContainText('Google può usare le foto');
+  await foglio.getByRole('button', { name: 'Ho capito, continua' }).click();
+  const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==';
+  await foglio.getByLabel('Foto del frigo').setInputFiles({ name: 'frigo.png', mimeType: 'image/png', buffer: Buffer.from(PNG, 'base64') });
+  const elenco = foglio.getByRole('list', { name: 'Alimenti nella foto' });
+  await expect(elenco).toContainText('«oggetto misterioso»: non lo trovo nel catalogo');
+  // Le zucchine non hanno quantità: o la si scrive o si toglie. Le uova non ci sono davvero.
+  await elenco.getByRole('listitem').filter({ hasText: 'Uova' }).getByRole('checkbox').uncheck();
+  await foglio.getByRole('button', { name: 'Aggiungi in casa (2)' }).click();
+  await expect(foglio.getByRole('alert')).toContainText('Scrivi la quantità di zucchine');
+  await foglio.getByLabel('Quantità di Zucchine').fill('300');
+  await foglio.getByRole('button', { name: 'Aggiungi in casa (2)' }).click();
+  await expect(page.getByRole('button', { name: /Stato del salvataggio: Tutto salvato/ })).toBeVisible();
+  await expect
+    .poll(async () =>
+      sql<{ ingrediente_id: string; q: number; unita: string; luogo: string }>(
+        `select ingrediente_id, quantita::float as q, unita, luogo from lotto where eliminato_il is null
+            and famiglia_id in (select famiglia_id from utente_famiglia where utente_id = $1) order by ingrediente_id collate "C"`,
+        [luca.id],
+      ),
+    )
+    .toEqual([
+      { ingrediente_id: 'ing:latte', q: 1000, unita: 'ml', luogo: 'frigo' },
+      { ingrediente_id: 'ing:zucchina', q: 300, unita: 'g', luogo: 'frigo' },
+    ]);
+  // La seconda volta l'avviso non si ripete.
+  await page.getByRole('button', { name: '📷 Foto del frigo' }).click();
+  await expect(foglio.getByLabel('Foto del frigo')).toBeAttached();
+});

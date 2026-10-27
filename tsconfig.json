@@ -17,5 +17,5 @@
     "noEmit": true,
     "types": ["node"]
   },
-  "include": ["src", "tests", "vite.config.ts", "vitest.config.ts", "eslint.config.js"]
+  "include": ["src", "tests", "supabase/functions/foto-frigo/nucleo.ts", "supabase/functions/foto-frigo/nucleo.test.ts", "vite.config.ts", "vitest.config.ts", "eslint.config.js"]
 }
