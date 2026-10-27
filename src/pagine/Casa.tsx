@@ -9,6 +9,7 @@ import { formatta, inBase, leggiNumero, UNITA, type Unita, UNITA_BASE, type Unit
 import { CercaIngrediente } from '../ui/CercaIngrediente';
 import { type ProdottoScansionato, ScansionaProdotto } from '../ui/CodiceProdotto';
 import { Foglio } from '../ui/Foglio';
+import { FotoFrigo } from './FotoFrigo';
 
 export interface Lotto {
   id: string;
@@ -60,7 +61,7 @@ export function Casa() {
   const indice = useIndice(vista);
   const lotti = useLotti();
   const [luogo, setLuogo] = useState<Luogo>('frigo');
-  const [aperto, setAperto] = useState<string | 'nuovo' | null>(null);
+  const [aperto, setAperto] = useState<string | 'nuovo' | 'foto' | null>(null);
   const giorno = oggi();
   const presto = daUsarePresto(lotti, giorno);
   const perId = new Map((vista.righe.lotto ?? []).map((l) => [l.id, { ingrediente_id: String(l.ingrediente_id), unita: String(l.unita) }]));
@@ -69,15 +70,20 @@ export function Casa() {
 
   if (!vista.pronta || !indice) return <p className="tenue">Sto caricando la casa…</p>;
   const qui = lotti.filter((l) => l.luogo === luogo).sort((a, b) => indice.nome(a.ingrediente_id).localeCompare(indice.nome(b.ingrediente_id), 'it'));
-  const lotto = aperto && aperto !== 'nuovo' ? lotti.find((l) => l.id === aperto) : undefined;
+  const lotto = aperto && aperto !== 'nuovo' && aperto !== 'foto' ? lotti.find((l) => l.id === aperto) : undefined;
 
   return (
     <>
       <div className="riga spazio" style={{ marginBottom: 12 }}>
         <h2 style={{ margin: 0 }}>In casa</h2>
-        <button className="bottone primario piccolo" onClick={() => setAperto('nuovo')}>
-          + Aggiungi
-        </button>
+        <div className="riga">
+          <button className="bottone piccolo" onClick={() => setAperto('foto')}>
+            📷 Foto del frigo
+          </button>
+          <button className="bottone primario piccolo" onClick={() => setAperto('nuovo')}>
+            + Aggiungi
+          </button>
+        </div>
       </div>
 
       {presto.length > 0 && (
@@ -125,6 +131,7 @@ export function Casa() {
 
       <p className="tenue">Le date stimate sono indicative: controlla sempre l’alimento. L’app non dice mai che qualcosa è sicuro oltre la data.</p>
 
+      {aperto === 'foto' && <FotoFrigo indice={indice} luogo={luogo} chiudi={() => setAperto(null)} />}
       {aperto === 'nuovo' && <NuovoLotto indice={indice} luogo={luogo} chiudi={() => setAperto(null)} />}
       {lotto && <SchedaLotto indice={indice} lotto={lotto} giorno={giorno} chiudi={() => setAperto(null)} />}
     </>

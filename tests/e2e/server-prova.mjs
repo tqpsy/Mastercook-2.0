@@ -104,6 +104,22 @@ createServer(async (req, res) => {
       return rispondi(res, 200, (await pool.query(testo, valori)).rows);
     }
     if (percorso.startsWith('/auth/v1/')) return rispondi(res, 204);
+    // Foto del frigo: al posto di Gemini una risposta fissa; il controllo su chi fa parte della famiglia è vero.
+    if (percorso === '/functions/v1/foto-frigo' && req.method === 'POST') {
+      const sub = utenteDalToken(req);
+      const { famiglia_id, immagine } = await corpo(req);
+      const r = sub && typeof immagine === 'string' && immagine.length > 0 ? await comeUtente(sub, 'select 1 from famiglia where id = $1', [famiglia_id]) : { rowCount: 0 };
+      if (!r.rowCount) return rispondi(res, 403, { errore: 'non_autorizzato' });
+      return rispondi(res, 200, {
+        modello: 'prova',
+        alimenti: [
+          { nome: 'latte', quantita: 1000, unita: 'ml' },
+          { nome: 'uova', quantita: 6, unita: 'pz' },
+          { nome: 'zucchina', quantita: null, unita: null },
+          { nome: 'oggetto misterioso', quantita: null, unita: null },
+        ],
+      });
+    }
     const f = percorso.match(/^\/storage\/v1\/object\/(?:authenticated\/)?foto\/(.+)$/);
     if (f) {
       const sub = utenteDalToken(req);

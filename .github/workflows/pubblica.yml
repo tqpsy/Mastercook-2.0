@@ -1,7 +1,7 @@
 name: Pubblica
 
 # A ogni modifica di main: applica le migrazioni al database Supabase, poi pubblica l'app su GitHub Pages.
-# Segreti richiesti (Settings → Secrets → Actions): SUPABASE_ACCESS_TOKEN, SUPABASE_DB_PASSWORD. Il progetto (mxotaznwiuysvwswbrrs) è pubblico, è nell'indirizzo.
+# Segreti richiesti (Settings → Secrets → Actions): SUPABASE_ACCESS_TOKEN, SUPABASE_DB_PASSWORD; facoltativo GEMINI_API_KEY (foto del frigo). Il progetto (mxotaznwiuysvwswbrrs) è pubblico, è nell'indirizzo.
 # Variabili pubbliche facoltative (Settings → Variables → Actions): SUPABASE_URL, SUPABASE_CHIAVE; senza, si usa il progetto di Luca.
 
 on:
@@ -57,3 +57,26 @@ jobs:
           path: dist
       - id: pubblicazione
         uses: actions/deploy-pages@v4
+
+  # Separata dall'app: se la funzione non si pubblica, l'app esce lo stesso (e la foto dice che non è attiva).
+  funzioni:
+    needs: database
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Pubblica la funzione della foto del frigo
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          REF="${{ vars.SUPABASE_PROJECT_REF || 'mxotaznwiuysvwswbrrs' }}"
+          supabase functions deploy foto-frigo --project-ref "$REF" --use-api
+          # La chiave Gemini va solo nei segreti del server; senza, l'app dice che la foto non è ancora attiva.
+          if [ -n "$GEMINI_API_KEY" ]; then
+            supabase secrets set --project-ref "$REF" GEMINI_API_KEY="$GEMINI_API_KEY"
+          else
+            echo "GEMINI_API_KEY non impostata: la foto del frigo resta spenta."
+          fi
