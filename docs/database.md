@@ -205,6 +205,26 @@ ingrediente di sistema `ing:avanzo` (in porzioni).
   prima da confermare). Le notifiche push del telefono non ci sono: servirebbero un servizio di invio e il consenso a
   ogni dispositivo, e restano per una fase successiva.
 
+## Icone delle ricette
+
+Migrazione `20261103000000_icone.sql`. Tabella `icona_ricetta`: al più un'icona per ricetta e famiglia, anche per le
+ricette di Mastercook. Senza, l'app usa l'icona dell'ingrediente principale (`iconaRicetta`; per dolci e colazioni
+quella della categoria).
+
+| Tipo | Dati |
+|---|---|
+| `scegli_icona` | `id`, `ricetta_id`, `emoji` (un'emoji; `null` torna all'automatica). Ripetuto non scrive di nuovo; ricetta di un'altra famiglia → `ricetta_non_trovata` |
+
+## Esigenze sui crudi
+
+Solo nell'app (`src/dominio/crudi.ts`), nessuna tabella nuova: le esigenze `cls:no_salumi_crudi`, `cls:no_pesce_crudo`,
+`cls:no_carne_cruda`, `cls:no_latte_crudo`, `cls:no_uova_crude` guardano **come la ricetta usa l'ingrediente**. Le
+ricette di Mastercook sono state lette una per una: è segnato quali ingredienti restano crudi (il formaggio grattugiato
+sopra o mantecato a fuoco spento conta come crudo; il guanciale rosolato no). Crudo e obbligatorio → non adatta;
+facoltativo, o un prodotto che può essere sia a latte crudo sia pastorizzato (feta, pesto, asiago…) → da verificare.
+Nelle ricette della famiglia l'app non sa se si cuoce: da verificare. Scritti a parole, i vincoli restano da verificare
+su tutte le ricette; l'app lo spiega e propone queste esigenze.
+
 ## Foto delle ricette
 
 Deposito privato `foto` di Supabase Storage (migrazione `20261028000300_foto.sql`): percorso `<famiglia>/<uuid>.jpg`,

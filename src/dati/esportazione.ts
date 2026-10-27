@@ -5,7 +5,7 @@
 import type { Riga, RigaScaricata, Tabella, Trasporto } from './tipi';
 
 export const FORMATO = 'mastercook-2';
-export const VERSIONE_FILE = 6;
+export const VERSIONE_FILE = 7;
 
 /** Le tabelle dei file della versione 2 (Fase 2): senza il menu. */
 const TABELLE_V2 = ['famiglia', 'membro', 'vincolo_alimentare', 'ingrediente', 'ricetta', 'ricetta_ingrediente', 'ricetta_passo', 'lotto', 'movimento'] as const;
@@ -15,6 +15,8 @@ const TABELLE_V3 = [...TABELLE_V2, 'categoria_pasto', 'portata', 'eccezione_memb
 const TABELLE_V4 = [...TABELLE_V3, 'voce_spesa', 'acquisto', 'acquisto_riga'] as const;
 /** Le tabelle dei file della versione 5 (Fase 4, seconda parte): senza i consumi. */
 const TABELLE_V5 = [...TABELLE_V4, 'prodotto', 'scontrino', 'scontrino_riga'] as const;
+/** Le tabelle dei file della versione 6 (Fase 5): senza le icone scelte. */
+const TABELLE_V6 = [...TABELLE_V5, 'conferma_pasto', 'consumo_riga', 'consumo_lotto'] as const;
 
 /** Tabelle esportate: i dati della famiglia. Accessi, inviti e cronologia restano fuori. */
 export const TABELLE_ESPORTATE = [
@@ -40,6 +42,7 @@ export const TABELLE_ESPORTATE = [
   'conferma_pasto',
   'consumo_riga',
   'consumo_lotto',
+  'icona_ricetta',
 ] as const satisfies readonly Tabella[];
 
 /** Le tabelle presenti nei file della versione 1, che si possono ancora ripristinare. */
@@ -97,7 +100,7 @@ export function controllaFile(testo: string): ControlloFile {
   }
   const file = f as Partial<FileEsportazione>;
   if (file?.formato !== FORMATO) return { valido: false, motivo: 'Il file non è un’esportazione di Mastercook.' };
-  if (file.versione_schema !== 1 && file.versione_schema !== 2 && file.versione_schema !== 3 && file.versione_schema !== 4 && file.versione_schema !== 5 && file.versione_schema !== VERSIONE_FILE) {
+  if (file.versione_schema !== 1 && file.versione_schema !== 2 && file.versione_schema !== 3 && file.versione_schema !== 4 && file.versione_schema !== 5 && file.versione_schema !== 6 && file.versione_schema !== VERSIONE_FILE) {
     return { valido: false, motivo: 'Il file viene da una versione dell’app che questa non sa leggere.' };
   }
   const t = file.tabelle;
@@ -110,7 +113,9 @@ export function controllaFile(testo: string): ControlloFile {
             ? TABELLE_V4
             : file.versione_schema === 5
               ? TABELLE_V5
-              : TABELLE_ESPORTATE;
+              : file.versione_schema === 6
+                ? TABELLE_V6
+                : TABELLE_ESPORTATE;
   for (const k of attese) {
     if (!Array.isArray(t[k]) || file.conteggi?.[k] !== t[k].length) return { valido: false, motivo: 'Il file è stato modificato o è incompleto.' };
   }

@@ -3,7 +3,7 @@ import { CATEGORIE, type Categoria } from '../catalogo/tipi';
 import { righeAttive, useFamiglia, useVista } from '../dati/contesto';
 import { useIndice } from '../dati/indice';
 import { type Esito, NOME_ESITO, valutaPerFamiglia, type ValutazioneFamiglia, type Vincolo } from '../dominio/compatibilita';
-import { copertura, filtra, type Indice, type Ricetta } from '../dominio/ricette';
+import { copertura, filtra, iconaRicetta, type Indice, type Ricetta } from '../dominio/ricette';
 import { formatta, scala } from '../dominio/unita';
 import { Foglio } from '../ui/Foglio';
 import { Foto } from '../ui/Foto';
@@ -25,6 +25,74 @@ export function useInCasa(): Set<string> {
   return useMemo(() => new Set((lotti ?? []).filter((l) => !l.eliminato_il && !l.chiuso_il && Number(l.quantita) > 0).map((l) => String(l.ingrediente_id))), [lotti]);
 }
 
+/** Le icone scelte dalla famiglia, per ricetta. */
+export function useIcone(): Map<string, string> {
+  const righe = useVista().righe.icona_ricetta;
+  return useMemo(() => new Map((righe ?? []).filter((r) => !r.eliminato_il).map((r) => [String(r.ricetta_id), String(r.emoji)])), [righe]);
+}
+
+/** Icone di piatti da proporre, oltre a quelle degli ingredienti della ricetta. */
+const ICONE_PIATTI = ['🍝', '🍚', '🍛', '🍜', '🍲', '🥘', '🍕', '🥗', '🥙', '🌮', '🍔', '🥪', '🍳', '🥩', '🍗', '🐟', '🍣', '🦐', '🥦', '🥔', '🍆', '🥕', '🍅', '🫘', '🧀', '🥟', '🍰', '🍪', '🍮', '🍨', '🥧', '☕'];
+
+/** La prima emoji di un testo (un'emoji può essere fatta di più codici), o null se non è un'emoji. */
+function primaEmoji(testo: string): string | null {
+  const t = testo.trim();
+  if (!t) return null;
+  const pezzo = [...new Intl.Segmenter('it', { granularity: 'grapheme' }).segment(t)][0]?.segment ?? '';
+  return /\p{Extended_Pictographic}|\p{Regional_Indicator}/u.test(pezzo) && pezzo.length <= 16 ? pezzo : null;
+}
+
+function CambiaIcona({ indice, ricetta: r, scelta, chiudi }: { indice: Indice; ricetta: Ricetta; scelta?: string; chiudi: () => void }) {
+  const { esegui } = useFamiglia();
+  const [scritta, setScritta] = useState('');
+  const [errore, setErrore] = useState<string | null>(null);
+  const attuale = iconaRicetta(indice, r, scelta);
+  const proposte = [...new Set([...r.ingredienti.map((g) => indice.ingrediente(g.ingrediente_id)?.emoji).filter((e): e is string => !!e), ...ICONE_PIATTI])];
+  async function scegli(emoji: string | null) {
+    await esegui('scegli_icona', { id: crypto.randomUUID(), ricetta_id: r.id, emoji });
+    chiudi();
+  }
+  return (
+    <Foglio titolo="Cambia icona" chiudi={chiudi}>
+      <p className="tenue" style={{ marginTop: 0 }}>
+        {r.titolo}: ora <span aria-hidden>{attuale}</span>
+        {scelta ? ' (scelta dalla famiglia)' : ' (automatica, dall’ingrediente principale)'}. Vale per tutta la famiglia.
+      </p>
+      <div className="scelte" role="group" aria-label="Icone proposte">
+        {proposte.map((e) => (
+          <button key={e} className="bottone" aria-label={`Usa ${e}`} aria-pressed={e === attuale} onClick={() => scegli(e)}>
+            {e}
+          </button>
+        ))}
+      </div>
+      <label className="campo">
+        <span>Oppure scrivi un’emoji</span>
+        <input value={scritta} onChange={(e) => setScritta(e.target.value)} maxLength={16} style={{ width: 90 }} />
+      </label>
+      <button
+        className="bottone"
+        onClick={() => {
+          const e = primaEmoji(scritta);
+          if (!e) return setErrore('Scrivi un’emoji, per esempio 🍛.');
+          void scegli(e);
+        }}
+      >
+        Usa questa
+      </button>
+      {errore && (
+        <div className="avviso errore" role="alert">
+          {errore}
+        </div>
+      )}
+      {scelta && (
+        <button className="bottone pieno" style={{ marginTop: 12 }} onClick={() => scegli(null)}>
+          Torna all’icona automatica
+        </button>
+      )}
+    </Foglio>
+  );
+}
+
 /** Chi mangia a casa e i suoi vincoli, nella forma che serve alla valutazione. */
 export function useCommensali() {
   const vista = useVista();
@@ -40,6 +108,7 @@ export function Ricette() {
   const vista = useVista();
   const indice = useIndice(vista);
   const inCasa = useInCasa();
+  const icone = useIcone();
   const { membri, vincoli } = useCommensali();
   const [testo, setTesto] = useState('');
   const [categoria, setCategoria] = useState<Categoria | null>(null);
@@ -113,7 +182,7 @@ export function Ricette() {
       <div className="scheda" style={{ padding: trovate.length ? undefined : 0 }}>
         <ul className="elenco">
           {trovate.slice(0, quante).map((r) => (
-            <VoceRicetta key={r.id} indice={indice} ricetta={r} inCasa={inCasa} esito={conVincoli ? valutaPerFamiglia(indice, r, membri, vincoli).esito : null} apri={() => setAperta(r.id)} />
+            <VoceRicetta key={r.id} indice={indice} ricetta={r} icona={iconaRicetta(indice, r, icone.get(r.id))} inCasa={inCasa} esito={conVincoli ? valutaPerFamiglia(indice, r, membri, vincoli).esito : null} apri={() => setAperta(r.id)} />
           ))}
         </ul>
       </div>
@@ -126,6 +195,7 @@ export function Ricette() {
         <SchedaRicetta
           indice={indice}
           ricetta={ricetta}
+          iconaScelta={icone.get(ricetta.id)}
           inCasa={inCasa}
           valutazione={conVincoli ? valutaPerFamiglia(indice, ricetta, membri, vincoli) : null}
           chiudi={() => setAperta(null)}
@@ -146,7 +216,21 @@ export function Ricette() {
   );
 }
 
-function VoceRicetta({ indice, ricetta: r, inCasa, esito, apri }: { indice: Indice; ricetta: Ricetta; inCasa: Set<string>; esito: Esito | null; apri: () => void }) {
+function VoceRicetta({
+  indice,
+  ricetta: r,
+  icona,
+  inCasa,
+  esito,
+  apri,
+}: {
+  indice: Indice;
+  ricetta: Ricetta;
+  icona: string;
+  inCasa: Set<string>;
+  esito: Esito | null;
+  apri: () => void;
+}) {
   const cat = CATEGORIE.find((c) => c.id === r.categoria);
   const cucina = r.cucina !== 'italiana' ? indice.catalogo.cucine.find((c) => c.id === r.cucina) : undefined;
   const cop = inCasa.size ? copertura(indice, r, inCasa) : null;
@@ -154,7 +238,7 @@ function VoceRicetta({ indice, ricetta: r, inCasa, esito, apri }: { indice: Indi
     <li>
       <button className="voce" onClick={apri} aria-label={`Apri ${r.titolo}`}>
         <span className="emoji" aria-hidden>
-          {cat?.emoji}
+          {icona}
         </span>
         <span className="cresce">
           <strong>{r.titolo}</strong>
@@ -182,6 +266,7 @@ export function minutiDi(r: Ricetta): number | null {
 function SchedaRicetta({
   indice,
   ricetta: r,
+  iconaScelta,
   inCasa,
   valutazione,
   chiudi,
@@ -189,6 +274,7 @@ function SchedaRicetta({
 }: {
   indice: Indice;
   ricetta: Ricetta;
+  iconaScelta?: string;
   inCasa: Set<string>;
   valutazione: ValutazioneFamiglia | null;
   chiudi: () => void;
@@ -200,6 +286,7 @@ function SchedaRicetta({
   const [porzioni, setPorzioni] = useState(r.porzioni);
   const casa = indice.estendi(inCasa);
   const origine = r.derivata_da ? indice.perId.get(r.derivata_da) : undefined;
+  const [cambiaIcona, setCambiaIcona] = useState(false);
 
   async function archivia(archiviata: boolean) {
     await esegui('salva_ricetta', { id: r.id, versione_attesa: r.versione, campi: { archiviata } });
@@ -214,10 +301,15 @@ function SchedaRicetta({
     chiudi();
   }
 
+  if (cambiaIcona) return <CambiaIcona indice={indice} ricetta={r} scelta={iconaScelta} chiudi={() => setCambiaIcona(false)} />;
   return (
     <Foglio titolo={r.titolo} chiudi={chiudi}>
       <Foto percorso={r.foto} alt={`Foto di ${r.titolo}`} />
       <p className="tenue">
+        <button className="bottone piccolo" onClick={() => setCambiaIcona(true)} aria-label={`Cambia icona: ${r.titolo}`} style={{ marginRight: 8 }}>
+          <span aria-hidden>{iconaRicetta(indice, r, iconaScelta)}</span> Cambia icona
+        </button>
+
         {[CATEGORIE.find((c) => c.id === r.categoria)?.nome, minutiDi(r) && `${minutiDi(r)} min`, r.difficolta && ['facile', 'media', 'impegnativa'][r.difficolta - 1], r.di_sistema ? 'ricetta di Mastercook' : 'ricetta della famiglia']
           .filter(Boolean)
           .join(' · ')}

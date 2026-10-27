@@ -181,3 +181,40 @@ test('foto: si aggiunge anche senza rete, parte prima della ricetta e non si sos
   await tablet.getByRole('button', { name: `Apri ${titolo} con pomodoro` }).click();
   await expect(tablet.getByRole('img', { name: `Foto di ${titolo} con pomodoro` })).toBeVisible();
 });
+
+test('crudi: il guanciale cotto va bene, la bresaola no; l’icona si sceglie per la famiglia', async ({ browser }, info) => {
+  const luca = await nuovoUtente('Luca');
+  const { page } = await apri(browser, luca, info.project.use);
+  await creaFamiglia(page, 'Casa Crudi');
+  await aggiungiPersona(page, 'Anna');
+  await page.getByRole('button', { name: 'Modifica Anna' }).click();
+  await page.getByRole('button', { name: '+ Aggiungi' }).click();
+  await page.getByRole('button', { name: 'Intolleranza' }).click();
+  await page.getByLabel('Altro (scrivilo tu)').fill('prosciutto crudo');
+  await page.getByRole('button', { name: 'Vedi le esigenze sui crudi' }).click();
+  await page.getByRole('button', { name: 'Niente salumi crudi' }).click();
+  await page.getByRole('button', { name: 'Fatto' }).click();
+  await page.getByRole('button', { name: 'Chiudi' }).click();
+
+  await page.getByRole('button', { name: 'Ricette' }).click();
+  await page.getByLabel('Cerca').fill('carbonara');
+  await page.getByRole('button', { name: 'Apri Spaghetti alla carbonara' }).click();
+  await expect(page.getByRole('dialog', { name: 'Spaghetti alla carbonara' }).getByText('Adatta a tutti')).toBeVisible();
+  await page.getByRole('button', { name: 'Chiudi' }).click();
+  await page.getByLabel('Cerca').fill('bresaola');
+  await page.getByRole('button', { name: 'Apri Bresaola, rucola e grana' }).click();
+  await expect(page.getByRole('dialog', { name: 'Bresaola, rucola e grana' }).getByText(/Anna: ⛔ niente salumi crudi: bresaola non si cuoce/)).toBeVisible();
+  await page.getByRole('button', { name: 'Chiudi' }).click();
+
+  await page.getByLabel('Cerca').fill('basmati');
+  const voce = page.getByRole('button', { name: 'Apri Riso basmati speziato (pulao)' });
+  await expect(voce).toContainText('🍚');
+  await voce.click();
+  await page.getByRole('button', { name: 'Cambia icona: Riso basmati speziato (pulao)' }).click();
+  await page.getByRole('dialog', { name: 'Cambia icona' }).getByRole('button', { name: 'Usa 🍛' }).click();
+  await expect(page.getByRole('button', { name: 'Cambia icona: Riso basmati speziato (pulao)' })).toContainText('🍛');
+  await expect(page.getByRole('button', { name: /Stato del salvataggio: Tutto salvato/ })).toBeVisible();
+  await expect
+    .poll(() => sql(`select ricetta_id, emoji from icona_ricetta where famiglia_id in (select famiglia_id from utente_famiglia where utente_id = $1)`, [luca.id]))
+    .toEqual([{ ricetta_id: 'sys:riso_basmati_spezie', emoji: '🍛' }]);
+});

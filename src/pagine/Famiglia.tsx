@@ -359,6 +359,15 @@ function NuovoVincolo({ membro, esistenti, chiudi }: { membro: string; esistenti
           </div>
         </label>
       </form>
+      {tipo !== 'esigenza' && tipo !== 'indicazione_medica' && /crud/i.test(testo) && (
+        <div className="avviso info">
+          Scritto a parole, l’app non lo sa valutare e mette il punto di domanda su tutte le ricette. Per i crudi ci sono le
+          esigenze apposite, che guardano se nella ricetta l’alimento si cuoce.{' '}
+          <button type="button" className="bottone piccolo" onClick={() => setTipo('esigenza')}>
+            Vedi le esigenze sui crudi
+          </button>
+        </div>
+      )}
       {tipo === 'indicazione_medica' && (
         <p className="tenue">L’app conserva l’indicazione e la mostra, ma non la interpreta né la sostituisce con suggerimenti automatici.</p>
       )}

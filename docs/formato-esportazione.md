@@ -23,6 +23,7 @@ così è sempre completo anche se il dispositivo non ha ancora scaricato tutto.
 - Dalla versione 4 (Fase 4) anche la spesa: `voce_spesa`, `acquisto`, `acquisto_riga` (con i prezzi pagati).
 - Dalla versione 5 anche scontrini e codici a barre: `scontrino` (con il testo letto), `scontrino_riga`, `prodotto`.
 - Dalla versione 6 (Fase 5) anche i consumi: `conferma_pasto` (con le revisioni), `consumo_riga`, `consumo_lotto`.
+- Dalla versione 7 anche le icone scelte per le ricette: `icona_ricetta`.
   Il catalogo di sistema non c'è: è uguale per tutti e gli id `ing:…`/`sys:…` restano validi.
 - Le foto non sono nel file (sono immagini nel deposito): le ricette ripristinate restano senza foto.
 - Ogni riga è com'è nel database (campi descritti in `docs/database.md` e nelle migrazioni).

@@ -186,3 +186,27 @@ describe('ricette della famiglia', () => {
     expect(r).toEqual({ allergeni_noti: false, allergeni: [] });
   });
 });
+
+describe('icona scelta per una ricetta', () => {
+  it('si sceglie, si cambia, ripetuta non scrive di nuovo, si toglie; solo ricette visibili ed emoji vere', async () => {
+    const { u, famiglia } = await famigliaCon();
+    const icone = () => banco.sql(`select ricetta_id, emoji, versione from icona_ricetta where famiglia_id = $1 and eliminato_il is null`, [famiglia]);
+    const scegli = (emoji: string | null, ricetta_id = 'sys:riso_basmati_spezie') => u.applica(comando('scegli_icona', famiglia, { id: randomUUID(), ricetta_id, emoji }));
+
+    expect((await scegli('🍛')).esito).toBe('applicato');
+    expect((await scegli('🍛')).esito).toBe('applicato');
+    expect(await icone()).toEqual([{ ricetta_id: 'sys:riso_basmati_spezie', emoji: '🍛', versione: 1 }]);
+    await scegli('🍚');
+    expect(await icone()).toEqual([{ ricetta_id: 'sys:riso_basmati_spezie', emoji: '🍚', versione: 2 }]);
+    await scegli(null);
+    expect(await icone()).toEqual([]);
+
+    expect((await scegli('ciao')).esito).not.toBe('applicato');
+    expect((await scegli('🍛', 'sys:non_esiste')).esito).not.toBe('applicato');
+    const altra = await famigliaCon();
+    const { id, c } = nuovaRicetta(altra.famiglia);
+    await altra.u.applica(c);
+    expect((await scegli('🍛', id)).esito).not.toBe('applicato');
+    expect(await icone()).toEqual([]);
+  });
+});

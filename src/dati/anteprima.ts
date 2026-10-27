@@ -265,6 +265,14 @@ const EFFETTI: Record<string, Effetto> = {
       aggiungi('scontrino_riga', (x) => ({ scontrino_id: d.id, descrizione: x.descrizione, prezzo: x.prezzo ?? null, acquisto_riga_id: riga, versione: 1 }))(righe, r, famiglia);
     }
   },
+  scegli_icona: (righe, d, famiglia) => {
+    const esistente = (righe.icona_ricetta ?? []).find((r) => r.ricetta_id === d.ricetta_id && !r.eliminato_il);
+    if (esistente) {
+      righe.icona_ricetta = (righe.icona_ricetta ?? []).map((r) =>
+        r === esistente ? { ...r, ...(d.emoji ? { emoji: d.emoji } : { eliminato_il: new Date().toISOString() }), in_attesa: true } : r,
+      );
+    } else if (d.emoji) aggiungi('icona_ricetta', (x) => ({ ricetta_id: x.ricetta_id, emoji: x.emoji, versione: 1 }))(righe, d, famiglia);
+  },
   salva_prodotto: (righe, d, famiglia) => {
     const esistente = (righe.prodotto ?? []).find((p) => p.codice === d.codice && !p.eliminato_il);
     const campi = { codice: d.codice, ingrediente_id: d.ingrediente_id, nome: d.nome ?? null, quantita: d.quantita ?? null, unita: d.unita ?? null };

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import catalogo from '../catalogo/catalogo.json';
 import type { Catalogo } from '../catalogo/tipi';
 import { valutaPerFamiglia, valutaPerVincoli } from './compatibilita';
+import { CRUDI_NELLE_RICETTE } from './crudi';
 import { Indice, ingredienteDellaFamiglia, type Ricetta } from './ricette';
 
 const indice = new Indice(catalogo as Catalogo);
@@ -68,5 +69,39 @@ describe('compatibilità delle ricette con i vincoli', () => {
       ['Luca', 'adatta'],
       ['Sara', 'non_adatta'],
     ]);
+  });
+});
+
+describe('esigenze sui crudi', () => {
+  const e = (oggetto: string) => [v(oggetto, { tipo: 'esigenza' })];
+  it('conta come la ricetta usa l’ingrediente: cotto va bene, crudo no', () => {
+    expect(valutaPerVincoli(indice, ricetta('sys:carbonara'), e('cls:no_salumi_crudi')).esito).toBe('adatta');
+    expect(valutaPerVincoli(indice, ricetta('sys:saltimbocca'), e('cls:no_salumi_crudi')).esito).toBe('adatta');
+    expect(valutaPerVincoli(indice, ricetta('sys:bresaola_rucola'), e('cls:no_salumi_crudi')).esito).toBe('non_adatta');
+    expect(valutaPerVincoli(indice, ricetta('sys:salmone_forno'), e('cls:no_pesce_crudo')).esito).toBe('adatta');
+    expect(valutaPerVincoli(indice, ricetta('sys:sushi_maki'), e('cls:no_pesce_crudo')).esito).toBe('non_adatta');
+    expect(valutaPerVincoli(indice, ricetta('sys:pollo_cacciatora'), e('cls:no_carne_cruda')).esito).toBe('adatta');
+    expect(valutaPerVincoli(indice, ricetta('sys:tiramisu'), e('cls:no_uova_crude')).esito).toBe('non_adatta');
+  });
+
+  it('latte crudo: il parmigiano cotto in forno va bene, sopra la pasta no; facoltativo o «dipende» è da verificare', () => {
+    expect(valutaPerVincoli(indice, ricetta('sys:lasagne'), e('cls:no_latte_crudo')).esito).toBe('adatta');
+    expect(valutaPerVincoli(indice, ricetta('sys:cacio_pepe'), e('cls:no_latte_crudo')).esito).toBe('non_adatta');
+    expect(valutaPerVincoli(indice, ricetta('sys:pasta_pomodoro'), e('cls:no_latte_crudo')).esito).toBe('da_verificare');
+    expect(valutaPerVincoli(indice, ricetta('sys:insalata_greca'), e('cls:no_latte_crudo')).esito).toBe('da_verificare');
+  });
+
+  it('in una ricetta della famiglia non si sa se si cuoce: da verificare', () => {
+    const r = { ...ricetta('sys:salmone_forno'), id: crypto.randomUUID(), di_sistema: false };
+    expect(valutaPerVincoli(indice, r, e('cls:no_pesce_crudo')).esito).toBe('da_verificare');
+    expect(valutaPerVincoli(indice, r, e('cls:no_salumi_crudi')).esito).toBe('adatta');
+  });
+
+  it('ogni ricetta segnata esiste e usa davvero quegli ingredienti', () => {
+    for (const [id, crudi] of Object.entries(CRUDI_NELLE_RICETTE)) {
+      const r = ricetta(id);
+      expect(r, id).toBeDefined();
+      for (const c of crudi) expect(r.ingredienti.map((g) => g.ingrediente_id), id).toContain(c);
+    }
   });
 });
