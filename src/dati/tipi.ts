@@ -51,7 +51,10 @@ export type Tabella =
   | 'acquisto_riga'
   | 'prodotto'
   | 'scontrino'
-  | 'scontrino_riga';
+  | 'scontrino_riga'
+  | 'conferma_pasto'
+  | 'consumo_riga'
+  | 'consumo_lotto';
 
 export interface Riga {
   id: string;

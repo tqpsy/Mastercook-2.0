@@ -173,6 +173,29 @@ Migrazione `20261031000000_scontrini.sql`. Tabelle `scontrino`, `scontrino_riga`
   salvarlo di nuovo lo aggiorna. Per un codice nuovo l'app chiede a Open Food Facts nome e formato (parte solo il
   numero del codice) e la persona sceglie l'ingrediente.
 
+## Comandi della Fase 5: conferma dei pasti e consumi
+
+Migrazione `20261101000000_consumi.sql`. Tabelle `conferma_pasto`, `consumo_riga`, `consumo_lotto`; `lotto.conferma_id`;
+ingrediente di sistema `ing:avanzo` (in porzioni).
+
+| Tipo | Dati |
+|---|---|
+| `conferma_pasto` | `id`, `portata_id`, `esito` (come_previsto, quantita_diverse, altro_piatto, saltato), `revisione_attesa?` (per correggere), `ricetta_id?` + `porzioni?` o `testo?` (altro piatto), `righe?: [{ingrediente_id, unita, quantita}]`, `avanzi?: [{lotto_id, nome, quantita, luogo, date…}]`, `nota?` → `{revisione, movimenti, mancanti}` |
+
+- **Solo la conferma toglie dalla casa** (T-CON-1); il menu da solo non tocca niente. La portata non cambia mai per
+  somigliare a ciò che è successo (T-CON-6).
+- **Una sola conferma attiva per portata** (indice unico parziale e blocco della portata): la stessa conferma ripetuta
+  non toglie due volte (T-CON-2); due dispositivi insieme → uno applica, l'altro riceve `gia_confermato` (T-CON-3).
+- **Correggere** = una revisione nuova con `revisione_attesa`. Il database confronta ciò che è già stato preso per la
+  portata (`consumo_lotto`) con il nuovo usato e sposta solo la differenza, un movimento per lotto (T-CON-4).
+  «Saltato» come correzione restituisce tutto.
+- **Previsto** (`interno.previsto_portata`): come la lista della spesa, piatto per porzioni (indicate o automatiche) più
+  le alternative; senza «q.b.», facoltativi e ingredienti di base. `consumo_riga` tiene previsto e usato (T-CON-5).
+- **Scarico**: dai lotti aperti che valgono come l'ingrediente (gli spaghetti valgono come pasta), prima quelli che
+  scadono prima (T-CON-8). Ciò che in casa non c'era torna in `mancanti`, senza inventare quantità.
+- **Avanzi**: lotti `ing:avanzo` in porzioni, origine `avanzo`, legati alla conferma; in frigo la data è stimata dalla
+  regola dei cotti della ricetta (giorni consigliati), altrimenti resta sconosciuta.
+
 ## Foto delle ricette
 
 Deposito privato `foto` di Supabase Storage (migrazione `20261028000300_foto.sql`): percorso `<famiglia>/<uuid>.jpg`,

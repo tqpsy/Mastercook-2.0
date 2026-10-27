@@ -242,6 +242,7 @@ export function Menu() {
 function Piatto({ indice, dati, portata: p, apri }: { indice: Indice; dati: DatiMenu; portata: PortataMenu; apri: () => void }) {
   const d = descrivi(indice, dati, p);
   const esito = d.valutazione?.esito;
+  const confermato = useVista().righe.conferma_pasto?.some((c) => c.portata_id === p.id && c.attiva && !c.eliminato_il);
   return (
     <button className={`piatto${esito ? ` ${esito}` : ''}`} onClick={apri} aria-label={`Apri ${d.titolo}`}>
       <span className="cresce">
@@ -249,6 +250,7 @@ function Piatto({ indice, dati, portata: p, apri }: { indice: Indice; dati: Dati
         {d.titolo}
         {d.nonPiace.length > 0 && <span title={d.nonPiace.map((g) => `a ${g.nome} non piace ${g.cosa.toLowerCase()}`).join('; ')}> 🙅</span>}
         {p.bloccata && <span aria-label="bloccato"> 🔒</span>}
+        {confermato && <span aria-label="pasto confermato"> ✔️</span>}
       </span>
       <span className="tenue piccolo">
         {formattaPorzioni(d.porzioni)}

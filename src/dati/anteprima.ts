@@ -271,6 +271,39 @@ const EFFETTI: Record<string, Effetto> = {
     if (esistente) righe.prodotto = (righe.prodotto ?? []).map((p) => (p === esistente ? { ...p, ...campi, in_attesa: true } : p));
     else aggiungi('prodotto', () => ({ ...campi, versione: 1 }))(righe, d, famiglia);
   },
+  conferma_pasto: (righe, d, famiglia) => {
+    if ((righe.conferma_pasto ?? []).some((c) => c.id === d.id)) return;
+    const prima = (righe.conferma_pasto ?? []).find((c) => c.portata_id === d.portata_id && c.attiva);
+    if (prima && d.revisione_attesa == null) return;
+    righe.conferma_pasto = (righe.conferma_pasto ?? []).map((c) => (c === prima ? { ...c, attiva: false, in_attesa: true } : c));
+    aggiungi('conferma_pasto', (x) => ({
+      portata_id: x.portata_id,
+      revisione: Number(prima?.revisione ?? 0) + 1,
+      esito: x.esito,
+      ricetta_id: x.esito === 'altro_piatto' ? (x.ricetta_id ?? null) : null,
+      testo: x.esito === 'altro_piatto' ? (x.testo ?? null) : null,
+      porzioni: x.esito === 'altro_piatto' ? (x.porzioni ?? null) : null,
+      attiva: true,
+      nota: x.nota ?? null,
+      versione: 1,
+    }))(righe, d, famiglia);
+    for (const a of (d.avanzi ?? []) as Record<string, unknown>[]) {
+      aggiungi('lotto', (x) => ({
+        ingrediente_id: 'ing:avanzo',
+        nome: x.nome ?? null,
+        quantita: Number(x.quantita),
+        unita: 'pz',
+        luogo: x.luogo ?? 'frigo',
+        data_limite: x.data_limite ?? null,
+        tipo_data: x.tipo_data ?? 'sconosciuta',
+        fonte_data: x.fonte_data ?? null,
+        calcolata_il: x.calcolata_il ?? null,
+        origine: 'avanzo',
+        conferma_id: d.id,
+        versione: 1,
+      }))(righe, { ...a, id: a.lotto_id }, famiglia);
+    }
+  },
   annulla_acquisto: (righe, d) => {
     const acquisto = (righe.acquisto ?? []).find((a) => a.id === d.id);
     if (!acquisto || acquisto.stato === 'annullato') return;
