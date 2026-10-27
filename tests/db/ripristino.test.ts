@@ -179,7 +179,7 @@ describe('esportazione e ripristino con ricette e casa (versione 2)', () => {
     await u.applica(comando('sposta_lotto', famiglia, { lotto_id: carne, luogo: 'freezer', quantita: 200, nuovo_id: randomUUID() }));
 
     const file = await esporta(u, famiglia);
-    expect(file.versione_schema).toBe(3);
+    expect(file.versione_schema).toBe(4);
     expect(file.conteggi).toMatchObject({ ingrediente: 1, ricetta: 1, ricetta_ingrediente: 3, ricetta_passo: 1, lotto: 3, movimento: 6 });
 
     const nuova = randomUUID();
@@ -265,5 +265,58 @@ describe('esportazione e ripristino del menu (versione 3)', () => {
     expect(menu(ripristinato)).toEqual(menu(vivi(file)));
     // Dopo il ripristino si continua a usare il menu come prima.
     expect((await u.applica(comando('imposta_categoria', nuova, { chiave: 'merenda', attiva: false }))).esito).toBe('applicato');
+  });
+});
+
+describe('esportazione e ripristino di spesa e acquisti (versione 4)', () => {
+  it('lista, acquisti e righe tornano uguali e restano legati ai lotti; un file della versione 3 si ripristina ancora', async () => {
+    const { u, famiglia } = await famigliaCompleta();
+    await u.applica(comando('aggiungi_voce', famiglia, { id: randomUUID(), testo: 'Detersivo', nota: 'quello verde' }));
+    const voce = randomUUID();
+    await u.applica(comando('aggiungi_voce', famiglia, { id: voce, ingrediente_id: 'ing:latte', quantita: 1000, unita: 'ml' }));
+    const riga = randomUUID();
+    await u.applica(
+      comando('conferma_acquisto', famiglia, {
+        id: randomUUID(),
+        data: '2026-11-02',
+        negozio: 'Mercato',
+        righe: [
+          { id: riga, voce_id: voce, ingrediente_id: 'ing:latte', quantita: 1000, unita: 'ml', prezzo: 1.29, lotto_id: randomUUID(), luogo: 'frigo' },
+          { id: randomUUID(), nome: 'Pile', prezzo: 4 },
+        ],
+      }),
+    );
+    await u.applica(comando('correggi_riga_acquisto', famiglia, { id: riga, quantita_vista: 1000, quantita_nuova: 500 }));
+
+    const file = await esporta(u, famiglia);
+    expect(file.versione_schema).toBe(4);
+    expect(file.conteggi).toMatchObject({ voce_spesa: 2, acquisto: 1, acquisto_riga: 2 });
+    const nuova = randomUUID();
+    expect(await u.applica(comando('ripristina_famiglia', nuova, { file: JSON.parse(JSON.stringify(file)) }))).toMatchObject({
+      esito: 'applicato',
+      dettaglio: { acquisti: 1 },
+    });
+    const spesa = async (f: string) =>
+      banco.sql(
+        `select coalesce(v.ingrediente_id, v.testo) as voce, v.stato, v.nota,
+                (select string_agg(coalesce(r.ingrediente_id, r.nome) || ' ' || coalesce(r.quantita::text, '-') || ' ' || r.prezzo::text
+                                   || ' ' || coalesce(l.quantita::text, 'nessun lotto'), ', ' order by r.nome)
+                   from acquisto_riga r left join lotto l on l.id = r.lotto_id where r.famiglia_id = $1) as righe
+           from voce_spesa v where v.famiglia_id = $1 order by coalesce(v.ingrediente_id, v.testo) collate "C"`,
+        [f],
+      );
+    expect(await spesa(nuova)).toEqual(await spesa(famiglia));
+    expect((await spesa(nuova))[1].righe).toBe('Pile - 4.00 nessun lotto, ing:latte 500 1.29 500');
+
+    const v3 = JSON.parse(JSON.stringify(file));
+    v3.versione_schema = 3;
+    for (const t of ['voce_spesa', 'acquisto', 'acquisto_riga']) {
+      delete v3.tabelle[t];
+      delete v3.conteggi[t];
+    }
+    expect((await u.applica(comando('ripristina_famiglia', randomUUID(), { file: v3 }))).esito).toBe('applicato');
+    const rotto = JSON.parse(JSON.stringify(file));
+    delete rotto.tabelle.acquisto;
+    expect((await u.applica(comando('ripristina_famiglia', randomUUID(), { file: rotto }))).dettaglio.motivo).toBe('file_incompleto');
   });
 });

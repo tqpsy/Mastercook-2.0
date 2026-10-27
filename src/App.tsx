@@ -14,6 +14,7 @@ import { Menu } from './pagine/Menu';
 import { NuovaFamiglia } from './pagine/NuovaFamiglia';
 import { Oggi } from './pagine/Oggi';
 import { Ricette } from './pagine/Ricette';
+import { Spesa } from './pagine/Spesa';
 import { esci, type FamigliaMia, mieFamiglie, supabase } from './piattaforma/supabase';
 import { StatoSync } from './ui/StatoSync';
 
@@ -180,7 +181,7 @@ function ConAccesso() {
   }
 }
 
-type Scheda = 'oggi' | 'menu' | 'ricette' | 'casa' | 'famiglia' | 'impostazioni';
+type Scheda = 'oggi' | 'menu' | 'spesa' | 'ricette' | 'casa' | 'famiglia' | 'impostazioni';
 
 function Guscio({ email, apriFamiglia }: { email: string; apriFamiglia: (famiglia: string) => void }) {
   const [scheda, setScheda] = useState<Scheda>('oggi');
@@ -190,6 +191,7 @@ function Guscio({ email, apriFamiglia }: { email: string; apriFamiglia: (famigli
       [
         { id: 'oggi', nome: 'Oggi', icona: '☀️' },
         { id: 'menu', nome: 'Menu', icona: '📅' },
+        { id: 'spesa', nome: 'Spesa', icona: '🛒' },
         { id: 'ricette', nome: 'Ricette', icona: '📖' },
         { id: 'casa', nome: 'Casa', icona: '🏠' },
         { id: 'famiglia', nome: 'Famiglia', icona: '👪' },
@@ -224,6 +226,7 @@ function Guscio({ email, apriFamiglia }: { email: string; apriFamiglia: (famigli
       <main className="pagina">
         {scheda === 'oggi' && <Oggi vai={setScheda} />}
         {scheda === 'menu' && <Menu />}
+        {scheda === 'spesa' && <Spesa />}
         {scheda === 'ricette' && <Ricette />}
         {scheda === 'casa' && <Casa />}
         {scheda === 'famiglia' && <Famiglia />}

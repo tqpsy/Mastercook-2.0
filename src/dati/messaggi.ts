@@ -41,6 +41,11 @@ const MOTIVI: Record<string, string> = {
   portata_non_trovata: 'Il piatto non è più nel menu.',
   eccezione_cambiata: 'Nel frattempo qualcuno ha cambiato cosa mangia questa persona.',
   gusto_cambiato: 'Nel frattempo qualcuno ha cambiato questo gusto.',
+  periodo_non_valido: 'Il periodo della spesa non è valido (al massimo un mese).',
+  gia_acquistata: 'Questa voce è già stata comprata e confermata.',
+  stato_non_ammesso: 'Questa voce non può passare a quello stato.',
+  fonte_non_ammessa: 'Questo tipo di acquisto non si può confermare da qui.',
+  acquisto_annullato: 'L’acquisto è stato annullato: non si può più correggere.',
 };
 
 export function spiegaMotivo(motivo: string | undefined): string {
@@ -76,6 +81,13 @@ const AZIONI: Record<string, string> = {
   rimuovi_eccezione: 'Cambiare chi mangia un piatto',
   imposta_gusto: 'Segnare un gusto',
   rimuovi_gusto: 'Togliere un gusto',
+  ricalcola_spesa: 'Aggiornare la lista dal menu',
+  aggiungi_voce: 'Aggiungere alla lista della spesa',
+  modifica_voce: 'Cambiare una voce della lista',
+  imposta_stato_voce: 'Spuntare una voce della lista',
+  conferma_acquisto: 'Confermare la spesa',
+  annulla_acquisto: 'Annullare un acquisto',
+  correggi_riga_acquisto: 'Correggere un acquisto',
 };
 
 export function descriviAzione(tipo: string): string {

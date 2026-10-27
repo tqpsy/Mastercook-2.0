@@ -9,7 +9,7 @@ import { useOggiSiMangia } from './Menu';
  * Oggi: cosa si mangia, cosa usare presto e cosa c'è già. Spesa e scontrini arrivano nelle prossime fasi:
  * qui lo si dice senza mostrare dati finti.
  */
-export function Oggi({ vai }: { vai: (scheda: 'menu' | 'ricette' | 'casa') => void }) {
+export function Oggi({ vai }: { vai: (scheda: 'menu' | 'spesa' | 'ricette' | 'casa') => void }) {
   const vista = useVista();
   const indice = useIndice(vista);
   const lotti = useLotti();
@@ -18,6 +18,7 @@ export function Oggi({ vai }: { vai: (scheda: 'menu' | 'ricette' | 'casa') => vo
   const giorno = oggi();
   const presto = daUsarePresto(lotti, giorno);
   const { piatti } = useOggiSiMangia();
+  const daComprare = righeAttive(vista, 'voce_spesa').filter((v) => v.stato === 'da_acquistare').length;
   const data = new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
   return (
     <>
@@ -44,9 +45,12 @@ export function Oggi({ vai }: { vai: (scheda: 'menu' | 'ricette' | 'casa') => vo
             ))}
           </ul>
         )}
-        <div className="riga" style={{ marginTop: 12 }}>
+        <div className="riga" style={{ marginTop: 12, flexWrap: 'wrap' }}>
           <button className="bottone piccolo" onClick={() => vai('menu')}>
             Apri il menu della settimana
+          </button>
+          <button className="bottone piccolo" onClick={() => vai('spesa')}>
+            Lista della spesa{daComprare ? ` (${daComprare})` : ''}
           </button>
         </div>
       </section>
@@ -88,7 +92,7 @@ export function Oggi({ vai }: { vai: (scheda: 'menu' | 'ricette' | 'casa') => vo
           {persone === 1 ? 'C’è 1 persona' : `Ci sono ${persone} persone`} in famiglia. Allergie ed esigenze di ognuno, nella scheda <strong>Famiglia</strong>, decidono quali ricette sono adatte.
         </p>
       </div>
-      <div className="avviso info">Lista della spesa e scontrini arriveranno nelle prossime fasi.</div>
+      <div className="avviso info">La lettura degli scontrini e lo scanner dei codici a barre arrivano a breve.</div>
     </>
   );
 }

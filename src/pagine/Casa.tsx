@@ -159,7 +159,7 @@ function ElencoLotti({ indice, lotti, giorno, apri, conLuogo }: { indice: Indice
 }
 
 /** Legge «1,5» + «kg» per l'ingrediente e lo porta in unità base, o dice cosa non va. */
-function quantitaDa(testo: string, unita: Unita, ing: Ingrediente | undefined): { valore: number; unita: UnitaBase } | string {
+export function quantitaDa(testo: string, unita: Unita, ing: Ingrediente | undefined): { valore: number; unita: UnitaBase } | string {
   const n = leggiNumero(testo);
   if (n === null) return 'Scrivi una quantità, per esempio 500 o 1,5.';
   const e = inBase(n, unita, ing?.dimensione ?? 'massa');

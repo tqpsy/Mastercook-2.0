@@ -2,7 +2,7 @@
 
 Assistente domestico per organizzare i pasti della famiglia: menu settimanale, ricette, inventario di frigorifero, freezer e dispensa, scadenze, lista della spesa e riduzione degli sprechi.
 
-Stato: **Fase 3, menu della settimana** (in revisione). Si possono creare la famiglia e invitare gli altri, consultare 209 ricette, scriverne di proprie con foto, tenere frigo, freezer e dispensa con date e scadenze, e pianificare il menu della settimana: piatti per pasto, chi mangia altro o non c'è, porzioni automatiche, allergie e gusti segnalati, settimana ripetuta. Spesa, scontrini e consumi arrivano nelle fasi successive.
+Stato: **Fase 4, spesa e acquisti** (in corso). Si possono creare la famiglia e invitare gli altri, consultare 209 ricette, scriverne di proprie con foto, tenere frigo, freezer e dispensa con date e scadenze, e pianificare il menu della settimana: piatti per pasto, chi mangia altro o non c'è, porzioni automatiche, allergie e gusti segnalati, settimana ripetuta. La lista della spesa nasce dal menu togliendo ciò che c'è in casa; il carrello si conferma in due tocchi e solo allora la spesa entra in casa, con prezzi e stima del costo. Scontrini letti dalla foto, scanner dei codici a barre e consumi arrivano dopo.
 
 App: https://tqpsy.github.io/Mastercook-2.0/
 
