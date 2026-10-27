@@ -109,6 +109,9 @@ const TABELLE: Tabella[] = [
   'portata',
   'eccezione_membro',
   'gusto',
+  'voce_spesa',
+  'acquisto',
+  'acquisto_riga',
 ];
 
 export interface Vista {

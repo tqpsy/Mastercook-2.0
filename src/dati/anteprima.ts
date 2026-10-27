@@ -176,6 +176,81 @@ const EFFETTI: Record<string, Effetto> = {
       );
   },
   rimuovi_gusto: elimina('gusto'),
+
+  // Il ricalcolo della lista lo fa il server: sul dispositivo la lista si aggiorna quando risponde.
+  aggiungi_voce: aggiungi('voce_spesa', (d) => ({
+    tipo: 'manuale',
+    ingrediente_id: d.ingrediente_id ?? null,
+    testo: d.testo ?? null,
+    unita: d.unita ?? null,
+    quantita_richiesta: d.quantita ?? null,
+    quantita_scelta: null,
+    stato: 'da_acquistare',
+    non_piu_necessaria: false,
+    nota: d.nota ?? null,
+    versione: 1,
+  })),
+  modifica_voce: modifica('voce_spesa'),
+  imposta_stato_voce: (righe, d) => {
+    righe.voce_spesa = (righe.voce_spesa ?? []).map((r) =>
+      r.id === d.id && r.stato !== 'acquistata' ? { ...r, stato: d.stato, non_piu_necessaria: d.stato === 'rimossa' ? false : r.non_piu_necessaria, in_attesa: true } : r,
+    );
+  },
+  conferma_acquisto: (righe, d, famiglia) => {
+    if ((righe.acquisto ?? []).some((a) => a.id === d.id)) return;
+    const data = d.data ?? null;
+    aggiungi('acquisto', () => ({ fonte: d.fonte ?? 'carrello', data, negozio: d.negozio ?? null, stato: 'confermato', versione: 1 }))(righe, d, famiglia);
+    for (const r of (d.righe ?? []) as Record<string, unknown>[]) {
+      const conIngrediente = r.ingrediente_id != null;
+      if (conIngrediente) {
+        aggiungi('lotto', (x) => ({
+          ingrediente_id: x.ingrediente_id,
+          nome: x.nome ?? null,
+          quantita: Number(x.quantita),
+          unita: x.unita,
+          luogo: x.luogo ?? 'dispensa',
+          data_acquisto: data,
+          data_limite: x.data_limite ?? null,
+          tipo_data: x.tipo_data ?? 'sconosciuta',
+          fonte_data: x.fonte_data ?? null,
+          calcolata_il: x.calcolata_il ?? null,
+          origine: 'acquisto',
+          versione: 1,
+        }))(righe, { ...r, id: r.lotto_id }, famiglia);
+      }
+      aggiungi('acquisto_riga', (x) => ({
+        acquisto_id: d.id,
+        voce_id: x.voce_id ?? null,
+        ingrediente_id: x.ingrediente_id ?? null,
+        nome: x.nome ?? null,
+        quantita: x.quantita ?? null,
+        unita: x.unita ?? null,
+        prezzo: x.prezzo ?? null,
+        lotto_id: conIngrediente ? x.lotto_id : null,
+        versione: 1,
+      }))(righe, r, famiglia);
+      if (r.voce_id) {
+        righe.voce_spesa = (righe.voce_spesa ?? []).map((v) => (v.id === r.voce_id ? { ...v, stato: 'acquistata', non_piu_necessaria: false, in_attesa: true } : v));
+      }
+    }
+  },
+  annulla_acquisto: (righe, d) => {
+    const acquisto = (righe.acquisto ?? []).find((a) => a.id === d.id);
+    if (!acquisto || acquisto.stato === 'annullato') return;
+    righe.acquisto = (righe.acquisto ?? []).map((a) => (a === acquisto ? { ...a, stato: 'annullato', in_attesa: true } : a));
+    for (const r of (righe.acquisto_riga ?? []).filter((x) => x.acquisto_id === d.id && x.lotto_id)) {
+      cambiaQuantita(righe, String(r.lotto_id), (q) => q - Math.min(q, Number(r.quantita)));
+    }
+  },
+  correggi_riga_acquisto: (righe, d) => {
+    const riga = (righe.acquisto_riga ?? []).find((r) => r.id === d.id);
+    if (!riga) return;
+    const nuova = d.quantita_nuova == null ? null : Number(d.quantita_nuova);
+    if (nuova !== null && riga.lotto_id) cambiaQuantita(righe, String(riga.lotto_id), (q) => q + nuova - Number(riga.quantita));
+    righe.acquisto_riga = (righe.acquisto_riga ?? []).map((r) =>
+      r === riga ? { ...r, ...(nuova !== null ? { quantita: nuova } : {}), ...('prezzo' in d ? { prezzo: d.prezzo } : {}), in_attesa: true } : r,
+    );
+  },
 };
 
 /** Una riga copiata senza identità né stato di sincronizzazione. */

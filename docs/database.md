@@ -117,6 +117,39 @@ Il menu è un'**intenzione**: nessun comando del menu scrive lotti o movimenti (
 - Riferimenti controllati dal database: ricetta di sistema o della famiglia, persona e ingrediente della famiglia,
   categoria esistente.
 
+## Comandi della Fase 4: spesa e acquisti
+
+Migrazione `20261030000000_spesa.sql`. Tabelle `voce_spesa`, `acquisto`, `acquisto_riga`.
+La lista è un'intenzione, l'acquisto confermato è un fatto, la casa è lo stato che ne deriva.
+
+| Tipo | Dati |
+|---|---|
+| `ricalcola_spesa` | `dal`, `al` (al massimo 31 giorni) → `{nuove, aggiornate, non_piu_necessarie}` |
+| `aggiungi_voce` | `id`, `ingrediente_id` **oppure** `testo`, `quantita?`, `unita?`, `nota?` (voce manuale) |
+| `modifica_voce` | `id`, `versione_attesa`, `campi` (quantita_scelta, quantita_richiesta solo per le manuali, unita, testo, nota) |
+| `imposta_stato_voce` | `id`, `stato` (da_acquistare, nel_carrello, rimossa) |
+| `conferma_acquisto` | `id`, `fonte` (carrello/manuale), `data`, `negozio?`, `righe: [{id, voce_id?, ingrediente_id?, nome?, quantita?, unita?, prezzo?, lotto_id, luogo, date…}]` |
+| `annulla_acquisto` | `id` → `{gia_usati}` |
+| `correggi_riga_acquisto` | `id`, `quantita_vista` + `quantita_nuova` e/o `prezzo` |
+
+- **Fabbisogno** (`interno.fabbisogno_menu`, calcolato dal database e mai salvato): ingredienti delle portate del
+  periodo × porzioni (automatiche come nell'app) ÷ porzioni della ricetta, comprese le alternative di chi mangia altro;
+  esclusi «q.b.», facoltativi e ingredienti di base (sale, olio, pepe, aceto, acqua).
+- **Da comprare** = fabbisogno − casa − ciò che è nel carrello o già in lista a mano. La casa copre prima gli ingredienti
+  più specifici: gli spaghetti valgono come «pasta», non il contrario (T-SPE-9).
+- Le voci derivate hanno chiave unica (ingrediente, unità) finché sono da comprare: dieci ricalcoli non creano doppioni
+  (T-SPE-6). Le manuali non le tocca nessun ricalcolo (T-SPE-5).
+- Se il menu cambia, una derivata non più utile sparisce solo se nessuno l'ha toccata; altrimenti, e sempre se è nel
+  carrello, resta segnata `non_piu_necessaria` e decide la persona (T-SPE-3).
+- **Stati**: da comprare → nel carrello (preso in negozio, da confermare) → acquistata; oppure rimossa. Il carrello
+  è lo stato «acquistato da confermare» di Fase 0: nessuno dei due tocca la casa.
+- **Solo `conferma_acquisto` crea lotti con origine `acquisto`** (T-ACQ-1). Lo stesso acquisto confermato due volte,
+  anche con un comando diverso, carica una volta (T-ACQ-3). Una riga senza ingrediente (detersivo) non va in casa.
+- **Annullare** scrive movimenti `annullo` opposti; se una parte è già stata usata si toglie solo quel che resta e lo
+  si dice (`gia_usati`, T-ACQ-6/8). **Correggere** scrive un solo movimento di differenza (T-ACQ-7).
+- **Prezzi**: nessuna tabella, sono le righe d'acquisto con un prezzo. L'app stima il costo di una voce con la mediana
+  dei prezzi per unità degli ultimi 6 mesi e dice su quante voci manca il prezzo (`src/dominio/spesa.ts`, T-PRE).
+
 ## Foto delle ricette
 
 Deposito privato `foto` di Supabase Storage (migrazione `20261028000300_foto.sql`): percorso `<famiglia>/<uuid>.jpg`,

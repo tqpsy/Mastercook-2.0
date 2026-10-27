@@ -45,7 +45,10 @@ export type Tabella =
   | 'categoria_pasto'
   | 'portata'
   | 'eccezione_membro'
-  | 'gusto';
+  | 'gusto'
+  | 'voce_spesa'
+  | 'acquisto'
+  | 'acquisto_riga';
 
 export interface Riga {
   id: string;

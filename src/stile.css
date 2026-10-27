@@ -577,3 +577,37 @@ button.etichetta {
   min-height: 36px;
   cursor: pointer;
 }
+
+/* Spesa */
+.link {
+  all: unset;
+  cursor: pointer;
+  color: var(--primario);
+  text-decoration: underline;
+  min-height: 44px;
+}
+.link:disabled {
+  color: var(--testo-tenue);
+  text-decoration: none;
+  cursor: default;
+}
+.link:focus-visible {
+  outline: 2px solid var(--primario);
+  outline-offset: 2px;
+}
+.spunta {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  accent-color: var(--primario);
+  margin: 8px 4px 8px 0;
+}
+.dato {
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--bordo);
+  border-radius: 10px;
+  background: var(--superficie);
+  color: var(--testo);
+  font: inherit;
+}
