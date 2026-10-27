@@ -5,7 +5,7 @@
 import type { Riga, RigaScaricata, Tabella, Trasporto } from './tipi';
 
 export const FORMATO = 'mastercook-2';
-export const VERSIONE_FILE = 9;
+export const VERSIONE_FILE = 10;
 
 /** Le tabelle dei file della versione 2 (Fase 2): senza il menu. */
 const TABELLE_V2 = ['famiglia', 'membro', 'vincolo_alimentare', 'ingrediente', 'ricetta', 'ricetta_ingrediente', 'ricetta_passo', 'lotto', 'movimento'] as const;
@@ -106,7 +106,7 @@ export function controllaFile(testo: string): ControlloFile {
   }
   const file = f as Partial<FileEsportazione>;
   if (file?.formato !== FORMATO) return { valido: false, motivo: 'Il file non è un’esportazione di Mastercook.' };
-  if (file.versione_schema !== 1 && file.versione_schema !== 2 && file.versione_schema !== 3 && file.versione_schema !== 4 && file.versione_schema !== 5 && file.versione_schema !== 6 && file.versione_schema !== 7 && file.versione_schema !== 8 && file.versione_schema !== VERSIONE_FILE) {
+  if (file.versione_schema !== 1 && file.versione_schema !== 2 && file.versione_schema !== 3 && file.versione_schema !== 4 && file.versione_schema !== 5 && file.versione_schema !== 6 && file.versione_schema !== 7 && file.versione_schema !== 8 && file.versione_schema !== 9 && file.versione_schema !== VERSIONE_FILE) {
     return { valido: false, motivo: 'Il file viene da una versione dell’app che questa non sa leggere.' };
   }
   const t = file.tabelle;

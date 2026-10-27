@@ -138,17 +138,44 @@ const EFFETTI: Record<string, Effetto> = {
     note: d.note ?? null,
     versione: 1,
   })),
+  aggiungi_avanzo: (righe, d, famiglia) => {
+    const da = (righe.portata ?? []).find((r) => r.id === d.avanzo_di && !r.eliminato_il);
+    if (!da) return;
+    aggiungi('portata', () => ({
+      data: d.data,
+      categoria: d.categoria,
+      ricetta_id: da.ricetta_id,
+      testo: null,
+      porzioni: d.porzioni ?? null,
+      origine: 'manuale',
+      avanzo_di: da.id,
+      bloccata: false,
+      ordine: d.ordine ?? 0,
+      note: null,
+      versione: 1,
+    }))(righe, d, famiglia);
+  },
   modifica_portata: modifica('portata'),
   rimuovi_portata: (righe, d, famiglia) => {
     elimina('portata')(righe, d, famiglia);
-    righe.eccezione_membro = (righe.eccezione_membro ?? []).map((r) => (r.portata_id === d.id && !r.eliminato_il ? { ...r, eliminato_il: 'in_attesa', in_attesa: true } : r));
+    // Con il piatto se ne vanno anche i suoi avanzi dei giorni dopo non ancora confermati.
+    const confermate = new Set((righe.conferma_pasto ?? []).filter((c) => c.attiva && !c.eliminato_il).map((c) => c.portata_id));
+    const tolte = new Set([d.id]);
+    righe.portata = (righe.portata ?? []).map((p) => {
+      if (p.avanzo_di !== d.id || p.eliminato_il || confermate.has(p.id)) return p;
+      tolte.add(p.id);
+      return { ...p, eliminato_il: 'in_attesa', in_attesa: true };
+    });
+    righe.eccezione_membro = (righe.eccezione_membro ?? []).map((r) => (tolte.has(r.portata_id) && !r.eliminato_il ? { ...r, eliminato_il: 'in_attesa', in_attesa: true } : r));
   },
   ripeti_portate: (righe, d, famiglia) => {
     const portate = righe.portata ?? [];
     for (const x of (d.portate ?? []) as Record<string, unknown>[]) {
       const da = portate.find((r) => r.id === x.da && !r.eliminato_il);
       if (!da) continue;
-      aggiungi('portata', () => ({ ...senzaChiavi(da), data: x.data, categoria: x.categoria ?? da.categoria, origine: 'ripetuta', bloccata: false, versione: 1 }))(righe, x, famiglia);
+      const origine = (d.portate as Record<string, unknown>[]).find((y) => da.avanzo_di && y.da === da.avanzo_di);
+      const avanzo_di = origine && String(origine.data) < String(x.data) ? origine.id : null;
+      aggiungi('portata', () => ({ ...senzaChiavi(da), data: x.data, categoria: x.categoria ?? da.categoria, origine: 'ripetuta', avanzo_di, bloccata: false, versione: 1 }))(righe, x, famiglia);
     }
     const eccezioni = righe.eccezione_membro ?? [];
     for (const x of (d.eccezioni ?? []) as Record<string, unknown>[]) {

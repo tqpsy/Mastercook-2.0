@@ -179,7 +179,7 @@ describe('esportazione e ripristino con ricette e casa (versione 2)', () => {
     await u.applica(comando('sposta_lotto', famiglia, { lotto_id: carne, luogo: 'freezer', quantita: 200, nuovo_id: randomUUID() }));
 
     const file = await esporta(u, famiglia);
-    expect(file.versione_schema).toBe(9);
+    expect(file.versione_schema).toBe(10);
     expect(file.conteggi).toMatchObject({ ingrediente: 1, ricetta: 1, ricetta_ingrediente: 3, ricetta_passo: 1, lotto: 3, movimento: 6 });
 
     const nuova = randomUUID();
@@ -289,7 +289,7 @@ describe('esportazione e ripristino di spesa e acquisti (versione 4)', () => {
     await u.applica(comando('correggi_riga_acquisto', famiglia, { id: riga, quantita_vista: 1000, quantita_nuova: 500 }));
 
     const file = await esporta(u, famiglia);
-    expect(file.versione_schema).toBe(9);
+    expect(file.versione_schema).toBe(10);
     expect(file.conteggi).toMatchObject({ voce_spesa: 2, acquisto: 1, acquisto_riga: 2 });
     const nuova = randomUUID();
     expect(await u.applica(comando('ripristina_famiglia', nuova, { file: JSON.parse(JSON.stringify(file)) }))).toMatchObject({
@@ -342,7 +342,7 @@ describe('esportazione e ripristino di scontrini e prodotti (versione 5)', () =>
       }),
     );
     const file = await esporta(u, famiglia);
-    expect(file.versione_schema).toBe(9);
+    expect(file.versione_schema).toBe(10);
     expect(file.conteggi).toMatchObject({ prodotto: 1, scontrino: 1, scontrino_riga: 3, acquisto: 1, acquisto_riga: 2 });
     const nuova = randomUUID();
     expect((await u.applica(comando('ripristina_famiglia', nuova, { file: JSON.parse(JSON.stringify(file)) }))).esito).toBe('applicato');
@@ -396,7 +396,7 @@ describe('esportazione e ripristino dei consumi (versione 6)', () => {
       }),
     );
     const file = await esporta(u, famiglia);
-    expect(file.versione_schema).toBe(9);
+    expect(file.versione_schema).toBe(10);
     expect(file.conteggi).toMatchObject({ conferma_pasto: 2 });
     const nuova = randomUUID();
     expect((await u.applica(comando('ripristina_famiglia', nuova, { file: JSON.parse(JSON.stringify(file)) }))).esito).toBe('applicato');
@@ -488,5 +488,29 @@ describe('esportazione e ripristino dei pasti fissi (versione 9)', () => {
     delete v8.tabelle.pasto_fisso;
     delete v8.conteggi.pasto_fisso;
     expect((await u.applica(comando('ripristina_famiglia', randomUUID(), { file: v8 }))).esito).toBe('applicato');
+  });
+});
+
+describe('esportazione e ripristino dei piatti che durano più giorni (versione 10)', () => {
+  it('l’avanzo torna legato al suo piatto; un file della versione 9 si ripristina ancora', async () => {
+    const { u, famiglia } = await famigliaCompleta();
+    const torta = randomUUID();
+    await u.applica(comando('aggiungi_portata', famiglia, { id: torta, data: '2026-11-08', categoria: 'merenda', ricetta_id: 'sys:carbonara' }));
+    await u.applica(comando('aggiungi_avanzo', famiglia, { id: randomUUID(), avanzo_di: torta, data: '2026-11-09', categoria: 'colazione' }));
+    const file = await esporta(u, famiglia);
+    expect(file.versione_schema).toBe(10);
+    const nuova = randomUUID();
+    expect((await u.applica(comando('ripristina_famiglia', nuova, { file: JSON.parse(JSON.stringify(file)) }))).esito).toBe('applicato');
+    expect(
+      await banco.sql(
+        `select a.data::text as giorno, o.data::text as cucinato from portata a join portata o on o.id = a.avanzo_di where a.famiglia_id = $1 and a.eliminato_il is null`,
+        [nuova],
+      ),
+    ).toEqual([{ giorno: '2026-11-09', cucinato: '2026-11-08' }]);
+
+    const v9 = JSON.parse(JSON.stringify(file));
+    v9.versione_schema = 9;
+    for (const p of v9.tabelle.portata) delete p.avanzo_di;
+    expect((await u.applica(comando('ripristina_famiglia', randomUUID(), { file: v9 }))).esito).toBe('applicato');
   });
 });

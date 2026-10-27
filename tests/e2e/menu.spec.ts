@@ -134,3 +134,38 @@ test('colazione fissa: ogni giorno da oggi, cambiata da un giorno in poi, poi fe
     .toEqual(['Latte e caffè', 'Latte e caffè', 'Cappuccino', 'Cappuccino']);
   expect((await sql<{ id: string }>(`select id from portata where id = $1 and testo = 'Cappuccino' and eliminato_il is null`, [id])).length).toBe(1);
 });
+
+test('torta che dura più giorni: avanzo domani, la conferma la mette in casa', async ({ browser }, info) => {
+  const luca = await nuovoUtente('Luca');
+  const { page } = await apri(browser, luca, info.project.use);
+  await creaFamiglia(page, 'Casa Torta');
+  await page.getByRole('button', { name: 'Menu', exact: true }).click();
+  await page.getByRole('group', { name: 'Vista' }).getByRole('button', { name: 'Giorni' }).click();
+  await page.getByRole('button', { name: `Aggiungi a cena di ${dataLunga(oggi())}` }).click();
+  await page.getByRole('dialog').getByLabel('Cosa si mangia').fill('torta di mele');
+  await page.getByRole('dialog').getByRole('button', { name: /Torta di mele/ }).first().click();
+  await page.getByRole('button', { name: 'Apri Torta di mele' }).first().click();
+  const scheda = page.getByRole('dialog', { name: 'Torta di mele' });
+  const domani = piuGiorni(oggi(), 1);
+  await expect(scheda.getByLabel('Giorno dell’avanzo')).toHaveValue(domani);
+  await scheda.getByRole('button', { name: '🍰 Avanza anche qui' }).click();
+  await expect(scheda.getByRole('list', { name: 'Avanzi nei giorni dopo' })).toContainText(dataLunga(domani));
+  await expect(scheda).toContainText('Si cucinano 2 porzioni');
+  await page.getByRole('button', { name: 'Chiudi' }).click();
+  if (lunedi(domani) === lunedi(oggi())) {
+    await expect(page.getByRole('region', { name: dataLunga(domani) }).getByRole('button', { name: 'Apri Torta di mele' })).toContainText('avanzo');
+  }
+
+  await page.getByRole('button', { name: 'Oggi', exact: true }).click();
+  await page.getByRole('button', { name: 'Mangiato come previsto: Torta di mele' }).click();
+  await expect(page.getByRole('button', { name: /Stato del salvataggio: Tutto salvato/ })).toBeVisible();
+  await expect
+    .poll(async () =>
+      sql<{ nome: string; q: number }>(
+        `select nome, quantita::float as q from lotto where ingrediente_id = 'ing:avanzo' and eliminato_il is null
+            and famiglia_id in (select famiglia_id from utente_famiglia where utente_id = $1)`,
+        [luca.id],
+      ),
+    )
+    .toEqual([{ nome: 'Torta di mele', q: 1 }]);
+});

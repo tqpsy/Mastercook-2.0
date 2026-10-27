@@ -41,6 +41,15 @@ describe('previsto (come il server)', () => {
     // Luca: 1/4 di carbonara (80 g); Sara: mezza porzione di aglio e olio (320 × 0,5 / 4 = 40 g).
     expect(r.find((c) => c.ingrediente_id === 'ing:spaghetti')).toEqual({ ingrediente_id: 'ing:spaghetti', unita: 'g', quantita: 120 });
   });
+
+  it('piatto che dura più giorni: si cucina tutto il primo giorno, il giorno dopo si mangia l’avanzo', () => {
+    const primo = portata('p', '2026-11-03', { porzioni: 4 });
+    const dopo = portata('q', '2026-11-04', { avanzo_di: 'p' });
+    const tutte = [primo, dopo];
+    // 4 + 1,5 porzioni automatiche del giorno dopo = 5,5 × 80 g.
+    expect(previstoPortata(indice, primo, persone, [], tutte).find((c) => c.ingrediente_id === 'ing:spaghetti')?.quantita).toBe(440);
+    expect(previstoPortata(indice, dopo, persone, [], tutte)).toEqual([{ ingrediente_id: 'ing:avanzo', unita: 'pz', quantita: 1.5 }]);
+  });
 });
 
 describe('da confermare e avanzi', () => {

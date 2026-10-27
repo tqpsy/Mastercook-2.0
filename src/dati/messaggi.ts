@@ -79,6 +79,7 @@ const AZIONI: Record<string, string> = {
   crea_categoria: 'Aggiungere un pasto',
   modifica_categoria: 'Modificare un pasto',
   aggiungi_portata: 'Aggiungere un piatto al menu',
+  aggiungi_avanzo: 'Mettere l’avanzo di un piatto in un altro giorno',
   modifica_portata: 'Cambiare un piatto del menu',
   rimuovi_portata: 'Togliere un piatto dal menu',
   ripeti_portate: 'Ripetere il menu',
