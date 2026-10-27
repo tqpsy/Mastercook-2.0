@@ -150,6 +150,29 @@ La lista è un'intenzione, l'acquisto confermato è un fatto, la casa è lo stat
 - **Prezzi**: nessuna tabella, sono le righe d'acquisto con un prezzo. L'app stima il costo di una voce con la mediana
   dei prezzi per unità degli ultimi 6 mesi e dice su quante voci manca il prezzo (`src/dominio/spesa.ts`, T-PRE).
 
+## Comandi della Fase 4: scontrini e codici a barre
+
+Migrazione `20261031000000_scontrini.sql`. Tabelle `scontrino`, `scontrino_riga`, `prodotto`; `acquisto.scontrino_id`.
+
+| Tipo | Dati |
+|---|---|
+| `importa_scontrino` | `id`, `acquisto_id`, `data`, `negozio?`, `ora?`, `totale?`, `qr?`, `testo?`, `righe: [{id, descrizione, prezzo?, abbina?: acquisto_riga_id, nuova?: {id, ingrediente_id?, quantita?, unita?, lotto_id?, luogo?, date…}}]` → `{abbinate, nuove}` oppure `{gia_importato}` |
+| `salva_prodotto` | `id`, `codice` (8–14 cifre), `ingrediente_id`, `nome?`, `quantita?`, `unita?` → `{}` oppure `{aggiornato: id}` |
+
+- Lo scontrino si legge sul telefono (foto con Tesseract, o testo incollato: `src/dominio/scontrini.ts`) e una
+  persona rivede ogni riga prima di importare. Il server non legge immagini.
+- **Impronta** (`interno.impronta_scontrino`): il contenuto del QR se c'è, altrimenti negozio (solo lettere e cifre),
+  data, ora e totale. È unica per famiglia: lo stesso scontrino importato di nuovo, anche da un altro telefono,
+  risponde `gia_importato` e non cambia niente (T-ACQ-5).
+- Una riga **abbinata** a una riga d'acquisto già confermata dal carrello le dà solo il prezzo: niente secondo carico
+  (T-ACQ-4). Ogni riga d'acquisto ha al più una riga di scontrino (`riga_gia_abbinata`).
+- Le righe **nuove** formano un acquisto con fonte `scontrino`; quelle con un ingrediente creano un lotto con origine
+  `scontrino` e un movimento di carico (T-ACQ-2). Annullare quell'acquisto funziona come per gli altri.
+- Le righe né abbinate né nuove (sacchetti, righe sbagliate) restano solo sullo scontrino.
+- **Prodotti**: un codice a barre per famiglia, associato a un ingrediente con nome e formato della confezione;
+  salvarlo di nuovo lo aggiorna. Per un codice nuovo l'app chiede a Open Food Facts nome e formato (parte solo il
+  numero del codice) e la persona sceglie l'ingrediente.
+
 ## Foto delle ricette
 
 Deposito privato `foto` di Supabase Storage (migrazione `20261028000300_foto.sql`): percorso `<famiglia>/<uuid>.jpg`,

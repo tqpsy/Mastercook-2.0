@@ -611,3 +611,23 @@ button.etichetta {
   color: var(--testo);
   font: inherit;
 }
+
+/* Scanner di codici a barre e QR. */
+.scanner video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 12px;
+  background: #000;
+}
+
+.testo-letto {
+  white-space: pre-wrap;
+  font-size: 0.8rem;
+  max-height: 240px;
+  overflow: auto;
+  background: var(--primario-tenue);
+  padding: 8px;
+  border-radius: 8px;
+}

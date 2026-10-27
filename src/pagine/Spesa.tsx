@@ -19,7 +19,9 @@ import {
 import { formatta, formattaEuro, formattaGiorno, leggiNumero, UNITA, type Unita, UNITA_BASE, unitaPer } from '../dominio/unita';
 import { CercaIngrediente } from '../ui/CercaIngrediente';
 import { Foglio } from '../ui/Foglio';
+import { ScansionaProdotto } from '../ui/CodiceProdotto';
 import { quantitaDa } from './Casa';
+import { Scontrino } from './Scontrino';
 
 /** Quanti giorni di menu guarda la lista. */
 export const GIORNI_SPESA = 7;
@@ -60,6 +62,8 @@ export function Spesa() {
   const [aperta, setAperta] = useState<string | null>(null);
   const [conferma, setConferma] = useState(false);
   const [acquistoAperto, setAcquistoAperto] = useState<string | null>(null);
+  const [scontrino, setScontrino] = useState(false);
+  const [scansiona, setScansiona] = useState(false);
   const dal = oggi();
   const al = piuGiorni(dal, GIORNI_SPESA - 1);
   const ricalcolata = useRef(false);
@@ -84,9 +88,14 @@ export function Spesa() {
     <>
       <div className="riga spazio" style={{ marginBottom: 4, flexWrap: 'wrap' }}>
         <h2 style={{ margin: 0 }}>Lista della spesa</h2>
-        <button className="bottone primario piccolo" onClick={() => setAggiungi(true)}>
-          + Aggiungi
-        </button>
+        <div className="riga">
+          <button className="bottone piccolo" onClick={() => setScansiona(true)} aria-label="Scansiona un prodotto nel carrello">
+            <span aria-hidden>📷</span> Scansiona
+          </button>
+          <button className="bottone primario piccolo" onClick={() => setAggiungi(true)}>
+            + Aggiungi
+          </button>
+        </div>
       </div>
       <p className="tenue" style={{ marginTop: 4 }}>
         Per il menu da {formattaGiorno(dal)} a {formattaGiorno(al)}, tolto ciò che c’è già in casa.{' '}
@@ -144,13 +153,47 @@ export function Spesa() {
         </button>
       )}
 
+      <button className="bottone pieno" style={{ marginTop: 8 }} onClick={() => setScontrino(true)}>
+        <span aria-hidden>🧾</span> Aggiungi uno scontrino
+      </button>
+
       <Acquisti indice={indice} acquisti={acquisti} righe={righe} apri={setAcquistoAperto} />
 
       {aggiungi && <NuovaVoce indice={indice} chiudi={() => setAggiungi(false)} />}
       {vocePerta && <SchedaVoce indice={indice} voce={vocePerta} prezzi={prezzi} chiudi={() => setAperta(null)} />}
       {conferma && <ConfermaSpesa indice={indice} carrello={carrello} chiudi={() => setConferma(false)} />}
+      {scontrino && <Scontrino indice={indice} chiudi={() => setScontrino(false)} />}
+      {scansiona && <NelCarrello indice={indice} voci={voci} chiudi={() => setScansiona(false)} />}
       {acquisto && <SchedaAcquisto indice={indice} acquisto={acquisto} righe={righe.filter((r) => r.acquisto_id === acquisto.id)} chiudi={() => setAcquistoAperto(null)} />}
     </>
+  );
+}
+
+/**
+ * Un prodotto scansionato al supermercato va nel carrello: la voce della lista se c'è, altrimenti una
+ * voce nuova. Un codice nuovo si ricorda per la famiglia, con la confezione se la si conosce già.
+ */
+function NelCarrello({ indice, voci, chiudi }: { indice: Indice; voci: VoceSpesa[]; chiudi: () => void }) {
+  const { esegui } = useFamiglia();
+  return (
+    <ScansionaProdotto
+      indice={indice}
+      chiudi={chiudi}
+      trovato={async ({ codice, ingrediente, prodotto, esterno }) => {
+        chiudi();
+        if (!prodotto) {
+          const f = esterno?.formato?.unita === UNITA_BASE[ingrediente.dimensione] ? esterno.formato : undefined;
+          prodotto = { id: crypto.randomUUID(), codice, ingrediente_id: ingrediente.id, nome: esterno?.nome ?? null, quantita: f?.quantita ?? null, unita: f?.unita ?? null };
+          await esegui('salva_prodotto', prodotto as unknown as Record<string, unknown>);
+        }
+        const voce = voci.find((v) => v.stato === 'da_acquistare' && v.ingrediente_id && indice.antenati(ingrediente.id).includes(v.ingrediente_id));
+        if (voce) return void (await esegui('imposta_stato_voce', { id: voce.id, stato: 'nel_carrello' }));
+        const id = crypto.randomUUID();
+        const formato = prodotto?.quantita && prodotto.unita ? { quantita: prodotto.quantita, unita: prodotto.unita } : {};
+        await esegui('aggiungi_voce', { id, ingrediente_id: ingrediente.id, ...formato });
+        await esegui('imposta_stato_voce', { id, stato: 'nel_carrello' });
+      }}
+    />
   );
 }
 
@@ -527,7 +570,7 @@ function SchedaAcquisto({ indice, acquisto: a, righe, chiudi }: { indice: Indice
   return (
     <Foglio titolo={`Spesa di ${formattaGiorno(a.data)}`} chiudi={chiudi}>
       <p className="tenue" style={{ marginTop: 0 }}>
-        {[a.negozio, a.fonte === 'carrello' ? 'dal carrello' : 'registrata a mano', annullato && 'annullata: le quantità sono state tolte dalla casa'].filter(Boolean).join(' · ')}
+        {[a.negozio, a.fonte === 'carrello' ? 'dal carrello' : a.fonte === 'scontrino' ? 'dallo scontrino' : 'registrata a mano', annullato && 'annullata: le quantità sono state tolte dalla casa'].filter(Boolean).join(' · ')}
       </p>
       <ul className="elenco">
         {righe.map((r) => (

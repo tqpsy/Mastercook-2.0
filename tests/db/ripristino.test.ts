@@ -179,7 +179,7 @@ describe('esportazione e ripristino con ricette e casa (versione 2)', () => {
     await u.applica(comando('sposta_lotto', famiglia, { lotto_id: carne, luogo: 'freezer', quantita: 200, nuovo_id: randomUUID() }));
 
     const file = await esporta(u, famiglia);
-    expect(file.versione_schema).toBe(4);
+    expect(file.versione_schema).toBe(5);
     expect(file.conteggi).toMatchObject({ ingrediente: 1, ricetta: 1, ricetta_ingrediente: 3, ricetta_passo: 1, lotto: 3, movimento: 6 });
 
     const nuova = randomUUID();
@@ -289,7 +289,7 @@ describe('esportazione e ripristino di spesa e acquisti (versione 4)', () => {
     await u.applica(comando('correggi_riga_acquisto', famiglia, { id: riga, quantita_vista: 1000, quantita_nuova: 500 }));
 
     const file = await esporta(u, famiglia);
-    expect(file.versione_schema).toBe(4);
+    expect(file.versione_schema).toBe(5);
     expect(file.conteggi).toMatchObject({ voce_spesa: 2, acquisto: 1, acquisto_riga: 2 });
     const nuova = randomUUID();
     expect(await u.applica(comando('ripristina_famiglia', nuova, { file: JSON.parse(JSON.stringify(file)) }))).toMatchObject({
@@ -317,6 +317,56 @@ describe('esportazione e ripristino di spesa e acquisti (versione 4)', () => {
     expect((await u.applica(comando('ripristina_famiglia', randomUUID(), { file: v3 }))).esito).toBe('applicato');
     const rotto = JSON.parse(JSON.stringify(file));
     delete rotto.tabelle.acquisto;
+    expect((await u.applica(comando('ripristina_famiglia', randomUUID(), { file: rotto }))).dettaglio.motivo).toBe('file_incompleto');
+  });
+});
+
+describe('esportazione e ripristino di scontrini e prodotti (versione 5)', () => {
+  it('scontrino, righe e prodotti tornano uguali e restano legati agli acquisti; un file della versione 4 si ripristina ancora', async () => {
+    const { u, famiglia } = await famigliaCompleta();
+    await u.applica(comando('salva_prodotto', famiglia, { id: randomUUID(), codice: '8001234567890', ingrediente_id: 'ing:latte', nome: 'Latte intero', quantita: 1000, unita: 'ml' }));
+    await u.applica(
+      comando('importa_scontrino', famiglia, {
+        id: randomUUID(),
+        acquisto_id: randomUUID(),
+        negozio: 'Supermercato',
+        data: '2026-11-02',
+        ora: '18:30',
+        totale: 3.79,
+        testo: 'SUPERMERCATO\nLATTE INTERO 1L 1,29',
+        righe: [
+          { id: randomUUID(), descrizione: 'LATTE INTERO 1L', prezzo: 1.29, nuova: { id: randomUUID(), lotto_id: randomUUID(), ingrediente_id: 'ing:latte', quantita: 1000, unita: 'ml', luogo: 'frigo' } },
+          { id: randomUUID(), descrizione: 'SACCHETTO', prezzo: 0.1 },
+          { id: randomUUID(), descrizione: 'PILE AA', prezzo: 2.4, nuova: { id: randomUUID() } },
+        ],
+      }),
+    );
+    const file = await esporta(u, famiglia);
+    expect(file.versione_schema).toBe(5);
+    expect(file.conteggi).toMatchObject({ prodotto: 1, scontrino: 1, scontrino_riga: 3, acquisto: 1, acquisto_riga: 2 });
+    const nuova = randomUUID();
+    expect((await u.applica(comando('ripristina_famiglia', nuova, { file: JSON.parse(JSON.stringify(file)) }))).esito).toBe('applicato');
+    const scontrini = async (f: string) =>
+      banco.sql(
+        `select s.negozio, s.data::text, s.ora, s.testo, s.totale::text, s.impronta, a.fonte,
+                (select string_agg(sr.descrizione || ' ' || coalesce(sr.prezzo::text, '-') || ' ' || coalesce(ar.ingrediente_id, ar.nome, 'solo scontrino'), ', ' order by sr.descrizione)
+                   from scontrino_riga sr left join acquisto_riga ar on ar.id = sr.acquisto_riga_id where sr.scontrino_id = s.id) as righe,
+                (select string_agg(p.codice || ' ' || p.ingrediente_id, ', ') from prodotto p where p.famiglia_id = $1) as prodotti
+           from scontrino s join acquisto a on a.id = s.acquisto_id and a.scontrino_id = s.id where s.famiglia_id = $1`,
+        [f],
+      );
+    expect(await scontrini(nuova)).toEqual(await scontrini(famiglia));
+    expect((await scontrini(nuova))[0].righe).toBe('LATTE INTERO 1L 1.29 ing:latte, PILE AA 2.40 PILE AA, SACCHETTO 0.10 solo scontrino');
+
+    const v4 = JSON.parse(JSON.stringify(file));
+    v4.versione_schema = 4;
+    for (const t of ['prodotto', 'scontrino', 'scontrino_riga']) {
+      delete v4.tabelle[t];
+      delete v4.conteggi[t];
+    }
+    expect((await u.applica(comando('ripristina_famiglia', randomUUID(), { file: v4 }))).esito).toBe('applicato');
+    const rotto = JSON.parse(JSON.stringify(file));
+    delete rotto.tabelle.scontrino;
     expect((await u.applica(comando('ripristina_famiglia', randomUUID(), { file: rotto }))).dettaglio.motivo).toBe('file_incompleto');
   });
 });

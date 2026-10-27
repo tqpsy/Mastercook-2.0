@@ -234,6 +234,43 @@ const EFFETTI: Record<string, Effetto> = {
       }
     }
   },
+  importa_scontrino: (righe, d, famiglia) => {
+    if ((righe.scontrino ?? []).some((x) => x.id === d.id)) return;
+    const elenco = (d.righe ?? []) as Record<string, unknown>[];
+    const nuove: Record<string, unknown>[] = elenco.filter((r) => r.nuova).map((r) => ({ ...(r.nuova as Record<string, unknown>), prezzo: r.prezzo ?? null, descrizione: r.descrizione }));
+    const conAcquisto = nuove.length > 0;
+    aggiungi('scontrino', (x) => ({
+      negozio: x.negozio ?? null,
+      data: x.data,
+      ora: x.ora ?? null,
+      totale: x.totale ?? null,
+      testo: x.testo ?? null,
+      acquisto_id: conAcquisto ? x.acquisto_id : null,
+      versione: 1,
+    }))(righe, d, famiglia);
+    if (conAcquisto) {
+      EFFETTI.conferma_acquisto(
+        righe,
+        { id: d.acquisto_id, fonte: 'scontrino', data: d.data, negozio: d.negozio, righe: nuove.map((n) => ({ ...n, nome: n.nome ?? (n.ingrediente_id ? null : n.descrizione) })) },
+        famiglia,
+      );
+      righe.acquisto = (righe.acquisto ?? []).map((a) => (a.id === d.acquisto_id ? { ...a, scontrino_id: d.id } : a));
+      righe.lotto = (righe.lotto ?? []).map((l) => (l.in_attesa && nuove.some((n) => n.lotto_id === l.id) ? { ...l, origine: 'scontrino' } : l));
+    }
+    for (const r of elenco) {
+      if (r.abbina) {
+        righe.acquisto_riga = (righe.acquisto_riga ?? []).map((x) => (x.id === r.abbina ? { ...x, prezzo: r.prezzo ?? x.prezzo, in_attesa: true } : x));
+      }
+      const riga = r.abbina ?? (r.nuova as Record<string, unknown> | undefined)?.id ?? null;
+      aggiungi('scontrino_riga', (x) => ({ scontrino_id: d.id, descrizione: x.descrizione, prezzo: x.prezzo ?? null, acquisto_riga_id: riga, versione: 1 }))(righe, r, famiglia);
+    }
+  },
+  salva_prodotto: (righe, d, famiglia) => {
+    const esistente = (righe.prodotto ?? []).find((p) => p.codice === d.codice && !p.eliminato_il);
+    const campi = { codice: d.codice, ingrediente_id: d.ingrediente_id, nome: d.nome ?? null, quantita: d.quantita ?? null, unita: d.unita ?? null };
+    if (esistente) righe.prodotto = (righe.prodotto ?? []).map((p) => (p === esistente ? { ...p, ...campi, in_attesa: true } : p));
+    else aggiungi('prodotto', () => ({ ...campi, versione: 1 }))(righe, d, famiglia);
+  },
   annulla_acquisto: (righe, d) => {
     const acquisto = (righe.acquisto ?? []).find((a) => a.id === d.id);
     if (!acquisto || acquisto.stato === 'annullato') return;

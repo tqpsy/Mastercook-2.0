@@ -46,6 +46,8 @@ const MOTIVI: Record<string, string> = {
   stato_non_ammesso: 'Questa voce non può passare a quello stato.',
   fonte_non_ammessa: 'Questo tipo di acquisto non si può confermare da qui.',
   acquisto_annullato: 'L’acquisto è stato annullato: non si può più correggere.',
+  riga_non_trovata: 'Una riga della spesa a cui volevi dare il prezzo non esiste più.',
+  riga_gia_abbinata: 'Una riga della spesa ha già il suo scontrino.',
 };
 
 export function spiegaMotivo(motivo: string | undefined): string {
@@ -88,6 +90,8 @@ const AZIONI: Record<string, string> = {
   conferma_acquisto: 'Confermare la spesa',
   annulla_acquisto: 'Annullare un acquisto',
   correggi_riga_acquisto: 'Correggere un acquisto',
+  importa_scontrino: 'Aggiungere uno scontrino',
+  salva_prodotto: 'Ricordare un codice a barre',
 };
 
 export function descriviAzione(tipo: string): string {
