@@ -231,6 +231,21 @@ tolto. L'app chiede di prolungare quando apre Oggi (due settimane) e il menu (fi
 Cambiare il piatto «da questo giorno in poi» = `modifica_portata` del giorno, `ferma_pasto_fisso` con `tieni`, poi
 `fissa_pasto` con `da_portata`.
 
+## Piatti che durano più giorni
+
+Migrazione `20261106000000_avanzi_programmati.sql`. `portata.avanzo_di` = la portata da cui viene l'avanzo (la torta di
+domenica mangiata lunedì a colazione). Il primo giorno si cucina e si compra per tutti: `fabbisogno_menu` e
+`previsto_portata` sommano le porzioni dei giorni dopo (`interno.porzioni_portata`); la portata-avanzo prevede solo
+`ing:avanzo` in porzioni e, confermata, prende soltanto dagli avanzi di quel piatto. Confermare il primo giorno senza
+`avanzi` mette in casa da solo le porzioni dei giorni dopo (una volta per portata); `avanzi: []` = finito tutto.
+
+| Comando | Dati |
+|---|---|
+| `aggiungi_avanzo` | `id`, `avanzo_di`, `data` (dopo il piatto), `categoria`, `porzioni?`, `ordine?` |
+
+`rimuovi_portata` toglie anche gli avanzi non confermati del piatto; `ripeti_portate` mantiene il legame se copia
+piatto e avanzo insieme.
+
 ## Ricette segnate «va bene»
 
 Migrazione `20261104000000_verifiche.sql`. Tabella `ricetta_verificata`: la famiglia ha controllato una ricetta per un

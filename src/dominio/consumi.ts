@@ -34,6 +34,7 @@ export interface Consumo {
 }
 
 const chiave = (c: Pick<Consumo, 'ingrediente_id' | 'unita'>) => `${c.ingrediente_id}|${c.unita}`;
+const AVANZO = 'ing:avanzo';
 
 /** Gli ingredienti che un piatto consuma: senza «q.b.», facoltativi e ingredienti di base (sale, olio, pepe). */
 export function ingredientiPiatto(indice: Indice, ricetta: Ricetta, porzioni: number): Consumo[] {
@@ -48,11 +49,29 @@ export function ingredientiPiatto(indice: Indice, ricetta: Ricetta, porzioni: nu
   return [...somme.values()].map((c) => ({ ...c, quantita: Math.round(c.quantita * 10) / 10 }));
 }
 
-/** Il previsto di una portata: il piatto per le sue porzioni e le alternative di chi mangia altro. */
-export function previstoPortata(indice: Indice, portata: PortataMenu, persone: Persona[], eccezioni: Eccezione[]): Consumo[] {
+/** Le porzioni di una portata: quelle scritte, o automatiche da chi mangia. */
+export function porzioniPortata(portata: PortataMenu, persone: Persona[], eccezioni: Eccezione[]): number {
+  return portata.porzioni ?? porzioniAutomatiche(persone, eccezioni.filter((e) => e.portata_id === portata.id));
+}
+
+/** Gli avanzi programmati di una portata: le portate dei giorni dopo che mangiano quello che avanza. */
+export function avanziDi(portata: PortataMenu, portate: PortataMenu[]): PortataMenu[] {
+  return portate.filter((p) => p.avanzo_di === portata.id).sort((a, b) => a.data.localeCompare(b.data));
+}
+
+/**
+ * Il previsto di una portata: il piatto per le sue porzioni e le alternative di chi mangia altro.
+ * Un piatto che dura più giorni si cucina tutto il primo giorno; il giorno dopo si mangia l'avanzo, in porzioni.
+ */
+export function previstoPortata(indice: Indice, portata: PortataMenu, persone: Persona[], eccezioni: Eccezione[], portate: PortataMenu[] = []): Consumo[] {
   const sue = eccezioni.filter((e) => e.portata_id === portata.id);
+  if (portata.avanzo_di) {
+    const n = porzioniPortata(portata, persone, eccezioni);
+    return n > 0 ? [{ ingrediente_id: AVANZO, unita: 'pz', quantita: n }] : [];
+  }
   const piatti: [Ricetta | undefined, number][] = [];
-  if (portata.ricetta_id) piatti.push([indice.perId.get(portata.ricetta_id), portata.porzioni ?? porzioniAutomatiche(persone, sue)]);
+  const dopo = avanziDi(portata, portate).reduce((t, a) => t + porzioniPortata(a, persone, eccezioni), 0);
+  if (portata.ricetta_id) piatti.push([indice.perId.get(portata.ricetta_id), porzioniPortata(portata, persone, eccezioni) + dopo]);
   for (const e of sue) {
     const p = persone.find((x) => x.id === e.membro_id);
     if (e.tipo === 'alternativa' && e.ricetta_id && p) piatti.push([indice.perId.get(e.ricetta_id), e.porzioni ?? p.porzione]);
@@ -116,7 +135,7 @@ export function ricettePerUrgenti(
   limite = 3,
   verifiche?: Verifica[],
 ): RicettaPerUrgenti[] {
-  const daUsare = indice.estendi(urgenti.filter((id) => id !== 'ing:avanzo'));
+  const daUsare = indice.estendi(urgenti.filter((id) => id !== AVANZO));
   if (!daUsare.size) return [];
   const casa = new Set(inCasa);
   const trovate: RicettaPerUrgenti[] = [];

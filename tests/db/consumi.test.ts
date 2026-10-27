@@ -179,6 +179,72 @@ describe('conferma del pasto', () => {
   });
 });
 
+describe('piatti che durano più giorni', () => {
+  it('la spesa e il previsto contano tutto il primo giorno; la conferma mette in casa l’avanzo, che il giorno dopo si mangia', async () => {
+    const { u, famiglia } = await famigliaCon();
+    const portata = await piatto(u, famiglia);
+    const domani = randomUUID();
+    const prima = await u.applica(comando('aggiungi_avanzo', famiglia, { id: randomUUID(), avanzo_di: portata, data: '2026-11-03', categoria: 'cena' }));
+    expect(prima.dettaglio.motivo).toBe('dati_non_validi');
+    expect((await u.applica(comando('aggiungi_avanzo', famiglia, { id: domani, avanzo_di: portata, data: '2026-11-04', categoria: 'pranzo', porzioni: 2 }))).esito).toBe('applicato');
+
+    const spaghetti = (dal: string, al: string) =>
+      banco.sql<{ q: number }>(`select quantita::float as q from interno.fabbisogno_menu($1, $2, $3) where ingrediente_id = 'ing:spaghetti'`, [famiglia, dal, al]);
+    // 4 + 2 porzioni il giorno in cui si cucina; il giorno dopo non si compra niente.
+    expect(await spaghetti('2026-11-03', '2026-11-04')).toEqual([{ q: 480 }]);
+    expect(await spaghetti('2026-11-04', '2026-11-04')).toEqual([]);
+    expect(await banco.sql(`select ingrediente_id, unita, quantita::float as q from interno.previsto_portata($1)`, [domani])).toEqual([
+      { ingrediente_id: 'ing:avanzo', unita: 'pz', q: 2 },
+    ]);
+
+    // Un altro avanzo in frigo non si tocca: si prende solo quello di questo piatto.
+    const altro = await lotto(u, famiglia, 'ing:avanzo', 3, 'pz', '2026-11-01');
+    const c = conferma(famiglia, portata, 'come_previsto');
+    expect((await u.applica(c)).esito).toBe('applicato');
+    const [l] = await banco.sql<{ id: string; nome: string; q: number }>(
+      `select id, nome, quantita::float as q from lotto where conferma_id = $1 and ingrediente_id = 'ing:avanzo'`,
+      [c.dati.id],
+    );
+    expect(l).toMatchObject({ nome: 'Spaghetti alla carbonara', q: 2 });
+    // Correggere la conferma non aggiunge un secondo avanzo.
+    expect((await u.applica(conferma(famiglia, portata, 'come_previsto', { revisione_attesa: 1 }))).esito).toBe('applicato');
+    expect((await banco.sql(`select count(*)::int as n from lotto where famiglia_id = $1 and origine = 'avanzo'`, [famiglia]))[0].n).toBe(1);
+
+    expect((await u.applica(conferma(famiglia, domani, 'come_previsto'))).dettaglio.mancanti).toEqual([]);
+    expect(await quantita(l.id)).toBe(0);
+    expect(await quantita(altro)).toBe(3);
+  });
+
+  it('togliere il piatto toglie gli avanzi dei giorni dopo non ancora confermati', async () => {
+    const { u, famiglia } = await famigliaCon();
+    const portata = await piatto(u, famiglia);
+    const avanzo = randomUUID();
+    expect((await u.applica(comando('aggiungi_avanzo', famiglia, { id: avanzo, avanzo_di: portata, data: '2026-11-05', categoria: 'merenda' }))).esito).toBe('applicato');
+    const solo = await piatto(u, famiglia, 'sys:carbonara', 4, '2026-11-04');
+    expect((await u.applica(comando('aggiungi_avanzo', famiglia, { id: randomUUID(), avanzo_di: solo, data: '2026-11-05', categoria: 'cena' }))).esito).toBe('applicato');
+    expect((await u.applica(comando('rimuovi_portata', famiglia, { id: portata }))).esito).toBe('applicato');
+    const vive = await banco.sql<{ id: string }>(`select id from portata where famiglia_id = $1 and eliminato_il is null order by data`, [famiglia]);
+    expect(vive.map((x) => x.id)).not.toContain(avanzo);
+    expect(vive).toHaveLength(2);
+  });
+
+  it('ripetere la settimana: l’avanzo copiato con il suo piatto resta legato alla copia', async () => {
+    const { u, famiglia } = await famigliaCon();
+    const torta = await piatto(u, famiglia, 'sys:carbonara', 4, '2026-11-02');
+    const avanzo = randomUUID();
+    await u.applica(comando('aggiungi_avanzo', famiglia, { id: avanzo, avanzo_di: torta, data: '2026-11-03', categoria: 'cena' }));
+    const [nuovaTorta, nuovoAvanzo, soloAvanzo] = [randomUUID(), randomUUID(), randomUUID()];
+    const portate = [
+      { da: torta, id: nuovaTorta, data: '2026-11-09' },
+      { da: avanzo, id: nuovoAvanzo, data: '2026-11-10' },
+    ];
+    expect((await u.applica(comando('ripeti_portate', famiglia, { portate }))).esito).toBe('applicato');
+    expect((await u.applica(comando('ripeti_portate', famiglia, { portate: [{ da: avanzo, id: soloAvanzo, data: '2026-11-17' }] }))).esito).toBe('applicato');
+    const legami = await banco.sql<{ id: string; avanzo_di: string | null }>(`select id, avanzo_di from portata where id = any($1)`, [[nuovoAvanzo, soloAvanzo]]);
+    expect(Object.fromEntries(legami.map((x) => [x.id, x.avanzo_di]))).toEqual({ [nuovoAvanzo]: nuovaTorta, [soloAvanzo]: null });
+  });
+});
+
 describe('foto del piatto', () => {
   it('si aggiunge e si toglie dopo la conferma, solo nella cartella della famiglia', async () => {
     const { u, famiglia } = await famigliaCon();

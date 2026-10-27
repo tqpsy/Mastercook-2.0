@@ -19,6 +19,7 @@ import {
   ripetiSettimana,
   valutaPortata,
 } from '../dominio/menu';
+import { avanziDi, porzioniPortata } from '../dominio/consumi';
 import { filtra, type Indice } from '../dominio/ricette';
 import { oggi, piuGiorni } from '../dominio/scadenze';
 import { Foglio } from '../ui/Foglio';
@@ -97,6 +98,8 @@ function descrivi(indice: Indice, dati: DatiMenu, p: PortataMenu) {
     gusti,
     nonPiace: gusti.filter((g) => g.valore === 'non_piace'),
     porzioni: p.porzioni ?? porzioniAutomatiche(dati.persone, eccezioni),
+    /** Porzioni messe da parte per i giorni dopo (piatto che dura più giorni). */
+    dopo: avanziDi(p, dati.portate).reduce((t, a) => t + porzioniPortata(a, dati.persone, dati.eccezioni), 0),
   };
 }
 
@@ -289,6 +292,8 @@ function Piatto({ indice, dati, portata: p, apri }: { indice: Indice; dati: Dati
       </span>
       <span className="tenue piccolo">
         {formattaPorzioni(d.porzioni)}
+        {p.avanzo_di && ' · avanzo'}
+        {d.dopo > 0 && ` · +${d.dopo.toLocaleString('it-IT')} per i giorni dopo`}
         {d.eccezioni.length > 0 && ` · ${d.eccezioni.length} a parte`}
         {p.in_attesa && ' · in invio'}
       </span>
@@ -447,6 +452,7 @@ function SchedaPiatto({ indice, dati, portata: p, chiudi }: { indice: Indice; da
         {p.fisso_id && ' · 🔁 ogni giorno'}
         {!d.ricetta && ' · senza ricetta'}
       </p>
+      {p.avanzo_di && <AvanzoDi dati={dati} portata={p} />}
 
       {d.valutazione && <EsitoPiatto esito={d.valutazione.esito} righe={d.valutazione.perMembro.filter((m) => m.valutazione).map((m) => `${m.nome}${m.mangia === 'alternativa' ? ' (piatto a parte)' : ''}: ${ICONA_ESITO[m.valutazione!.esito]} ${m.valutazione!.motivi.join('; ') || 'nessun problema noto'}`)} />}
       {d.gusti.length > 0 && (
@@ -529,6 +535,8 @@ function SchedaPiatto({ indice, dati, portata: p, chiudi }: { indice: Indice; da
         </div>
       </div>
 
+      {p.ricetta_id && !p.avanzo_di && <DuraPiuGiorni dati={dati} portata={p} cucinate={d.porzioni + d.dopo} />}
+
       <div className="campo">
         <span>Chi mangia</span>
         <ul className="elenco">
@@ -590,6 +598,83 @@ function SchedaPiatto({ indice, dati, portata: p, chiudi }: { indice: Indice; da
         Togli dal menu
       </button>
     </Foglio>
+  );
+}
+
+/** Un avanzo: si mangia ciò che è avanzato dal piatto di un altro giorno, non si cucina di nuovo. */
+function AvanzoDi({ dati, portata: p }: { dati: DatiMenu; portata: PortataMenu }) {
+  const origine = dati.portate.find((x) => x.id === p.avanzo_di);
+  return (
+    <p className="avviso" style={{ marginTop: 0 }}>
+      🍰 Avanzo {origine ? `di ${nomeCategoria(dati, origine.categoria).toLowerCase()} di ${dataLunga(origine.data)}` : 'di un altro giorno'}: non si cucina e non va nella spesa. Confermando, si toglie
+      dall’avanzo in casa.
+    </p>
+  );
+}
+
+/**
+ * Un piatto che dura più giorni (una torta, un ragù): si mettono le porzioni nei pasti dei giorni dopo.
+ * Il primo giorno si cucina e si compra per tutti; i giorni dopo si mangia l'avanzo.
+ */
+function DuraPiuGiorni({ dati, portata: p, cucinate }: { dati: DatiMenu; portata: PortataMenu; cucinate: number }) {
+  const { esegui } = useFamiglia();
+  const giorni = [1, 2, 3, 4, 5, 6].map((n) => piuGiorni(p.data, n));
+  const [giorno, setGiorno] = useState(giorni[0]);
+  const [categoria, setCategoria] = useState(p.categoria);
+  const avanzi = avanziDi(p, dati.portate);
+  return (
+    <div className="campo" style={{ marginTop: 16 }}>
+      <span>Dura più giorni?</span>
+      {avanzi.length > 0 && (
+        <>
+          <p className="tenue" style={{ margin: '0 0 6px' }}>
+            Si cucinano {formattaPorzioni(cucinate)}: le altre si mangiano dopo.
+          </p>
+          <ul className="elenco" aria-label="Avanzi nei giorni dopo">
+            {avanzi.map((a) => (
+              <li key={a.id} className="riga">
+                <span className="cresce" style={{ textTransform: 'capitalize' }}>
+                  {nomeCategoria(dati, a.categoria)} · {dataLunga(a.data)}
+                </span>
+                <button className="bottone piccolo" aria-label={`Togli l’avanzo di ${dataLunga(a.data)}`} onClick={() => esegui('rimuovi_portata', { id: a.id })}>
+                  Togli
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      <div className="riga" style={{ flexWrap: 'wrap' }}>
+        <select className="dato" aria-label="Giorno dell’avanzo" value={giorno} onChange={(e) => setGiorno(e.target.value)} style={{ width: 'auto' }}>
+          {giorni.map((g) => (
+            <option key={g} value={g}>
+              {dataLunga(g)}
+            </option>
+          ))}
+        </select>
+        <select className="dato" aria-label="Pasto dell’avanzo" value={categoria} onChange={(e) => setCategoria(e.target.value)} style={{ width: 'auto' }}>
+          {dati.categorie.map((c) => (
+            <option key={c.valore} value={c.valore}>
+              {c.nome}
+            </option>
+          ))}
+        </select>
+        <button
+          className="bottone piccolo"
+          onClick={() =>
+            esegui('aggiungi_avanzo', {
+              id: crypto.randomUUID(),
+              avanzo_di: p.id,
+              data: giorno,
+              categoria,
+              ordine: dati.portate.filter((x) => x.data === giorno && x.categoria === categoria).length,
+            })
+          }
+        >
+          🍰 Avanza anche qui
+        </button>
+      </div>
+    </div>
   );
 }
 

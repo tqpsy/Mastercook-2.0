@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useFamiglia, useVista, type Vista } from '../dati/contesto';
-import { type ConfermaPasto as Conferma, type Consumo, type EsitoPasto, giorniAvanzo, NOME_ESITO, previstoPortata } from '../dominio/consumi';
+import { avanziDi, type ConfermaPasto as Conferma, type Consumo, type EsitoPasto, giorniAvanzo, NOME_ESITO, porzioniPortata, previstoPortata } from '../dominio/consumi';
 import type { PortataMenu } from '../dominio/menu';
 import { type Indice, normalizza, type Ricetta } from '../dominio/ricette';
 import { oggi, piuGiorni } from '../dominio/scadenze';
@@ -59,7 +59,9 @@ export function ConfermaPasto({
   const { esegui } = useFamiglia();
   const vista = useVista();
   const { righe: consumi } = useConferme(vista);
-  const previsto = useMemo(() => previstoPortata(indice, portata, dati.persone, dati.eccezioni), [indice, portata, dati]);
+  const previsto = useMemo(() => previstoPortata(indice, portata, dati.persone, dati.eccezioni, dati.portate), [indice, portata, dati]);
+  // Porzioni messe nel menu dei giorni dopo (piatto che dura più giorni): sono l'avanzo atteso.
+  const perDopo = avanziDi(portata, dati.portate).reduce((t, a) => t + porzioniPortata(a, dati.persone, dati.eccezioni), 0);
   const usatePrima = attiva ? consumi.filter((c) => c.conferma_id === attiva.id) : [];
   const [esito, setEsito] = useState<EsitoPasto>(attiva?.esito ?? 'come_previsto');
   const [quantita, setQuantita] = useState<Record<string, string>>(() =>
@@ -74,8 +76,8 @@ export function ConfermaPasto({
   const [ricetta, setRicetta] = useState<Ricetta | null>(attiva?.ricetta_id ? (indice.perId.get(attiva.ricetta_id) ?? null) : null);
   const [testo, setTesto] = useState(attiva?.testo ?? '');
   const [porzioni, setPorzioni] = useState(String(attiva?.porzioni ?? portata.porzioni ?? (previsto.length ? '' : 1)).replace('.', ','));
-  const [avanzi, setAvanzi] = useState(false);
-  const [porzioniAvanzo, setPorzioniAvanzo] = useState('1');
+  const [avanzi, setAvanzi] = useState(!attiva && perDopo > 0);
+  const [porzioniAvanzo, setPorzioniAvanzo] = useState(String(perDopo || 1).replace('.', ','));
   const [luogoAvanzo, setLuogoAvanzo] = useState<'frigo' | 'freezer'>('frigo');
   const [nota, setNota] = useState(attiva?.nota ?? '');
   const [errore, setErrore] = useState<string | null>(null);
@@ -122,7 +124,7 @@ export function ConfermaPasto({
             : { tipo_data: 'sconosciuta' }),
         },
       ];
-    }
+    } else if (perDopo > 0 && !attiva) d.avanzi = []; // finito tutto: niente avanzo per i giorni dopo
     await esegui('conferma_pasto', d);
     chiudi();
   }
@@ -229,6 +231,11 @@ export function ConfermaPasto({
                 <option value="frigo">Frigo</option>
                 <option value="freezer">Freezer</option>
               </select>
+              {perDopo > 0 && (
+                <p className="tenue" style={{ width: '100%', margin: '4px 0 0' }}>
+                  Nel menu dei giorni dopo ne avete messe {String(perDopo).replace('.', ',')}.
+                </p>
+              )}
               <p className="tenue" style={{ width: '100%', margin: '4px 0 0' }}>
                 {luogoAvanzo === 'frigo' && giorni !== null
                   ? `Stima indicativa: da consumare entro ${giorni === 1 ? 'domani' : `${giorni} giorni`} (regola dei cotti). Controlla sempre.`

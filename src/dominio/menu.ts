@@ -173,6 +173,8 @@ export interface PortataMenu {
   origine: string;
   /** La regola del piatto fisso da cui viene, se c'è. */
   fisso_id?: string | null;
+  /** La portata da cui viene l'avanzo (un piatto che dura più giorni), se c'è. */
+  avanzo_di?: string | null;
   bloccata: boolean;
   ordine: number;
   note: string | null;
