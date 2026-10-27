@@ -35,6 +35,12 @@ const MOTIVI: Record<string, string> = {
   origine_non_ammessa: 'Operazione non valida.',
   data_confezione_protetta: 'La data letta sulla confezione non si sostituisce con una stima.',
   movimento_immutabile: 'La cronologia non si modifica.',
+  ricetta_nel_menu: 'La ricetta è nel menu: archiviala invece di eliminarla.',
+  categoria_non_trovata: 'Questo pasto non esiste più.',
+  categoria_standard: 'Colazione, pranzo e gli altri pasti standard si possono solo accendere o spegnere.',
+  portata_non_trovata: 'Il piatto non è più nel menu.',
+  eccezione_cambiata: 'Nel frattempo qualcuno ha cambiato cosa mangia questa persona.',
+  gusto_cambiato: 'Nel frattempo qualcuno ha cambiato questo gusto.',
 };
 
 export function spiegaMotivo(motivo: string | undefined): string {
@@ -59,6 +65,17 @@ const AZIONI: Record<string, string> = {
   correggi_lotto: 'Correggere una quantità',
   sposta_lotto: 'Spostare un prodotto',
   modifica_lotto: 'Modificare un prodotto',
+  imposta_categoria: 'Accendere o spegnere un pasto',
+  crea_categoria: 'Aggiungere un pasto',
+  modifica_categoria: 'Modificare un pasto',
+  aggiungi_portata: 'Aggiungere un piatto al menu',
+  modifica_portata: 'Cambiare un piatto del menu',
+  rimuovi_portata: 'Togliere un piatto dal menu',
+  ripeti_portate: 'Ripetere il menu',
+  imposta_eccezione: 'Cambiare chi mangia un piatto',
+  rimuovi_eccezione: 'Cambiare chi mangia un piatto',
+  imposta_gusto: 'Segnare un gusto',
+  rimuovi_gusto: 'Togliere un gusto',
 };
 
 export function descriviAzione(tipo: string): string {

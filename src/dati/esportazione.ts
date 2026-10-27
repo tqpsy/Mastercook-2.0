@@ -5,7 +5,7 @@
 import type { Riga, RigaScaricata, Tabella, Trasporto } from './tipi';
 
 export const FORMATO = 'mastercook-2';
-export const VERSIONE_FILE = 2;
+export const VERSIONE_FILE = 3;
 
 /** Tabelle esportate: i dati della famiglia. Accessi, inviti e cronologia restano fuori. */
 export const TABELLE_ESPORTATE = [
@@ -18,6 +18,10 @@ export const TABELLE_ESPORTATE = [
   'ricetta_passo',
   'lotto',
   'movimento',
+  'categoria_pasto',
+  'portata',
+  'eccezione_membro',
+  'gusto',
 ] as const satisfies readonly Tabella[];
 
 /** Le tabelle presenti nei file della versione 1, che si possono ancora ripristinare. */

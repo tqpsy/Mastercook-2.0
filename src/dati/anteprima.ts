@@ -116,7 +116,74 @@ const EFFETTI: Record<string, Effetto> = {
     aggiungi('lotto', () => ({ ...copia, quantita: parte, luogo: d.luogo, ...stima, versione: 1 }))(righe, { id: d.nuovo_id }, famiglia);
   },
   modifica_lotto: modifica('lotto'),
+
+  imposta_categoria: (righe, d, famiglia) => {
+    const elenco = righe.categoria_pasto ?? [];
+    const esistente = elenco.find((r) => r.chiave === d.chiave && !r.eliminato_il);
+    if (esistente) righe.categoria_pasto = elenco.map((r) => (r === esistente ? { ...r, attiva: d.attiva, in_attesa: true } : r));
+    else aggiungi('categoria_pasto', () => ({ chiave: d.chiave, nome: null, attiva: d.attiva, ordine: 99, versione: 1 }))(righe, { id: `chiave:${String(d.chiave)}` }, famiglia);
+  },
+  crea_categoria: aggiungi('categoria_pasto', (d) => ({ chiave: null, nome: d.nome, emoji: d.emoji ?? null, ordine: d.ordine ?? 99, attiva: true, versione: 1 })),
+  modifica_categoria: modifica('categoria_pasto'),
+  aggiungi_portata: aggiungi('portata', (d) => ({
+    data: d.data,
+    categoria: d.categoria,
+    ricetta_id: d.ricetta_id ?? null,
+    testo: d.testo ?? null,
+    porzioni: d.porzioni ?? null,
+    origine: 'manuale',
+    bloccata: false,
+    ordine: d.ordine ?? 0,
+    note: d.note ?? null,
+    versione: 1,
+  })),
+  modifica_portata: modifica('portata'),
+  rimuovi_portata: (righe, d, famiglia) => {
+    elimina('portata')(righe, d, famiglia);
+    righe.eccezione_membro = (righe.eccezione_membro ?? []).map((r) => (r.portata_id === d.id && !r.eliminato_il ? { ...r, eliminato_il: 'in_attesa', in_attesa: true } : r));
+  },
+  ripeti_portate: (righe, d, famiglia) => {
+    const portate = righe.portata ?? [];
+    for (const x of (d.portate ?? []) as Record<string, unknown>[]) {
+      const da = portate.find((r) => r.id === x.da && !r.eliminato_il);
+      if (!da) continue;
+      aggiungi('portata', () => ({ ...senzaChiavi(da), data: x.data, categoria: x.categoria ?? da.categoria, origine: 'ripetuta', bloccata: false, versione: 1 }))(righe, x, famiglia);
+    }
+    const eccezioni = righe.eccezione_membro ?? [];
+    for (const x of (d.eccezioni ?? []) as Record<string, unknown>[]) {
+      const da = eccezioni.find((r) => r.id === x.da && !r.eliminato_il);
+      if (da) aggiungi('eccezione_membro', () => ({ ...senzaChiavi(da), portata_id: x.portata_id, versione: 1 }))(righe, x, famiglia);
+    }
+  },
+  imposta_eccezione: (righe, d, famiglia) => {
+    const campi = { tipo: d.tipo, ricetta_id: d.ricetta_id ?? null, testo: d.testo ?? null, porzioni: d.porzioni ?? null };
+    const elenco = righe.eccezione_membro ?? [];
+    const esistente = elenco.find((r) => r.portata_id === d.portata_id && r.membro_id === d.membro_id && !r.eliminato_il);
+    if (esistente) righe.eccezione_membro = elenco.map((r) => (r === esistente ? { ...r, ...campi, in_attesa: true } : r));
+    else aggiungi('eccezione_membro', () => ({ portata_id: d.portata_id, membro_id: d.membro_id, ...campi, versione: 1 }))(righe, d, famiglia);
+  },
+  rimuovi_eccezione: elimina('eccezione_membro'),
+  imposta_gusto: (righe, d, famiglia) => {
+    const chiave = d.ingrediente_id ?? d.ricetta_id;
+    const elenco = righe.gusto ?? [];
+    const esistente = elenco.find((r) => r.membro_id === d.membro_id && (r.ingrediente_id ?? r.ricetta_id) === chiave && !r.eliminato_il);
+    if (esistente) righe.gusto = elenco.map((r) => (r === esistente ? { ...r, valore: d.valore, in_attesa: true } : r));
+    else
+      aggiungi('gusto', () => ({ membro_id: d.membro_id, ingrediente_id: d.ingrediente_id ?? null, ricetta_id: d.ricetta_id ?? null, valore: d.valore, versione: 1 }))(
+        righe,
+        d,
+        famiglia,
+      );
+  },
+  rimuovi_gusto: elimina('gusto'),
 };
+
+/** Una riga copiata senza identità né stato di sincronizzazione. */
+function senzaChiavi(r: RigaInVista): Record<string, unknown> {
+  const copia: Record<string, unknown> = { ...r };
+  for (const k of ['id', 'seq', 'in_attesa', 'eliminato_il']) delete copia[k];
+  return copia;
+}
 
 function cambiaQuantita(righe: Righe, id: string, nuova: (q: number) => number) {
   righe.lotto = (righe.lotto ?? []).map((r) => {
