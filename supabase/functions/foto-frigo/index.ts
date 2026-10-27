@@ -1,6 +1,7 @@
 // Edge Function «foto-frigo»: riceve una foto (JPEG in base64) da un membro della famiglia e restituisce
-// gli alimenti che Gemini riconosce. La chiave Gemini è un segreto del server (GEMINI_API_KEY): non arriva
-// mai sui telefoni. La foto non si salva: passa a Google e basta.
+// gli alimenti che Gemini riconosce. La chiave Gemini è quella della famiglia (scritta nelle Impostazioni) oppure,
+// per le famiglie di chi gestisce l'app, il segreto del progetto (GEMINI_API_KEY): non arriva mai sui telefoni.
+// La foto non si salva: passa a Google e basta.
 import { riconosci } from './nucleo.ts';
 
 const CORS = {
@@ -9,14 +10,24 @@ const CORS = {
   'access-control-allow-methods': 'POST, OPTIONS',
 };
 
+/** Intestazioni per chiamare il database come servizio: chiave segreta nuova (sb_secret_…) o service_role di prima. */
+function accessoServizio(): Record<string, string> {
+  try {
+    const segrete = JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS') ?? '{}') as Record<string, string>;
+    const chiave = segrete.default ?? Object.values(segrete)[0];
+    if (chiave) return { apikey: chiave };
+  } catch {
+    // Formato inatteso: si prova la chiave di prima.
+  }
+  const vecchia = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+  return { apikey: vecchia, authorization: `Bearer ${vecchia}` };
+}
+
 const rispondi = (stato: number, dati: unknown) => new Response(JSON.stringify(dati), { status: stato, headers: { ...CORS, 'content-type': 'application/json' } });
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
   if (req.method !== 'POST') return rispondi(405, { errore: 'metodo' });
-  const chiave = Deno.env.get('GEMINI_API_KEY');
-  if (!chiave) return rispondi(503, { errore: 'non_configurata' });
-
   let d: { famiglia_id?: string; immagine?: string };
   try {
     d = await req.json();
@@ -36,6 +47,16 @@ Deno.serve(async (req) => {
   });
   const righe = famiglia.ok ? ((await famiglia.json()) as unknown[]) : [];
   if (!righe.length) return rispondi(403, { errore: 'non_autorizzato' });
+
+  // La chiave si legge con la chiave segreta del progetto: i telefoni non possono rileggerla.
+  const r = await fetch(`${url}/rest/v1/rpc/chiave_gemini_per_foto`, {
+    method: 'POST',
+    headers: { ...accessoServizio(), 'content-type': 'application/json' },
+    body: JSON.stringify({ p_famiglia: d.famiglia_id }),
+  });
+  const scelta = r.ok ? ((await r.json()) as { chiave: string | null; condivisa: boolean }) : { chiave: null, condivisa: false };
+  const chiave = scelta.chiave ?? (scelta.condivisa ? Deno.env.get('GEMINI_API_KEY') : undefined);
+  if (!chiave) return rispondi(503, { errore: 'non_configurata' });
 
   const esito = await riconosci(d.immagine, chiave);
   return rispondi('errore' in esito ? (esito.errore === 'quota' ? 429 : 502) : 200, esito);

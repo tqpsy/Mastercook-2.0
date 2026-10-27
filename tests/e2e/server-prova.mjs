@@ -30,6 +30,8 @@ const FUNZIONI = {
   applica_comando: (a) => ['select public.applica_comando($1) as r', [a.comando]],
   entra_con_invito: (a) => ['select public.entra_con_invito($1) as r', [a.comando]],
   scarica_modifiche: (a) => ['select public.scarica_modifiche($1, $2, $3) as r', [a.p_famiglia, a.p_dopo, a.p_limite]],
+  imposta_chiave_gemini: (a) => ['select public.imposta_chiave_gemini($1, $2) as r', [a.p_famiglia, a.p_chiave]],
+  stato_chiave_gemini: (a) => ['select public.stato_chiave_gemini($1) as r', [a.p_famiglia]],
   mie_famiglie: () => ['select coalesce(jsonb_agg(to_jsonb(f)), \'[]\'::jsonb) as r from public.mie_famiglie() f', []],
 };
 
@@ -110,6 +112,9 @@ createServer(async (req, res) => {
       const { famiglia_id, immagine } = await corpo(req);
       const r = sub && typeof immagine === 'string' && immagine.length > 0 ? await comeUtente(sub, 'select 1 from famiglia where id = $1', [famiglia_id]) : { rowCount: 0 };
       if (!r.rowCount) return rispondi(res, 403, { errore: 'non_autorizzato' });
+      // Come la funzione vera: serve la chiave della famiglia (o quella del progetto per chi gestisce l'app).
+      const scelta = (await pool.query('select public.chiave_gemini_per_foto($1) as r', [famiglia_id])).rows[0].r;
+      if (!scelta.chiave && !scelta.condivisa) return rispondi(res, 503, { errore: 'non_configurata' });
       return rispondi(res, 200, {
         modello: 'prova',
         alimenti: [

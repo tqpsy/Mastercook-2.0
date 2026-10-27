@@ -29,3 +29,33 @@ export async function riconosciFoto(famiglia_id: string, foto: Blob): Promise<{ 
     return { errore: 'rete' };
   }
 }
+
+export interface StatoChiave {
+  /** La famiglia ha una chiave sua (se ne vedono solo le ultime 4 cifre). */
+  propria: boolean;
+  finale: string | null;
+  /** La famiglia può usare la chiave del progetto (le famiglie di chi gestisce l'app). */
+  condivisa: boolean;
+}
+
+/** Com'è messa la chiave Gemini della famiglia. Null senza rete. */
+export async function statoChiave(famiglia: string): Promise<StatoChiave | null> {
+  try {
+    const { data, error } = await supabase().rpc('stato_chiave_gemini', { p_famiglia: famiglia });
+    return error ? null : ((data as StatoChiave | null) ?? null);
+  } catch {
+    return null;
+  }
+}
+
+/** Scrive (o toglie, con testo vuoto) la chiave della famiglia. Solo chi amministra. */
+export async function impostaChiave(famiglia: string, chiave: string): Promise<{ stato: StatoChiave } | { motivo: string }> {
+  try {
+    const { data, error } = await supabase().rpc('imposta_chiave_gemini', { p_famiglia: famiglia, p_chiave: chiave });
+    if (error) return { motivo: 'rete' };
+    const r = data as { esito: string; dettaglio: StatoChiave & { motivo?: string } };
+    return r.esito === 'applicato' ? { stato: r.dettaglio } : { motivo: r.dettaglio.motivo ?? 'dati_non_validi' };
+  } catch {
+    return { motivo: 'rete' };
+  }
+}

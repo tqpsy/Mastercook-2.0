@@ -3,6 +3,7 @@ import { idDispositivo, righeAttive, useFamiglia, useVista } from '../dati/conte
 import { esporta } from '../dati/esportazione';
 import { spiegaMotivo } from '../dati/messaggi';
 import { VERSIONE_APP } from '../dati/tipi';
+import { impostaChiave, type StatoChiave, statoChiave } from '../piattaforma/fotoFrigo';
 import { eliminaFamiglia, type FamigliaMia, mieFamiglie, trasportoSupabase } from '../piattaforma/supabase';
 import { Ripristino } from '../ui/Ripristino';
 
@@ -21,6 +22,7 @@ export function Impostazioni({ email, esci, apriFamiglia }: { email: string; esc
 
       {amministratore && <Inviti />}
       <Accessi amministratore={amministratore} io={utenteId} />
+      <ChiaveGemini amministratore={amministratore} />
       <IMieiDati nomeFamiglia={String(famiglia?.nome ?? 'famiglia')} apriFamiglia={apriFamiglia} />
       {amministratore && famiglia && <EliminaFamiglia nome={String(famiglia.nome)} apriFamiglia={apriFamiglia} />}
 
@@ -299,5 +301,94 @@ function EliminaFamiglia({ nome, apriFamiglia }: { nome: string; apriFamiglia: (
         )}
       </details>
     </div>
+  );
+}
+
+/**
+ * La chiave Gemini della famiglia, per la foto del frigo. Si scrive e si toglie; dopo il salvataggio
+ * non si rilegge più (nemmeno chi l'ha scritta): se ne vedono solo le ultime 4 cifre.
+ */
+function ChiaveGemini({ amministratore }: { amministratore: boolean }) {
+  const { famiglia } = useFamiglia();
+  const [stato, setStato] = useState<StatoChiave | null | undefined>(undefined);
+  const [nuova, setNuova] = useState('');
+  const [attendi, setAttendi] = useState(false);
+  const [errore, setErrore] = useState<string | null>(null);
+
+  useEffect(() => {
+    let valido = true;
+    void statoChiave(famiglia).then((s) => valido && setStato(s));
+    return () => {
+      valido = false;
+    };
+  }, [famiglia]);
+
+  async function salva(chiave: string) {
+    setAttendi(true);
+    setErrore(null);
+    const r = await impostaChiave(famiglia, chiave);
+    setAttendi(false);
+    if ('stato' in r) {
+      setStato(r.stato);
+      setNuova('');
+    } else {
+      setErrore(
+        r.motivo === 'chiave_non_valida'
+          ? 'Non sembra una chiave di Google AI Studio: copiala di nuovo, intera.'
+          : r.motivo === 'rete'
+            ? 'Serve la connessione per salvare la chiave.'
+            : spiegaMotivo(r.motivo),
+      );
+    }
+  }
+
+  const descrizione =
+    stato === undefined
+      ? 'Controllo…'
+      : stato === null
+        ? 'Senza rete non posso controllare.'
+        : stato.propria
+          ? `Attiva la chiave della famiglia (…${stato.finale}).`
+          : stato.condivisa
+            ? 'Usa la chiave di chi gestisce l’app. Puoi mettere quella della famiglia.'
+            : 'Nessuna chiave: la foto del frigo non funziona finché non ne inserisci una.';
+
+  return (
+    <>
+      <h2>Foto del frigo</h2>
+      <div className="scheda" aria-label="Chiave Gemini">
+        <p style={{ marginTop: 0 }}>{descrizione}</p>
+        {amministratore ? (
+          <>
+            <p className="tenue">
+              Crea una chiave gratuita su aistudio.google.com («Get API key», con un account Google maggiorenne) e incollala qui. Dopo il salvataggio nessuno la può
+              rileggere, nemmeno tu: la usa solo il server per leggere le foto. Consiglio: attiva la fatturazione sul progetto della chiave; con qualche foto al
+              giorno si spendono pochi centesimi al mese.
+            </p>
+            <label className="campo">
+              <span>Chiave Gemini della famiglia</span>
+              <input className="dato" type="password" autoComplete="off" value={nuova} onChange={(e) => setNuova(e.target.value)} placeholder="AIza…" />
+            </label>
+            <div className="riga" style={{ flexWrap: 'wrap' }}>
+              <button className="bottone primario" disabled={attendi || !nuova.trim()} onClick={() => void salva(nuova)}>
+                Salva la chiave
+              </button>
+              {stato?.propria && (
+                <button className="bottone" disabled={attendi} onClick={() => void salva('')}>
+                  Togli la chiave
+                </button>
+              )}
+            </div>
+          </>
+        ) : (
+          <p className="tenue">La chiave la inserisce chi amministra la famiglia.</p>
+        )}
+        {errore && (
+          <div className="avviso errore" role="alert" style={{ marginTop: 10 }}>
+            {errore}
+          </div>
+        )}
+      </div>
+    </>
   );
 }
