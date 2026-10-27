@@ -179,7 +179,7 @@ describe('esportazione e ripristino con ricette e casa (versione 2)', () => {
     await u.applica(comando('sposta_lotto', famiglia, { lotto_id: carne, luogo: 'freezer', quantita: 200, nuovo_id: randomUUID() }));
 
     const file = await esporta(u, famiglia);
-    expect(file.versione_schema).toBe(5);
+    expect(file.versione_schema).toBe(6);
     expect(file.conteggi).toMatchObject({ ingrediente: 1, ricetta: 1, ricetta_ingrediente: 3, ricetta_passo: 1, lotto: 3, movimento: 6 });
 
     const nuova = randomUUID();
@@ -289,7 +289,7 @@ describe('esportazione e ripristino di spesa e acquisti (versione 4)', () => {
     await u.applica(comando('correggi_riga_acquisto', famiglia, { id: riga, quantita_vista: 1000, quantita_nuova: 500 }));
 
     const file = await esporta(u, famiglia);
-    expect(file.versione_schema).toBe(5);
+    expect(file.versione_schema).toBe(6);
     expect(file.conteggi).toMatchObject({ voce_spesa: 2, acquisto: 1, acquisto_riga: 2 });
     const nuova = randomUUID();
     expect(await u.applica(comando('ripristina_famiglia', nuova, { file: JSON.parse(JSON.stringify(file)) }))).toMatchObject({
@@ -342,7 +342,7 @@ describe('esportazione e ripristino di scontrini e prodotti (versione 5)', () =>
       }),
     );
     const file = await esporta(u, famiglia);
-    expect(file.versione_schema).toBe(5);
+    expect(file.versione_schema).toBe(6);
     expect(file.conteggi).toMatchObject({ prodotto: 1, scontrino: 1, scontrino_riga: 3, acquisto: 1, acquisto_riga: 2 });
     const nuova = randomUUID();
     expect((await u.applica(comando('ripristina_famiglia', nuova, { file: JSON.parse(JSON.stringify(file)) }))).esito).toBe('applicato');
@@ -368,5 +368,58 @@ describe('esportazione e ripristino di scontrini e prodotti (versione 5)', () =>
     const rotto = JSON.parse(JSON.stringify(file));
     delete rotto.tabelle.scontrino;
     expect((await u.applica(comando('ripristina_famiglia', randomUUID(), { file: rotto }))).dettaglio.motivo).toBe('file_incompleto');
+  });
+});
+
+describe('esportazione e ripristino dei consumi (versione 6)', () => {
+  it('conferme con le revisioni, consumi e avanzi tornano uguali; un file della versione 5 si ripristina ancora', async () => {
+    const { u, famiglia } = await famigliaCompleta();
+    const lotto = randomUUID();
+    await u.applica(comando('aggiungi_lotto', famiglia, { id: lotto, ingrediente_id: 'ing:spaghetti', quantita: 500, unita: 'g', luogo: 'dispensa', tipo_data: 'sconosciuta' }));
+    const portata = randomUUID();
+    await u.applica(comando('aggiungi_portata', famiglia, { id: portata, data: '2026-11-03', categoria: 'cena', ricetta_id: 'sys:carbonara', porzioni: 4 }));
+    await u.applica(
+      comando('conferma_pasto', famiglia, {
+        id: randomUUID(),
+        portata_id: portata,
+        esito: 'come_previsto',
+        avanzi: [{ lotto_id: randomUUID(), nome: 'Carbonara', quantita: 1, luogo: 'frigo', tipo_data: 'sconosciuta' }],
+      }),
+    );
+    await u.applica(
+      comando('conferma_pasto', famiglia, {
+        id: randomUUID(),
+        portata_id: portata,
+        esito: 'quantita_diverse',
+        revisione_attesa: 1,
+        righe: [{ ingrediente_id: 'ing:spaghetti', unita: 'g', quantita: 200 }],
+      }),
+    );
+    const file = await esporta(u, famiglia);
+    expect(file.versione_schema).toBe(6);
+    expect(file.conteggi).toMatchObject({ conferma_pasto: 2 });
+    const nuova = randomUUID();
+    expect((await u.applica(comando('ripristina_famiglia', nuova, { file: JSON.parse(JSON.stringify(file)) }))).esito).toBe('applicato');
+    const consumi = async (f: string) =>
+      banco.sql(
+        `select c.revisione, c.esito, c.attiva,
+                (select string_agg(r.ingrediente_id || ' ' || r.quantita_prevista::text || '→' || r.quantita_usata::text, ', ' order by r.ingrediente_id collate "C")
+                   from consumo_riga r where r.conferma_id = c.id) as righe,
+                (select sum(l.quantita)::text from consumo_lotto l where l.conferma_id = c.id) as preso,
+                (select string_agg(a.nome || ' ' || a.quantita::text, ', ') from lotto a where a.conferma_id = c.id) as avanzi,
+                (select string_agg(l.ingrediente_id || ' ' || l.quantita::text, ', ' order by l.ingrediente_id collate "C") from lotto l where l.famiglia_id = $1) as casa
+           from conferma_pasto c where c.famiglia_id = $1 order by c.revisione`,
+        [f],
+      );
+    expect(await consumi(nuova)).toEqual(await consumi(famiglia));
+    expect((await consumi(nuova))[1]).toMatchObject({ attiva: true, preso: '-120', casa: 'ing:avanzo 1, ing:spaghetti 300' });
+
+    const v5 = JSON.parse(JSON.stringify(file));
+    v5.versione_schema = 5;
+    for (const t of ['conferma_pasto', 'consumo_riga', 'consumo_lotto']) {
+      delete v5.tabelle[t];
+      delete v5.conteggi[t];
+    }
+    expect((await u.applica(comando('ripristina_famiglia', randomUUID(), { file: v5 }))).esito).toBe('applicato');
   });
 });

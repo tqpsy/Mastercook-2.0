@@ -69,6 +69,25 @@ const ingredienti = INGREDIENTI.map((i) => ({
   peso_pz: i.peso_pz ?? null,
   emoji: emojiIngrediente(i.id),
 }));
+// Ingrediente nuovo di Mastercook 2.0 (Fase 5): le porzioni avanzate di un piatto, in casa come lotti.
+// Nel database lo inserisce la migrazione 20261101000000_consumi.sql.
+ingredienti.push({
+  id: 'ing:avanzo',
+  nome: 'Avanzo',
+  sinonimi: ['avanzi', 'piatto avanzato', 'porzione avanzata'],
+  reparto: 'gastronomia',
+  sottocategoria: 'Avanzi',
+  dimensione: 'pezzi',
+  luogo: 'frigo',
+  giorni: 2,
+  allergeni: [],
+  classi: [],
+  genitore: null,
+  base: false,
+  mesi: null,
+  peso_pz: null,
+  emoji: '🥡',
+});
 
 const ricette = RICETTE_SISTEMA.map((r) => ({
   id: r.id,

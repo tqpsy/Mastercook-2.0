@@ -1,13 +1,48 @@
-import { righeAttive, useVista } from '../dati/contesto';
+import { useState } from 'react';
+import { righeAttive, useFamiglia, useVista } from '../dati/contesto';
 import { useIndice } from '../dati/indice';
+import { type ConfermaPasto as Conferma, daConfermare, NOME_ESITO } from '../dominio/consumi';
+import type { PortataMenu } from '../dominio/menu';
+import type { Indice } from '../dominio/ricette';
 import { daUsarePresto, oggi } from '../dominio/scadenze';
-import { formatta } from '../dominio/unita';
+import { formatta, formattaGiorno } from '../dominio/unita';
 import { EtichettaData, useLotti } from './Casa';
+import { ConfermaPasto, useConferme } from './ConfermaPasto';
 import { useOggiSiMangia } from './Menu';
 
+const titoloDi = (indice: Indice, p: PortataMenu) => (p.ricetta_id ? indice.perId.get(p.ricetta_id)?.titolo : null) ?? p.testo ?? 'Piatto';
+
+/** Conferma in un tocco «come previsto», oppure apre le domande; a conferma fatta, l'esito e «Correggi». */
+function StatoPasto({ titolo, conferma, apri, portata }: { titolo: string; conferma?: Conferma; apri: () => void; portata: PortataMenu }) {
+  const { esegui } = useFamiglia();
+  if (conferma) {
+    return (
+      <span className="riga">
+        <span className="etichetta">{NOME_ESITO[conferma.esito]}</span>
+        <button className="bottone piccolo" onClick={apri} aria-label={`Correggi: ${titolo}`}>
+          Correggi
+        </button>
+      </span>
+    );
+  }
+  return (
+    <span className="riga">
+      <button
+        className="bottone primario piccolo"
+        aria-label={`Mangiato come previsto: ${titolo}`}
+        onClick={() => esegui('conferma_pasto', { id: crypto.randomUUID(), portata_id: portata.id, esito: 'come_previsto' })}
+      >
+        ✓ Mangiato
+      </button>
+      <button className="bottone piccolo" onClick={apri} aria-label={`Com’è andato: ${titolo}`}>
+        Altro…
+      </button>
+    </span>
+  );
+}
+
 /**
- * Oggi: cosa si mangia, cosa usare presto e cosa c'è già. Spesa e scontrini arrivano nelle prossime fasi:
- * qui lo si dice senza mostrare dati finti.
+ * Oggi: cosa si mangia (e confermarlo in un tocco), i pasti ancora da confermare, cosa usare presto.
  */
 export function Oggi({ vai }: { vai: (scheda: 'menu' | 'spesa' | 'ricette' | 'casa') => void }) {
   const vista = useVista();
@@ -17,7 +52,11 @@ export function Oggi({ vai }: { vai: (scheda: 'menu' | 'spesa' | 'ricette' | 'ca
   const persone = righeAttive(vista, 'membro').filter((m) => !m.archiviato).length;
   const giorno = oggi();
   const presto = daUsarePresto(lotti, giorno);
-  const { piatti } = useOggiSiMangia();
+  const { piatti, dati } = useOggiSiMangia();
+  const { attive } = useConferme(vista);
+  const [aperto, setAperto] = useState<string | null>(null);
+  const arretrati = daConfermare(dati.portate, attive, giorno).filter((p) => p.data < giorno);
+  const portataAperta = aperto ? dati.portate.find((p) => p.id === aperto) : undefined;
   const daComprare = righeAttive(vista, 'voce_spesa').filter((v) => v.stato === 'da_acquistare').length;
   const data = new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
   return (
@@ -36,11 +75,12 @@ export function Oggi({ vai }: { vai: (scheda: 'menu' | 'spesa' | 'ricette' | 'ca
         ) : (
           <ul className="elenco">
             {piatti.map(({ categoria, portata, titolo }) => (
-              <li key={portata.id} className="riga">
+              <li key={portata.id} className="riga" style={{ flexWrap: 'wrap' }}>
                 <span aria-hidden>{categoria.emoji}</span>
                 <span className="cresce">
                   {titolo} <span className="tenue">· {categoria.nome.toLowerCase()}</span>
                 </span>
+                <StatoPasto titolo={titolo} portata={portata} conferma={attive.get(portata.id)} apri={() => setAperto(portata.id)} />
               </li>
             ))}
           </ul>
@@ -54,6 +94,33 @@ export function Oggi({ vai }: { vai: (scheda: 'menu' | 'spesa' | 'ricette' | 'ca
           </button>
         </div>
       </section>
+
+      {indice && arretrati.length > 0 && (
+        <section className="scheda" aria-label="Pasti da confermare">
+          <h3 style={{ marginTop: 0 }}>Pasti da confermare</h3>
+          <p className="tenue" style={{ marginTop: 0 }}>
+            Confermare toglie dalla casa ciò che è stato usato: così frigo e dispensa restano veri.
+          </p>
+          <ul className="elenco">
+            {arretrati.map((p) => {
+              const titolo = titoloDi(indice, p);
+              const categoria = dati.categorie.find((c) => c.valore === p.categoria);
+              return (
+                <li key={p.id} className="riga" style={{ flexWrap: 'wrap' }}>
+                  <span className="cresce">
+                    {titolo}{' '}
+                    <span className="tenue">
+                      · {formattaGiorno(p.data)}
+                      {categoria && `, ${categoria.nome.toLowerCase()}`}
+                    </span>
+                  </span>
+                  <StatoPasto titolo={titolo} portata={p} apri={() => setAperto(p.id)} />
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
 
       <section className="scheda" aria-label="Da usare presto">
         <h3 style={{ marginTop: 0 }}>Da usare presto</h3>
@@ -92,7 +159,16 @@ export function Oggi({ vai }: { vai: (scheda: 'menu' | 'spesa' | 'ricette' | 'ca
           {persone === 1 ? 'C’è 1 persona' : `Ci sono ${persone} persone`} in famiglia. Allergie ed esigenze di ognuno, nella scheda <strong>Famiglia</strong>, decidono quali ricette sono adatte.
         </p>
       </div>
-      <div className="avviso info">La lettura degli scontrini e lo scanner dei codici a barre arrivano a breve.</div>
+      {indice && portataAperta && (
+        <ConfermaPasto
+          indice={indice}
+          dati={dati}
+          portata={portataAperta}
+          titolo={titoloDi(indice, portataAperta)}
+          attiva={attive.get(portataAperta.id)}
+          chiudi={() => setAperto(null)}
+        />
+      )}
     </>
   );
 }

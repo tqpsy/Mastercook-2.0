@@ -10314,6 +10314,27 @@
    "mesi": null,
    "peso_pz": null,
    "emoji": "🧼"
+  },
+  {
+   "id": "ing:avanzo",
+   "nome": "Avanzo",
+   "sinonimi": [
+    "avanzi",
+    "piatto avanzato",
+    "porzione avanzata"
+   ],
+   "reparto": "gastronomia",
+   "sottocategoria": "Avanzi",
+   "dimensione": "pezzi",
+   "luogo": "frigo",
+   "giorni": 2,
+   "allergeni": [],
+   "classi": [],
+   "genitore": null,
+   "base": false,
+   "mesi": null,
+   "peso_pz": null,
+   "emoji": "🥡"
   }
  ],
  "ricette": [
