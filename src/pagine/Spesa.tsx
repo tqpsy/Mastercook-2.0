@@ -429,7 +429,7 @@ function ConfermaSpesa({ indice, carrello, chiudi }: { indice: Indice; carrello:
     if (!pronte.length) return setErrore('Non c’è niente da confermare.');
     await esegui('conferma_acquisto', {
       id: crypto.randomUUID(),
-      fonte: carrello.length ? 'carrello' : 'manuale',
+      fonte: righe.some((r) => r.voce_id) ? 'carrello' : 'manuale',
       data: giorno,
       negozio: negozio.trim() || null,
       righe: pronte,

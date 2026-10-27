@@ -58,7 +58,7 @@ test('invito: chi apre il link entra con un tocco e vede la famiglia; le modific
 test('senza rete: la modifica resta in attesa, visibile, e parte al ritorno della rete', async ({ browser }, info) => {
   const luca = await nuovoUtente('Luca');
   const { contesto, page } = await apri(browser, luca, info.project.use);
-  const marco = `Marco ${info.project.name}`;
+  const marco = `Marco ${info.project.name} ${luca.id.slice(0, 6)}`;
   await creaFamiglia(page, 'Casa Offline');
   await page.getByRole('button', { name: 'Famiglia' }).click();
 

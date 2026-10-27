@@ -133,7 +133,7 @@ test('foto: si aggiunge anche senza rete, parte prima della ricetta e non si sos
   const { contesto, page } = await apri(browser, luca, info.project.use);
   await creaFamiglia(page, 'Casa Foto');
   await page.getByRole('button', { name: 'Ricette' }).click();
-  const titolo = `Bruschetta ${info.project.name}`;
+  const titolo = `Bruschetta ${info.project.name} ${luca.id.slice(0, 6)}`;
 
   await contesto.setOffline(true);
   await page.getByRole('button', { name: '+ Ricetta' }).click();

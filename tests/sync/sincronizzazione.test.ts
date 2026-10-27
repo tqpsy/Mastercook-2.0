@@ -5,6 +5,7 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { type Banco, creaFamiglia, nuovoBanco } from '../db/banco';
+import { vistaConAnteprima } from '../../src/dati/anteprima';
 import { casuale, dispositivo, statoLocale, statoServer } from './dispositivi';
 
 let banco: Banco;
@@ -280,5 +281,29 @@ describe('T-SYN-11: prova casuale con tre dispositivi e rete instabile', () => {
     expect(a.rete.foto).toEqual([{ percorso, dopo: prima }]);
     expect(await banco.sql('select foto from ricetta where id = $1', [id])).toEqual([{ foto: percorso }]);
     expect((await a.archivio.foto.get(percorso))?.caricata).toBe(true);
+  });
+
+  it('un comando applicato resta nell’anteprima finché lo scarico non porta le sue righe: nessun ritorno indietro a metà', async () => {
+    const { a, famiglia } = await famigliaConDue();
+    await a.sync.sincronizza();
+    const id = randomUUID();
+    await a.sync.accoda('aggiungi_membro', { id, nome: 'Sara' });
+    const vista = async () => {
+      const righe = { membro: await a.archivio.righeDi(famiglia, 'membro') };
+      return (vistaConAnteprima(righe, await a.sync.voci()).membro ?? []).some((m) => m.id === id);
+    };
+    expect(await a.sync.invia()).toBe('vuota');
+    // Applicato sul server ma non ancora scaricato: si vede ancora (dall'anteprima), e non risulta «in attesa».
+    expect((await a.sync.voci()).map((v) => v.stato)).toEqual(['inviata']);
+    expect(a.sync.leggiStato().in_attesa).toBe(0);
+    expect(await vista()).toBe(true);
+    // Se lo scarico fallisce resta com'è; quando riesce, le righe vere prendono il posto dell'anteprima.
+    a.rete.accesa = false;
+    expect(await a.sync.scarica()).toBe('rete');
+    expect(await vista()).toBe(true);
+    a.rete.accesa = true;
+    expect(await a.sync.scarica()).toBe('aggiornato');
+    expect(await a.sync.voci()).toEqual([]);
+    expect(await vista()).toBe(true);
   });
 });
