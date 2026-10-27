@@ -46,7 +46,7 @@ async function famigliaCon(): Promise<{ u: Utente; famiglia: string }> {
 describe('catalogo di sistema nel database', () => {
   it('è lo stesso di src/catalogo/catalogo.json', async () => {
     const ing = await banco.sql<{ id: string; dimensione: string; allergeni: string[]; genitore: string | null }>(
-      'select id, dimensione, allergeni, genitore from ingrediente where famiglia_id is null order by id',
+      'select id, dimensione, allergeni, genitore from ingrediente where famiglia_id is null order by id collate "C"',
     );
     expect(ing.map((i) => i.id)).toEqual(CATALOGO.ingredienti.map((i) => i.id).sort());
     const perId = new Map(ing.map((i) => [i.id, i]));
@@ -87,7 +87,7 @@ describe('ricette della famiglia', () => {
     const { u, famiglia } = await famigliaCon();
     const { id, c } = nuovaRicetta(famiglia);
     expect((await u.applica(c)).esito).toBe('applicato');
-    const righe = await banco.sql('select ingrediente_id, quantita, qb from ricetta_ingrediente where ricetta_id = $1 order by ingrediente_id', [id]);
+    const righe = await banco.sql('select ingrediente_id, quantita, qb from ricetta_ingrediente where ricetta_id = $1 order by ingrediente_id collate "C"', [id]);
     expect(righe).toEqual([
       { ingrediente_id: 'ing:sale', quantita: null, qb: true },
       { ingrediente_id: 'ing:spaghetti', quantita: '320', qb: false },
@@ -141,7 +141,7 @@ describe('ricette della famiglia', () => {
       u.applica(comando('salva_ricetta', famiglia, { id, ingredienti: { modifica: [{ id: aglio.id, versione_attesa: 1, campi: { quantita: 15 } }] } })),
     ]);
     expect([a.esito, b.esito]).toEqual(['applicato', 'applicato']);
-    const q = await banco.sql('select quantita from ricetta_ingrediente where ricetta_id = $1 order by ingrediente_id', [id]);
+    const q = await banco.sql('select quantita from ricetta_ingrediente where ricetta_id = $1 order by ingrediente_id collate "C"', [id]);
     expect(q.map((x) => Number(x.quantita))).toEqual([15, 400]);
 
     const terzo = await u.applica(
