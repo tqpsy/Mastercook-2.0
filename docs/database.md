@@ -215,6 +215,17 @@ quella della categoria).
 |---|---|
 | `scegli_icona` | `id`, `ricetta_id`, `emoji` (un'emoji; `null` torna all'automatica). Ripetuto non scrive di nuovo; ricetta di un'altra famiglia → `ricetta_non_trovata` |
 
+## Ricette segnate «va bene»
+
+Migrazione `20261104000000_verifiche.sql`. Tabella `ricetta_verificata`: la famiglia ha controllato una ricetta per un
+membro e va bene. Vale per la versione della ricetta in cui è stata segnata (se la ricetta cambia, l'app torna a
+chiedere). Nell'app (`valutaPerVincoli`) toglie i dubbi e può scavalcare un'esigenza (crudi, vegetariano…), mai
+un'allergia o un'intolleranza che esclude la ricetta.
+
+| Tipo | Dati |
+|---|---|
+| `verifica_ricetta` | `id`, `membro_id`, `ricetta_id`, `versione_ricetta`, `va_bene` (falso lo toglie). Ripetuto non scrive di nuovo |
+
 ## Esigenze sui crudi
 
 Solo nell'app (`src/dominio/crudi.ts`), nessuna tabella nuova: le esigenze `cls:no_salumi_crudi`, `cls:no_pesce_crudo`,

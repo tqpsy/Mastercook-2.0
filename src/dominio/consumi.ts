@@ -4,7 +4,7 @@
  * e a proporre, con lo stesso calcolo del server.
  */
 import type { RegolaCotti } from '../catalogo/tipi';
-import { valutaPerFamiglia, type Vincolo } from './compatibilita';
+import { valutaPerFamiglia, type Verifica, type Vincolo } from './compatibilita';
 import { porzioniAutomatiche, type Eccezione, type Persona, type PortataMenu } from './menu';
 import { copertura, type Indice, principali, type Ricetta } from './ricette';
 
@@ -114,6 +114,7 @@ export function ricettePerUrgenti(
   membri: { id: string; nome: string }[],
   vincoli: Vincolo[],
   limite = 3,
+  verifiche?: Verifica[],
 ): RicettaPerUrgenti[] {
   const daUsare = indice.estendi(urgenti.filter((id) => id !== 'ing:avanzo'));
   if (!daUsare.size) return [];
@@ -123,7 +124,7 @@ export function ricettePerUrgenti(
     if (r.archiviata) continue;
     const usa = [...new Set(principali(indice, r).map((g) => g.ingrediente_id).filter((id) => daUsare.has(id)))];
     if (!usa.length) continue;
-    if (valutaPerFamiglia(indice, r, membri, vincoli).esito === 'non_adatta') continue;
+    if (valutaPerFamiglia(indice, r, membri, vincoli, verifiche).esito === 'non_adatta') continue;
     trovate.push({ ricetta: r, usa, ...copertura(indice, r, casa) });
   }
   return trovate

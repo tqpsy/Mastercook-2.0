@@ -102,6 +102,8 @@ export function Oggi({ vai }: { vai: (scheda: 'menu' | 'spesa' | 'ricette' | 'ca
         lotti.map((l) => l.ingrediente_id),
         dati.persone,
         dati.vincoli,
+        3,
+        dati.verifiche,
       )
     : [];
   const cenaOggi = dati.portate.some((p) => p.data === giorno && p.categoria === 'cena');

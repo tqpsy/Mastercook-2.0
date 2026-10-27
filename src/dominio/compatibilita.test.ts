@@ -51,7 +51,7 @@ describe('compatibilità delle ricette con i vincoli', () => {
     expect(valutaPerVincoli(indice, ricetta('sys:carbonara'), [v('ing:lattosio', { tipo: 'intolleranza' })]).esito).toBe('non_adatta');
     expect(valutaPerVincoli(indice, ricetta('sys:spaghetti_aglio_olio'), [v('ing:nichel', { tipo: 'intolleranza' })]).esito).toBe('da_verificare');
     const medico = valutaPerVincoli(indice, ricetta('sys:spaghetti_aglio_olio'), [v('txt:poco_sale', { tipo: 'indicazione_medica', testo: 'Poco sale' })]);
-    expect(medico).toEqual({ esito: 'da_verificare', motivi: ['da controllare: Poco sale'] });
+    expect(medico).toEqual({ esito: 'da_verificare', motivi: ['da controllare: Poco sale'], verificabile: true });
   });
 
   it('per la famiglia vale l’esito peggiore, con il dettaglio di ognuno', () => {
@@ -103,5 +103,22 @@ describe('esigenze sui crudi', () => {
       expect(r, id).toBeDefined();
       for (const c of crudi) expect(r.ingredienti.map((g) => g.ingrediente_id), id).toContain(c);
     }
+  });
+});
+
+describe('«va bene» della famiglia', () => {
+  const ver = (ricetta_id: string, versione_ricetta = 1) => [{ membro_id: 'm', ricetta_id, versione_ricetta }];
+  it('toglie il dubbio e scavalca un’esigenza, per la versione segnata', () => {
+    const crudo = [v('cls:no_latte_crudo', { tipo: 'esigenza' })];
+    const r = ricetta('sys:cacio_pepe');
+    expect(valutaPerVincoli(indice, r, crudo)).toMatchObject({ esito: 'non_adatta', verificabile: true });
+    expect(valutaPerFamiglia(indice, r, [{ id: 'm', nome: 'Anna' }], crudo, ver(r.id)).esito).toBe('adatta');
+    expect(valutaPerFamiglia(indice, r, [{ id: 'm', nome: 'Anna' }], crudo, ver(r.id, 2)).esito).toBe('non_adatta');
+  });
+  it('non vale mai contro un’allergia che esclude la ricetta', () => {
+    const r = ricetta('sys:carbonara');
+    const uova = [v('all:uova')];
+    expect(valutaPerVincoli(indice, r, uova)).toMatchObject({ esito: 'non_adatta', verificabile: false });
+    expect(valutaPerFamiglia(indice, r, [{ id: 'm', nome: 'Anna' }], uova, ver(r.id)).esito).toBe('non_adatta');
   });
 });

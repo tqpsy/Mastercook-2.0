@@ -96,6 +96,7 @@ const AZIONI: Record<string, string> = {
   importa_scontrino: 'Aggiungere uno scontrino',
   salva_prodotto: 'Ricordare un codice a barre',
   scegli_icona: 'Cambiare l’icona di una ricetta',
+  verifica_ricetta: 'Segnare «va bene» una ricetta',
   conferma_pasto: 'Confermare un pasto',
   foto_pasto: 'Aggiungere la foto di un piatto',
 };
