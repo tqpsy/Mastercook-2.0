@@ -132,7 +132,7 @@ const EFFETTI: Record<string, Effetto> = {
     ricetta_id: d.ricetta_id ?? null,
     testo: d.testo ?? null,
     porzioni: d.porzioni ?? null,
-    origine: 'manuale',
+    origine: d.origine === 'automatica' ? 'automatica' : 'manuale',
     bloccata: false,
     ordine: d.ordine ?? 0,
     note: d.note ?? null,

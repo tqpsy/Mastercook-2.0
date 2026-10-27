@@ -169,3 +169,31 @@ test('torta che dura più giorni: avanzo domani, la conferma la mette in casa', 
     )
     .toEqual([{ nome: 'Torta di mele', q: 1 }]);
 });
+
+test('proposte: l’app propone i pasti vuoti, si cambia o si toglie, entra solo ciò che si conferma', async ({ browser }, info) => {
+  const luca = await nuovoUtente('Luca');
+  const { page } = await apri(browser, luca, info.project.use);
+  await creaFamiglia(page, 'Casa Proposte');
+  await page.getByRole('button', { name: 'Menu', exact: true }).click();
+  await page.getByRole('button', { name: '✨ Proponi la settimana' }).click();
+  const foglio = page.getByRole('dialog', { name: 'Proposte per la settimana' });
+  const voci = foglio.getByRole('list', { name: 'Proposte' }).getByRole('listitem');
+  const quante = await voci.count();
+  expect(quante).toBeGreaterThan(0);
+  const prima = (await voci.first().textContent()) ?? '';
+  await voci.first().getByRole('button', { name: /Un’altra/ }).click();
+  await expect(voci.first()).not.toHaveText(prima);
+  await voci.nth(0).getByRole('checkbox').uncheck();
+  await foglio.getByRole('button', { name: `Metti nel menu (${quante - 1})` }).click();
+  await expect(page.getByRole('button', { name: /Stato del salvataggio: Tutto salvato/ })).toBeVisible();
+  const proposte = () =>
+    sql<{ n: number }>(
+      `select count(*)::int as n from portata where origine = 'automatica' and eliminato_il is null
+          and famiglia_id in (select famiglia_id from utente_famiglia where utente_id = $1)`,
+      [luca.id],
+    );
+  await expect.poll(async () => (await proposte())[0].n).toBe(quante - 1);
+  // Riaprendo, resta da proporre solo il pasto tolto.
+  await page.getByRole('button', { name: '✨ Proponi la settimana' }).click();
+  await expect(foglio.getByRole('list', { name: 'Proposte' }).getByRole('listitem')).toHaveCount(1);
+});
