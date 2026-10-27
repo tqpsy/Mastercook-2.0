@@ -107,6 +107,42 @@ export function porzioniAutomatiche(persone: Persona[], eccezioni: Pick<Eccezion
   return Math.round(totale * 2) / 2;
 }
 
+/** Gli ospiti di un pasto: solo numeri e codici (`all:…`, `ing:…`, `cls:…`), mai nomi. */
+export interface OspitiPasto {
+  id: string;
+  data: string;
+  categoria: string;
+  adulti: number;
+  bambini: number;
+  oggetti: string[];
+  versione?: number;
+  in_attesa?: boolean;
+}
+
+/** Porzione di un bambino ospite: la stessa che usa il database. */
+export const PORZIONE_BAMBINO = 0.6;
+export const ID_OSPITI = 'ospiti';
+
+export function ospitiDel(ospiti: OspitiPasto[], data: string, categoria: string): OspitiPasto | undefined {
+  return ospiti.find((o) => o.data === data && o.categoria === categoria && o.adulti + o.bambini > 0);
+}
+
+const TIPO_PER_PREFISSO: Record<string, string> = { all: 'allergia', ing: 'intolleranza', cls: 'esigenza', txt: 'esigenza' };
+
+/**
+ * Chi mangia a un pasto: la famiglia più gli ospiti, contati come una persona sola (adulto 1, bambino 0,6)
+ * con le loro esigenze. Le allergie degli ospiti valgono anche per le tracce: non si sa quanto sono gravi.
+ */
+export function alPasto(persone: Persona[], vincoli: Vincolo[], ospiti?: OspitiPasto): { persone: Persona[]; vincoli: Vincolo[] } {
+  if (!ospiti || ospiti.adulti + ospiti.bambini <= 0) return { persone, vincoli };
+  const porzione = ospiti.adulti + PORZIONE_BAMBINO * ospiti.bambini;
+  const loro = ospiti.oggetti.map((oggetto) => {
+    const tipo = TIPO_PER_PREFISSO[oggetto.split(':')[0]] ?? 'esigenza';
+    return { membro_id: ID_OSPITI, tipo, oggetto, severita: tipo === 'allergia' ? 'evitare_anche_tracce' : 'evitare', testo: null };
+  });
+  return { persone: [...persone, { id: ID_OSPITI, nome: 'Ospiti', porzione }], vincoli: [...vincoli, ...loro] };
+}
+
 export interface ValutazionePortata {
   esito: Esito;
   perMembro: { membro_id: string; nome: string; mangia: 'principale' | 'alternativa' | 'niente'; valutazione: Valutazione | null }[];

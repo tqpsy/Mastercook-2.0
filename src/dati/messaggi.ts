@@ -104,6 +104,7 @@ const AZIONI: Record<string, string> = {
   ferma_pasto_fisso: 'Fermare un piatto fisso',
   conferma_pasto: 'Confermare un pasto',
   foto_pasto: 'Aggiungere la foto di un piatto',
+  imposta_ospiti: 'Segnare gli ospiti',
 };
 
 export function descriviAzione(tipo: string): string {
