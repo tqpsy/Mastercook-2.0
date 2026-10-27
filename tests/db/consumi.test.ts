@@ -178,3 +178,20 @@ describe('conferma del pasto', () => {
     expect((await v.applica(conferma(estranea, altra, 'saltato'))).dettaglio.motivo).toBe('portata_non_trovata');
   });
 });
+
+describe('foto del piatto', () => {
+  it('si aggiunge e si toglie dopo la conferma, solo nella cartella della famiglia', async () => {
+    const { u, famiglia } = await famigliaCon();
+    const portata = await piatto(u, famiglia);
+    const c = conferma(famiglia, portata, 'saltato');
+    await u.applica(c);
+    const foto = `${famiglia}/${randomUUID()}.jpg`;
+    expect((await u.applica(comando('foto_pasto', famiglia, { id: c.dati.id, foto }))).esito).toBe('applicato');
+    expect((await banco.sql('select foto, revisione from conferma_pasto where id = $1', [c.dati.id]))[0]).toEqual({ foto, revisione: 1 });
+    const altrui = await u.applica(comando('foto_pasto', famiglia, { id: c.dati.id, foto: `${randomUUID()}/${randomUUID()}.jpg` }));
+    expect(altrui.esito).toBe('rifiutato');
+    expect((await u.applica(comando('foto_pasto', famiglia, { id: randomUUID(), foto }))).dettaglio.motivo).toBe('conferma_non_trovata');
+    await u.applica(comando('foto_pasto', famiglia, { id: c.dati.id, foto: null }));
+    expect((await banco.sql('select foto from conferma_pasto where id = $1', [c.dati.id]))[0].foto).toBeNull();
+  });
+});

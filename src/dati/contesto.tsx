@@ -25,6 +25,7 @@ interface ValoreContesto extends Sessione {
 }
 
 const Contesto = createContext<ValoreContesto | null>(null);
+const ContestoVista = createContext<Vista | null>(null);
 
 export function nomeArchivio(utenteId: string) {
   return `mastercook-${utenteId}`;
@@ -77,7 +78,13 @@ export function FamigliaAperta({ sessione, children }: { sessione: Sessione; chi
     [sessione, base, pianificatore],
   );
 
-  return <Contesto.Provider value={valore}>{children}</Contesto.Provider>;
+  return (
+    <Contesto.Provider value={valore}>
+      <VistaCondivisa archivio={base.archivio} famiglia={sessione.famiglia}>
+        {children}
+      </VistaCondivisa>
+    </Contesto.Provider>
+  );
 }
 
 export function useFamiglia(): ValoreContesto {
@@ -126,21 +133,32 @@ export interface Vista {
   pronta: boolean;
 }
 
-/** Copia locale con sopra l'anteprima della coda, aggiornata a ogni cambiamento dell'archivio. */
-export function useVista(): Vista {
-  const { archivio, famiglia } = useFamiglia();
+/**
+ * Copia locale con sopra l'anteprima della coda, aggiornata a ogni cambiamento dell'archivio.
+ * Una sola osservazione per tutta l'app, letta in una transazione: righe e coda sono sempre dello stesso
+ * istante, e due parti dello schermo non possono vedere due versioni diverse.
+ */
+function VistaCondivisa({ archivio, famiglia, children }: { archivio: Archivio; famiglia: string; children: ReactNode }) {
   const [vista, setVista] = useState<Vista>({ righe: {}, coda: [], pronta: false });
   useEffect(() => {
-    const osservata = liveQuery(async () => {
-      const righe: Righe = {};
-      for (const t of TABELLE) righe[t] = await archivio.righeDi(famiglia, t);
-      const coda = await archivio.coda.where('famiglia_id').equals(famiglia).sortBy('ordine');
-      return { righe: vistaConAnteprima(righe, coda), coda, pronta: true };
-    });
+    const osservata = liveQuery(() =>
+      archivio.transaction('r', archivio.righe, archivio.coda, async () => {
+        const righe: Righe = {};
+        for (const t of TABELLE) righe[t] = await archivio.righeDi(famiglia, t);
+        const coda = await archivio.coda.where('famiglia_id').equals(famiglia).sortBy('ordine');
+        return { righe: vistaConAnteprima(righe, coda), coda, pronta: true };
+      }),
+    );
     const s = osservata.subscribe({ next: setVista, error: () => undefined });
     return () => s.unsubscribe();
   }, [archivio, famiglia]);
-  return vista;
+  return <ContestoVista.Provider value={vista}>{children}</ContestoVista.Provider>;
+}
+
+export function useVista(): Vista {
+  const v = useContext(ContestoVista);
+  if (!v) throw new Error('useVista fuori da FamigliaAperta');
+  return v;
 }
 
 export function righeAttive(vista: Vista, tabella: Tabella): RigaInVista[] {

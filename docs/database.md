@@ -181,6 +181,7 @@ ingrediente di sistema `ing:avanzo` (in porzioni).
 | Tipo | Dati |
 |---|---|
 | `conferma_pasto` | `id`, `portata_id`, `esito` (come_previsto, quantita_diverse, altro_piatto, saltato), `revisione_attesa?` (per correggere), `ricetta_id?` + `porzioni?` o `testo?` (altro piatto), `righe?: [{ingrediente_id, unita, quantita}]`, `avanzi?: [{lotto_id, nome, quantita, luogo, date…}]`, `nota?` → `{revisione, movimenti, mancanti}` |
+| `foto_pasto` | `id` (della conferma), `foto` (percorso nel deposito, o `null` per toglierla). Migrazione `20261102000000_foto_pasto.sql`; conferma sconosciuta → `conferma_non_trovata` |
 
 - **Solo la conferma toglie dalla casa** (T-CON-1); il menu da solo non tocca niente. La portata non cambia mai per
   somigliare a ciò che è successo (T-CON-6).
@@ -195,6 +196,14 @@ ingrediente di sistema `ing:avanzo` (in porzioni).
   scadono prima (T-CON-8). Ciò che in casa non c'era torna in `mancanti`, senza inventare quantità.
 - **Avanzi**: lotti `ing:avanzo` in porzioni, origine `avanzo`, legati alla conferma; in frigo la data è stimata dalla
   regola dei cotti della ricetta (giorni consigliati), altrimenti resta sconosciuta.
+- **Foto del piatto**: facoltativa, dopo la conferma; stesso deposito e stesse regole delle foto delle ricette, e solo
+  foto della propria famiglia. Non tocca la casa. Come le foto delle ricette, non è nell'esportazione.
+- **Ricette per ciò che scade** (R-SCA-5, nell'app, `ricettePerUrgenti`): in Oggi, sotto «Da usare presto», fino a tre
+  ricette che usano quei prodotti, prima chi ne usa di più e poi chi ha più ingredienti in casa; escluse quelle non
+  adatte a qualcuno della famiglia. «Stasera» le mette a cena con `aggiungi_portata`.
+- **Avvisi**: dentro l'app, come numeri sulle schede (Casa: prodotti scaduti o da usare oggi; Oggi: pasti dei tre giorni
+  prima da confermare). Le notifiche push del telefono non ci sono: servirebbero un servizio di invio e il consenso a
+  ogni dispositivo, e restano per una fase successiva.
 
 ## Foto delle ricette
 

@@ -50,6 +50,7 @@ const MOTIVI: Record<string, string> = {
   riga_gia_abbinata: 'Una riga della spesa ha già il suo scontrino.',
   gia_confermato: 'Qualcun altro ha già confermato questo pasto: se serve, correggilo.',
   conferma_cambiata: 'Nel frattempo qualcuno ha corretto questo pasto.',
+  conferma_non_trovata: 'La conferma di questo pasto non esiste più.',
 };
 
 export function spiegaMotivo(motivo: string | undefined): string {
@@ -95,6 +96,7 @@ const AZIONI: Record<string, string> = {
   importa_scontrino: 'Aggiungere uno scontrino',
   salva_prodotto: 'Ricordare un codice a barre',
   conferma_pasto: 'Confermare un pasto',
+  foto_pasto: 'Aggiungere la foto di un piatto',
 };
 
 export function descriviAzione(tipo: string): string {

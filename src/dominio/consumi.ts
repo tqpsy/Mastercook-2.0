@@ -4,8 +4,10 @@
  * e a proporre, con lo stesso calcolo del server.
  */
 import type { RegolaCotti } from '../catalogo/tipi';
+import { valutaPerFamiglia, type Vincolo } from './compatibilita';
 import { porzioniAutomatiche, type Eccezione, type Persona, type PortataMenu } from './menu';
-import type { Indice, Ricetta } from './ricette';
+import { copertura, type Indice, principali, type Ricetta } from './ricette';
+
 import { piuGiorni } from './scadenze';
 import type { UnitaBase } from './unita';
 
@@ -21,6 +23,7 @@ export interface ConfermaPasto {
   porzioni: number | null;
   attiva: boolean;
   nota: string | null;
+  foto?: string | null;
   in_attesa?: boolean;
 }
 
@@ -91,3 +94,44 @@ export const NOME_ESITO: Record<EsitoPasto, string> = {
   altro_piatto: 'Mangiato altro',
   saltato: 'Saltato',
 };
+
+export interface RicettaPerUrgenti {
+  ricetta: Ricetta;
+  /** Gli ingredienti da usare presto che la ricetta usa. */
+  usa: string[];
+  presenti: number;
+  totali: number;
+}
+
+/**
+ * Ricette che usano ciò che scade presto (R-SCA-5): prima chi ne usa di più, poi chi ha più ingredienti
+ * già in casa. Quelle non adatte a qualcuno della famiglia non si propongono.
+ */
+export function ricettePerUrgenti(
+  indice: Indice,
+  urgenti: string[],
+  inCasa: string[],
+  membri: { id: string; nome: string }[],
+  vincoli: Vincolo[],
+  limite = 3,
+): RicettaPerUrgenti[] {
+  const daUsare = indice.estendi(urgenti.filter((id) => id !== 'ing:avanzo'));
+  if (!daUsare.size) return [];
+  const casa = new Set(inCasa);
+  const trovate: RicettaPerUrgenti[] = [];
+  for (const r of indice.ricette) {
+    if (r.archiviata) continue;
+    const usa = [...new Set(principali(indice, r).map((g) => g.ingrediente_id).filter((id) => daUsare.has(id)))];
+    if (!usa.length) continue;
+    if (valutaPerFamiglia(indice, r, membri, vincoli).esito === 'non_adatta') continue;
+    trovate.push({ ricetta: r, usa, ...copertura(indice, r, casa) });
+  }
+  return trovate
+    .sort(
+      (a, b) =>
+        b.usa.length - a.usa.length ||
+        b.presenti / Math.max(1, b.totali) - a.presenti / Math.max(1, a.totali) ||
+        a.ricetta.titolo.localeCompare(b.ricetta.titolo, 'it'),
+    )
+    .slice(0, limite);
+}

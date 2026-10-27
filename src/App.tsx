@@ -3,10 +3,10 @@ import Dexie from 'dexie';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { configurato } from './config';
 import { Archivio } from './dati/archivio';
-import { FamigliaAperta, nomeArchivio, type Sessione, useFamiglia } from './dati/contesto';
+import { FamigliaAperta, nomeArchivio, type Sessione, useFamiglia, useVista } from './dati/contesto';
 import { ErroreRete } from './dati/tipi';
 import { Accesso } from './pagine/Accesso';
-import { Casa } from './pagine/Casa';
+import { Casa, useLotti } from './pagine/Casa';
 import { Famiglia } from './pagine/Famiglia';
 import { Impostazioni } from './pagine/Impostazioni';
 import { Invito } from './pagine/Invito';
@@ -16,6 +16,7 @@ import { Oggi } from './pagine/Oggi';
 import { Ricette } from './pagine/Ricette';
 import { Spesa } from './pagine/Spesa';
 import { esci, type FamigliaMia, mieFamiglie, supabase } from './piattaforma/supabase';
+import { oggi, piuGiorni, statoData } from './dominio/scadenze';
 import { StatoSync } from './ui/StatoSync';
 
 const CHIAVE_INVITO = 'mc-invito';
@@ -183,9 +184,28 @@ function ConAccesso() {
 
 type Scheda = 'oggi' | 'menu' | 'spesa' | 'ricette' | 'casa' | 'famiglia' | 'impostazioni';
 
+/**
+ * Gli avvisi dentro l'app (non notifiche): in Casa i prodotti scaduti o da usare oggi secondo la data
+ * registrata; in Oggi i pasti dei giorni prima ancora da confermare.
+ */
+function useAvvisi(): Partial<Record<Scheda, { n: number; testo: string }>> {
+  const vista = useVista();
+  const lotti = useLotti();
+  const giorno = oggi();
+  const casa = lotti.filter((l) => ['scaduto', 'oggi'].includes(statoData(l, giorno))).length;
+  const attive = new Set((vista.righe.conferma_pasto ?? []).filter((c) => c.attiva && !c.eliminato_il).map((c) => c.portata_id));
+  const dal = piuGiorni(giorno, -3);
+  const pasti = (vista.righe.portata ?? []).filter((p) => !p.eliminato_il && String(p.data) >= dal && String(p.data) < giorno && !attive.has(p.id)).length;
+  return {
+    ...(casa ? { casa: { n: casa, testo: casa === 1 ? '1 prodotto scaduto o da usare oggi' : `${casa} prodotti scaduti o da usare oggi` } } : {}),
+    ...(pasti ? { oggi: { n: pasti, testo: pasti === 1 ? '1 pasto da confermare' : `${pasti} pasti da confermare` } } : {}),
+  };
+}
+
 function Guscio({ email, apriFamiglia }: { email: string; apriFamiglia: (famiglia: string) => void }) {
   const [scheda, setScheda] = useState<Scheda>('oggi');
   const { sync, utenteId, archivio } = useFamiglia();
+  const avvisi = useAvvisi();
   const schede = useMemo(
     () =>
       [
@@ -234,11 +254,22 @@ function Guscio({ email, apriFamiglia }: { email: string; apriFamiglia: (famigli
       </main>
       <nav className="schede">
         {schede.map((s) => (
-          <button key={s.id} aria-current={scheda === s.id ? 'page' : undefined} onClick={() => setScheda(s.id)}>
+          <button
+            key={s.id}
+            aria-current={scheda === s.id ? 'page' : undefined}
+            aria-describedby={avvisi[s.id] ? `avviso-${s.id}` : undefined}
+            onClick={() => setScheda(s.id)}
+          >
             <span className="icona" aria-hidden>
               {s.icona}
+              {avvisi[s.id] && <span className="contatore">{avvisi[s.id]!.n}</span>}
             </span>
             {s.nome}
+            {avvisi[s.id] && (
+              <span id={`avviso-${s.id}`} hidden>
+                {avvisi[s.id]!.testo}
+              </span>
+            )}
           </button>
         ))}
       </nav>
