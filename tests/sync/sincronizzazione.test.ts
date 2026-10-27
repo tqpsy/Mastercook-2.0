@@ -148,6 +148,53 @@ describe('sincronizzazione tra dispositivi', () => {
     expect(await statoLocale(a, famiglia)).toEqual(await statoServer(banco, famiglia));
   });
 
+  it('la stessa persona cambia due volte lo stesso campo prima dello scarico: nessun falso conflitto', async () => {
+    const { famiglia, a, membro } = await famigliaConDue();
+    await a.sync.sincronizza();
+    // La vista mostra ancora la versione 1 finché lo scarico non arriva: tutti i tocchi partono da lì.
+    await a.sync.accoda('modifica_membro', { id: membro, versione_attesa: 1, campi: { porzione: 2 } });
+    expect(await a.sync.invia()).toBe('vuota');
+    await a.sync.accoda('modifica_membro', { id: membro, versione_attesa: 1, campi: { porzione: 1 } });
+    await a.sync.accoda('modifica_membro', { id: membro, versione_attesa: 1, campi: { porzione: 0.5 } });
+    await a.sync.sincronizza();
+    expect(a.sync.leggiStato()).toMatchObject({ in_attesa: 0, da_sistemare: 0 });
+    expect(Number((await banco.sql('select porzione from membro where id = $1', [membro]))[0].porzione)).toBe(0.5);
+    expect(await statoLocale(a, famiglia)).toEqual(await statoServer(banco, famiglia));
+
+    // Scarico già arrivato ma schermata non ancora ridisegnata: il tocco parte dalla versione vecchia.
+    const [vecchia] = await banco.sql('select versione from membro where id = $1', [membro]);
+    await a.sync.accoda('modifica_membro', { id: membro, versione_attesa: vecchia.versione, campi: { porzione: 2 } });
+    await a.sync.sincronizza();
+    await a.sync.accoda('modifica_membro', { id: membro, versione_attesa: vecchia.versione, campi: { porzione: 0.5 } });
+    await a.sync.sincronizza();
+    expect(a.sync.leggiStato()).toMatchObject({ in_attesa: 0, da_sistemare: 0 });
+
+    // Anche offline: i comandi in coda si aggiornano uno dopo l'altro mentre partono.
+    a.rete.accesa = false;
+    const [riga] = await banco.sql('select versione from membro where id = $1', [membro]);
+    for (const porzione of [1, 1.5, 1]) await a.sync.accoda('modifica_membro', { id: membro, versione_attesa: riga.versione, campi: { porzione } });
+    a.rete.accesa = true;
+    await a.sync.sincronizza();
+    expect(a.sync.leggiStato()).toMatchObject({ in_attesa: 0, da_sistemare: 0 });
+    expect(Number((await banco.sql('select porzione from membro where id = $1', [membro]))[0].porzione)).toBe(1);
+  });
+
+  it('una modifica di un altro dispositivo in mezzo resta un conflitto vero', async () => {
+    const { a, b, membro } = await famigliaConDue();
+    await a.sync.sincronizza();
+    await b.sync.sincronizza();
+    await a.sync.accoda('modifica_membro', { id: membro, versione_attesa: 1, campi: { note: 'da A' } });
+    await b.sync.accoda('modifica_membro', { id: membro, versione_attesa: 1, campi: { porzione: 2 } });
+    await b.sync.invia();
+    expect(await a.sync.invia()).toBe('vuota');
+    // A cambia ora la porzione partendo dalla versione 1: non ha visto quella di B.
+    await a.sync.accoda('modifica_membro', { id: membro, versione_attesa: 1, campi: { porzione: 1.5 } });
+    await a.sync.sincronizza();
+    expect(a.sync.leggiStato()).toMatchObject({ da_sistemare: 1 });
+    const voce = (await a.sync.voci()).find((v) => v.stato === 'da_sistemare');
+    expect(voce?.esito?.dettaglio).toMatchObject({ motivo: 'stesso_campo', campi: [{ campo: 'porzione', valore_attuale: 2 }] });
+  });
+
   it('T-SYN-9: tre giorni offline con 40 comandi: partono in ordine al ritorno della rete', async () => {
     const { famiglia, a, membro } = await famigliaConDue();
     a.rete.accesa = false;

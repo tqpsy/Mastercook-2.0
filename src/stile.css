@@ -344,18 +344,34 @@ p {
   align-items: flex-end;
   justify-content: center;
 }
+/* Con un foglio aperto la pagina sotto non scorre: il dito muove solo il foglio. */
+html.foglio-aperto,
+html.foglio-aperto body {
+  overflow: hidden;
+}
+.foglio-sfondo {
+  overscroll-behavior: contain;
+}
 .foglio {
   width: 100%;
   max-width: 560px;
   max-height: 88dvh;
   overflow: auto;
+  overscroll-behavior: contain;
   background: var(--sfondo);
   border-radius: 20px 20px 0 0;
   padding: 20px 16px calc(20px + env(safe-area-inset-bottom));
 }
+/* Altezza fissa: cambiando scheda il bordo in alto resta dov'è. */
+.foglio.alto {
+  height: 88dvh;
+}
 @media (min-width: 700px) {
   .foglio-sfondo {
     align-items: center;
+  }
+  .foglio.alto {
+    height: min(88dvh, 720px);
   }
   .foglio {
     border-radius: 20px;
