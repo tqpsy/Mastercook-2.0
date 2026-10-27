@@ -13,7 +13,11 @@ export interface RigaLocale {
   riga: Riga;
 }
 
-export type StatoVoceCoda = 'in_attesa' | 'da_sistemare';
+/**
+ * `inviata`: il server l'ha applicata ma la copia locale non ha ancora scaricato le righe cambiate. Resta
+ * nell'anteprima fino allo scarico che le porta, così la schermata non torna per un attimo allo stato di prima.
+ */
+export type StatoVoceCoda = 'in_attesa' | 'inviata' | 'da_sistemare';
 
 export interface VoceCoda {
   /** Ordine d'inserimento: i comandi partono in quest'ordine. */

@@ -10,7 +10,7 @@
  *   quindi un'interruzione lascia la copia locale com'era e si riprende dallo stesso punto.
  */
 import type { Archivio, VoceCoda } from './archivio';
-import { type Comando, ErroreRete, type Esito, type Trasporto, VERSIONE_APP } from './tipi';
+import { type Comando, ErroreRete, type Esito, type RigaScaricata, type Trasporto, VERSIONE_APP } from './tipi';
 
 export type Blocco = 'app_da_aggiornare' | 'accesso_scaduto' | 'non_autorizzato';
 
@@ -145,7 +145,8 @@ export class Sincronizzatore {
         return 'bloccata';
       }
       if (esito.esito === 'applicato') {
-        await this.o.archivio.coda.delete(voce.ordine!);
+        // Si toglie dalla coda con lo scarico che porta le sue righe (scaricaOra), non prima.
+        await this.o.archivio.coda.update(voce.ordine!, { stato: 'inviata' });
       } else {
         await this.o.archivio.coda.update(voce.ordine!, { stato: 'da_sistemare', esito });
       }
@@ -178,11 +179,14 @@ export class Sincronizzatore {
 
   private async scaricaOra(): Promise<'aggiornato' | 'rete' | 'bloccata'> {
     const { archivio, trasporto, famiglia } = this.o;
-    for (;;) {
-      const dopo = await archivio.cursore(famiglia);
+    // Tutte le pagine si scrivono insieme ai comandi inviati che contengono: la vista passa dall'anteprima
+    // alle righe vere in un colpo solo, senza un attimo in cui non c'è né l'una né le altre.
+    const dopo = await archivio.cursore(famiglia);
+    const righe: RigaScaricata[] = [];
+    for (let cursore = dopo; ; ) {
       let pagina;
       try {
-        pagina = await trasporto.scarica(famiglia, dopo, this.o.limitePagina);
+        pagina = await trasporto.scarica(famiglia, cursore, this.o.limitePagina);
       } catch (e) {
         if (!(e instanceof ErroreRete)) throw e;
         this.aggiorna({ senza_rete: true });
@@ -192,21 +196,20 @@ export class Sincronizzatore {
         this.aggiorna({ bloccato: pagina.errore === 'non_autenticato' ? 'accesso_scaduto' : 'non_autorizzato' });
         return 'bloccata';
       }
-      const righe = pagina.righe;
-      if (righe.length) {
-        const ultimo = righe[righe.length - 1].seq;
-        await archivio.transaction('rw', archivio.righe, archivio.cursori, async () => {
-          await archivio.righe.bulkPut(
-            righe.map((r) => ({ tabella: r.tabella, id: r.riga.id, famiglia_id: famiglia, seq: r.seq, riga: r.riga })),
-          );
-          await archivio.cursori.put({ famiglia_id: famiglia, seq: ultimo, aggiornato_il: this.o.ora().toISOString() });
-        });
-      }
-      if (!pagina.altre) {
-        this.aggiorna({ senza_rete: false, ultimo_scarico: this.o.ora().toISOString() });
-        return 'aggiornato';
-      }
+      righe.push(...pagina.righe);
+      if (pagina.righe.length) cursore = pagina.righe[pagina.righe.length - 1].seq;
+      if (!pagina.altre) break;
     }
+    await archivio.transaction('rw', archivio.righe, archivio.cursori, archivio.coda, async () => {
+      if (righe.length) {
+        await archivio.righe.bulkPut(righe.map((r) => ({ tabella: r.tabella, id: r.riga.id, famiglia_id: famiglia, seq: r.seq, riga: r.riga })));
+        await archivio.cursori.put({ famiglia_id: famiglia, seq: righe[righe.length - 1].seq, aggiornato_il: this.o.ora().toISOString() });
+      }
+      const inviate = (await archivio.coda.where('famiglia_id').equals(famiglia).toArray()).filter((v) => v.stato === 'inviata');
+      if (inviate.length) await archivio.coda.bulkDelete(inviate.map((v) => v.ordine!));
+    });
+    this.aggiorna({ senza_rete: false, ultimo_scarico: this.o.ora().toISOString() });
+    return 'aggiornato';
   }
 
   /** Invia la coda e poi scarica: la copia locale torna uguale al server. */

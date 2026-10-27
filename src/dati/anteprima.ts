@@ -409,12 +409,12 @@ function cambiaQuantita(righe: Righe, id: string, nuova: (q: number) => number) 
   });
 }
 
-/** Righe del server con sopra l'effetto previsto dei comandi in attesa, nell'ordine della coda. */
+/** Righe del server con sopra l'effetto previsto dei comandi in attesa (o applicati ma non ancora scaricati), nell'ordine della coda. */
 export function vistaConAnteprima(righe: Righe, coda: VoceCoda[]): Righe {
   const vista: Righe = {};
   for (const [t, elenco] of Object.entries(righe)) vista[t as Tabella] = [...(elenco ?? [])];
   for (const voce of coda) {
-    if (voce.stato !== 'in_attesa') continue;
+    if (voce.stato === 'da_sistemare') continue;
     EFFETTI[voce.comando.tipo]?.(vista, voce.comando.dati, voce.famiglia_id);
   }
   return vista;
