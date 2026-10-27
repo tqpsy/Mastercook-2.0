@@ -72,7 +72,7 @@ export function Famiglia() {
   );
 }
 
-function Vincoli({ vincoli, rimuovi }: { vincoli: RigaInVista[]; rimuovi?: (id: string) => void }) {
+function Vincoli({ vincoli }: { vincoli: RigaInVista[] }) {
   if (!vincoli.length) return null;
   return (
     <span className="etichette">
@@ -80,11 +80,6 @@ function Vincoli({ vincoli, rimuovi }: { vincoli: RigaInVista[]; rimuovi?: (id: 
         <span key={v.id} className={`etichetta ${v.tipo === 'allergia' ? 'allergia' : ''} ${v.in_attesa ? 'attesa' : ''}`}>
           {v.tipo === 'indicazione_medica' ? `🩺 ${String(v.testo ?? '')}` : `${v.tipo === 'allergia' ? '⚠️ ' : ''}${nomeOggetto(String(v.oggetto), v.testo as string | null)}`}
           {v.severita === 'evitare_anche_tracce' && ' (anche tracce)'}
-          {rimuovi && (
-            <button onClick={() => rimuovi(v.id)} aria-label={`Togli ${nomeOggetto(String(v.oggetto), v.testo as string | null)}`}>
-              ✕
-            </button>
-          )}
         </span>
       ))}
     </span>
@@ -165,12 +160,12 @@ function SchedaPersona({ membro, vincoli, chiudi }: { membro?: RigaInVista; vinc
       <div className="campo">
         <span>Allergie, intolleranze ed esigenze</span>
         {vincoli.length ? (
-          <Vincoli vincoli={vincoli} rimuovi={(id) => esegui('rimuovi_vincolo', { id })} />
+          <Vincoli vincoli={vincoli} />
         ) : (
           <p className="tenue">Nessuna indicata.</p>
         )}
         <button className="bottone piccolo" style={{ marginTop: 10 }} onClick={() => setAggiungi(true)}>
-          + Aggiungi
+          {vincoli.length ? 'Aggiungi o togli' : '+ Aggiungi'}
         </button>
       </div>
 
@@ -289,8 +284,17 @@ function NuovoVincolo({ membro, esistenti, chiudi }: { membro: string; esistenti
   const [tracce, setTracce] = useState(false);
   const [testo, setTesto] = useState('');
   const [fonte, setFonte] = useState<'dichiarato' | 'medico' | 'dietista'>('dichiarato');
-  const gia = new Set(esistenti.map((v) => `${String(v.tipo)}:${String(v.oggetto)}`));
+  const gia = new Map(esistenti.map((v) => [`${String(v.tipo)}:${String(v.oggetto)}`, v.id]));
   const elenco = tipo === 'allergia' ? ALLERGENI_UE : tipo === 'intolleranza' ? INTOLLERANZE : tipo === 'esigenza' ? ESIGENZE : [];
+  // Quelle scritte a parole (o le indicazioni mediche) non sono nell'elenco: si mostrano lo stesso, per poterle togliere.
+  const scritte = esistenti.filter((v) => v.tipo === tipo && !elenco.some((x) => x.oggetto === v.oggetto));
+
+  /** Un tocco aggiunge, un altro toglie. */
+  async function cambia(oggetto: string) {
+    const id = gia.get(`${tipo}:${oggetto}`);
+    if (id) await esegui('rimuovi_vincolo', { id });
+    else await aggiungi(oggetto);
+  }
 
   async function aggiungi(oggetto: string, testoLibero?: string) {
     await esegui('aggiungi_vincolo', {
@@ -305,7 +309,7 @@ function NuovoVincolo({ membro, esistenti, chiudi }: { membro: string; esistenti
   }
 
   return (
-    <Foglio titolo="Aggiungi" chiudi={chiudi}>
+    <Foglio titolo="Allergie, intolleranze ed esigenze" chiudi={chiudi} alto>
       <div className="scelte">
         {(['allergia', 'intolleranza', 'esigenza', 'indicazione_medica'] as TipoVincolo[]).map((t) => (
           <button key={t} aria-pressed={tipo === t} onClick={() => setTipo(t)}>
@@ -321,14 +325,29 @@ function NuovoVincolo({ membro, esistenti, chiudi }: { membro: string; esistenti
         </label>
       )}
 
-      {elenco.length > 0 && (
+      {(elenco.length > 0 || scritte.length > 0) && (
         <div className="scelte">
           {elenco.map((v) => (
-            <button key={v.oggetto} aria-pressed={gia.has(`${tipo}:${v.oggetto}`)} disabled={gia.has(`${tipo}:${v.oggetto}`)} onClick={() => aggiungi(v.oggetto)}>
+            <button key={v.oggetto} aria-pressed={gia.has(`${tipo}:${v.oggetto}`)} onClick={() => cambia(v.oggetto)}>
               {v.nome}
             </button>
           ))}
+          {scritte.map((v) => (
+            <button
+              key={v.id}
+              aria-pressed
+              onClick={() => esegui('rimuovi_vincolo', { id: v.id })}
+              aria-label={`Togli ${tipo === 'indicazione_medica' ? String(v.testo ?? '') : nomeOggetto(String(v.oggetto), v.testo as string | null)}`}
+            >
+              {tipo === 'indicazione_medica' ? `🩺 ${String(v.testo ?? '')}` : nomeOggetto(String(v.oggetto), v.testo as string | null)}
+            </button>
+          ))}
         </div>
+      )}
+      {elenco.length > 0 && (
+        <p className="tenue" style={{ marginTop: 0 }}>
+          Tocca per scegliere, tocca di nuovo per togliere.
+        </p>
       )}
 
       <form

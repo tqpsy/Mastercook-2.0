@@ -30,6 +30,52 @@ test('primo accesso: crea la famiglia, aggiunge una persona con un’allergia, t
   expect(r.n).toBe(1);
 });
 
+test('allergie: il pannello non cambia altezza tra le schede, un secondo tocco toglie, nessuna «x» nella scheda della persona', async ({ browser }, info) => {
+  const luca = await nuovoUtente('Luca');
+  const { page } = await apri(browser, luca, info.project.use);
+  await creaFamiglia(page);
+  await aggiungiPersona(page, 'Sara');
+
+  await page.getByRole('button', { name: 'Modifica Sara' }).click();
+  await page.getByRole('button', { name: '+ Aggiungi' }).click();
+  const pannello = page.getByRole('dialog', { name: 'Allergie, intolleranze ed esigenze' });
+  const alto = async () => (await pannello.boundingBox())!;
+  const prima = await alto();
+  for (const scheda of ['Intolleranza', 'Esigenza', 'Indicazione medica', 'Allergia']) {
+    await pannello.getByRole('button', { name: scheda, exact: true }).click();
+    const ora = await alto();
+    expect(Math.round(ora.y)).toBe(Math.round(prima.y));
+    expect(Math.round(ora.height)).toBe(Math.round(prima.height));
+  }
+
+  const arachidi = pannello.getByRole('button', { name: 'Arachidi' });
+  await arachidi.click();
+  await expect(arachidi).toHaveAttribute('aria-pressed', 'true');
+  await arachidi.click();
+  await expect(arachidi).toHaveAttribute('aria-pressed', 'false');
+  await pannello.getByRole('button', { name: 'Sesamo' }).click();
+  await pannello.getByRole('button', { name: 'Fatto' }).click();
+
+  const scheda = page.getByRole('dialog', { name: 'Sara' });
+  await expect(scheda.getByText('⚠️ Sesamo')).toBeVisible();
+  await expect(scheda.getByText('Arachidi')).toHaveCount(0);
+  await expect(scheda.getByRole('button', { name: '✕' })).toHaveCount(0);
+
+  // Con un foglio aperto la pagina sotto non scorre.
+  expect(await page.evaluate(() => getComputedStyle(document.body).overflow)).toBe('hidden');
+
+  // Porzione cambiata più volte di fila: nessun falso «da sistemare».
+  for (const p of ['Adulto', 'Ragazzo', 'Adulto', 'Bambino']) await scheda.getByRole('button', { name: p, exact: true }).click();
+  await scheda.getByRole('button', { name: 'Chiudi' }).click();
+  expect(await page.evaluate(() => getComputedStyle(document.body).overflow)).not.toBe('hidden');
+  await expect(page.getByRole('button', { name: /Stato del salvataggio: Tutto salvato/ })).toBeVisible();
+  const [r] = await sql<{ porzione: string }>(
+    `select porzione::text from membro where nome = 'Sara' and famiglia_id in (select famiglia_id from utente_famiglia where utente_id = $1)`,
+    [luca.id],
+  );
+  expect(Number(r.porzione)).toBe(0.6);
+});
+
 test('invito: chi apre il link entra con un tocco e vede la famiglia; le modifiche arrivano all’altro dispositivo', async ({ browser }, info) => {
   const luca = await nuovoUtente('Luca');
   const { page: telefono } = await apri(browser, luca, info.project.use);
