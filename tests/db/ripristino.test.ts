@@ -94,7 +94,7 @@ describe('esportazione e ripristino', () => {
     const file = await esporta(u, famiglia);
     const casi: [unknown, string][] = [
       [{ ...file, formato: 'altro' }, 'file_non_riconosciuto'],
-      [{ ...file, versione_schema: 3 }, 'versione_file_non_supportata'],
+      [{ ...file, versione_schema: 99 }, 'versione_file_non_supportata'],
       [{ ...file, tabelle: { ...file.tabelle, lotto: undefined } }, 'file_incompleto'],
       [{ ...file, tabelle: { ...file.tabelle, membro: undefined } }, 'file_incompleto'],
       [{ ...file, tabelle: { ...file.tabelle, membro: [{ ...file.tabelle.membro[0], porzione: 9 }] } }, 'dati_non_validi'],
@@ -179,7 +179,7 @@ describe('esportazione e ripristino con ricette e casa (versione 2)', () => {
     await u.applica(comando('sposta_lotto', famiglia, { lotto_id: carne, luogo: 'freezer', quantita: 200, nuovo_id: randomUUID() }));
 
     const file = await esporta(u, famiglia);
-    expect(file.versione_schema).toBe(2);
+    expect(file.versione_schema).toBe(3);
     expect(file.conteggi).toMatchObject({ ingrediente: 1, ricetta: 1, ricetta_ingrediente: 3, ricetta_passo: 1, lotto: 3, movimento: 6 });
 
     const nuova = randomUUID();
@@ -202,5 +202,68 @@ describe('esportazione e ripristino con ricette e casa (versione 2)', () => {
     };
     const e = await u.applica(comando('ripristina_famiglia', randomUUID(), { file: v1 }));
     expect(e).toMatchObject({ esito: 'applicato', dettaglio: { membri: 2, vincoli: 2 } });
+  });
+});
+
+describe('esportazione e ripristino del menu (versione 3)', () => {
+  /** Menu confrontabile senza id: categorie per nome, persone per nome, ricette per titolo. */
+  function menu(f: FileEsportazione) {
+    const persone = new Map(f.tabelle.membro.map((m) => [m.id, m.nome]));
+    const titoli = new Map(f.tabelle.ricetta.map((r) => [r.id, r.titolo]));
+    const ric = (id: unknown) => (id == null ? null : String(id).startsWith('sys:') ? String(id) : `famiglia:${titoli.get(String(id))}`);
+    const categorie = new Map(f.tabelle.categoria_pasto.map((c) => [c.id, c.chiave ?? `famiglia:${c.nome}`]));
+    const cat = (c: unknown) => categorie.get(String(c)) ?? String(c);
+    const portate = new Map(f.tabelle.portata.map((p) => [p.id, `${p.data} ${cat(p.categoria)} ${ric(p.ricetta_id) ?? p.testo}`]));
+    return {
+      categorie: f.tabelle.categoria_pasto.map((c) => `${c.chiave ?? c.nome} ${c.emoji ?? ''} ${c.attiva}`).sort(),
+      portate: f.tabelle.portata
+        .map((p) => ({ cosa: portate.get(p.id), porzioni: p.porzioni, origine: p.origine, bloccata: p.bloccata, note: p.note }))
+        .sort((a, b) => String(a.cosa).localeCompare(String(b.cosa))),
+      eccezioni: f.tabelle.eccezione_membro.map((e) => `${portate.get(String(e.portata_id))} ${persone.get(String(e.membro_id))} ${e.tipo} ${ric(e.ricetta_id) ?? e.testo}`).sort(),
+      gusti: f.tabelle.gusto.map((g) => `${persone.get(String(g.membro_id))} ${g.ingrediente_id ?? ric(g.ricetta_id)} ${g.valore}`).sort(),
+    };
+  }
+
+  it('categorie, portate, eccezioni e gusti tornano uguali; le portate tolte restano tolte', async () => {
+    const { u, famiglia } = await famigliaCompleta();
+    const sara = String((await banco.sql("select id from membro where famiglia_id = $1 and nome = 'Sara'", [famiglia]))[0].id);
+    const torta = randomUUID();
+    await u.applica(
+      comando('salva_ricetta', famiglia, {
+        id: torta,
+        nuova: true,
+        campi: { titolo: 'Torta della domenica', categoria: 'dolce', porzioni: 8 },
+        ingredienti: { aggiungi: [{ id: randomUUID(), ingrediente_id: 'ing:mela', quantita: 500, unita: 'g' }] },
+        passi: { aggiungi: [{ id: randomUUID(), ordine: 1, testo: 'Cuoci.' }] },
+      }),
+    );
+    await u.applica(comando('imposta_categoria', famiglia, { chiave: 'merenda', attiva: true }));
+    const brunch = randomUUID();
+    await u.applica(comando('crea_categoria', famiglia, { id: brunch, nome: 'Brunch', emoji: '🥞' }));
+    const cena = randomUUID();
+    await u.applica(comando('aggiungi_portata', famiglia, { id: cena, data: '2026-11-03', categoria: 'cena', ricetta_id: 'sys:carbonara', porzioni: 3, note: 'Poco pepe' }));
+    await u.applica(comando('aggiungi_portata', famiglia, { id: randomUUID(), data: '2026-11-08', categoria: brunch, ricetta_id: torta }));
+    await u.applica(comando('aggiungi_portata', famiglia, { id: randomUUID(), data: '2026-11-04', categoria: 'merenda', testo: 'Frutta' }));
+    const tolta = randomUUID();
+    await u.applica(comando('aggiungi_portata', famiglia, { id: tolta, data: '2026-11-05', categoria: 'pranzo', testo: 'Avanzi' }));
+    await u.applica(comando('rimuovi_portata', famiglia, { id: tolta }));
+    await u.applica(comando('modifica_portata', famiglia, { id: cena, versione_attesa: 1, campi: { bloccata: true } }));
+    await u.applica(comando('imposta_eccezione', famiglia, { id: randomUUID(), portata_id: cena, membro_id: sara, tipo: 'alternativa', ricetta_id: torta }));
+    await u.applica(comando('imposta_gusto', famiglia, { id: randomUUID(), membro_id: sara, ingrediente_id: 'ing:zucchina', valore: 'non_piace' }));
+    await u.applica(comando('imposta_gusto', famiglia, { id: randomUUID(), membro_id: sara, ricetta_id: torta, valore: 'piace' }));
+
+    const file = await esporta(u, famiglia);
+    expect(file.conteggi).toMatchObject({ categoria_pasto: 2, portata: 3, eccezione_membro: 1, gusto: 2 });
+    const nuova = randomUUID();
+    const e = await u.applica(comando('ripristina_famiglia', nuova, { file: JSON.parse(JSON.stringify(file)) }));
+    expect(e).toMatchObject({ esito: 'applicato', dettaglio: { portate: 3 } });
+    const ripristinato = await esporta(u, nuova);
+    const vivi = (f: FileEsportazione): FileEsportazione => ({
+      ...f,
+      tabelle: Object.fromEntries(Object.entries(f.tabelle).map(([t, r]) => [t, r.filter((x) => x.eliminato_il == null)])) as FileEsportazione['tabelle'],
+    });
+    expect(menu(ripristinato)).toEqual(menu(vivi(file)));
+    // Dopo il ripristino si continua a usare il menu come prima.
+    expect((await u.applica(comando('imposta_categoria', nuova, { chiave: 'merenda', attiva: false }))).esito).toBe('applicato');
   });
 });

@@ -41,7 +41,11 @@ export type Tabella =
   | 'ricetta_ingrediente'
   | 'ricetta_passo'
   | 'lotto'
-  | 'movimento';
+  | 'movimento'
+  | 'categoria_pasto'
+  | 'portata'
+  | 'eccezione_membro'
+  | 'gusto';
 
 export interface Riga {
   id: string;

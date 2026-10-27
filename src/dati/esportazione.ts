@@ -5,7 +5,10 @@
 import type { Riga, RigaScaricata, Tabella, Trasporto } from './tipi';
 
 export const FORMATO = 'mastercook-2';
-export const VERSIONE_FILE = 2;
+export const VERSIONE_FILE = 3;
+
+/** Le tabelle dei file della versione 2 (Fase 2): senza il menu. */
+const TABELLE_V2 = ['famiglia', 'membro', 'vincolo_alimentare', 'ingrediente', 'ricetta', 'ricetta_ingrediente', 'ricetta_passo', 'lotto', 'movimento'] as const;
 
 /** Tabelle esportate: i dati della famiglia. Accessi, inviti e cronologia restano fuori. */
 export const TABELLE_ESPORTATE = [
@@ -18,6 +21,10 @@ export const TABELLE_ESPORTATE = [
   'ricetta_passo',
   'lotto',
   'movimento',
+  'categoria_pasto',
+  'portata',
+  'eccezione_membro',
+  'gusto',
 ] as const satisfies readonly Tabella[];
 
 /** Le tabelle presenti nei file della versione 1, che si possono ancora ripristinare. */
@@ -75,14 +82,14 @@ export function controllaFile(testo: string): ControlloFile {
   }
   const file = f as Partial<FileEsportazione>;
   if (file?.formato !== FORMATO) return { valido: false, motivo: 'Il file non è un’esportazione di Mastercook.' };
-  if (file.versione_schema !== 1 && file.versione_schema !== VERSIONE_FILE) {
+  if (file.versione_schema !== 1 && file.versione_schema !== 2 && file.versione_schema !== VERSIONE_FILE) {
     return { valido: false, motivo: 'Il file viene da una versione dell’app che questa non sa leggere.' };
   }
   const t = file.tabelle;
   if (!t || !Array.isArray(t.famiglia) || t.famiglia.length !== 1 || !Array.isArray(t.membro) || !Array.isArray(t.vincolo_alimentare)) {
     return { valido: false, motivo: 'Il file è incompleto.' };
   }
-  const attese: readonly (typeof TABELLE_ESPORTATE)[number][] = file.versione_schema === 1 ? TABELLE_V1 : TABELLE_ESPORTATE;
+  const attese: readonly (typeof TABELLE_ESPORTATE)[number][] = file.versione_schema === 1 ? TABELLE_V1 : file.versione_schema === 2 ? TABELLE_V2 : TABELLE_ESPORTATE;
   for (const k of attese) {
     if (!Array.isArray(t[k]) || file.conteggi?.[k] !== t[k].length) return { valido: false, motivo: 'Il file è stato modificato o è incompleto.' };
   }

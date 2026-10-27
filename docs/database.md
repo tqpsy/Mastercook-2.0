@@ -86,6 +86,37 @@ Regole principali, tutte nel database e coperte da test (`tests/db/ricette.test.
   (`data_confezione_protetta`). Le regole di stima sono indicative: vedi `src/dominio/scadenze.ts`.
 - Un lotto si aggiunge solo a mano (`origine = manuale`) in questa fase: acquisti, scontrini e foto arrivano dopo.
 
+## Comandi della Fase 3: menu della settimana
+
+Migrazione `20261029000000_menu.sql`. Tabelle `categoria_pasto`, `portata`, `eccezione_membro`, `gusto`.
+Il menu è un'**intenzione**: nessun comando del menu scrive lotti o movimenti (T-PIA, `tests/db/menu.test.ts`).
+
+| Tipo | Dati |
+|---|---|
+| `imposta_categoria` | `chiave` (colazione/spuntino/pranzo/merenda/cena), `attiva` |
+| `crea_categoria` | `id`, `nome`, `emoji`, `ordine` |
+| `modifica_categoria` | `id`, `versione_attesa`, `campi` (nome, emoji, ordine, attiva); non per le standard (`categoria_standard`) |
+| `aggiungi_portata` | `id`, `data`, `categoria` (chiave o id di una categoria della famiglia), `ricetta_id` **oppure** `testo`, `porzioni?`, `ordine?`, `note?` |
+| `modifica_portata` | `id`, `versione_attesa`, `campi` (data, categoria, ricetta_id, testo, porzioni, bloccata, ordine, note) |
+| `rimuovi_portata` | `id` (toglie anche le sue eccezioni) |
+| `ripeti_portate` | `portate: [{da, id, data, categoria?}]`, `eccezioni: [{da, id, portata_id}]` → `{copiate, saltate}` |
+| `imposta_eccezione` | `id`, `portata_id`, `membro_id`, `tipo` (non_mangia/alternativa), `ricetta_id?`, `testo?`, `porzioni?`, `versione_attesa?` |
+| `rimuovi_eccezione` | `id` |
+| `imposta_gusto` | `id`, `membro_id`, `ingrediente_id` **oppure** `ricetta_id`, `valore` (piace/non_piace), `versione_attesa?` |
+| `rimuovi_gusto` | `id` |
+
+- **Pasti senza tabella propria**: una portata sta in un pasto identificato da (`data`, `categoria`); più portate
+  nello stesso pasto convivono, anche aggiunte nello stesso momento da due telefoni (T-SYN-1).
+- **Porzioni** nulle = automatiche: le calcola l'app sommando la porzione di chi mangia il piatto
+  (`src/dominio/menu.ts`). Un numero scritto a mano resta quello.
+- **Eccezioni e gusti** sono uno per persona e portata (o per persona e alimento). Rimandare la stessa scelta è
+  «già presente»; cambiarla senza aver visto quella di un altro è un conflitto (`eccezione_cambiata`, `gusto_cambiato`).
+- `origine`: dall'app arrivano solo `manuale` e `ripetuta`; `automatica` è riservata alle proposte della Fase 6.
+  `bloccata` dice alle proposte automatiche di non toccare quel piatto.
+- Una ricetta usata nel menu non si elimina (`ricetta_nel_menu`): si archivia. Una persona tolta perde eccezioni e gusti.
+- Riferimenti controllati dal database: ricetta di sistema o della famiglia, persona e ingrediente della famiglia,
+  categoria esistente.
+
 ## Foto delle ricette
 
 Deposito privato `foto` di Supabase Storage (migrazione `20261028000300_foto.sql`): percorso `<famiglia>/<uuid>.jpg`,

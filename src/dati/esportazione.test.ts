@@ -51,5 +51,14 @@ describe('esportazione', () => {
     expect(controllaFile(JSON.stringify(v1)).valido).toBe(true);
     const v2Incompleto = { ...v1, versione_schema: 2 };
     expect(controllaFile(JSON.stringify(v2Incompleto)).valido).toBe(false);
+    // Un file della Fase 2 (senza menu) resta valido.
+    const menu = ['categoria_pasto', 'portata', 'eccezione_membro', 'gusto'];
+    const v2 = {
+      ...f,
+      versione_schema: 2,
+      tabelle: Object.fromEntries(Object.entries(f.tabelle).filter(([t]) => !menu.includes(t))),
+      conteggi: Object.fromEntries(Object.entries(f.conteggi).filter(([t]) => !menu.includes(t))),
+    };
+    expect(controllaFile(JSON.stringify(v2)).valido).toBe(true);
   });
 });

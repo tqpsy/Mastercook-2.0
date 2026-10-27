@@ -1,7 +1,9 @@
 import { type FormEvent, useState } from 'react';
 import type { RigaInVista } from '../dati/anteprima';
 import { righeAttive, useFamiglia, useVista } from '../dati/contesto';
+import { useIndice } from '../dati/indice';
 import { ALLERGENI_UE, ESIGENZE, INTOLLERANZE, NOME_TIPO, nomeOggetto, oggettoDaTesto, type TipoVincolo } from '../dominio/vincoli';
+import { CercaIngrediente } from '../ui/CercaIngrediente';
 import { Foglio } from '../ui/Foglio';
 
 const EMOJI = ['🧑', '👩', '👨', '👧', '👦', '🧒', '👶', '👵', '👴', '🧔', '👱', '🙂'];
@@ -172,6 +174,8 @@ function SchedaPersona({ membro, vincoli, chiudi }: { membro?: RigaInVista; vinc
         </button>
       </div>
 
+      <Gusti membro={membro.id} />
+
       <CampoTesto etichetta="Note" valore={String(membro.note ?? '')} lungo salva={(note) => modifica({ note: note || null })} />
 
       {!membro.utente_id && (
@@ -189,6 +193,69 @@ function SchedaPersona({ membro, vincoli, chiudi }: { membro?: RigaInVista; vinc
       )}
       {aggiungi && <NuovoVincolo membro={membro.id} esistenti={vincoli} chiudi={() => setAggiungi(false)} />}
     </Foglio>
+  );
+}
+
+/** Cosa piace e cosa no: non esclude ricette, le segnala nel menu. */
+function Gusti({ membro }: { membro: string }) {
+  const { esegui } = useFamiglia();
+  const vista = useVista();
+  const indice = useIndice(vista);
+  const [cerca, setCerca] = useState<'piace' | 'non_piace' | null>(null);
+  const gusti = righeAttive(vista, 'gusto').filter((g) => g.membro_id === membro);
+  if (!indice) return null;
+  const nome = (g: RigaInVista) => (g.ingrediente_id ? indice.nome(String(g.ingrediente_id)) : (indice.perId.get(String(g.ricetta_id))?.titolo ?? 'Ricetta'));
+  const imposta = (dati: Record<string, unknown>, valore: 'piace' | 'non_piace') => {
+    const esistente = gusti.find((g) => (g.ingrediente_id ?? g.ricetta_id) === (dati.ingrediente_id ?? dati.ricetta_id));
+    return esegui('imposta_gusto', { id: crypto.randomUUID(), membro_id: membro, ...dati, valore, versione_attesa: esistente?.versione });
+  };
+
+  return (
+    <div className="campo">
+      <span>Gusti</span>
+      {gusti.length ? (
+        <ul className="elenco">
+          {gusti.map((g) => (
+            <li key={g.id} className="riga">
+              <span aria-hidden>{g.valore === 'piace' ? '😋' : '🙅'}</span>
+              <span className="cresce">
+                {g.valore === 'piace' ? 'Piace' : 'Non piace'}: {nome(g)}
+              </span>
+              <button className="bottone piccolo" aria-label={`Togli ${nome(g)} dai gusti`} onClick={() => esegui('rimuovi_gusto', { id: g.id })}>
+                Togli
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="tenue">Nessun gusto indicato. Servono solo a segnalarlo nel menu, non escludono nulla.</p>
+      )}
+      {cerca ? (
+        <>
+          <CercaIngrediente
+            indice={indice}
+            etichetta={cerca === 'piace' ? 'Cosa piace' : 'Cosa non piace'}
+            autoFocus
+            scegli={(i) => {
+              void imposta({ ingrediente_id: i.id }, cerca);
+              setCerca(null);
+            }}
+          />
+          <button className="bottone piccolo" onClick={() => setCerca(null)}>
+            Annulla
+          </button>
+        </>
+      ) : (
+        <div className="riga" style={{ marginTop: 10, flexWrap: 'wrap' }}>
+          <button className="bottone piccolo" onClick={() => setCerca('piace')}>
+            + Piace
+          </button>
+          <button className="bottone piccolo" onClick={() => setCerca('non_piace')}>
+            + Non piace
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 

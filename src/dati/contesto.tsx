@@ -105,6 +105,10 @@ const TABELLE: Tabella[] = [
   'ricetta_passo',
   'lotto',
   'movimento',
+  'categoria_pasto',
+  'portata',
+  'eccezione_membro',
+  'gusto',
 ];
 
 export interface Vista {

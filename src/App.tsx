@@ -10,6 +10,7 @@ import { Casa } from './pagine/Casa';
 import { Famiglia } from './pagine/Famiglia';
 import { Impostazioni } from './pagine/Impostazioni';
 import { Invito } from './pagine/Invito';
+import { Menu } from './pagine/Menu';
 import { NuovaFamiglia } from './pagine/NuovaFamiglia';
 import { Oggi } from './pagine/Oggi';
 import { Ricette } from './pagine/Ricette';
@@ -179,7 +180,7 @@ function ConAccesso() {
   }
 }
 
-type Scheda = 'oggi' | 'ricette' | 'casa' | 'famiglia' | 'impostazioni';
+type Scheda = 'oggi' | 'menu' | 'ricette' | 'casa' | 'famiglia' | 'impostazioni';
 
 function Guscio({ email, apriFamiglia }: { email: string; apriFamiglia: (famiglia: string) => void }) {
   const [scheda, setScheda] = useState<Scheda>('oggi');
@@ -188,10 +189,10 @@ function Guscio({ email, apriFamiglia }: { email: string; apriFamiglia: (famigli
     () =>
       [
         { id: 'oggi', nome: 'Oggi', icona: '☀️' },
+        { id: 'menu', nome: 'Menu', icona: '📅' },
         { id: 'ricette', nome: 'Ricette', icona: '📖' },
         { id: 'casa', nome: 'Casa', icona: '🏠' },
         { id: 'famiglia', nome: 'Famiglia', icona: '👪' },
-        { id: 'impostazioni', nome: 'Impostazioni', icona: '⚙️' },
       ] as const,
     [],
   );
@@ -212,11 +213,17 @@ function Guscio({ email, apriFamiglia }: { email: string; apriFamiglia: (famigli
   return (
     <>
       <header className="testata">
-        <h1>{schede.find((s) => s.id === scheda)?.nome}</h1>
-        <StatoSync />
+        <h1>{scheda === 'impostazioni' ? 'Impostazioni' : schede.find((s) => s.id === scheda)?.nome}</h1>
+        <div className="riga">
+          <StatoSync />
+          <button className="bottone piccolo" aria-label="Impostazioni" aria-pressed={scheda === 'impostazioni'} onClick={() => setScheda('impostazioni')}>
+            <span aria-hidden>⚙️</span>
+          </button>
+        </div>
       </header>
       <main className="pagina">
         {scheda === 'oggi' && <Oggi vai={setScheda} />}
+        {scheda === 'menu' && <Menu />}
         {scheda === 'ricette' && <Ricette />}
         {scheda === 'casa' && <Casa />}
         {scheda === 'famiglia' && <Famiglia />}

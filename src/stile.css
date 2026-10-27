@@ -459,3 +459,121 @@ details > summary {
   background: var(--superficie-2);
   color: var(--testo-tenue);
 }
+
+/* Menu della settimana */
+.piatto {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  min-height: 44px;
+  padding: 6px 10px;
+  margin-bottom: 6px;
+  border-radius: 10px;
+  background: var(--superficie-2);
+  border-left: 4px solid var(--bordo);
+  color: var(--testo);
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+.piatto:focus-visible,
+.aggiungi-piatto:focus-visible {
+  outline: 2px solid var(--primario);
+  outline-offset: 2px;
+}
+.piatto.adatta {
+  border-left-color: var(--primario);
+}
+.piatto.da_verificare {
+  border-left-color: var(--attenzione);
+}
+.piatto.non_adatta {
+  border-left-color: var(--errore);
+}
+.piatto .piccolo {
+  font-size: 0.8rem;
+}
+.aggiungi-piatto {
+  width: 100%;
+  min-height: 44px;
+  border: 1px dashed var(--bordo);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--testo-tenue);
+  font: inherit;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+.giorno.oggi {
+  border-color: var(--primario);
+}
+.pasto {
+  display: grid;
+  grid-template-columns: 108px 1fr;
+  gap: 8px;
+  align-items: start;
+  padding: 6px 0;
+  border-top: 1px solid var(--bordo);
+}
+.pasto:first-of-type {
+  border-top: 0;
+}
+.nome-pasto {
+  padding-top: 10px;
+  font-size: 0.9rem;
+}
+/* La griglia esce dalla colonna della pagina e usa tutta la larghezza dello schermo; scorre solo lei. */
+.griglia-menu {
+  overflow-x: auto;
+  width: calc(100vw - 16px);
+  max-width: 1400px;
+  margin: 0 0 16px 50%;
+  transform: translateX(-50%);
+  padding: 0 8px;
+  box-sizing: border-box;
+}
+.griglia-menu table {
+  border-collapse: separate;
+  border-spacing: 6px;
+  min-width: 820px;
+  width: 100%;
+  table-layout: fixed;
+  font-size: 0.9rem;
+}
+.griglia-menu th {
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-align: left;
+  vertical-align: top;
+  padding: 4px;
+}
+.griglia-menu thead th {
+  text-transform: capitalize;
+}
+.griglia-menu tbody th {
+  width: 92px;
+  position: sticky;
+  left: 0;
+  background: var(--sfondo);
+  z-index: 1;
+}
+.griglia-menu td {
+  vertical-align: top;
+  padding: 0;
+}
+.griglia-menu .oggi {
+  color: var(--primario);
+}
+.elenco > li.oggi strong {
+  color: var(--primario);
+}
+button.etichetta {
+  border: 0;
+  font: inherit;
+  font-size: 0.85rem;
+  min-height: 36px;
+  cursor: pointer;
+}
