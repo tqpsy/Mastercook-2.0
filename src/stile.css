@@ -390,3 +390,56 @@ p {
   margin: 0 auto 18px;
   display: block;
 }
+
+/* Voce di elenco toccabile: tutta la riga è il bottone. */
+.voce {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  min-height: 44px;
+}
+.voce:focus-visible {
+  outline: 2px solid var(--primario);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+.risultati {
+  background: var(--superficie);
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio);
+  padding: 0 12px;
+  margin-top: 6px;
+}
+.risultati > li {
+  padding: 6px 0;
+}
+.etichetta.avviso-data {
+  background: var(--attenzione-tenue);
+  color: var(--attenzione);
+}
+.etichetta.scaduto {
+  background: var(--errore-tenue);
+  color: var(--errore);
+}
+details > summary {
+  cursor: pointer;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  color: var(--testo-tenue);
+}
+.schede button {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (max-width: 400px) {
+  .schede button {
+    font-size: 0.72rem;
+  }
+}

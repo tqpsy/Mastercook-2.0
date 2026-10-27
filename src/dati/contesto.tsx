@@ -93,7 +93,19 @@ export function useStatoSync(): StatoSincronizzazione {
   return stato;
 }
 
-const TABELLE: Tabella[] = ['famiglia', 'utente_famiglia', 'membro', 'vincolo_alimentare', 'invito'];
+const TABELLE: Tabella[] = [
+  'famiglia',
+  'utente_famiglia',
+  'membro',
+  'vincolo_alimentare',
+  'invito',
+  'ingrediente',
+  'ricetta',
+  'ricetta_ingrediente',
+  'ricetta_passo',
+  'lotto',
+  'movimento',
+];
 
 export interface Vista {
   righe: Righe;
