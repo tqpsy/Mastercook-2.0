@@ -1,7 +1,7 @@
 /** Aiuti condivisi dalle prove dell'interfaccia: utenti di prova, sessione nel browser, passi ricorrenti. */
 import { type Browser, expect, type Page } from '@playwright/test';
 
-export const SERVER = `http://localhost:${process.env.MC_PORTA_SERVER ?? '54400'}`;
+export const SERVER = `http://localhost:${process.env.MC_PORTA_SERVER ?? '14400'}`;
 
 export interface UtenteProva {
   id: string;
