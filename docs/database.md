@@ -299,6 +299,19 @@ Migrazione `20261111000000_ospiti.sql`. Tabella `ospiti_pasto`: uno per pasto (`
   `imposta_ospiti` e ogni notte con pg_cron dove c'è; un pasto già passato accetta solo i numeri.
 - Gli ospiti non entrano nell'esportazione.
 
+## Privacy: consenso ed eliminazione dell'account
+
+Migrazione `20261112000000_privacy_account.sql`.
+
+- `interno.consenso` (utente, versione, quando): `registra_consenso(p_versione)` e `mio_consenso()`. L'app chiede di
+  accettare l'informativa (`src/pagine/Privacy.tsx`, `VERSIONE_PRIVACY`) al primo accesso e quando cambia versione.
+- `anteprima_eliminazione_account()` → `{cancellate, lasciate}`: le famiglie dove si è l'unico account e quelle
+  condivise.
+- `elimina_mio_account('ELIMINA')`: cancella le famiglie dove si è soli; dalle altre si esce (riga
+  `utente_famiglia` eliminata, scheda della persona scollegata; se si era l'unico amministratore lo diventa l'account
+  entrato prima); poi cancella l'utente di Supabase. `utente_famiglia.utente_id` ora va a null quando l'utente non
+  c'è più, così gli altri dispositivi scaricano l'uscita. Le foto delle famiglie cancellate le toglie prima l'app.
+
 ## Scaricare le modifiche
 
 `public.scarica_modifiche(famiglia, dopo, limite)` restituisce `{ righe: [{tabella, seq, riga}], altre }`

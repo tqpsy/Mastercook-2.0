@@ -4,10 +4,22 @@ import { esporta } from '../dati/esportazione';
 import { spiegaMotivo } from '../dati/messaggi';
 import { VERSIONE_APP } from '../dati/tipi';
 import { impostaChiave, type StatoChiave, statoChiave } from '../piattaforma/fotoFrigo';
-import { eliminaFamiglia, type FamigliaMia, mieFamiglie, trasportoSupabase } from '../piattaforma/supabase';
+import { type AnteprimaEliminazione, anteprimaEliminazione, eliminaFamiglia, eliminaMioAccount, type FamigliaMia, mieFamiglie, trasportoSupabase } from '../piattaforma/supabase';
+import { Foglio } from '../ui/Foglio';
 import { Ripristino } from '../ui/Ripristino';
+import { TestoPrivacy } from './Privacy';
 
-export function Impostazioni({ email, esci, apriFamiglia }: { email: string; esci: () => void; apriFamiglia: (famiglia: string) => void }) {
+export function Impostazioni({
+  email,
+  esci,
+  apriFamiglia,
+  dimentica,
+}: {
+  email: string;
+  esci: () => void;
+  apriFamiglia: (famiglia: string) => void;
+  dimentica: () => Promise<void>;
+}) {
   const { ruolo, utenteId } = useFamiglia();
   const vista = useVista();
   const famiglia = righeAttive(vista, 'famiglia')[0];
@@ -25,6 +37,7 @@ export function Impostazioni({ email, esci, apriFamiglia }: { email: string; esc
       <ChiaveGemini amministratore={amministratore} />
       <IMieiDati nomeFamiglia={String(famiglia?.nome ?? 'famiglia')} apriFamiglia={apriFamiglia} />
       {amministratore && famiglia && <EliminaFamiglia nome={String(famiglia.nome)} apriFamiglia={apriFamiglia} />}
+      <PrivacyEAccount dimentica={dimentica} />
 
       <h2>Questo dispositivo</h2>
       <div className="scheda">
@@ -389,6 +402,91 @@ function ChiaveGemini({ amministratore }: { amministratore: boolean }) {
           </div>
         )}
       </div>
+    </>
+  );
+}
+
+/**
+ * L'informativa e l'eliminazione del proprio account: prima si mostra cosa succede (famiglie che spariscono e
+ * famiglie da cui si esce), poi si conferma scrivendo ELIMINA.
+ */
+function PrivacyEAccount({ dimentica }: { dimentica: () => Promise<void> }) {
+  const [leggi, setLeggi] = useState(false);
+  const [anteprima, setAnteprima] = useState<AnteprimaEliminazione | null>(null);
+  const [scritto, setScritto] = useState('');
+  const [attendi, setAttendi] = useState(false);
+  const [errore, setErrore] = useState<string | null>(null);
+
+  async function prepara() {
+    setErrore(null);
+    try {
+      setAnteprima(await anteprimaEliminazione());
+    } catch {
+      setErrore('Serve la connessione per eliminare l’account.');
+    }
+  }
+
+  async function elimina() {
+    if (!anteprima) return;
+    setAttendi(true);
+    setErrore(null);
+    try {
+      const esito = await eliminaMioAccount(anteprima);
+      if (esito.esito === 'applicato') return await dimentica();
+      setErrore(spiegaMotivo(esito.dettaglio.motivo));
+    } catch {
+      setErrore('Serve la connessione per eliminare l’account. Riprova appena sei online.');
+    }
+    setAttendi(false);
+  }
+
+  return (
+    <>
+      <h2>Privacy</h2>
+      <div className="scheda" aria-label="Privacy e account">
+        <button className="bottone pieno" onClick={() => setLeggi(true)}>
+          Come trattiamo i tuoi dati
+        </button>
+        {!anteprima ? (
+          <button className="bottone pieno pericolo" style={{ marginTop: 10 }} onClick={() => void prepara()}>
+            Elimina il mio account
+          </button>
+        ) : (
+          <div className="avviso errore" style={{ marginTop: 10 }}>
+            {anteprima.cancellate.length > 0 && (
+              <p>
+                Si cancellano per sempre, con tutti i loro dati: <strong>{anteprima.cancellate.map((f) => f.nome).join(', ')}</strong>. Se vuoi tenerne una copia,
+                esportala prima.
+              </p>
+            )}
+            {anteprima.lasciate.length > 0 && (
+              <p>
+                Esci da <strong>{anteprima.lasciate.map((f) => f.nome).join(', ')}</strong>: la famiglia continua per gli altri, che tengono la tua scheda (senza il
+                tuo account) finché non la tolgono.
+              </p>
+            )}
+            <p>Il tuo accesso con Google viene cancellato. Non si torna indietro.</p>
+            <label className="campo">
+              <span>Scrivi ELIMINA per confermare</span>
+              <input value={scritto} onChange={(e) => setScritto(e.target.value)} autoComplete="off" />
+            </label>
+            <div className="riga" style={{ flexWrap: 'wrap' }}>
+              <button className="bottone primario pericolo" disabled={scritto.trim() !== 'ELIMINA' || attendi} onClick={() => void elimina()}>
+                {attendi ? 'Elimino…' : 'Elimina il mio account'}
+              </button>
+              <button className="bottone" onClick={() => setAnteprima(null)}>
+                Annulla
+              </button>
+            </div>
+          </div>
+        )}
+        {errore && <div className="avviso errore">{errore}</div>}
+      </div>
+      {leggi && (
+        <Foglio titolo="Privacy" chiudi={() => setLeggi(false)}>
+          <TestoPrivacy />
+        </Foglio>
+      )}
     </>
   );
 }

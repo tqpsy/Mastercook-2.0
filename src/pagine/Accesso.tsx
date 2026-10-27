@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import { accediConGoogle } from '../piattaforma/supabase';
+import { Foglio } from '../ui/Foglio';
+import { TestoPrivacy } from './Privacy';
 
 export function Accesso({ invito }: { invito: boolean }) {
   const [errore, setErrore] = useState<string | null>(null);
   const [attendi, setAttendi] = useState(false);
+  const [privacy, setPrivacy] = useState(false);
   async function accedi() {
     setAttendi(true);
     setErrore(null);
@@ -25,6 +28,14 @@ export function Accesso({ invito }: { invito: boolean }) {
       <button className="bottone primario pieno" onClick={accedi} disabled={attendi}>
         {attendi ? 'Apro Google…' : 'Accedi con Google'}
       </button>
+      <button className="bottone piccolo" style={{ marginTop: 12 }} onClick={() => setPrivacy(true)}>
+        Come trattiamo i tuoi dati
+      </button>
+      {privacy && (
+        <Foglio titolo="Privacy" chiudi={() => setPrivacy(false)}>
+          <TestoPrivacy />
+        </Foglio>
+      )}
     </main>
   );
 }

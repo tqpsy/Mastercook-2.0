@@ -32,7 +32,8 @@ jobs:
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
           supabase link --project-ref "${{ vars.SUPABASE_PROJECT_REF || 'mxotaznwiuysvwswbrrs' }}" --password "$SUPABASE_DB_PASSWORD"
-          supabase db push --password "$SUPABASE_DB_PASSWORD"
+          # Più rami lavorano insieme: una migrazione con data precedente all'ultima applicata si applica lo stesso.
+          supabase db push --include-all --password "$SUPABASE_DB_PASSWORD"
 
   app:
     needs: database

@@ -10,8 +10,8 @@ export interface UtenteProva {
   nome: string;
 }
 
-export async function nuovoUtente(nome: string): Promise<UtenteProva> {
-  const r = await fetch(`${SERVER}/prova/utente`, { method: 'POST', body: JSON.stringify({ nome }) });
+export async function nuovoUtente(nome: string, { consenso = true } = {}): Promise<UtenteProva> {
+  const r = await fetch(`${SERVER}/prova/utente`, { method: 'POST', body: JSON.stringify({ nome, consenso }) });
   return r.json();
 }
 

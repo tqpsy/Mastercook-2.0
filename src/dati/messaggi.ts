@@ -10,6 +10,7 @@ const MOTIVI: Record<string, string> = {
   membro_non_trovato: 'La persona non esiste più.',
   famiglia_esistente: 'Questa famiglia esiste già.',
   nome_non_corrisponde: 'Il nome scritto non è quello della famiglia: niente è stato eliminato.',
+  conferma_mancante: 'Per confermare scrivi ELIMINA: niente è stato eliminato.',
   invito_scaduto: 'L’invito è scaduto. Chiedine uno nuovo.',
   invito_esaurito: 'L’invito è già stato usato da tutte le persone previste. Chiedine uno nuovo.',
   invito_revocato: 'L’invito è stato annullato. Chiedine uno nuovo.',
