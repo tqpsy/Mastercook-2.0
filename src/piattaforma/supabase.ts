@@ -127,3 +127,45 @@ export async function eliminaFamiglia(famiglia: string, nome: string, dispositiv
   }
   return trasportoSupabase.applica({ id: crypto.randomUUID(), famiglia_id: famiglia, tipo: 'elimina_famiglia', dati: { nome }, versione_app, dispositivo });
 }
+
+/** La versione dell'informativa accettata; `null` se non ancora. Senza rete: ErroreRete. */
+export async function mioConsenso(): Promise<number | null> {
+  const r = await chiama<number | null | Esito>('mio_consenso', {});
+  if (r !== null && typeof r === 'object') throw new ErroreRete('accesso scaduto');
+  return r;
+}
+
+export async function registraConsenso(versione: number): Promise<void> {
+  const r = await chiama<number | Esito>('registra_consenso', { p_versione: versione });
+  if (r !== versione) throw new ErroreRete('consenso non registrato');
+}
+
+export interface AnteprimaEliminazione {
+  cancellate: { famiglia_id: string; nome: string }[];
+  lasciate: { famiglia_id: string; nome: string }[];
+}
+
+export async function anteprimaEliminazione(): Promise<AnteprimaEliminazione> {
+  const r = await chiama<AnteprimaEliminazione | Esito>('anteprima_eliminazione_account', {});
+  if ('esito' in r) throw new ErroreRete('accesso scaduto');
+  return r;
+}
+
+/**
+ * Elimina il proprio account: prima le foto delle famiglie dove si è soli (finché si è membri e si può),
+ * poi il database cancella quelle famiglie, fa uscire dalle altre e toglie l'utente.
+ */
+export async function eliminaMioAccount(anteprima: AnteprimaEliminazione): Promise<Esito> {
+  for (const f of anteprima.cancellate) {
+    try {
+      const deposito = supabase().storage.from('foto');
+      const { data } = await deposito.list(f.famiglia_id, { limit: 1000 });
+      if (data?.length) await deposito.remove(data.map((x) => `${f.famiglia_id}/${x.name}`));
+    } catch {
+      // Le foto rimaste non sono più leggibili da nessuno.
+    }
+  }
+  const esito = await chiama<Esito>('elimina_mio_account', { p_conferma: 'ELIMINA' });
+  if (esito.esito === 'applicato') await supabase().auth.signOut({ scope: 'local' });
+  return esito;
+}

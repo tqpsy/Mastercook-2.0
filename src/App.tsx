@@ -12,10 +12,11 @@ import { Impostazioni } from './pagine/Impostazioni';
 import { Invito } from './pagine/Invito';
 import { Menu } from './pagine/Menu';
 import { NuovaFamiglia } from './pagine/NuovaFamiglia';
+import { Consenso, VERSIONE_PRIVACY } from './pagine/Privacy';
 import { Oggi } from './pagine/Oggi';
 import { Ricette } from './pagine/Ricette';
 import { Spesa } from './pagine/Spesa';
-import { esci, type FamigliaMia, mieFamiglie, supabase } from './piattaforma/supabase';
+import { esci, type FamigliaMia, mieFamiglie, mioConsenso, supabase } from './piattaforma/supabase';
 import { oggi, piuGiorni, statoData } from './dominio/scadenze';
 import { StatoSync } from './ui/StatoSync';
 
@@ -64,6 +65,7 @@ export function App() {
 type Fase =
   | { tipo: 'carico' }
   | { tipo: 'accesso' }
+  | { tipo: 'consenso' }
   | { tipo: 'invito'; codice: string }
   | { tipo: 'nuova' }
   | { tipo: 'errore'; testo: string }
@@ -72,7 +74,7 @@ type Fase =
 function ConAccesso() {
   const [auth, setAuth] = useState<Session | null | undefined>(undefined);
   const [invito, setInvito] = useState<string | null>(() => codiceInvitoDalLink());
-  const [famiglie, setFamiglie] = useState<{ utente: string; elenco: FamigliaMia[] } | { utente: string; errore: string } | null>(null);
+  const [famiglie, setFamiglie] = useState<{ utente: string; elenco: FamigliaMia[]; consenso: number | null } | { utente: string; errore: string } | null>(null);
   const [riprova, setRiprova] = useState(0);
   const [aperta, setAperta] = useState(() => leggi<FamigliaMia & { utente: string }>(CHIAVE_FAMIGLIA));
 
@@ -95,8 +97,8 @@ function ConAccesso() {
   useEffect(() => {
     if (!utenteId) return;
     let valido = true;
-    mieFamiglie()
-      .then((elenco) => valido && setFamiglie({ utente: utenteId, elenco }))
+    Promise.all([mieFamiglie(), mioConsenso()])
+      .then(([elenco, consenso]) => valido && setFamiglie({ utente: utenteId, elenco, consenso }))
       .catch((e) =>
         valido &&
         setFamiglie({
@@ -112,8 +114,13 @@ function ConAccesso() {
   const fase = useMemo((): Fase => {
     if (auth === undefined) return { tipo: 'carico' };
     if (!utenteId) return { tipo: 'accesso' };
-    if (invito) return { tipo: 'invito', codice: invito };
     const note = famiglie?.utente === utenteId ? famiglie : null;
+    // Il consenso si chiede appena il server risponde; senza rete si entra se il dispositivo conosce già la famiglia.
+    if (note && 'elenco' in note && (note.consenso ?? 0) < VERSIONE_PRIVACY) return { tipo: 'consenso' };
+    if (invito) {
+      if (!note) return { tipo: 'carico' };
+      return { tipo: 'invito', codice: invito };
+    }
     const ricordata = aperta?.utente === utenteId ? aperta : null;
     if (note && 'elenco' in note) {
       const scelta = note.elenco.find((f) => f.famiglia_id === ricordata?.famiglia_id) ?? note.elenco[0];
@@ -150,6 +157,8 @@ function ConAccesso() {
       return null;
     case 'accesso':
       return <Accesso invito={!!invito} />;
+    case 'consenso':
+      return <Consenso fatto={() => setRiprova((n) => n + 1)} esci={() => void esci()} />;
     case 'invito':
       return (
         <Invito
@@ -219,6 +228,14 @@ function Guscio({ email, apriFamiglia }: { email: string; apriFamiglia: (famigli
     [],
   );
 
+  /** Dopo l'eliminazione dell'account: via la copia locale e la famiglia ricordata. */
+  async function dimenticaDispositivo() {
+    archivio.close();
+    await Dexie.delete(nomeArchivio(utenteId));
+    scrivi(CHIAVE_FAMIGLIA, null);
+    window.location.reload();
+  }
+
   async function esciDaQui() {
     const s = sync.leggiStato();
     const nonSalvate = s.in_attesa + s.da_sistemare;
@@ -250,7 +267,7 @@ function Guscio({ email, apriFamiglia }: { email: string; apriFamiglia: (famigli
         {scheda === 'ricette' && <Ricette />}
         {scheda === 'casa' && <Casa />}
         {scheda === 'famiglia' && <Famiglia />}
-        {scheda === 'impostazioni' && <Impostazioni email={email} esci={esciDaQui} apriFamiglia={apriFamiglia} />}
+        {scheda === 'impostazioni' && <Impostazioni email={email} esci={esciDaQui} apriFamiglia={apriFamiglia} dimentica={dimenticaDispositivo} />}
       </main>
       <nav className="schede">
         {schede.map((s) => (

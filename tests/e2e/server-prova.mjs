@@ -32,6 +32,10 @@ const FUNZIONI = {
   scarica_modifiche: (a) => ['select public.scarica_modifiche($1, $2, $3) as r', [a.p_famiglia, a.p_dopo, a.p_limite]],
   imposta_chiave_gemini: (a) => ['select public.imposta_chiave_gemini($1, $2) as r', [a.p_famiglia, a.p_chiave]],
   stato_chiave_gemini: (a) => ['select public.stato_chiave_gemini($1) as r', [a.p_famiglia]],
+  mio_consenso: () => ['select public.mio_consenso() as r', []],
+  registra_consenso: (a) => ['select public.registra_consenso($1) as r', [a.p_versione]],
+  anteprima_eliminazione_account: () => ['select public.anteprima_eliminazione_account() as r', []],
+  elimina_mio_account: (a) => ['select public.elimina_mio_account($1) as r', [a.p_conferma]],
   mie_famiglie: () => ['select coalesce(jsonb_agg(to_jsonb(f)), \'[]\'::jsonb) as r from public.mie_famiglie() f', []],
 };
 
@@ -94,9 +98,11 @@ createServer(async (req, res) => {
   try {
     const percorso = new URL(req.url, 'http://x').pathname;
     if (percorso === '/prova/utente' && req.method === 'POST') {
-      const { nome: n = 'Prova' } = await corpo(req);
+      const { nome: n = 'Prova', consenso = true } = await corpo(req);
       const id = randomUUID();
       await pool.query('insert into auth.users (id, email) values ($1, $2)', [id, `${id}@prova.test`]);
+      // Di base l'informativa è già accettata; il test del consenso la chiede apposta.
+      if (consenso) await pool.query('insert into interno.consenso (utente_id, versione) values ($1, 1)', [id]);
       const payload = { sub: id, role: 'authenticated', exp: Math.floor(Date.now() / 1000) + 86400 };
       const token = `e30.${Buffer.from(JSON.stringify(payload)).toString('base64url')}.prova`;
       return rispondi(res, 200, { id, token, email: `${id}@prova.test`, nome: n });
