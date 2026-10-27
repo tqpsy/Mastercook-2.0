@@ -5,6 +5,7 @@ import type { Indice, Ingrediente, Ricetta, RigaRicetta } from '../dominio/ricet
 import { inBase, leggiNumero, UNITA, type Unita, UNITA_BASE, unitaPer } from '../dominio/unita';
 import { CercaIngrediente } from '../ui/CercaIngrediente';
 import { Foglio } from '../ui/Foglio';
+import { Foto, riduciFoto } from '../ui/Foto';
 
 export type Bozza = { tipo: 'nuova' } | { tipo: 'copia'; da: Ricetta } | { tipo: 'modifica'; ricetta: Ricetta };
 
@@ -25,7 +26,7 @@ interface PassoBozza {
   testo: string;
 }
 
-const CAMPI = ['titolo', 'descrizione', 'categoria', 'cucina', 'provenienza', 'porzioni', 'minuti_totali'] as const;
+const CAMPI = ['titolo', 'descrizione', 'categoria', 'cucina', 'provenienza', 'porzioni', 'minuti_totali', 'foto'] as const;
 
 const numeroInTesto = (n: number | null) => (n === null ? '' : String(n).replace('.', ','));
 
@@ -47,7 +48,7 @@ function righeDa(r: Ricetta | undefined, copia: boolean): RigaBozza[] {
  * riga: due persone che correggono righe diverse della stessa ricetta non si pestano i piedi.
  */
 export function EditorRicetta({ indice, bozza, chiudi }: { indice: Indice; bozza: Bozza; chiudi: (id?: string) => void }) {
-  const { esegui } = useFamiglia();
+  const { esegui, archivio, famiglia } = useFamiglia();
   const base = bozza.tipo === 'nuova' ? undefined : bozza.tipo === 'copia' ? bozza.da : bozza.ricetta;
   const copia = bozza.tipo !== 'modifica';
   const [titolo, setTitolo] = useState(bozza.tipo === 'copia' ? `${bozza.da.titolo} (mia versione)` : (base?.titolo ?? ''));
@@ -61,6 +62,7 @@ export function EditorRicetta({ indice, bozza, chiudi }: { indice: Indice; bozza
   const [passi, setPassi] = useState<PassoBozza[]>(() =>
     base?.passi.length ? base.passi.map((p) => ({ chiave: crypto.randomUUID(), originale: copia ? undefined : p, testo: p.testo })) : [{ chiave: crypto.randomUUID(), testo: '' }],
   );
+  const [foto, setFoto] = useState<{ percorso: string | null; file: Blob | null }>({ percorso: base?.foto ?? null, file: null });
   const [cerca, setCerca] = useState(false);
   const [errori, setErrori] = useState<string[]>([]);
 
@@ -72,6 +74,17 @@ export function EditorRicetta({ indice, bozza, chiudi }: { indice: Indice; bozza
     [copiaXs[i], copiaXs[j]] = [copiaXs[j], copiaXs[i]];
     return copiaXs;
   };
+
+  async function scegliFoto(f: File | undefined) {
+    if (!f) return;
+    // Una foto nuova non prende il posto di quella che c'è senza chiederlo.
+    if ((foto.percorso || foto.file) && !window.confirm('Sostituire la foto attuale con quella nuova?')) return;
+    try {
+      setFoto({ percorso: `${famiglia}/${crypto.randomUUID()}.jpg`, file: await riduciFoto(f) });
+    } catch {
+      setErrori(['Questa immagine non si riesce a leggere: prova con un’altra.']);
+    }
+  }
 
   function aggiungiIngrediente(i: Ingrediente) {
     setRighe((rs) => [...rs, { chiave: crypto.randomUUID(), ingrediente_id: i.id, numero: '', unita: UNITA_BASE[i.dimensione], qb: false, opzionale: false, testo: '' }]);
@@ -115,7 +128,10 @@ export function EditorRicetta({ indice, bozza, chiudi }: { indice: Indice; bozza
       provenienza: provenienza.trim() || null,
       porzioni: nPorzioni,
       minuti_totali: nMinuti,
+      foto: foto.percorso,
     };
+    // Il file resta sul dispositivo e parte prima del comando che lo cita (anche più tardi, senza rete).
+    if (foto.file && foto.percorso) await archivio.foto.put({ percorso: foto.percorso, famiglia_id: famiglia, file: foto.file, caricata: false });
 
     const id = bozza.tipo === 'modifica' ? bozza.ricetta.id : crypto.randomUUID();
     const dati: Record<string, unknown> = { id };
@@ -190,6 +206,22 @@ export function EditorRicetta({ indice, bozza, chiudi }: { indice: Indice; bozza
             ))}
           </select>
         </label>
+
+        <div className="campo">
+          <span>Foto</span>
+          <Foto percorso={foto.percorso} file={foto.file} alt={`Foto di ${titolo}`} />
+          <div className="riga">
+            <label className="bottone">
+              {foto.percorso ? 'Cambia foto' : 'Aggiungi foto'}
+              <input type="file" accept="image/*" hidden onChange={(e) => (void scegliFoto(e.target.files?.[0]), (e.target.value = ''))} />
+            </label>
+            {foto.percorso && (
+              <button type="button" className="bottone" onClick={() => window.confirm('Togliere la foto da questa ricetta?') && setFoto({ percorso: null, file: null })}>
+                Togli foto
+              </button>
+            )}
+          </div>
+        </div>
 
         <h3>Ingredienti</h3>
         <ul className="elenco">

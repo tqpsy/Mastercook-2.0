@@ -71,6 +71,8 @@ export interface Pagina {
 export interface Trasporto {
   applica(comando: Comando): Promise<Esito>;
   scarica(famiglia: string, dopo: number, limite?: number): Promise<Pagina>;
+  /** Carica una foto nel deposito prima del comando che la usa. ErroreRete se manca la rete. */
+  caricaFoto?(percorso: string, file: Blob): Promise<void>;
 }
 
 export class ErroreRete extends Error {

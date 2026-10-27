@@ -254,4 +254,31 @@ describe('T-SYN-11: prova casuale con tre dispositivi e rete instabile', () => {
       expect(doppi).toEqual([]);
     });
   }
+
+  it('una ricetta con una foto nuova parte solo dopo che la foto è nel deposito', async () => {
+    const { famiglia, a } = await famigliaConDue();
+    await a.sync.sincronizza();
+    const id = randomUUID();
+    const percorso = `${famiglia}/${randomUUID()}.jpg`;
+    await a.archivio.foto.put({ percorso, famiglia_id: famiglia, file: new Blob(['jpeg']), caricata: false });
+    await a.sync.accoda('salva_ricetta', {
+      id,
+      nuova: true,
+      campi: { titolo: 'Torta della nonna', categoria: 'dolce', porzioni: 8, foto: percorso },
+      ingredienti: { aggiungi: [{ id: randomUUID(), ingrediente_id: 'ing:farina', quantita: 300, unita: 'g', qb: false, opzionale: false, ordine: 0 }] },
+      passi: { aggiungi: [{ id: randomUUID(), ordine: 0, testo: 'Impasta e cuoci.' }] },
+    });
+
+    a.rete.fotoGuaste = true;
+    const prima = a.rete.richieste;
+    expect(await a.sync.invia()).toBe('rete');
+    expect(a.rete.richieste).toBe(prima);
+    expect(await banco.sql('select count(*)::int as n from ricetta where id = $1', [id])).toEqual([{ n: 0 }]);
+
+    a.rete.fotoGuaste = false;
+    expect(await a.sync.invia()).toBe('vuota');
+    expect(a.rete.foto).toEqual([{ percorso, dopo: prima }]);
+    expect(await banco.sql('select foto from ricetta where id = $1', [id])).toEqual([{ foto: percorso }]);
+    expect((await a.archivio.foto.get(percorso))?.caricata).toBe(true);
+  });
 });

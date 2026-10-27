@@ -123,3 +123,61 @@ test('casa: aggiunge, mostra cosa usare presto, scala la quantità usata e stima
   await page.getByRole('button', { name: 'Oggi' }).click();
   await expect(page.getByRole('region', { name: 'Da usare presto' }).getByText('Entro 1 giorno')).toBeVisible();
 });
+
+/** Una piccola immagine PNG vera (8×8, color pomodoro). */
+const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAIAAABLbSncAAAAEUlEQVR4nGM4YKCAFTEMLQkAuk5EAekeRxgAAAAASUVORK5CYII=', 'base64');
+const immagine = (name: string) => ({ name, mimeType: 'image/png', buffer: PNG });
+
+test('foto: si aggiunge anche senza rete, parte prima della ricetta e non si sostituisce senza conferma', async ({ browser }, info) => {
+  const luca = await nuovoUtente('Luca');
+  const { contesto, page } = await apri(browser, luca, info.project.use);
+  await creaFamiglia(page, 'Casa Foto');
+  await page.getByRole('button', { name: 'Ricette' }).click();
+  const titolo = `Bruschetta ${info.project.name}`;
+
+  await contesto.setOffline(true);
+  await page.getByRole('button', { name: '+ Ricetta' }).click();
+  const editor = page.getByRole('dialog', { name: 'Nuova ricetta' });
+  await editor.getByLabel('Titolo').fill(titolo);
+  await editor.getByRole('button', { name: /Antipasto/ }).click();
+  await editor.locator('input[type=file]').setInputFiles(immagine('bruschetta.png'));
+  await expect(editor.getByRole('img', { name: `Foto di ${titolo}` })).toBeVisible();
+  await editor.getByRole('button', { name: '+ Ingrediente' }).click();
+  await editor.getByLabel('Ingrediente').fill('pane');
+  await editor.getByRole('button', { name: 'Pane', exact: true }).click();
+  await editor.getByLabel('Quantità di Pane', { exact: true }).fill('200');
+  await editor.getByRole('textbox', { name: 'Passaggio 1' }).fill('Tosta il pane.');
+  await editor.getByRole('button', { name: 'Salva ricetta' }).click();
+  const scheda = page.getByRole('dialog', { name: titolo });
+  await expect(scheda.getByRole('img', { name: `Foto di ${titolo}` })).toBeVisible();
+  const fotoDiLuca = `select 1 from storage.objects where bucket_id = 'foto'
+    and split_part(name, '/', 1)::uuid in (select famiglia_id from utente_famiglia where utente_id = $1)`;
+  expect(await sql(fotoDiLuca, [luca.id])).toHaveLength(0);
+
+  await contesto.setOffline(false);
+  await expect(page.getByRole('button', { name: /Tutto salvato/ })).toBeVisible({ timeout: 20_000 });
+  const [r] = await sql<{ foto: string; caricata: boolean }>(
+    `select r.foto, exists (select 1 from storage.objects o where o.bucket_id = 'foto' and o.name = r.foto) as caricata from ricetta r where r.titolo = $1`,
+    [titolo],
+  );
+  expect(r.caricata).toBe(true);
+
+  // Una foto nuova chiede conferma: rifiutando, resta quella di prima.
+  await scheda.getByRole('button', { name: 'Modifica' }).click();
+  const modifica = page.getByRole('dialog', { name: 'Modifica ricetta' });
+  page.once('dialog', (d) => void d.dismiss());
+  await modifica.locator('input[type=file]').setInputFiles(immagine('altra.png'));
+  await modifica.getByLabel('Titolo').fill(`${titolo} con pomodoro`);
+  await modifica.getByRole('button', { name: 'Salva ricetta' }).click();
+  await expect(page.getByRole('dialog', { name: `${titolo} con pomodoro` })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Tutto salvato/ })).toBeVisible();
+  const [dopo] = await sql<{ foto: string }>(`select foto from ricetta where titolo = $1`, [`${titolo} con pomodoro`]);
+  expect(dopo.foto).toBe(r.foto);
+
+  // Su un altro dispositivo la foto arriva dal deposito.
+  const { page: tablet } = await apri(browser, luca, info.project.use);
+  await tablet.getByRole('button', { name: 'Ricette' }).click();
+  await tablet.getByLabel('Cerca').fill('bruschetta');
+  await tablet.getByRole('button', { name: `Apri ${titolo} con pomodoro` }).click();
+  await expect(tablet.getByRole('img', { name: `Foto di ${titolo} con pomodoro` })).toBeVisible();
+});

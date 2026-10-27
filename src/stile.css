@@ -443,3 +443,19 @@ details > summary {
     font-size: 0.72rem;
   }
 }
+.foto {
+  display: block;
+  width: 100%;
+  max-height: 320px;
+  object-fit: cover;
+  border-radius: var(--raggio);
+  margin-bottom: 12px;
+}
+.foto.vuota {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  background: var(--superficie-2);
+  color: var(--testo-tenue);
+}

@@ -6,6 +6,7 @@ import { type Esito, NOME_ESITO, valutaPerFamiglia, type ValutazioneFamiglia, ty
 import { copertura, filtra, type Indice, type Ricetta } from '../dominio/ricette';
 import { formatta, scala } from '../dominio/unita';
 import { Foglio } from '../ui/Foglio';
+import { Foto } from '../ui/Foto';
 import { EditorRicetta, type Bozza } from './EditorRicetta';
 
 const PAGINA = 40;
@@ -209,6 +210,7 @@ function SchedaRicetta({
 
   return (
     <Foglio titolo={r.titolo} chiudi={chiudi}>
+      <Foto percorso={r.foto} alt={`Foto di ${r.titolo}`} />
       <p className="tenue">
         {[CATEGORIE.find((c) => c.id === r.categoria)?.nome, minutiDi(r) && `${minutiDi(r)} min`, r.difficolta && ['facile', 'media', 'impegnativa'][r.difficolta - 1], r.di_sistema ? 'ricetta di Mastercook' : 'ricetta della famiglia']
           .filter(Boolean)
