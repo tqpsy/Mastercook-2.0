@@ -41,6 +41,11 @@ export class Sincronizzatore {
   private stato: StatoSincronizzazione = { in_attesa: 0, da_sistemare: 0, bloccato: null, senza_rete: false, ultimo_scarico: null };
   /** Le operazioni sulla rete avvengono una alla volta. */
   private fila: Promise<unknown> = Promise.resolve();
+  /**
+   * Ultimi comandi applicati, anche già usciti dalla coda: la schermata può mostrare ancora per un attimo
+   * la versione di prima dello scarico, e un tocco in quell'attimo parte da lì (vedi `ribasa`).
+   */
+  private applicati: VoceCoda[] = [];
 
   constructor(opzioni: OpzioniSincronizzatore) {
     this.o = {
@@ -87,11 +92,14 @@ export class Sincronizzatore {
 
   /** Mette in coda un comando e restituisce il suo id. Non invia: per inviare si chiama `sincronizza`. */
   async accoda(tipo: string, dati: Record<string, unknown>): Promise<string> {
+    // La vista mostra ancora la versione di prima dei comandi già applicati ma non scaricati.
+    const inviate = (await this.voci()).filter((v) => v.stato === 'inviata' && !this.applicati.some((a) => a.id === v.id));
+    const applicati = [...inviate, ...this.applicati].sort((a, b) => (a.ordine ?? 0) - (b.ordine ?? 0));
     const comando: Comando = {
       id: this.o.nuovoId(),
       famiglia_id: this.o.famiglia,
       tipo,
-      dati,
+      dati: ribasa(tipo, dati, applicati),
       versione_app: this.o.versioneApp,
       dispositivo: this.o.dispositivo,
     };
@@ -146,11 +154,22 @@ export class Sincronizzatore {
       }
       if (esito.esito === 'applicato') {
         // Si toglie dalla coda con lo scarico che porta le sue righe (scaricaOra), non prima.
-        await this.o.archivio.coda.update(voce.ordine!, { stato: 'inviata' });
+        await this.o.archivio.coda.update(voce.ordine!, { stato: 'inviata', esito });
+        await this.ribasaCoda({ ...voce, esito });
       } else {
         await this.o.archivio.coda.update(voce.ordine!, { stato: 'da_sistemare', esito });
       }
       await this.contaCoda();
+    }
+  }
+
+  /** I comandi in coda sulla stessa riga partono dalla versione che il comando appena applicato ha lasciato. */
+  private async ribasaCoda(applicato: VoceCoda) {
+    this.applicati = [...this.applicati.slice(-49), applicato];
+    for (const v of await this.voci()) {
+      if (v.stato !== 'in_attesa') continue;
+      const dati = ribasa(v.comando.tipo, v.comando.dati, [applicato]);
+      if (dati !== v.comando.dati) await this.o.archivio.coda.update(v.ordine!, { comando: { ...v.comando, dati } });
     }
   }
 
@@ -248,4 +267,26 @@ export class Sincronizzatore {
       return nuovo.id;
     });
   }
+}
+
+/**
+ * Una modifica per campi porta la versione della riga che il dispositivo ha visto. Se nel frattempo un
+ * comando dello stesso dispositivo sulla stessa riga è già stato applicato, il server ha alzato la
+ * versione: senza aggiornarla, cambiare due volte lo stesso campo (porzione 1 → 2 → 1) sembrerebbe un
+ * conflitto con qualcun altro. Si passa alla versione lasciata da quel comando solo se è sicuro:
+ * - il comando applicato partiva dalla versione che il server aveva (nessun altro in mezzo), oppure
+ * - tocca tutti i campi di questo (un cambio altrui su quei campi l'avrebbe già fatto fermare).
+ */
+export function ribasa(tipo: string, dati: Record<string, unknown>, applicati: VoceCoda[]): Record<string, unknown> {
+  let attesa = dati.versione_attesa;
+  const campi = dati.campi;
+  if (typeof attesa !== 'number' || !campi || typeof campi !== 'object') return dati;
+  for (const a of applicati) {
+    const d = a.esito?.dettaglio as { versione_prima?: unknown; versione?: unknown } | undefined;
+    if (a.comando.tipo !== tipo || a.comando.dati.id !== dati.id || a.comando.dati.versione_attesa !== attesa) continue;
+    if (typeof d?.versione !== 'number' || typeof d.versione_prima !== 'number') continue;
+    const campiApplicati = (a.comando.dati.campi ?? {}) as Record<string, unknown>;
+    if (d.versione_prima === attesa || Object.keys(campi).every((c) => c in campiApplicati)) attesa = d.versione;
+  }
+  return attesa === dati.versione_attesa ? dati : { ...dati, versione_attesa: attesa };
 }
