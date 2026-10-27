@@ -197,3 +197,44 @@ test('proposte: l’app propone i pasti vuoti, si cambia o si toglie, entra solo
   await page.getByRole('button', { name: '✨ Proponi la settimana' }).click();
   await expect(foglio.getByRole('list', { name: 'Proposte' }).getByRole('listitem')).toHaveCount(1);
 });
+
+test('ospiti a cena: porzioni che crescono, allergia controllata, niente nomi', async ({ browser }, info) => {
+  const luca = await nuovoUtente('Luca');
+  const { page } = await apri(browser, luca, info.project.use);
+  await creaFamiglia(page, 'Casa Ospiti');
+  await page.getByRole('button', { name: 'Menu', exact: true }).click();
+  await page.getByRole('group', { name: 'Vista' }).getByRole('button', { name: 'Giorni' }).click();
+  await page.getByRole('button', { name: `Aggiungi a cena di ${dataLunga(oggi())}` }).click();
+  await page.getByRole('dialog').getByLabel('Cosa si mangia').fill('carbonara');
+  await page.getByRole('dialog').getByRole('button', { name: /Spaghetti alla carbonara/ }).click();
+
+  await page.getByRole('button', { name: 'Apri Spaghetti alla carbonara' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: '👥 Ci sono ospiti?' }).click();
+  const ospiti = page.getByRole('dialog', { name: `Ospiti a cena di ${dataLunga(oggi())}` });
+  await ospiti.getByRole('button', { name: 'Adulti: uno in più' }).click();
+  await ospiti.getByRole('button', { name: 'Bambini: uno in più' }).click();
+  await ospiti.getByRole('group', { name: 'Allergie degli ospiti' }).getByRole('button', { name: 'Uova' }).click();
+  await ospiti.getByRole('button', { name: 'Salva gli ospiti' }).click();
+
+  await expect(page.getByRole('button', { name: 'Ospiti: 2 adulti e 1 bambino' })).toBeVisible();
+  await page.getByRole('button', { name: 'Apri Spaghetti alla carbonara' }).click();
+  const scheda = page.getByRole('dialog', { name: 'Spaghetti alla carbonara' });
+  // 1 (Luca) + 2 adulti + 0,6 = 3,6 → 3,5; la carbonara ha le uova.
+  await expect(scheda.getByRole('button', { name: 'Automatiche (3,5)' })).toBeVisible();
+  await expect(scheda.getByText(/Non adatta a tutti/)).toBeVisible();
+  await expect(scheda.getByText(/Ospiti: ⛔/)).toBeVisible();
+  await scheda.getByRole('button', { name: 'Chiudi' }).click();
+  await expect(page.getByRole('button', { name: /Stato del salvataggio: Tutto salvato/ })).toBeVisible();
+
+  const famiglia = `(select famiglia_id from utente_famiglia where utente_id = $1)`;
+  expect(await sql(`select adulti, bambini, oggetti from ospiti_pasto where famiglia_id = ${famiglia} and eliminato_il is null`, [luca.id])).toEqual([
+    { adulti: 2, bambini: 1, oggetti: ['all:uova'] },
+  ]);
+  expect(await sql(`select interno.porzioni_portata(id)::float as p from portata where famiglia_id = ${famiglia}`, [luca.id])).toEqual([{ p: 3.5 }]);
+
+  // Nessun ospite: si torna a 1 porzione.
+  await page.getByRole('button', { name: 'Ospiti: 2 adulti e 1 bambino' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Nessun ospite' }).click();
+  await expect(page.getByRole('button', { name: /^Ospiti:/ })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Apri Spaghetti alla carbonara' })).toContainText('1 porzione');
+});

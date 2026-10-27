@@ -315,6 +315,16 @@ const EFFETTI: Record<string, Effetto> = {
       p.fisso_id === d.id && String(p.data) >= dal && !p.eliminato_il && p.id !== d.tieni && !confermate.has(p.id) ? { ...p, eliminato_il: 'in_attesa', in_attesa: true } : p,
     );
   },
+  imposta_ospiti: (righe, d, famiglia) => {
+    const quanti = Number(d.adulti ?? 0) + Number(d.bambini ?? 0);
+    const esistente = (righe.ospiti_pasto ?? []).find((o) => o.data === d.data && o.categoria === d.categoria && !o.eliminato_il);
+    const campi = { adulti: Number(d.adulti ?? 0), bambini: Number(d.bambini ?? 0), oggetti: (d.oggetti as string[] | undefined) ?? [] };
+    if (esistente) {
+      righe.ospiti_pasto = (righe.ospiti_pasto ?? []).map((o) => (o === esistente ? { ...o, ...(quanti ? campi : { eliminato_il: 'in_attesa' }), in_attesa: true } : o));
+    } else if (quanti) {
+      aggiungi('ospiti_pasto', (x) => ({ data: x.data, categoria: x.categoria, ...campi, versione: 1 }))(righe, { ...d, id: `ospiti:${String(d.data)}:${String(d.categoria)}` }, famiglia);
+    }
+  },
   verifica_ricetta: (righe, d, famiglia) => {
     const esistente = (righe.ricetta_verificata ?? []).find((r) => r.membro_id === d.membro_id && r.ricetta_id === d.ricetta_id && !r.eliminato_il);
     if (esistente) {

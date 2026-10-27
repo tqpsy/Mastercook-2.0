@@ -5,7 +5,7 @@
  */
 import type { RegolaCotti } from '../catalogo/tipi';
 import { valutaPerFamiglia, type Verifica, type Vincolo } from './compatibilita';
-import { porzioniAutomatiche, type Eccezione, type Persona, type PortataMenu } from './menu';
+import { alPasto, porzioniAutomatiche, type Eccezione, type OspitiPasto, ospitiDel, type Persona, type PortataMenu } from './menu';
 import { copertura, type Indice, principali, type Ricetta } from './ricette';
 
 import { piuGiorni } from './scadenze';
@@ -49,9 +49,11 @@ export function ingredientiPiatto(indice: Indice, ricetta: Ricetta, porzioni: nu
   return [...somme.values()].map((c) => ({ ...c, quantita: Math.round(c.quantita * 10) / 10 }));
 }
 
-/** Le porzioni di una portata: quelle scritte, o automatiche da chi mangia. */
-export function porzioniPortata(portata: PortataMenu, persone: Persona[], eccezioni: Eccezione[]): number {
-  return portata.porzioni ?? porzioniAutomatiche(persone, eccezioni.filter((e) => e.portata_id === portata.id));
+/** Le porzioni di una portata: quelle scritte, o automatiche da chi mangia (ospiti del pasto compresi). */
+export function porzioniPortata(portata: PortataMenu, persone: Persona[], eccezioni: Eccezione[], ospiti: OspitiPasto[] = []): number {
+  if (portata.porzioni != null) return portata.porzioni;
+  const chi = alPasto(persone, [], ospitiDel(ospiti, portata.data, portata.categoria)).persone;
+  return porzioniAutomatiche(chi, eccezioni.filter((e) => e.portata_id === portata.id));
 }
 
 /** Gli avanzi programmati di una portata: le portate dei giorni dopo che mangiano quello che avanza. */
@@ -63,15 +65,22 @@ export function avanziDi(portata: PortataMenu, portate: PortataMenu[]): PortataM
  * Il previsto di una portata: il piatto per le sue porzioni e le alternative di chi mangia altro.
  * Un piatto che dura più giorni si cucina tutto il primo giorno; il giorno dopo si mangia l'avanzo, in porzioni.
  */
-export function previstoPortata(indice: Indice, portata: PortataMenu, persone: Persona[], eccezioni: Eccezione[], portate: PortataMenu[] = []): Consumo[] {
+export function previstoPortata(
+  indice: Indice,
+  portata: PortataMenu,
+  persone: Persona[],
+  eccezioni: Eccezione[],
+  portate: PortataMenu[] = [],
+  ospiti: OspitiPasto[] = [],
+): Consumo[] {
   const sue = eccezioni.filter((e) => e.portata_id === portata.id);
   if (portata.avanzo_di) {
-    const n = porzioniPortata(portata, persone, eccezioni);
+    const n = porzioniPortata(portata, persone, eccezioni, ospiti);
     return n > 0 ? [{ ingrediente_id: AVANZO, unita: 'pz', quantita: n }] : [];
   }
   const piatti: [Ricetta | undefined, number][] = [];
-  const dopo = avanziDi(portata, portate).reduce((t, a) => t + porzioniPortata(a, persone, eccezioni), 0);
-  if (portata.ricetta_id) piatti.push([indice.perId.get(portata.ricetta_id), porzioniPortata(portata, persone, eccezioni) + dopo]);
+  const dopo = avanziDi(portata, portate).reduce((t, a) => t + porzioniPortata(a, persone, eccezioni, ospiti), 0);
+  if (portata.ricetta_id) piatti.push([indice.perId.get(portata.ricetta_id), porzioniPortata(portata, persone, eccezioni, ospiti) + dopo]);
   for (const e of sue) {
     const p = persone.find((x) => x.id === e.membro_id);
     if (e.tipo === 'alternativa' && e.ricetta_id && p) piatti.push([indice.perId.get(e.ricetta_id), e.porzioni ?? p.porzione]);
