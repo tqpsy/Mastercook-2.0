@@ -97,6 +97,9 @@ const AZIONI: Record<string, string> = {
   salva_prodotto: 'Ricordare un codice a barre',
   scegli_icona: 'Cambiare l’icona di una ricetta',
   verifica_ricetta: 'Segnare «va bene» una ricetta',
+  fissa_pasto: 'Ripetere un piatto ogni giorno',
+  prolunga_pasti_fissi: 'Preparare i giorni dei piatti fissi',
+  ferma_pasto_fisso: 'Fermare un piatto fisso',
   conferma_pasto: 'Confermare un pasto',
   foto_pasto: 'Aggiungere la foto di un piatto',
 };

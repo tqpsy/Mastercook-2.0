@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useFamiglia, useVista, type Vista } from '../dati/contesto';
 import { useIndice } from '../dati/indice';
 import { type Esito, NOME_ESITO, type Verifica, type Vincolo } from '../dominio/compatibilita';
@@ -100,6 +100,36 @@ function descrivi(indice: Indice, dati: DatiMenu, p: PortataMenu) {
   };
 }
 
+/**
+ * Chiede al database di creare i giorni dei piatti fissi che mancano fino a `fino` (al più 60 giorni avanti).
+ * Lo chiede una volta per data limite: il comando è idempotente, più dispositivi non creano doppioni.
+ */
+export function useProlungaFissi(fino: string) {
+  const vista = useVista();
+  const { esegui } = useFamiglia();
+  const chiesto = useRef(new Set<string>());
+  const { pasto_fisso: regole, portata: portate } = vista.righe;
+  const pronta = vista.pronta;
+  const inCoda = vista.coda.some((v) => v.comando.tipo === 'prolunga_pasti_fissi' || v.comando.tipo === 'fissa_pasto');
+  useEffect(() => {
+    if (!pronta || inCoda) return;
+    const giorno = oggi();
+    const massimo = piuGiorni(giorno, 60);
+    const limite = fino < massimo ? fino : massimo;
+    const presenti = new Set((portate ?? []).filter((p) => p.fisso_id).map((p) => `${String(p.fisso_id)}|${String(p.data)}`));
+    const manca = (regole ?? []).some((f) => {
+      if (f.eliminato_il) return false;
+      const al = f.al ? String(f.al) : limite;
+      const fine = al < limite ? al : limite;
+      for (let d = String(f.dal) > giorno ? String(f.dal) : giorno; d <= fine; d = piuGiorni(d, 1)) if (!presenti.has(`${f.id}|${d}`)) return true;
+      return false;
+    });
+    if (!manca || chiesto.current.has(limite)) return;
+    chiesto.current.add(limite);
+    void esegui('prolunga_pasti_fissi', { fino_a: limite });
+  }, [pronta, inCoda, regole, portate, fino, esegui]);
+}
+
 export function Menu() {
   const vista = useVista();
   const indice = useIndice(vista);
@@ -111,6 +141,9 @@ export function Menu() {
   const [nuova, setNuova] = useState<{ data: string; categoria: string } | null>(null);
   const [aperta, setAperta] = useState<string | null>(null);
   const [pasti, setPasti] = useState(false);
+  const fineSettimana = piuGiorni(lun, 6);
+  const dueSettimane = piuGiorni(giorno, 13);
+  useProlungaFissi(fineSettimana > dueSettimane ? fineSettimana : dueSettimane);
 
   if (!vista.pronta || !indice) return <p className="tenue">Sto caricando il menu…</p>;
   const giorni = giorniDellaSettimana(lun);
@@ -411,6 +444,7 @@ function SchedaPiatto({ indice, dati, portata: p, chiudi }: { indice: Indice; da
       <p className="tenue" style={{ marginTop: 0, textTransform: 'capitalize' }}>
         {nomeCategoria(dati, p.categoria)} · {dataLunga(p.data)}
         {p.origine === 'ripetuta' && ' · ripetuto dalla settimana prima'}
+        {p.fisso_id && ' · 🔁 ogni giorno'}
         {!d.ricetta && ' · senza ricetta'}
       </p>
 
@@ -432,13 +466,49 @@ function SchedaPiatto({ indice, dati, portata: p, chiudi }: { indice: Indice; da
           etichetta="Nuovo piatto"
           scegli={async (s) => {
             await modifica(s);
+            // Un piatto fisso si può cambiare solo per oggi o da questo giorno in poi.
+            if (p.fisso_id && window.confirm('Cambiarlo anche nei giorni dopo? (Annulla = solo questo giorno)')) {
+              await esegui('ferma_pasto_fisso', { id: p.fisso_id, dal: p.data, tieni: p.id });
+              await esegui('fissa_pasto', { id: crypto.randomUUID(), categoria: p.categoria, ...s, porzioni: p.porzioni, ordine: p.ordine, dal: p.data, da_portata: p.id });
+            }
             setCambia(false);
           }}
         />
       ) : (
-        <button className="bottone piccolo" onClick={() => setCambia(true)}>
-          Cambia piatto
-        </button>
+        <div className="riga" style={{ flexWrap: 'wrap' }}>
+          <button className="bottone piccolo" onClick={() => setCambia(true)}>
+            Cambia piatto
+          </button>
+          {p.fisso_id ? (
+            <button
+              className="bottone piccolo"
+              onClick={async () => {
+                if (!window.confirm('Togliere questo piatto da oggi in poi? I giorni già confermati restano.')) return;
+                await esegui('ferma_pasto_fisso', { id: p.fisso_id, dal: p.data });
+                chiudi();
+              }}
+            >
+              Non più da questo giorno
+            </button>
+          ) : (
+            <button
+              className="bottone piccolo"
+              onClick={() =>
+                esegui('fissa_pasto', {
+                  id: crypto.randomUUID(),
+                  categoria: p.categoria,
+                  ...(p.ricetta_id ? { ricetta_id: p.ricetta_id } : { testo: p.testo }),
+                  porzioni: p.porzioni,
+                  ordine: p.ordine,
+                  dal: p.data,
+                  da_portata: p.id,
+                })
+              }
+            >
+              🔁 Ogni giorno da qui
+            </button>
+          )}
+        </div>
       )}
 
       <div className="campo" style={{ marginTop: 16 }}>
