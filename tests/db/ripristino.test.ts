@@ -3,8 +3,12 @@
  */
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import catalogo from '../../src/catalogo/catalogo.json';
+import type { Catalogo } from '../../src/catalogo/tipi';
 import { componiFile, type FileEsportazione } from '../../src/dati/esportazione';
+import { convertiVecchio, leggiVecchio } from '../../src/dati/migrazione';
 import type { RigaScaricata } from '../../src/dati/tipi';
+import { fileVecchio } from '../vecchio-esempio';
 import { type Banco, comando, creaFamiglia, nuovoBanco, type Utente } from './banco';
 
 let banco: Banco;
@@ -512,5 +516,77 @@ describe('esportazione e ripristino dei piatti che durano più giorni (versione 
     v9.versione_schema = 9;
     for (const p of v9.tabelle.portata) delete p.avanzo_di;
     expect((await u.applica(comando('ripristina_famiglia', randomUUID(), { file: v9 }))).esito).toBe('applicato');
+  });
+});
+
+describe('importazione dal vecchio Mastercook (Fase 7)', () => {
+  it('il file convertito entra in una famiglia nuova con persone, vincoli, ricette, casa, menu e gusti', async () => {
+    const u = await banco.utente();
+    const l = leggiVecchio(fileVecchio());
+    if (!l.valido) throw new Error(l.motivo);
+    const { file, rapporto } = convertiVecchio(l.file, catalogo as Catalogo, { io: 'm1', utente_id: u.id, oggi: '2026-10-27', adesso: new Date() });
+    const nuova = randomUUID();
+    const e = await u.applica(comando('ripristina_famiglia', nuova, { file: JSON.parse(JSON.stringify(file)), nome: rapporto.nome }));
+    expect(e).toMatchObject({ esito: 'applicato', dettaglio: { membri: 2, vincoli: 5, ricette: 1, lotti: 4, portate: 3 } });
+
+    // Chi importa è «Luca» del vecchio, non un profilo in più.
+    const membri = await u.sql('select nome, porzione::float as porzione, utente_id from membro where famiglia_id = $1 order by nome', [nuova]);
+    expect(membri.map((m) => [m.nome, m.porzione, m.utente_id === u.id])).toEqual([
+      ['Luca', 1, true],
+      ['Sara', 0.6, false],
+    ]);
+    const lotti = await u.sql('select nome, ingrediente_id, quantita::float as quantita, tipo_data, data_limite::text from lotto where famiglia_id = $1 order by nome', [nuova]);
+    expect(lotti.find((x) => x.nome === 'Latte intero')).toMatchObject({ ingrediente_id: 'ing:latte', quantita: 750, tipo_data: 'stimata', data_limite: '2026-10-29' });
+    expect(lotti.find((x) => x.nome === 'Lasagne avanzate')).toMatchObject({ ingrediente_id: 'ing:avanzo', quantita: 2 });
+    const righe = await u.sql(
+      `select i.nome, ri.quantita::float as quantita, ri.qb from ricetta_ingrediente ri join ingrediente i on i.id = ri.ingrediente_id
+        where ri.famiglia_id = $1 order by ri.ordine`,
+      [nuova],
+    );
+    expect(righe.map((r) => [r.nome, r.quantita, r.qb])).toEqual([
+      ['Farina 00', 300, false],
+      ['Uova', null, true],
+      ['Pinoli della nonna', 30, false],
+      ['Sale', null, true],
+    ]);
+    const menu = await u.sql('select data::text, categoria, ricetta_id is not null as ricetta, testo from portata where famiglia_id = $1 order by data, ordine', [nuova]);
+    expect(menu).toHaveLength(3);
+    const gusti = await u.sql('select valore from gusto where famiglia_id = $1 order by valore', [nuova]);
+    expect(gusti.map((g) => g.valore)).toEqual(['non_piace', 'piace']);
+  });
+});
+
+describe('eliminare una famiglia (ritorno indietro)', () => {
+  it('solo un amministratore, solo con il nome giusto; cancella tutto e solo quella famiglia', async () => {
+    const u = await banco.utente();
+    const l = leggiVecchio(fileVecchio());
+    if (!l.valido) throw new Error(l.motivo);
+    const { file } = convertiVecchio(l.file, catalogo as Catalogo, { io: 'm1', utente_id: u.id, oggi: '2026-10-27', adesso: new Date() });
+    const importata = randomUUID();
+    await u.applica(comando('ripristina_famiglia', importata, { file, nome: 'Casa importata' }));
+    const { famiglia: altra } = await creaFamiglia(u, 'Casa vera');
+
+    // Un membro che non amministra non può.
+    const c = await u.applica(comando('crea_invito', importata, { id: randomUUID(), giorni: 1, usi_massimi: 1 }));
+    const sara = await banco.utente();
+    await sara.entra(comando('entra_con_invito', randomUUID(), { codice: c.dettaglio.codice, membro: { id: randomUUID(), nome: 'Sara' } }));
+    expect((await sara.applica(comando('elimina_famiglia', importata, { nome: 'Casa importata' }))).dettaglio.motivo).toBe('solo_amministratore');
+    // Il nome sbagliato non elimina nulla.
+    expect((await u.applica(comando('elimina_famiglia', importata, { nome: 'Casa' }))).dettaglio.motivo).toBe('nome_non_corrisponde');
+
+    const conta = async (f: string) =>
+      (await banco.sql(
+        `select (select count(*) from membro where famiglia_id = $1) + (select count(*) from lotto where famiglia_id = $1)
+              + (select count(*) from ricetta where famiglia_id = $1) + (select count(*) from portata where famiglia_id = $1)
+              + (select count(*) from comando where famiglia_id = $1) + (select count(*) from utente_famiglia where famiglia_id = $1) as n`,
+        [f],
+      ))[0].n;
+    expect(Number(await conta(importata))).toBeGreaterThan(0);
+    const prima = Number(await conta(altra));
+
+    expect(await u.applica(comando('elimina_famiglia', importata, { nome: ' Casa importata ' }))).toMatchObject({ esito: 'applicato', dettaglio: { eliminata: true } });
+    expect(Number(await conta(importata))).toBe(0);
+    expect((await banco.sql('select count(*)::int as n from famiglia where id = $1', [importata]))[0].n).toBe(0);
+    expect(Number(await conta(altra))).toBe(prima);
   });
 });

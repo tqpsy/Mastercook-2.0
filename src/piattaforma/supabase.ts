@@ -112,3 +112,18 @@ export function ascoltaFamiglia(famiglia: string, avviso: () => void): () => voi
     void supabase().removeChannel(canale);
   };
 }
+
+/**
+ * Elimina la famiglia per sempre: prima le foto delle ricette dal deposito (finché si è membri e si può),
+ * poi tutto il resto con un comando. Serve la rete; il comando chiede il nome scritto come conferma.
+ */
+export async function eliminaFamiglia(famiglia: string, nome: string, dispositivo: string, versione_app: number): Promise<Esito> {
+  try {
+    const deposito = supabase().storage.from('foto');
+    const { data } = await deposito.list(famiglia, { limit: 1000 });
+    if (data?.length) await deposito.remove(data.map((f) => `${famiglia}/${f.name}`));
+  } catch {
+    // Se le foto non si tolgono restano illeggibili: nessuno è più membro della famiglia.
+  }
+  return trasportoSupabase.applica({ id: crypto.randomUUID(), famiglia_id: famiglia, tipo: 'elimina_famiglia', dati: { nome }, versione_app, dispositivo });
+}

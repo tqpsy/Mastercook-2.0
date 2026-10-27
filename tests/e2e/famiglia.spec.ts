@@ -3,6 +3,7 @@
  * L'accesso con Google è sostituito da una sessione di prova messa nel browser.
  */
 import { expect, test } from '@playwright/test';
+import { fileVecchio } from '../vecchio-esempio';
 import { aggiungiPersona, apri, creaFamiglia, nuovoUtente, sql } from './aiuti';
 
 test('primo accesso: crea la famiglia, aggiunge una persona con un’allergia, tutto resta dopo la riapertura', async ({ browser }, info) => {
@@ -71,4 +72,42 @@ test('senza rete: la modifica resta in attesa, visibile, e parte al ritorno dell
   await expect(page.getByRole('button', { name: /Tutto salvato/ })).toBeVisible({ timeout: 20_000 });
   expect((await sql<{ n: number }>(`select count(*)::int as n from membro where nome = $1`, [marco]))[0].n).toBe(1);
   await expect(page.locator('.etichetta', { hasText: 'in invio' })).toHaveCount(0);
+});
+
+test('importazione dal vecchio Mastercook: rapporto prima, poi famiglia nuova; si può tornare indietro eliminandola', async ({ browser }, info) => {
+  const luca = await nuovoUtente('Luca');
+  const { page } = await apri(browser, luca, info.project.use);
+  await page.getByText('Hai un file di esportazione, anche del vecchio Mastercook? Caricalo').click();
+  await page.getByLabel('File di esportazione (.json)').setInputFiles({ name: 'masterfood-casa.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(fileVecchio())) });
+
+  // Prova a secco: il rapporto, e nulla è ancora scritto.
+  const rapporto = page.getByLabel('Importazione dal vecchio Mastercook');
+  await expect(rapporto.getByText('Casa Topsidakis', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('Tu chi sei nel vecchio Mastercook?')).toHaveValue('m1');
+  await expect(page.getByRole('list', { name: 'Cosa entra' })).toContainText('2 persone, con 5 tra allergie, intolleranze ed esigenze');
+  await expect(page.getByRole('list', { name: 'Da ricontrollare' })).toContainText('q.b.');
+  expect((await sql<{ n: number }>('select count(*)::int as n from utente_famiglia where utente_id = $1', [luca.id]))[0].n).toBe(0);
+
+  await page.getByRole('button', { name: 'Importa in una famiglia nuova' }).click();
+  await expect(page.getByRole('heading', { name: 'Ciao, Casa Topsidakis (importata)' })).toBeVisible();
+  await page.getByRole('button', { name: 'Famiglia' }).click();
+  await expect(page.getByRole('button', { name: 'Modifica Sara' })).toBeVisible();
+  const membri = await sql<{ nome: string; mio: boolean }>(
+    'select m.nome, m.utente_id is not distinct from $1 as mio from membro m join utente_famiglia u on u.famiglia_id = m.famiglia_id where u.utente_id = $1 order by m.nome',
+    [luca.id],
+  );
+  expect(membri).toEqual([
+    { nome: 'Luca', mio: true },
+    { nome: 'Sara', mio: false },
+  ]);
+
+  // Ritorno indietro: si elimina la famiglia importata riscrivendone il nome.
+  await page.getByRole('button', { name: 'Impostazioni' }).click();
+  await page.getByText('Elimina questa famiglia').click();
+  const elimina = page.getByRole('button', { name: 'Elimina per sempre' });
+  await expect(elimina).toBeDisabled();
+  await page.getByLabel('Per confermare scrivi il nome della famiglia').fill('Casa Topsidakis (importata)');
+  await elimina.click();
+  await expect(page.getByRole('heading', { name: 'Crea la tua famiglia' })).toBeVisible();
+  expect((await sql<{ n: number }>('select count(*)::int as n from utente_famiglia where utente_id = $1', [luca.id]))[0].n).toBe(0);
 });

@@ -55,7 +55,7 @@ export function NuovaFamiglia({ nomeSuggerito, creata }: { nomeSuggerito: string
         </button>
       </form>
       <details style={{ marginTop: 28 }}>
-        <summary className="tenue">Hai un file di esportazione? Ripristinalo</summary>
+        <summary className="tenue">Hai un file di esportazione, anche del vecchio Mastercook? Caricalo</summary>
         <div style={{ marginTop: 12 }}>
           <Ripristino nomeUtente={nome.trim()} fatto={creata} />
         </div>
