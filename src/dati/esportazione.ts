@@ -5,10 +5,23 @@
 import type { Riga, RigaScaricata, Tabella, Trasporto } from './tipi';
 
 export const FORMATO = 'mastercook-2';
-export const VERSIONE_FILE = 1;
+export const VERSIONE_FILE = 2;
 
 /** Tabelle esportate: i dati della famiglia. Accessi, inviti e cronologia restano fuori. */
-export const TABELLE_ESPORTATE = ['famiglia', 'membro', 'vincolo_alimentare'] as const satisfies readonly Tabella[];
+export const TABELLE_ESPORTATE = [
+  'famiglia',
+  'membro',
+  'vincolo_alimentare',
+  'ingrediente',
+  'ricetta',
+  'ricetta_ingrediente',
+  'ricetta_passo',
+  'lotto',
+  'movimento',
+] as const satisfies readonly Tabella[];
+
+/** Le tabelle presenti nei file della versione 1, che si possono ancora ripristinare. */
+const TABELLE_V1 = ['famiglia', 'membro', 'vincolo_alimentare'] as const;
 
 export interface FileEsportazione {
   formato: typeof FORMATO;
@@ -62,13 +75,16 @@ export function controllaFile(testo: string): ControlloFile {
   }
   const file = f as Partial<FileEsportazione>;
   if (file?.formato !== FORMATO) return { valido: false, motivo: 'Il file non è un’esportazione di Mastercook.' };
-  if (file.versione_schema !== VERSIONE_FILE) return { valido: false, motivo: 'Il file viene da una versione dell’app che questa non sa leggere.' };
+  if (file.versione_schema !== 1 && file.versione_schema !== VERSIONE_FILE) {
+    return { valido: false, motivo: 'Il file viene da una versione dell’app che questa non sa leggere.' };
+  }
   const t = file.tabelle;
   if (!t || !Array.isArray(t.famiglia) || t.famiglia.length !== 1 || !Array.isArray(t.membro) || !Array.isArray(t.vincolo_alimentare)) {
     return { valido: false, motivo: 'Il file è incompleto.' };
   }
-  for (const k of TABELLE_ESPORTATE) {
-    if (file.conteggi?.[k] !== t[k].length) return { valido: false, motivo: 'Il file è stato modificato o è incompleto.' };
+  const attese: readonly (typeof TABELLE_ESPORTATE)[number][] = file.versione_schema === 1 ? TABELLE_V1 : TABELLE_ESPORTATE;
+  for (const k of attese) {
+    if (!Array.isArray(t[k]) || file.conteggi?.[k] !== t[k].length) return { valido: false, motivo: 'Il file è stato modificato o è incompleto.' };
   }
   return { valido: true, file: file as FileEsportazione };
 }

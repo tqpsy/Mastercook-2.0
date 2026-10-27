@@ -25,8 +25,9 @@ describe('esportazione', () => {
     const f = componiFile(righe, new Date('2026-10-27T10:00:00Z'));
     expect(f.tabelle.membro.map((m) => m.nome)).toEqual(['Luca', 'Sara R.']);
     expect(f.tabelle.vincolo_alimentare).toEqual([]);
-    expect(f.conteggi).toEqual({ famiglia: 1, membro: 2, vincolo_alimentare: 0 });
-    expect(Object.keys(f.tabelle)).toEqual(['famiglia', 'membro', 'vincolo_alimentare']);
+    expect(f.conteggi).toMatchObject({ famiglia: 1, membro: 2, vincolo_alimentare: 0, lotto: 0, movimento: 0 });
+    expect(Object.keys(f.tabelle)).not.toContain('comando');
+    expect(Object.keys(f.tabelle)).not.toContain('invito');
   });
 
   it('il controllo accetta il file prodotto e rifiuta file estranei, di altre versioni o manomessi', () => {
@@ -37,5 +38,18 @@ describe('esportazione', () => {
     expect(controllaFile(JSON.stringify({ ...f, versione_schema: 99 })).valido).toBe(false);
     const manomesso = { ...f, tabelle: { ...f.tabelle, membro: f.tabelle.membro.slice(1) } };
     expect(controllaFile(JSON.stringify(manomesso))).toMatchObject({ valido: false, motivo: 'Il file è stato modificato o è incompleto.' });
+  });
+
+  it('un file della versione 1 (senza ricette e casa) si può ancora ripristinare', () => {
+    const f = componiFile(righe, new Date());
+    const v1 = {
+      ...f,
+      versione_schema: 1,
+      tabelle: { famiglia: f.tabelle.famiglia, membro: f.tabelle.membro, vincolo_alimentare: f.tabelle.vincolo_alimentare },
+      conteggi: { famiglia: 1, membro: 2, vincolo_alimentare: 0 },
+    };
+    expect(controllaFile(JSON.stringify(v1)).valido).toBe(true);
+    const v2Incompleto = { ...v1, versione_schema: 2 };
+    expect(controllaFile(JSON.stringify(v2Incompleto)).valido).toBe(false);
   });
 });

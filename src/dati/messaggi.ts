@@ -19,6 +19,22 @@ const MOTIVI: Record<string, string> = {
   tipo_sconosciuto: 'Questa versione dell’app non sa ancora fare questa operazione.',
   comando_malformato: 'Operazione non valida.',
   id_gia_usato: 'Operazione non valida.',
+  unita_incompatibile: 'L’unità non va bene per questo ingrediente (per esempio grammi di uova).',
+  ricetta_di_sistema: 'Le ricette del catalogo non si modificano: duplicala per farne una tua.',
+  ingrediente_di_sistema: 'Gli ingredienti del catalogo non si modificano.',
+  ricetta_non_trovata: 'La ricetta di partenza non esiste più.',
+  ricetta_senza_ingredienti: 'Una ricetta ha bisogno di almeno un ingrediente.',
+  ricetta_senza_passaggi: 'Una ricetta ha bisogno di almeno un passaggio.',
+  ingrediente_non_trovato: 'L’ingrediente non esiste più.',
+  lotto_non_trovato: 'Questo prodotto non è più in casa.',
+  lotto_chiuso: 'Questo prodotto è già finito.',
+  quantita_insufficiente: 'Ce n’è meno di quanto volevi togliere: qualcuno l’ha già usato.',
+  quantita_non_valida: 'La quantità non è valida.',
+  quantita_cambiata: 'Nel frattempo qualcuno ha cambiato la quantità.',
+  causale_non_ammessa: 'Operazione non valida.',
+  origine_non_ammessa: 'Operazione non valida.',
+  data_confezione_protetta: 'La data letta sulla confezione non si sostituisce con una stima.',
+  movimento_immutabile: 'La cronologia non si modifica.',
 };
 
 export function spiegaMotivo(motivo: string | undefined): string {
@@ -34,6 +50,15 @@ const AZIONI: Record<string, string> = {
   crea_invito: 'Creare un invito',
   revoca_invito: 'Annullare un invito',
   rimuovi_accesso: 'Togliere un accesso',
+  crea_ingrediente: 'Aggiungere un ingrediente',
+  modifica_ingrediente: 'Modificare un ingrediente',
+  salva_ricetta: 'Salvare una ricetta',
+  elimina_ricetta: 'Eliminare una ricetta',
+  aggiungi_lotto: 'Aggiungere un prodotto in casa',
+  scarica_lotto: 'Segnare un prodotto usato o buttato',
+  correggi_lotto: 'Correggere una quantità',
+  sposta_lotto: 'Spostare un prodotto',
+  modifica_lotto: 'Modificare un prodotto',
 };
 
 export function descriviAzione(tipo: string): string {

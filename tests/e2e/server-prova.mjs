@@ -1,6 +1,6 @@
 /**
  * Server di prova per i test dell'interfaccia: risponde come Supabase alle poche chiamate che l'app fa
- * (`/rest/v1/rpc/<funzione>`), eseguendo le funzioni vere su un Postgres di prova con l'utente
+ * (`/rest/v1/rpc/<funzione>` e le foto in `/storage/v1/object/foto/…`), eseguendo le funzioni vere su un Postgres di prova con l'utente
  * indicato dal token. Non verifica la firma del token: serve solo nei test, mai in produzione.
  */
 import { randomUUID } from 'node:crypto';
@@ -33,6 +33,33 @@ const FUNZIONI = {
   mie_famiglie: () => ['select coalesce(jsonb_agg(to_jsonb(f)), \'[]\'::jsonb) as r from public.mie_famiglie() f', []],
 };
 
+/** I file delle foto, in memoria: il deposito vero è Supabase Storage. Le regole sono quelle del database. */
+const FILE = new Map();
+
+/** Esegue una query come l'utente del token, con le regole di accesso (RLS) del database. */
+async function comeUtente(sub, testo, valori) {
+  const client = await pool.connect();
+  try {
+    await client.query('begin');
+    await client.query('set local role authenticated');
+    await client.query(`select set_config('request.jwt.claims', $1, true)`, [JSON.stringify({ sub, role: 'authenticated' })]);
+    const r = await client.query(testo, valori);
+    await client.query('commit');
+    return r;
+  } catch (e) {
+    await client.query('rollback');
+    throw e;
+  } finally {
+    client.release();
+  }
+}
+
+async function grezzo(req) {
+  const parti = [];
+  for await (const c of req) parti.push(c);
+  return Buffer.concat(parti);
+}
+
 function utenteDalToken(req) {
   const t = (req.headers.authorization ?? '').replace(/^Bearer /, '');
   try {
@@ -58,7 +85,7 @@ createServer(async (req, res) => {
     res.writeHead(204, {
       'access-control-allow-origin': '*',
       'access-control-allow-headers': '*',
-      'access-control-allow-methods': 'GET, POST, OPTIONS',
+      'access-control-allow-methods': 'GET, POST, PUT, OPTIONS',
     });
     return res.end();
   }
@@ -77,24 +104,37 @@ createServer(async (req, res) => {
       return rispondi(res, 200, (await pool.query(testo, valori)).rows);
     }
     if (percorso.startsWith('/auth/v1/')) return rispondi(res, 204);
+    const f = percorso.match(/^\/storage\/v1\/object\/(?:authenticated\/)?foto\/(.+)$/);
+    if (f) {
+      const sub = utenteDalToken(req);
+      if (!sub) return rispondi(res, 400, { statusCode: '403', error: 'Unauthorized', message: 'token mancante' });
+      const nome = decodeURIComponent(f[1]);
+      if (req.method === 'POST' || req.method === 'PUT') {
+        const dati = await grezzo(req);
+        try {
+          await comeUtente(sub, `insert into storage.objects (bucket_id, name) values ('foto', $1) on conflict (bucket_id, name) do update set created_at = now()`, [nome]);
+        } catch (e) {
+          return rispondi(res, 400, { statusCode: '403', error: 'Unauthorized', message: String(e) });
+        }
+        FILE.set(nome, { dati, tipo: req.headers['content-type'] ?? 'image/jpeg' });
+        return rispondi(res, 200, { Key: `foto/${nome}` });
+      }
+      const r = await comeUtente(sub, `select 1 from storage.objects where bucket_id = 'foto' and name = $1`, [nome]);
+      const file = FILE.get(nome);
+      if (!r.rowCount || !file) return rispondi(res, 400, { statusCode: '404', error: 'not_found', message: 'Object not found' });
+      res.writeHead(200, { 'content-type': file.tipo, 'access-control-allow-origin': '*' });
+      return res.end(file.dati);
+    }
     const m = percorso.match(/^\/rest\/v1\/rpc\/(\w+)$/);
     if (!m || !FUNZIONI[m[1]]) return rispondi(res, 404, { message: 'non trovato' });
     const sub = utenteDalToken(req);
     if (!sub) return rispondi(res, 401, { message: 'JWT mancante', code: 'PGRST301' });
     const [testo, valori] = FUNZIONI[m[1]](await corpo(req));
-    const client = await pool.connect();
     try {
-      await client.query('begin');
-      await client.query('set local role authenticated');
-      await client.query(`select set_config('request.jwt.claims', $1, true)`, [JSON.stringify({ sub, role: 'authenticated' })]);
-      const r = await client.query(testo, valori);
-      await client.query('commit');
+      const r = await comeUtente(sub, testo, valori);
       return rispondi(res, 200, r.rows[0].r);
     } catch (e) {
-      await client.query('rollback');
       return rispondi(res, 500, { message: String(e) });
-    } finally {
-      client.release();
     }
   } catch (e) {
     return rispondi(res, 500, { message: String(e) });

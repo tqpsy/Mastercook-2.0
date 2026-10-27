@@ -127,6 +127,7 @@ export class Sincronizzatore {
       }
       let esito: Esito;
       try {
+        await this.caricaFotoDi(voce);
         esito = await this.o.trasporto.applica({ ...voce.comando, versione_app: this.o.versioneApp });
       } catch (e) {
         if (!(e instanceof ErroreRete)) throw e;
@@ -150,6 +151,24 @@ export class Sincronizzatore {
       }
       await this.contaCoda();
     }
+  }
+
+  /**
+   * Una ricetta che cita una foto nuova: prima si carica il file, poi parte il comando, così sul
+   * server una ricetta non punta mai a un file che non c'è. Se il deposito rifiuta il file (non per
+   * la rete), il comando parte lo stesso e la ricetta resta senza immagine visibile.
+   */
+  private async caricaFotoDi(voce: VoceCoda) {
+    const percorso = (voce.comando.dati.campi as Record<string, unknown> | undefined)?.foto;
+    if (typeof percorso !== 'string' || !this.o.trasporto.caricaFoto) return;
+    const foto = await this.o.archivio.foto.get(percorso);
+    if (!foto || foto.caricata) return;
+    try {
+      await this.o.trasporto.caricaFoto(percorso, foto.file);
+    } catch (e) {
+      if (e instanceof ErroreRete) throw e;
+    }
+    await this.o.archivio.foto.update(percorso, { caricata: true });
   }
 
   /** Scarica tutte le modifiche dopo il cursore. */

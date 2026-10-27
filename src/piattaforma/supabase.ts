@@ -66,7 +66,29 @@ export const trasportoSupabase: Trasporto & { entra(c: Comando): Promise<Esito> 
     if ('esito' in r) return { righe: [], altre: false, errore: 'non_autenticato' };
     return r;
   },
+  async caricaFoto(percorso, file) {
+    let risposta;
+    try {
+      risposta = await supabase().storage.from('foto').upload(percorso, file, { upsert: true, contentType: file.type || 'image/jpeg' });
+    } catch (e) {
+      throw new ErroreRete(String(e));
+    }
+    if (risposta.error) {
+      if (risposta.error.name === 'StorageUnknownError' || !navigator.onLine) throw new ErroreRete(risposta.error.message);
+      throw new Error(risposta.error.message);
+    }
+  },
 };
+
+/** Scarica una foto dal deposito; `null` senza rete o se il file non c'è. */
+export async function scaricaFoto(percorso: string): Promise<Blob | null> {
+  try {
+    const { data } = await supabase().storage.from('foto').download(percorso);
+    return data ?? null;
+  } catch {
+    return null;
+  }
+}
 
 export interface FamigliaMia {
   famiglia_id: string;

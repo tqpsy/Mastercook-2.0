@@ -28,6 +28,15 @@ export interface VoceCoda {
   esito?: Esito;
 }
 
+/** Una foto scattata o scelta su questo dispositivo, o già scaricata: resta qui anche senza rete. */
+export interface FotoLocale {
+  percorso: string;
+  famiglia_id: string;
+  file: Blob;
+  /** Falso finché non è nel deposito del server. */
+  caricata: boolean;
+}
+
 export interface Cursore {
   famiglia_id: string;
   seq: number;
@@ -35,12 +44,13 @@ export interface Cursore {
 }
 
 /** Aumentare quando cambia la forma della copia locale: si riscarica tutto, la coda resta. */
-export const VERSIONE_ARCHIVIO = 1;
+export const VERSIONE_ARCHIVIO = 2;
 
 export class Archivio extends Dexie {
   righe!: Table<RigaLocale, [Tabella, string]>;
   coda!: Table<VoceCoda, number>;
   cursori!: Table<Cursore, string>;
+  foto!: Table<FotoLocale, string>;
 
   constructor(nome: string) {
     super(nome);
@@ -48,6 +58,7 @@ export class Archivio extends Dexie {
       righe: '[tabella+id], tabella, famiglia_id, [famiglia_id+tabella]',
       coda: '++ordine, &id, famiglia_id, stato',
       cursori: 'famiglia_id',
+      foto: 'percorso, famiglia_id',
     });
   }
 

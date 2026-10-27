@@ -34,6 +34,10 @@ export class Rete implements Trasporto {
   accesa = true;
   guasti: Guasti = {};
   richieste = 0;
+  /** Le foto arrivate al deposito, in ordine, con il numero della richiesta di comando dopo cui sono arrivate. */
+  foto: { percorso: string; dopo: number }[] = [];
+  /** Il deposito delle foto non risponde (la rete dei comandi sì). */
+  fotoGuaste = false;
   constructor(
     private utente: Utente,
     private caso: () => number = Math.random,
@@ -52,6 +56,12 @@ export class Rete implements Trasporto {
       : await this.utente.applica(c);
     if (this.caso() < (this.guasti.perdiRisposta ?? 0)) throw new ErroreRete('risposta persa');
     return esito as Esito;
+  }
+
+  async caricaFoto(percorso: string): Promise<void> {
+    this.controlla();
+    if (this.fotoGuaste) throw new ErroreRete('deposito irraggiungibile');
+    this.foto.push({ percorso, dopo: this.richieste });
   }
 
   async scarica(famiglia: string, dopo: number, limite?: number): Promise<Pagina> {

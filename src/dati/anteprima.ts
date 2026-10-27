@@ -53,7 +53,78 @@ const EFFETTI: Record<string, Effetto> = {
     righe.invito = (righe.invito ?? []).map((r) => (r.id === d.id ? { ...r, revocato: true, in_attesa: true } : r));
   },
   modifica_famiglia: (righe, d, famiglia) => modifica('famiglia')(righe, { ...d, id: famiglia }, famiglia),
+
+  crea_ingrediente: aggiungi('ingrediente', (d) => ({
+    nome: d.nome,
+    reparto: d.reparto ?? 'altro',
+    dimensione: d.dimensione,
+    luogo: d.luogo ?? 'dispensa',
+    allergeni: d.allergeni ?? [],
+    allergeni_noti: d.allergeni_noti ?? false,
+    classi: d.classi ?? [],
+    genitore: d.genitore ?? null,
+    emoji: d.emoji ?? null,
+    versione: 1,
+  })),
+  modifica_ingrediente: modifica('ingrediente'),
+
+  salva_ricetta: (righe, d, famiglia) => {
+    if (d.nuova) aggiungi('ricetta', (x) => ({ ...(x.campi as object), archiviata: false, versione: 1 }))(righe, d, famiglia);
+    else if (d.campi && Object.keys(d.campi as object).length) modifica('ricetta')(righe, d, famiglia);
+    for (const [tabella, chiave] of [
+      ['ricetta_ingrediente', 'ingredienti'],
+      ['ricetta_passo', 'passi'],
+    ] as const) {
+      const diff = (d[chiave] ?? {}) as { aggiungi?: Record<string, unknown>[]; modifica?: Record<string, unknown>[]; rimuovi?: string[] };
+      for (const r of diff.aggiungi ?? []) aggiungi(tabella, (x) => ({ ...x, ricetta_id: d.id, versione: 1 }))(righe, r, famiglia);
+      for (const r of diff.modifica ?? []) modifica(tabella)(righe, r, famiglia);
+      for (const id of diff.rimuovi ?? []) elimina(tabella)(righe, { id }, famiglia);
+    }
+  },
+  elimina_ricetta: elimina('ricetta'),
+
+  aggiungi_lotto: aggiungi('lotto', (d) => ({
+    ingrediente_id: d.ingrediente_id,
+    nome: d.nome ?? null,
+    quantita: Number(d.quantita),
+    unita: d.unita,
+    luogo: d.luogo,
+    data_acquisto: d.data_acquisto ?? null,
+    data_limite: d.data_limite ?? null,
+    tipo_data: d.tipo_data,
+    fonte_data: d.fonte_data ?? null,
+    calcolata_il: d.calcolata_il ?? null,
+    origine: 'manuale',
+    note: d.note ?? null,
+    chiuso_il: null,
+    versione: 1,
+  })),
+  scarica_lotto: (righe, d) => cambiaQuantita(righe, String(d.lotto_id), (q) => q - Number(d.quantita)),
+  correggi_lotto: (righe, d) => cambiaQuantita(righe, String(d.lotto_id), () => Number(d.quantita_nuova)),
+  sposta_lotto: (righe, d, famiglia) => {
+    const stima = (d.stima ?? {}) as Record<string, unknown>;
+    const lotto = (righe.lotto ?? []).find((r) => r.id === d.lotto_id);
+    if (!lotto) return;
+    const parte = d.quantita == null ? null : Number(d.quantita);
+    if (parte === null || parte >= Number(lotto.quantita)) {
+      righe.lotto = (righe.lotto ?? []).map((r) => (r.id === d.lotto_id ? { ...r, luogo: d.luogo, ...stima, in_attesa: true } : r));
+      return;
+    }
+    cambiaQuantita(righe, lotto.id, (q) => q - parte);
+    const copia: Record<string, unknown> = { ...lotto };
+    for (const k of ['id', 'seq', 'in_attesa']) delete copia[k];
+    aggiungi('lotto', () => ({ ...copia, quantita: parte, luogo: d.luogo, ...stima, versione: 1 }))(righe, { id: d.nuovo_id }, famiglia);
+  },
+  modifica_lotto: modifica('lotto'),
 };
+
+function cambiaQuantita(righe: Righe, id: string, nuova: (q: number) => number) {
+  righe.lotto = (righe.lotto ?? []).map((r) => {
+    if (r.id !== id) return r;
+    const q = Math.max(0, nuova(Number(r.quantita)));
+    return { ...r, quantita: q, chiuso_il: q === 0 ? 'in_attesa' : null, in_attesa: true };
+  });
+}
 
 /** Righe del server con sopra l'effetto previsto dei comandi in attesa, nell'ordine della coda. */
 export function vistaConAnteprima(righe: Righe, coda: VoceCoda[]): Righe {
