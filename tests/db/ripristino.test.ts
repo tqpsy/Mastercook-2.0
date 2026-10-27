@@ -179,7 +179,7 @@ describe('esportazione e ripristino con ricette e casa (versione 2)', () => {
     await u.applica(comando('sposta_lotto', famiglia, { lotto_id: carne, luogo: 'freezer', quantita: 200, nuovo_id: randomUUID() }));
 
     const file = await esporta(u, famiglia);
-    expect(file.versione_schema).toBe(7);
+    expect(file.versione_schema).toBe(8);
     expect(file.conteggi).toMatchObject({ ingrediente: 1, ricetta: 1, ricetta_ingrediente: 3, ricetta_passo: 1, lotto: 3, movimento: 6 });
 
     const nuova = randomUUID();
@@ -289,7 +289,7 @@ describe('esportazione e ripristino di spesa e acquisti (versione 4)', () => {
     await u.applica(comando('correggi_riga_acquisto', famiglia, { id: riga, quantita_vista: 1000, quantita_nuova: 500 }));
 
     const file = await esporta(u, famiglia);
-    expect(file.versione_schema).toBe(7);
+    expect(file.versione_schema).toBe(8);
     expect(file.conteggi).toMatchObject({ voce_spesa: 2, acquisto: 1, acquisto_riga: 2 });
     const nuova = randomUUID();
     expect(await u.applica(comando('ripristina_famiglia', nuova, { file: JSON.parse(JSON.stringify(file)) }))).toMatchObject({
@@ -342,7 +342,7 @@ describe('esportazione e ripristino di scontrini e prodotti (versione 5)', () =>
       }),
     );
     const file = await esporta(u, famiglia);
-    expect(file.versione_schema).toBe(7);
+    expect(file.versione_schema).toBe(8);
     expect(file.conteggi).toMatchObject({ prodotto: 1, scontrino: 1, scontrino_riga: 3, acquisto: 1, acquisto_riga: 2 });
     const nuova = randomUUID();
     expect((await u.applica(comando('ripristina_famiglia', nuova, { file: JSON.parse(JSON.stringify(file)) }))).esito).toBe('applicato');
@@ -396,7 +396,7 @@ describe('esportazione e ripristino dei consumi (versione 6)', () => {
       }),
     );
     const file = await esporta(u, famiglia);
-    expect(file.versione_schema).toBe(7);
+    expect(file.versione_schema).toBe(8);
     expect(file.conteggi).toMatchObject({ conferma_pasto: 2 });
     const nuova = randomUUID();
     expect((await u.applica(comando('ripristina_famiglia', nuova, { file: JSON.parse(JSON.stringify(file)) }))).esito).toBe('applicato');
@@ -416,8 +416,10 @@ describe('esportazione e ripristino dei consumi (versione 6)', () => {
 
     const v6 = JSON.parse(JSON.stringify(file));
     v6.versione_schema = 6;
-    delete v6.tabelle.icona_ricetta;
-    delete v6.conteggi.icona_ricetta;
+    for (const t of ['icona_ricetta', 'ricetta_verificata']) {
+      delete v6.tabelle[t];
+      delete v6.conteggi[t];
+    }
     expect((await u.applica(comando('ripristina_famiglia', randomUUID(), { file: v6 }))).esito).toBe('applicato');
 
     const v5 = JSON.parse(JSON.stringify(v6));
@@ -441,5 +443,26 @@ describe('esportazione e ripristino delle icone (versione 7)', () => {
     expect(await banco.sql(`select ricetta_id, emoji from icona_ricetta where famiglia_id = $1 and eliminato_il is null`, [nuova])).toEqual([
       { ricetta_id: 'sys:riso_basmati_spezie', emoji: '🍛' },
     ]);
+  });
+});
+
+describe('esportazione e ripristino dei «va bene» (versione 8)', () => {
+  it('il «va bene» di una ricetta di Mastercook torna per lo stesso membro; un file della versione 7 si ripristina ancora', async () => {
+    const { u, famiglia } = await famigliaCompleta();
+    const [m] = await banco.sql<{ id: string; nome: string }>(`select id, nome from membro where famiglia_id = $1 order by nome limit 1`, [famiglia]);
+    await u.applica(comando('verifica_ricetta', famiglia, { id: randomUUID(), membro_id: m.id, ricetta_id: 'sys:carbonara', versione_ricetta: 1, va_bene: true }));
+    const file = await esporta(u, famiglia);
+    expect(file.conteggi).toMatchObject({ ricetta_verificata: 1 });
+    const nuova = randomUUID();
+    expect((await u.applica(comando('ripristina_famiglia', nuova, { file: JSON.parse(JSON.stringify(file)) }))).esito).toBe('applicato');
+    expect(
+      await banco.sql(`select m.nome, v.ricetta_id, v.versione_ricetta from ricetta_verificata v join membro m on m.id = v.membro_id where v.famiglia_id = $1`, [nuova]),
+    ).toEqual([{ nome: m.nome, ricetta_id: 'sys:carbonara', versione_ricetta: 1 }]);
+
+    const v7 = JSON.parse(JSON.stringify(file));
+    v7.versione_schema = 7;
+    delete v7.tabelle.ricetta_verificata;
+    delete v7.conteggi.ricetta_verificata;
+    expect((await u.applica(comando('ripristina_famiglia', randomUUID(), { file: v7 }))).esito).toBe('applicato');
   });
 });

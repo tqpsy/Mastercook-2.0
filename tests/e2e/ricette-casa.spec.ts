@@ -182,7 +182,7 @@ test('foto: si aggiunge anche senza rete, parte prima della ricetta e non si sos
   await expect(tablet.getByRole('img', { name: `Foto di ${titolo} con pomodoro` })).toBeVisible();
 });
 
-test('crudi: il guanciale cotto va bene, la bresaola no; l’icona si sceglie per la famiglia', async ({ browser }, info) => {
+test('crudi: il guanciale cotto va bene, la bresaola no finché non la segnate «va bene»; l’icona si sceglie per la famiglia', async ({ browser }, info) => {
   const luca = await nuovoUtente('Luca');
   const { page } = await apri(browser, luca, info.project.use);
   await creaFamiglia(page, 'Casa Crudi');
@@ -203,7 +203,17 @@ test('crudi: il guanciale cotto va bene, la bresaola no; l’icona si sceglie pe
   await page.getByRole('button', { name: 'Chiudi' }).click();
   await page.getByLabel('Cerca').fill('bresaola');
   await page.getByRole('button', { name: 'Apri Bresaola, rucola e grana' }).click();
-  await expect(page.getByRole('dialog', { name: 'Bresaola, rucola e grana' }).getByText(/Anna: ⛔ niente salumi crudi: bresaola non si cuoce/)).toBeVisible();
+  const bresaola = page.getByRole('dialog', { name: 'Bresaola, rucola e grana' });
+  await expect(bresaola.getByText(/Anna: ⛔ niente salumi crudi: bresaola non si cuoce/)).toBeVisible();
+  // L'avete controllata e per voi va bene: si segna, con una conferma perché scavalca un'esigenza.
+  page.once('dialog', (d) => void d.accept());
+  await bresaola.getByRole('button', { name: 'Va bene per Anna' }).click();
+  await expect(bresaola.getByText('Adatta a tutti')).toBeVisible();
+  await expect(bresaola.getByText(/Anna: ✅ segnata «va bene» da voi/)).toBeVisible();
+  await expect(page.getByRole('button', { name: /Stato del salvataggio: Tutto salvato/ })).toBeVisible();
+  await expect
+    .poll(() => sql(`select ricetta_id from ricetta_verificata where famiglia_id in (select famiglia_id from utente_famiglia where utente_id = $1) and eliminato_il is null`, [luca.id]))
+    .toEqual([{ ricetta_id: 'sys:bresaola_rucola' }]);
   await page.getByRole('button', { name: 'Chiudi' }).click();
 
   await page.getByLabel('Cerca').fill('basmati');

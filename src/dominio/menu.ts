@@ -3,7 +3,7 @@
  * portata tenendo conto di chi non mangia o mangia altro, gusti dichiarati. Nessuna di queste funzioni
  * tocca la casa: pianificare è un'intenzione (T-PIA).
  */
-import { type Esito, type Valutazione, valutaPerVincoli, type Vincolo } from './compatibilita';
+import { type Esito, type Valutazione, valutaPerVincoli, type Verifica, verificataPer, type Vincolo } from './compatibilita';
 import type { Indice, Ricetta } from './ricette';
 import { piuGiorni } from './scadenze';
 
@@ -119,14 +119,21 @@ const PEGGIORE: Record<Esito, number> = { adatta: 0, da_verificare: 1, non_adatt
  * si valuta sull'alternativa (se è testo libero l'app non può dirlo: da verificare se ha vincoli).
  * `ricetta` è null per una portata a testo libero.
  */
-export function valutaPortata(indice: Indice, ricetta: Ricetta | null, persone: Persona[], vincoli: Vincolo[], eccezioni: Eccezione[]): ValutazionePortata {
+export function valutaPortata(
+  indice: Indice,
+  ricetta: Ricetta | null,
+  persone: Persona[],
+  vincoli: Vincolo[],
+  eccezioni: Eccezione[],
+  verifiche?: Verifica[],
+): ValutazionePortata {
   const perMembro = persone.map((p) => {
     const e = eccezioni.find((x) => x.membro_id === p.id);
     const suoi = vincoli.filter((v) => v.membro_id === p.id);
     if (e?.tipo === 'non_mangia') return { membro_id: p.id, nome: p.nome, mangia: 'niente' as const, valutazione: null };
     const piatto = e?.tipo === 'alternativa' ? (e.ricetta_id ? (indice.perId.get(e.ricetta_id) ?? null) : null) : ricetta;
     const mangia = e?.tipo === 'alternativa' ? ('alternativa' as const) : ('principale' as const);
-    if (piatto) return { membro_id: p.id, nome: p.nome, mangia, valutazione: valutaPerVincoli(indice, piatto, suoi) };
+    if (piatto) return { membro_id: p.id, nome: p.nome, mangia, valutazione: valutaPerVincoli(indice, piatto, suoi, verificataPer(verifiche, p.id, piatto.id)) };
     const valutazione: Valutazione = suoi.length ? { esito: 'da_verificare', motivi: ['piatto scritto a mano: controlla tu gli ingredienti'] } : { esito: 'adatta', motivi: [] };
     return { membro_id: p.id, nome: p.nome, mangia, valutazione };
   });

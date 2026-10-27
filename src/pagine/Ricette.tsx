@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { CATEGORIE, type Categoria } from '../catalogo/tipi';
 import { righeAttive, useFamiglia, useVista } from '../dati/contesto';
 import { useIndice } from '../dati/indice';
-import { type Esito, NOME_ESITO, valutaPerFamiglia, type ValutazioneFamiglia, type Vincolo } from '../dominio/compatibilita';
+import { type Esito, NOME_ESITO, valutaPerFamiglia, type ValutazioneFamiglia, type Verifica, type Vincolo } from '../dominio/compatibilita';
 import { copertura, filtra, iconaRicetta, type Indice, type Ricetta } from '../dominio/ricette';
 import { formatta, scala } from '../dominio/unita';
 import { Foglio } from '../ui/Foglio';
@@ -96,12 +96,15 @@ function CambiaIcona({ indice, ricetta: r, scelta, chiudi }: { indice: Indice; r
 /** Chi mangia a casa e i suoi vincoli, nella forma che serve alla valutazione. */
 export function useCommensali() {
   const vista = useVista();
-  const { membro, vincolo_alimentare } = vista.righe;
+  const { membro, vincolo_alimentare, ricetta_verificata } = vista.righe;
   return useMemo(() => {
     const membri = (membro ?? []).filter((m) => !m.eliminato_il && !m.archiviato).map((m) => ({ id: m.id, nome: String(m.nome) }));
     const vincoli = (vincolo_alimentare ?? []).filter((v) => !v.eliminato_il) as unknown as Vincolo[];
-    return { membri, vincoli };
-  }, [membro, vincolo_alimentare]);
+    const verifiche: Verifica[] = (ricetta_verificata ?? [])
+      .filter((v) => !v.eliminato_il)
+      .map((v) => ({ membro_id: String(v.membro_id), ricetta_id: String(v.ricetta_id), versione_ricetta: Number(v.versione_ricetta) }));
+    return { membri, vincoli, verifiche };
+  }, [membro, vincolo_alimentare, ricetta_verificata]);
 }
 
 export function Ricette() {
@@ -109,7 +112,7 @@ export function Ricette() {
   const indice = useIndice(vista);
   const inCasa = useInCasa();
   const icone = useIcone();
-  const { membri, vincoli } = useCommensali();
+  const { membri, vincoli, verifiche } = useCommensali();
   const [testo, setTesto] = useState('');
   const [categoria, setCategoria] = useState<Categoria | null>(null);
   const [cucina, setCucina] = useState<string | null>(null);
@@ -182,7 +185,7 @@ export function Ricette() {
       <div className="scheda" style={{ padding: trovate.length ? undefined : 0 }}>
         <ul className="elenco">
           {trovate.slice(0, quante).map((r) => (
-            <VoceRicetta key={r.id} indice={indice} ricetta={r} icona={iconaRicetta(indice, r, icone.get(r.id))} inCasa={inCasa} esito={conVincoli ? valutaPerFamiglia(indice, r, membri, vincoli).esito : null} apri={() => setAperta(r.id)} />
+            <VoceRicetta key={r.id} indice={indice} ricetta={r} icona={iconaRicetta(indice, r, icone.get(r.id))} inCasa={inCasa} esito={conVincoli ? valutaPerFamiglia(indice, r, membri, vincoli, verifiche).esito : null} apri={() => setAperta(r.id)} />
           ))}
         </ul>
       </div>
@@ -197,7 +200,7 @@ export function Ricette() {
           ricetta={ricetta}
           iconaScelta={icone.get(ricetta.id)}
           inCasa={inCasa}
-          valutazione={conVincoli ? valutaPerFamiglia(indice, ricetta, membri, vincoli) : null}
+          valutazione={conVincoli ? valutaPerFamiglia(indice, ricetta, membri, vincoli, verifiche) : null}
           chiudi={() => setAperta(null)}
           modifica={(b) => setBozza(b)}
         />
@@ -288,6 +291,11 @@ function SchedaRicetta({
   const origine = r.derivata_da ? indice.perId.get(r.derivata_da) : undefined;
   const [cambiaIcona, setCambiaIcona] = useState(false);
 
+  async function segnaVaBene(membro_id: string, nome: string, va_bene: boolean, escluso: boolean) {
+    if (va_bene && escluso && !window.confirm(`Per ${nome} la ricetta non rispetta un’esigenza. L’avete controllata e va bene lo stesso?`)) return;
+    await esegui('verifica_ricetta', { id: crypto.randomUUID(), membro_id, ricetta_id: r.id, versione_ricetta: r.versione ?? 1, va_bene });
+  }
+
   async function archivia(archiviata: boolean) {
     await esegui('salva_ricetta', { id: r.id, versione_attesa: r.versione, campi: { archiviata } });
   }
@@ -326,6 +334,16 @@ function SchedaRicetta({
             {valutazione.perMembro.map((m) => (
               <li key={m.membro_id}>
                 {m.nome}: {ICONA_ESITO[m.valutazione.esito]} {m.valutazione.motivi.length ? m.valutazione.motivi.join('; ') : 'nessun problema noto'}
+                {m.valutazione.verificabile && (
+                  <button
+                    className="bottone piccolo"
+                    style={{ marginLeft: 8 }}
+                    aria-label={m.valutazione.verificata ? `Togli «va bene» per ${m.nome}` : `Va bene per ${m.nome}`}
+                    onClick={() => segnaVaBene(m.membro_id, m.nome, !m.valutazione.verificata, m.valutazione.esito === 'non_adatta')}
+                  >
+                    {m.valutazione.verificata ? 'Togli «va bene»' : '✅ Va bene'}
+                  </button>
+                )}
               </li>
             ))}
           </ul>

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useFamiglia, useVista, type Vista } from '../dati/contesto';
 import { useIndice } from '../dati/indice';
-import { type Esito, NOME_ESITO, type Vincolo } from '../dominio/compatibilita';
+import { type Esito, NOME_ESITO, type Verifica, type Vincolo } from '../dominio/compatibilita';
 import {
   type CategoriaPasto,
   categorieDellaFamiglia,
@@ -46,6 +46,7 @@ function modoIniziale(): Modo {
 export interface DatiMenu {
   persone: Persona[];
   vincoli: Vincolo[];
+  verifiche: Verifica[];
   gusti: Gusto[];
   categorie: CategoriaPasto[];
   portate: PortataMenu[];
@@ -63,6 +64,7 @@ export function useDatiMenu(vista: Vista): DatiMenu {
         .filter((m) => !m.archiviato)
         .map((m) => ({ id: m.id, nome: String(m.nome), porzione: Number(m.porzione ?? 1) })),
       vincoli: attive('vincolo_alimentare') as unknown as Vincolo[],
+      verifiche: attive('ricetta_verificata').map((v) => ({ membro_id: String(v.membro_id), ricetta_id: String(v.ricetta_id), versione_ricetta: Number(v.versione_ricetta) })),
       gusti: attive('gusto') as unknown as Gusto[],
       categorie: categorieDellaFamiglia(attive('categoria_pasto')),
       portate: attive('portata')
@@ -84,7 +86,7 @@ export function useDatiMenu(vista: Vista): DatiMenu {
 function descrivi(indice: Indice, dati: DatiMenu, p: PortataMenu) {
   const ricetta = p.ricetta_id ? (indice.perId.get(p.ricetta_id) ?? null) : null;
   const eccezioni = dati.eccezioni.filter((e) => e.portata_id === p.id);
-  const valutazione = dati.vincoli.length ? valutaPortata(indice, ricetta, dati.persone, dati.vincoli, eccezioni) : null;
+  const valutazione = dati.vincoli.length ? valutaPortata(indice, ricetta, dati.persone, dati.vincoli, eccezioni, dati.verifiche) : null;
   const mangiano = dati.persone.filter((x) => !eccezioni.some((e) => e.membro_id === x.id));
   const gusti = ricetta ? gustiPerPiatto(indice, ricetta, mangiano, dati.gusti) : [];
   return {
@@ -342,7 +344,7 @@ function CercaPiatto({ indice, dati, scegli, etichetta, persone }: { indice: Ind
       {testo.trim() && (
         <ul className="elenco risultati" aria-label="Risultati">
           {trovate.map((r) => {
-            const v = dati.vincoli.length ? valutaPortata(indice, r, chi, dati.vincoli, []) : null;
+            const v = dati.vincoli.length ? valutaPortata(indice, r, chi, dati.vincoli, [], dati.verifiche) : null;
             const no = gustiPerPiatto(indice, r, chi, dati.gusti).filter((g) => g.valore === 'non_piace');
             return (
               <li key={r.id}>

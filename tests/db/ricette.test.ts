@@ -210,3 +210,27 @@ describe('icona scelta per una ricetta', () => {
     expect(await icone()).toEqual([]);
   });
 });
+
+describe('ricetta segnata «va bene» per un membro', () => {
+  it('si segna, si aggiorna alla nuova versione, ripetuta non scrive, si toglie; solo membri e ricette della famiglia', async () => {
+    const { u, famiglia } = await famigliaCon();
+    const [m] = await banco.sql<{ id: string }>(`select id from membro where famiglia_id = $1 limit 1`, [famiglia]);
+    const righe = () => banco.sql(`select ricetta_id, versione_ricetta, versione from ricetta_verificata where famiglia_id = $1 and eliminato_il is null`, [famiglia]);
+    const segna = (va_bene: boolean, versione_ricetta = 1, extra: Record<string, unknown> = {}) =>
+      u.applica(comando('verifica_ricetta', famiglia, { id: randomUUID(), membro_id: m.id, ricetta_id: 'sys:carbonara', versione_ricetta, va_bene, ...extra }));
+
+    expect((await segna(true)).esito).toBe('applicato');
+    expect((await segna(true)).esito).toBe('applicato');
+    expect(await righe()).toEqual([{ ricetta_id: 'sys:carbonara', versione_ricetta: 1, versione: 1 }]);
+    await segna(true, 2);
+    expect(await righe()).toEqual([{ ricetta_id: 'sys:carbonara', versione_ricetta: 2, versione: 2 }]);
+    await segna(false);
+    expect(await righe()).toEqual([]);
+
+    const altra = await famigliaCon();
+    const [suo] = await banco.sql<{ id: string }>(`select id from membro where famiglia_id = $1 limit 1`, [altra.famiglia]);
+    expect((await segna(true, 1, { membro_id: suo.id })).esito).not.toBe('applicato');
+    expect((await segna(true, 1, { ricetta_id: 'sys:non_esiste' })).esito).not.toBe('applicato');
+    expect(await righe()).toEqual([]);
+  });
+});
