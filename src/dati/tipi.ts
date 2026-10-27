@@ -29,7 +29,19 @@ export interface Esito {
 }
 
 /** Tabelle che il server invia al dispositivo. */
-export type Tabella = 'famiglia' | 'utente_famiglia' | 'membro' | 'vincolo_alimentare' | 'invito' | 'comando';
+export type Tabella =
+  | 'famiglia'
+  | 'utente_famiglia'
+  | 'membro'
+  | 'vincolo_alimentare'
+  | 'invito'
+  | 'comando'
+  | 'ingrediente'
+  | 'ricetta'
+  | 'ricetta_ingrediente'
+  | 'ricetta_passo'
+  | 'lotto'
+  | 'movimento';
 
 export interface Riga {
   id: string;
