@@ -45,6 +45,8 @@ test('invito: chi apre il link entra con un tocco e vede la famiglia; le modific
   await expect(tablet.getByRole('heading', { name: 'Ciao, Casa Invito' })).toBeVisible();
 
   await aggiungiPersona(telefono, 'Nonna');
+  // Prima che il tablet chieda gli aggiornamenti, la Nonna deve essere arrivata al server.
+  await expect(telefono.getByRole('button', { name: /Stato del salvataggio: Tutto salvato/ })).toBeVisible();
   await tablet.getByRole('button', { name: 'Famiglia' }).click();
   await tablet.getByRole('button', { name: /Stato del salvataggio/ }).click();
   await tablet.getByRole('button', { name: 'Aggiorna adesso' }).click();

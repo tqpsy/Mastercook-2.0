@@ -36,7 +36,7 @@ pg_ctl -D /tmp/pg/data -l /tmp/pg/log -o "-p 54329 -k /tmp/pg" start
 
 ## Test dell'interfaccia
 
-`npm run test:e2e` avvia un server di prova (porta 54400) e l'app (porta 5173) e prova telefono e tablet.
+`npm run test:e2e` avvia un server di prova (porta 14400, sotto le porte che Linux usa per le connessioni in uscita) e l'app (porta 5173) e prova telefono e tablet.
 Se le porte sono occupate: `MC_PORTA_SERVER=54410 MC_PORTA_APP=5183 npm run test:e2e`.
 
 ## Librerie caricate solo quando servono

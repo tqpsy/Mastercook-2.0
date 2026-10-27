@@ -11,7 +11,7 @@ import pg from 'pg';
 
 const RADICE = join(import.meta.dirname, '..', '..');
 const INDIRIZZO = process.env.MC_DATABASE_URL ?? 'postgres://postgres@localhost:54329/postgres?host=/tmp/pg';
-const PORTA = Number(process.env.PORTA ?? 54400);
+const PORTA = Number(process.env.PORTA ?? 14400);
 
 const nome = `mc_e2e_${randomUUID().replaceAll('-', '').slice(0, 12)}`;
 const admin = new pg.Client({ connectionString: INDIRIZZO });

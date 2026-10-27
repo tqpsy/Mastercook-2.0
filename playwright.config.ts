@@ -1,7 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 
-// Porte cambiabili (MC_PORTA_SERVER, MC_PORTA_APP) se sul computer sono già occupate.
-const PORTA_SERVER = process.env.MC_PORTA_SERVER ?? '54400';
+// Porte cambiabili (MC_PORTA_SERVER, MC_PORTA_APP) se sul computer sono già occupate. Restano sotto 32768:
+// le porte più alte Linux le presta alle connessioni in uscita, e una può capitare proprio sulla nostra.
+const PORTA_SERVER = process.env.MC_PORTA_SERVER ?? '14400';
 const PORTA_APP = process.env.MC_PORTA_APP ?? '5173';
 const SERVER = `http://localhost:${PORTA_SERVER}`;
 
