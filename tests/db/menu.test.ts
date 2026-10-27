@@ -58,8 +58,12 @@ describe('pianificare non tocca la casa', () => {
     expect(e1.dettaglio).toMatchObject({ motivo: 'dati_non_validi', vincolo: 'ricetta_o_testo' });
     const e2 = await u.applica(comando('aggiungi_portata', famiglia, portata({ categoria: 'brunch' })));
     expect(e2.dettaglio.motivo).toBe('categoria_non_trovata');
-    const e3 = await u.applica(comando('aggiungi_portata', famiglia, portata({ origine: 'automatica' })));
-    expect(e3.dettaglio.motivo).toBe('origine_non_ammessa');
+    // Una proposta dell'app confermata dalla famiglia entra come «automatica»; «fissa» e «ripetuta» no.
+    const proposta = portata({ origine: 'automatica' });
+    expect((await u.applica(comando('aggiungi_portata', famiglia, proposta))).esito).toBe('applicato');
+    expect(await banco.sql('select origine from portata where id = $1', [proposta.id])).toEqual([{ origine: 'automatica' }]);
+    const e4 = await u.applica(comando('aggiungi_portata', famiglia, portata({ origine: 'fissa' })));
+    expect(e4.dettaglio.motivo).toBe('origine_non_ammessa');
   });
 
   it('T-PIA-7 spostare una portata da martedì a giovedì mantiene id ed eccezioni', async () => {

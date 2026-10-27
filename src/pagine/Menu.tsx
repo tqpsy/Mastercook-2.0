@@ -21,6 +21,7 @@ import {
 } from '../dominio/menu';
 import { avanziDi, porzioniPortata } from '../dominio/consumi';
 import { filtra, type Indice } from '../dominio/ricette';
+import { IdeePerPasto, ProponiSettimana } from './Proposte';
 import { oggi, piuGiorni } from '../dominio/scadenze';
 import { Foglio } from '../ui/Foglio';
 import { ICONA_ESITO } from './Ricette';
@@ -144,6 +145,7 @@ export function Menu() {
   const [nuova, setNuova] = useState<{ data: string; categoria: string } | null>(null);
   const [aperta, setAperta] = useState<string | null>(null);
   const [pasti, setPasti] = useState(false);
+  const [proponi, setProponi] = useState(false);
   const fineSettimana = piuGiorni(lun, 6);
   const dueSettimane = piuGiorni(giorno, 13);
   useProlungaFissi(fineSettimana > dueSettimane ? fineSettimana : dueSettimane);
@@ -205,6 +207,9 @@ export function Menu() {
         )}
         <button className="bottone piccolo" onClick={ripeti} disabled={!precedente.length} title={precedente.length ? undefined : 'La settimana prima è vuota'}>
           ↻ Ripeti la settimana prima
+        </button>
+        <button className="bottone piccolo" onClick={() => setProponi(true)} disabled={fine < giorno}>
+          ✨ Proponi la settimana
         </button>
         <button className="bottone piccolo" onClick={() => setPasti(true)}>
           Pasti
@@ -273,6 +278,7 @@ export function Menu() {
       {nuova && <NuovoPiatto indice={indice} dati={dati} {...nuova} chiudi={() => setNuova(null)} />}
       {portataAperta && <SchedaPiatto indice={indice} dati={dati} portata={portataAperta} chiudi={() => setAperta(null)} />}
       {pasti && <Pasti categorie={dati.categorie} chiudi={() => setPasti(false)} />}
+      {proponi && <ProponiSettimana indice={indice} dati={dati} giorni={giorni} chiudi={() => setProponi(false)} />}
     </>
   );
 }
@@ -420,6 +426,16 @@ function NuovoPiatto({ indice, dati, data, categoria, chiudi }: { indice: Indice
   const quanti = dati.portate.filter((p) => p.data === data && p.categoria === categoria).length;
   return (
     <Foglio titolo={`${nomeCategoria(dati, categoria)} di ${dataLunga(data)}`} chiudi={chiudi}>
+      <IdeePerPasto
+        indice={indice}
+        dati={dati}
+        data={data}
+        categoria={categoria}
+        scegli={async (ricetta_id) => {
+          await esegui('aggiungi_portata', { id: crypto.randomUUID(), data, categoria, ricetta_id, ordine: quanti, origine: 'automatica' });
+          chiudi();
+        }}
+      />
       <CercaPiatto
         indice={indice}
         dati={dati}
@@ -449,6 +465,7 @@ function SchedaPiatto({ indice, dati, portata: p, chiudi }: { indice: Indice; da
       <p className="tenue" style={{ marginTop: 0, textTransform: 'capitalize' }}>
         {nomeCategoria(dati, p.categoria)} · {dataLunga(p.data)}
         {p.origine === 'ripetuta' && ' · ripetuto dalla settimana prima'}
+        {p.origine === 'automatica' && ' · ✨ proposto dall’app'}
         {p.fisso_id && ' · 🔁 ogni giorno'}
         {!d.ricetta && ' · senza ricetta'}
       </p>

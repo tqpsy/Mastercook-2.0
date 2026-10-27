@@ -246,6 +246,13 @@ domenica mangiata lunedì a colazione). Il primo giorno si cucina e si compra pe
 `rimuovi_portata` toglie anche gli avanzi non confermati del piatto; `ripeti_portate` mantiene il legame se copia
 piatto e avanzo insieme.
 
+## Proposte dell'app (Fase 6)
+
+Migrazione `20261107000000_proposte.sql`. Le proposte (settimana e idee per un pasto) si calcolano sul dispositivo
+(`src/dominio/proposte.ts`): solo ricette «adatte» a tutti (anche grazie al «va bene»), senza ingredienti che a
+qualcuno non piacciono; prima ciò che scade e ciò che è in casa, poi varietà. Entrano nel menu solo quando la famiglia
+conferma, con `aggiungi_portata` e `origine: 'automatica'` (le altre origini restano riservate al database).
+
 ## Ricette segnate «va bene»
 
 Migrazione `20261104000000_verifiche.sql`. Tabella `ricetta_verificata`: la famiglia ha controllato una ricetta per un
