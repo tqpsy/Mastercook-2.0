@@ -154,12 +154,12 @@ export class Sincronizzatore {
   }
 
   /**
-   * Una ricetta che cita una foto nuova: prima si carica il file, poi parte il comando, così sul
+   * Una ricetta (o la conferma di un pasto) che cita una foto nuova: prima si carica il file, poi parte il comando, così sul
    * server una ricetta non punta mai a un file che non c'è. Se il deposito rifiuta il file (non per
    * la rete), il comando parte lo stesso e la ricetta resta senza immagine visibile.
    */
   private async caricaFotoDi(voce: VoceCoda) {
-    const percorso = (voce.comando.dati.campi as Record<string, unknown> | undefined)?.foto;
+    const percorso = (voce.comando.dati.campi as Record<string, unknown> | undefined)?.foto ?? voce.comando.dati.foto;
     if (typeof percorso !== 'string' || !this.o.trasporto.caricaFoto) return;
     const foto = await this.o.archivio.foto.get(percorso);
     if (!foto || foto.caricata) return;

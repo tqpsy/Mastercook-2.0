@@ -631,3 +631,23 @@ button.etichetta {
   padding: 8px;
   border-radius: 8px;
 }
+
+/* Numero di avvisi sull'icona di una scheda. */
+.schede .icona {
+  position: relative;
+}
+.contatore {
+  position: absolute;
+  top: -4px;
+  right: -12px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: var(--errore);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}

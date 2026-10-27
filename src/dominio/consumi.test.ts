@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import catalogo from '../catalogo/catalogo.json';
 import type { Catalogo } from '../catalogo/tipi';
-import { type ConfermaPasto, confermeAttive, daConfermare, giorniAvanzo, previstoPortata } from './consumi';
+import { type ConfermaPasto, confermeAttive, daConfermare, giorniAvanzo, previstoPortata, ricettePerUrgenti } from './consumi';
 import type { PortataMenu } from './menu';
 import { Indice } from './ricette';
 
@@ -61,5 +61,19 @@ describe('da confermare e avanzi', () => {
     const regole = (catalogo as Catalogo).regole_cotti;
     expect(giorniAvanzo(indice.perId.get('sys:carbonara'), regole)).toBe(1);
     expect(giorniAvanzo({ conservazione: null }, regole)).toBeNull();
+  });
+});
+
+describe('ricette per ciò che scade', () => {
+  it('prima chi usa più ingredienti urgenti; le ricette non adatte non si propongono', () => {
+    const membri = [{ id: 'luca', nome: 'Luca' }];
+    const tutte = ricettePerUrgenti(indice, ['ing:guanciale', 'ing:uova'], ['ing:spaghetti', 'ing:guanciale', 'ing:uova'], membri, [], 50);
+    expect(tutte[0].ricetta.id).toBe('sys:carbonara');
+    expect(tutte[0].usa.sort()).toEqual(['ing:guanciale', 'ing:uova']);
+    expect(tutte.every((r) => r.usa.length >= 1)).toBe(true);
+    const allergia = [{ id: 'v', membro_id: 'luca', tipo: 'allergia', oggetto: 'all:uova', severita: 'evitare', fonte: 'dichiarato', testo: null }];
+    const senzaUova = ricettePerUrgenti(indice, ['ing:guanciale', 'ing:uova'], [], membri, allergia as never, 50);
+    expect(senzaUova.map((r) => r.ricetta.id)).not.toContain('sys:carbonara');
+    expect(ricettePerUrgenti(indice, ['ing:avanzo'], [], membri, [])).toEqual([]);
   });
 });

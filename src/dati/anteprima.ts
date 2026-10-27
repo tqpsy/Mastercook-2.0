@@ -304,6 +304,9 @@ const EFFETTI: Record<string, Effetto> = {
       }))(righe, { ...a, id: a.lotto_id }, famiglia);
     }
   },
+  foto_pasto: (righe, d) => {
+    righe.conferma_pasto = (righe.conferma_pasto ?? []).map((c) => (c.id === d.id ? { ...c, foto: d.foto ?? null, in_attesa: true } : c));
+  },
   annulla_acquisto: (righe, d) => {
     const acquisto = (righe.acquisto ?? []).find((a) => a.id === d.id);
     if (!acquisto || acquisto.stato === 'annullato') return;
