@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { CATEGORIE, type Categoria } from '../catalogo/tipi';
-import { useFamiglia, useVista } from '../dati/contesto';
+import { righeAttive, useFamiglia, useVista } from '../dati/contesto';
 import { useIndice } from '../dati/indice';
 import { type Esito, NOME_ESITO, valutaPerFamiglia, type ValutazioneFamiglia, type Vincolo } from '../dominio/compatibilita';
 import { copertura, filtra, type Indice, type Ricetta } from '../dominio/ricette';
@@ -195,6 +195,8 @@ function SchedaRicetta({
   modifica: (b: Bozza) => void;
 }) {
   const { esegui } = useFamiglia();
+  const vista = useVista();
+  const nelMenu = righeAttive(vista, 'portata').some((p) => p.ricetta_id === r.id) || righeAttive(vista, 'eccezione_membro').some((e) => e.ricetta_id === r.id);
   const [porzioni, setPorzioni] = useState(r.porzioni);
   const casa = indice.estendi(inCasa);
   const origine = r.derivata_da ? indice.perId.get(r.derivata_da) : undefined;
@@ -203,6 +205,10 @@ function SchedaRicetta({
     await esegui('salva_ricetta', { id: r.id, versione_attesa: r.versione, campi: { archiviata } });
   }
   async function elimina() {
+    if (nelMenu) {
+      if (window.confirm(`«${r.titolo}» è nel menu e non si può eliminare. Vuoi archiviarla? Resterà nei menu ma non comparirà più tra le ricette.`)) await archivia(true);
+      return;
+    }
     if (!window.confirm(`Eliminare «${r.titolo}»? Non si potrà recuperare, se non da un file di esportazione.`)) return;
     await esegui('elimina_ricetta', { id: r.id });
     chiudi();
