@@ -5,6 +5,7 @@
  */
 import type { VoceCoda } from './archivio';
 import type { Riga, Tabella } from './tipi';
+import { piuGiorni } from '../dominio/scadenze';
 
 export interface RigaInVista extends Riga {
   /** Effetto di un comando non ancora applicato dal server. */
@@ -264,6 +265,28 @@ const EFFETTI: Record<string, Effetto> = {
       const riga = r.abbina ?? (r.nuova as Record<string, unknown> | undefined)?.id ?? null;
       aggiungi('scontrino_riga', (x) => ({ scontrino_id: d.id, descrizione: x.descrizione, prezzo: x.prezzo ?? null, acquisto_riga_id: riga, versione: 1 }))(righe, r, famiglia);
     }
+  },
+  fissa_pasto: (righe, d, famiglia) => {
+    aggiungi('pasto_fisso', (x) => ({
+      categoria: x.categoria,
+      ricetta_id: x.ricetta_id ?? null,
+      testo: x.testo ?? null,
+      porzioni: x.porzioni ?? null,
+      ordine: x.ordine ?? 0,
+      dal: x.dal,
+      al: null,
+      versione: 1,
+    }))(righe, d, famiglia);
+    if (d.da_portata) righe.portata = (righe.portata ?? []).map((p) => (p.id === d.da_portata ? { ...p, fisso_id: d.id, in_attesa: true } : p));
+  },
+  ferma_pasto_fisso: (righe, d) => {
+    const dal = String(d.dal);
+    const ieri = piuGiorni(dal, -1);
+    righe.pasto_fisso = (righe.pasto_fisso ?? []).map((f) => (f.id === d.id ? { ...f, al: f.al && String(f.al) < ieri ? f.al : ieri, in_attesa: true } : f));
+    const confermate = new Set((righe.conferma_pasto ?? []).filter((c) => c.attiva && !c.eliminato_il).map((c) => c.portata_id));
+    righe.portata = (righe.portata ?? []).map((p) =>
+      p.fisso_id === d.id && String(p.data) >= dal && !p.eliminato_il && p.id !== d.tieni && !confermate.has(p.id) ? { ...p, eliminato_il: 'in_attesa', in_attesa: true } : p,
+    );
   },
   verifica_ricetta: (righe, d, famiglia) => {
     const esistente = (righe.ricetta_verificata ?? []).find((r) => r.membro_id === d.membro_id && r.ricetta_id === d.ricetta_id && !r.eliminato_il);

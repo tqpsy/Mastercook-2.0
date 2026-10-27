@@ -56,7 +56,8 @@ export type Tabella =
   | 'consumo_riga'
   | 'consumo_lotto'
   | 'icona_ricetta'
-  | 'ricetta_verificata';
+  | 'ricetta_verificata'
+  | 'pasto_fisso';
 
 export interface Riga {
   id: string;

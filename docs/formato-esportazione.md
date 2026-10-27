@@ -25,6 +25,7 @@ così è sempre completo anche se il dispositivo non ha ancora scaricato tutto.
 - Dalla versione 6 (Fase 5) anche i consumi: `conferma_pasto` (con le revisioni), `consumo_riga`, `consumo_lotto`.
 - Dalla versione 7 anche le icone scelte per le ricette: `icona_ricetta`.
 - Dalla versione 8 anche le ricette segnate «va bene»: `ricetta_verificata`.
+- Dalla versione 9 anche i piatti fissi: `pasto_fisso` (e `portata.fisso_id`).
   Il catalogo di sistema non c'è: è uguale per tutti e gli id `ing:…`/`sys:…` restano validi.
 - Le foto non sono nel file (sono immagini nel deposito): le ricette ripristinate restano senza foto.
 - Ogni riga è com'è nel database (campi descritti in `docs/database.md` e nelle migrazioni).

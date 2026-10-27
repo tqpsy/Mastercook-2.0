@@ -4,13 +4,13 @@ import { useIndice } from '../dati/indice';
 import { type ConfermaPasto as Conferma, daConfermare, NOME_ESITO, ricettePerUrgenti } from '../dominio/consumi';
 import type { PortataMenu } from '../dominio/menu';
 import type { Indice } from '../dominio/ricette';
-import { daUsarePresto, oggi } from '../dominio/scadenze';
+import { daUsarePresto, oggi, piuGiorni } from '../dominio/scadenze';
 import { formatta, formattaGiorno } from '../dominio/unita';
 import { Foglio } from '../ui/Foglio';
 import { Foto, riduciFoto } from '../ui/Foto';
 import { EtichettaData, useLotti } from './Casa';
 import { ConfermaPasto, useConferme } from './ConfermaPasto';
-import { useOggiSiMangia } from './Menu';
+import { useOggiSiMangia, useProlungaFissi } from './Menu';
 
 const titoloDi = (indice: Indice, p: PortataMenu) => (p.ricetta_id ? indice.perId.get(p.ricetta_id)?.titolo : null) ?? p.testo ?? 'Piatto';
 
@@ -90,6 +90,7 @@ export function Oggi({ vai }: { vai: (scheda: 'menu' | 'spesa' | 'ricette' | 'ca
   const giorno = oggi();
   const presto = daUsarePresto(lotti, giorno);
   const { piatti, dati } = useOggiSiMangia();
+  useProlungaFissi(piuGiorni(giorno, 13));
   const { attive } = useConferme(vista);
   const [aperto, setAperto] = useState<string | null>(null);
   const arretrati = daConfermare(dati.portate, attive, giorno).filter((p) => p.data < giorno);

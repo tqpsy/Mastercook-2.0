@@ -171,6 +171,8 @@ export interface PortataMenu {
   testo: string | null;
   porzioni: number | null;
   origine: string;
+  /** La regola del piatto fisso da cui viene, se c'è. */
+  fisso_id?: string | null;
   bloccata: boolean;
   ordine: number;
   note: string | null;

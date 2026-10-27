@@ -91,3 +91,46 @@ test('menu: ripeti la settimana prima, accendi la merenda, la vista scelta resta
   // Sul telefono la pagina non scorre di lato.
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
+
+test('colazione fissa: ogni giorno da oggi, cambiata da un giorno in poi, poi fermata', async ({ browser }, info) => {
+  const luca = await nuovoUtente('Luca');
+  const { page } = await apri(browser, luca, info.project.use);
+  await creaFamiglia(page, 'Casa Colazione');
+  await page.getByRole('button', { name: 'Menu', exact: true }).click();
+  await page.getByRole('group', { name: 'Vista' }).getByRole('button', { name: 'Giorni' }).click();
+  await page.getByRole('button', { name: `Aggiungi a colazione di ${dataLunga(oggi())}` }).click();
+  await page.getByRole('dialog').getByLabel('Cosa si mangia').fill('Latte e caffè');
+  await page.getByRole('dialog').getByRole('button', { name: 'Scrivi «Latte e caffè» senza ricetta' }).click();
+  await page.getByRole('button', { name: 'Apri Latte e caffè' }).first().click();
+  await page.getByRole('dialog', { name: 'Latte e caffè' }).getByRole('button', { name: '🔁 Ogni giorno da qui' }).click();
+  await expect(page.getByRole('dialog', { name: 'Latte e caffè' })).toContainText('🔁 ogni giorno');
+  await page.getByRole('button', { name: 'Chiudi' }).click();
+
+  const colazioni = () =>
+    sql<{ data: string; testo: string }>(
+      `select data::text, testo from portata where categoria = 'colazione' and eliminato_il is null
+          and famiglia_id in (select famiglia_id from utente_famiglia where utente_id = $1) order by data`,
+      [luca.id],
+    );
+  await expect.poll(async () => (await colazioni()).length).toBeGreaterThanOrEqual(14);
+
+  // Da dopodomani si cambia: il cappuccino prende il posto del latte e caffè nei giorni dopo.
+  const dopodomani = piuGiorni(oggi(), 2);
+  const [{ id }] = await sql<{ id: string }>(
+    `select id from portata where categoria = 'colazione' and data = $2 and famiglia_id in (select famiglia_id from utente_famiglia where utente_id = $1)`,
+    [luca.id, dopodomani],
+  );
+  if (lunedi(dopodomani) !== lunedi(oggi())) await page.getByRole('button', { name: 'Settimana dopo' }).click();
+  await page.getByRole('region', { name: dataLunga(dopodomani) }).getByRole('button', { name: 'Apri Latte e caffè' }).click();
+  const scheda = page.getByRole('dialog', { name: 'Latte e caffè' });
+  await expect(scheda).toContainText(dataLunga(dopodomani));
+  await scheda.getByRole('button', { name: 'Cambia piatto' }).click();
+  await scheda.getByLabel('Nuovo piatto').fill('Cappuccino');
+  page.once('dialog', (d) => void d.accept());
+  await scheda.getByRole('button', { name: 'Scrivi «Cappuccino» senza ricetta' }).click();
+  await expect(page.getByRole('button', { name: /Stato del salvataggio: Tutto salvato/ })).toBeVisible();
+  await expect
+    .poll(async () => (await colazioni()).slice(0, 4).map((r) => r.testo))
+    .toEqual(['Latte e caffè', 'Latte e caffè', 'Cappuccino', 'Cappuccino']);
+  expect((await sql<{ id: string }>(`select id from portata where id = $1 and testo = 'Cappuccino' and eliminato_il is null`, [id])).length).toBe(1);
+});

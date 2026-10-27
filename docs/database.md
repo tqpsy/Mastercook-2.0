@@ -215,6 +215,22 @@ quella della categoria).
 |---|---|
 | `scegli_icona` | `id`, `ricetta_id`, `emoji` (un'emoji; `null` torna all'automatica). Ripetuto non scrive di nuovo; ricetta di un'altra famiglia → `ricetta_non_trovata` |
 
+## Piatti fissi
+
+Migrazione `20261105000000_pasti_fissi.sql`. Tabella `pasto_fisso` (pasto, piatto, porzioni, dal… al) e
+`portata.fisso_id`. Le portate dei giorni le crea il database (`interno.genera_fissi`) con id deterministici, da oggi
+fino a 60 giorni avanti: più dispositivi che chiedono di prolungare non creano doppioni, e un giorno tolto a mano resta
+tolto. L'app chiede di prolungare quando apre Oggi (due settimane) e il menu (fino alla settimana mostrata).
+
+| Tipo | Dati |
+|---|---|
+| `fissa_pasto` | `id`, `categoria`, `ricetta_id` o `testo`, `porzioni?`, `ordine?`, `dal`, `da_portata?` (diventa il primo giorno), `fino_a?` (predefinito due settimane) → `{create}` |
+| `prolunga_pasti_fissi` | `fino_a` → `{create}`; ripetuto non crea niente |
+| `ferma_pasto_fisso` | `id`, `dal` (compreso), `tieni?` → `{tolte}`; i giorni già confermati restano |
+
+Cambiare il piatto «da questo giorno in poi» = `modifica_portata` del giorno, `ferma_pasto_fisso` con `tieni`, poi
+`fissa_pasto` con `da_portata`.
+
 ## Ricette segnate «va bene»
 
 Migrazione `20261104000000_verifiche.sql`. Tabella `ricetta_verificata`: la famiglia ha controllato una ricetta per un

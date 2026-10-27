@@ -127,6 +127,7 @@ const TABELLE: Tabella[] = [
   'consumo_lotto',
   'icona_ricetta',
   'ricetta_verificata',
+  'pasto_fisso',
 ];
 
 export interface Vista {
