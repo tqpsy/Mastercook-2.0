@@ -13,8 +13,8 @@ const CHIAVE_AVVISO = 'mc-foto-frigo-avviso';
 
 const SPIEGA_ERRORE: Record<ErroreFoto, string> = {
   quota: 'Per oggi le foto gratuite di Gemini sono finite. Riprova domani, oppure aggiungi a mano.',
-  chiave: 'La chiave Gemini non è valida: va controllata nei segreti del progetto.',
-  non_configurata: 'La foto del frigo non è ancora attiva: manca la chiave Gemini nei segreti del progetto.',
+  chiave: 'La chiave Gemini della famiglia non è valida: chi amministra la controlla in Impostazioni.',
+  non_configurata: 'Per usare la foto del frigo serve la chiave Gemini della famiglia: chi amministra la inserisce in Impostazioni.',
   rete: 'Serve la connessione a internet per leggere la foto. Riprova quando c’è rete.',
   gemini: 'Gemini non è riuscito a leggere la foto. Riprova con più luce, oppure aggiungi a mano.',
   non_autorizzato: 'Non risulti in questa famiglia: esci e rientra, poi riprova.',
@@ -93,8 +93,9 @@ export function FotoFrigo({ indice, luogo: luogoIniziale, chiudi }: { indice: In
           prima che entri qualcosa.
         </p>
         <div className="avviso" role="note">
-          La foto viene inviata a Google con la chiave gratuita della famiglia. Con il piano gratuito <strong>Google può usare le foto per migliorare i suoi servizi</strong>.
-          Non fotografare persone, documenti o altro che non sia cibo. La foto non viene salvata nell’app.
+          La foto viene inviata a Gemini di Google con la chiave della famiglia. Per chi è in Europa <strong>Google non la usa per addestrare i suoi modelli</strong>, ma
+          la può conservare per un periodo limitato per i controlli contro gli abusi. Non fotografare persone, documenti o altro che non sia cibo. La foto non viene
+          salvata nell’app.
         </div>
         <button
           className="bottone primario pieno"
@@ -132,7 +133,7 @@ export function FotoFrigo({ indice, luogo: luogoIniziale, chiudi }: { indice: In
             <span aria-hidden>📷</span> Scatta o scegli la foto
             <input type="file" accept="image/*" capture="environment" hidden aria-label="Foto del frigo" onChange={(e) => void leggi(e.target.files?.[0])} />
           </label>
-          <p className="tenue">Gemini di Google, chiave gratuita della famiglia: la foto non resta nell’app.</p>
+          <p className="tenue">Gemini di Google, con la chiave della famiglia: la foto non resta nell’app.</p>
         </>
       )}
       {stato === 'leggo' && (

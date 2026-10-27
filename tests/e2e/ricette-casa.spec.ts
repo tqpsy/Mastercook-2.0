@@ -236,10 +236,26 @@ test('foto del frigo: prima l’avviso su Google, poi si controlla e in casa ent
   await page.getByRole('button', { name: 'Casa', exact: true }).click();
   await page.getByRole('button', { name: '📷 Foto del frigo' }).click();
   const foglio = page.getByRole('dialog', { name: 'Foto del frigo' });
-  await expect(foglio.getByRole('note')).toContainText('Google può usare le foto');
+  await expect(foglio.getByRole('note')).toContainText('Google non la usa per addestrare i suoi modelli');
   await foglio.getByRole('button', { name: 'Ho capito, continua' }).click();
   const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==';
-  await foglio.getByLabel('Foto del frigo').setInputFiles({ name: 'frigo.png', mimeType: 'image/png', buffer: Buffer.from(PNG, 'base64') });
+  const foto = { name: 'frigo.png', mimeType: 'image/png', buffer: Buffer.from(PNG, 'base64') };
+  // Una famiglia nuova non ha la chiave: l'app dice dove metterla.
+  await foglio.getByLabel('Foto del frigo').setInputFiles(foto);
+  await expect(foglio.getByRole('alert')).toContainText('chi amministra la inserisce in Impostazioni');
+  await foglio.getByRole('button', { name: 'Chiudi' }).click();
+
+  await page.getByRole('button', { name: 'Impostazioni' }).click();
+  const chiave = page.getByLabel('Chiave Gemini', { exact: true });
+  await expect(chiave).toContainText('Nessuna chiave');
+  await page.getByLabel('Chiave Gemini della famiglia').fill('AIzaProva_chiave-della-famiglia-1234');
+  await page.getByRole('button', { name: 'Salva la chiave' }).click();
+  await expect(chiave).toContainText('Attiva la chiave della famiglia (…1234)');
+  await expect(page.getByLabel('Chiave Gemini della famiglia')).toHaveValue('');
+
+  await page.getByRole('button', { name: 'Casa', exact: true }).click();
+  await page.getByRole('button', { name: '📷 Foto del frigo' }).click();
+  await foglio.getByLabel('Foto del frigo').setInputFiles(foto);
   const elenco = foglio.getByRole('list', { name: 'Alimenti nella foto' });
   await expect(elenco).toContainText('«oggetto misterioso»: non lo trovo nel catalogo');
   // Le zucchine non hanno quantità: o la si scrive o si toglie. Le uova non ci sono davvero.
