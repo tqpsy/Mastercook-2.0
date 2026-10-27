@@ -112,6 +112,9 @@ const TABELLE: Tabella[] = [
   'voce_spesa',
   'acquisto',
   'acquisto_riga',
+  'prodotto',
+  'scontrino',
+  'scontrino_riga',
 ];
 
 export interface Vista {

@@ -20,9 +20,11 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "2.118.0",
+    "barcode-detector": "3.2.3",
     "dexie": "4.4.7",
     "react": "19.3.1",
-    "react-dom": "19.3.1"
+    "react-dom": "19.3.1",
+    "tesseract.js": "7.0.0"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

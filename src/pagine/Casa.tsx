@@ -7,6 +7,7 @@ import type { Indice, Ingrediente } from '../dominio/ricette';
 import { daUsarePresto, descriviData, giorniTra, type Luogo, oggi, piuGiorni, REPARTI_SFUSI, spreco, statoData, stima, type TipoData } from '../dominio/scadenze';
 import { formatta, inBase, leggiNumero, UNITA, type Unita, UNITA_BASE, type UnitaBase, unitaPer } from '../dominio/unita';
 import { CercaIngrediente } from '../ui/CercaIngrediente';
+import { type ProdottoScansionato, ScansionaProdotto } from '../ui/CodiceProdotto';
 import { Foglio } from '../ui/Foglio';
 
 export interface Lotto {
@@ -180,6 +181,8 @@ function NuovoLotto({ indice, luogo: luogoIniziale, chiudi }: { indice: Indice; 
   const [data, setData] = useState('');
   const [sfuso, setSfuso] = useState(false);
   const [errore, setErrore] = useState<string | null>(null);
+  const [scansiona, setScansiona] = useState(false);
+  const [codice, setCodice] = useState<ProdottoScansionato | null>(null);
   const giorno = oggi();
 
   function scegli(i: Ingrediente) {
@@ -217,13 +220,43 @@ function NuovoLotto({ indice, luogo: luogoIniziale, chiudi }: { indice: Indice; 
       origine: 'manuale',
       ...date,
     });
+    // Il codice a barre si ricorda con quello che si è scritto: la prossima volta propone la stessa confezione.
+    const p = codice?.prodotto;
+    if (codice && (!p || p.ingrediente_id !== ing.id || p.quantita !== q.valore || p.unita !== q.unita || (p.nome ?? '') !== nome.trim())) {
+      await esegui('salva_prodotto', { id: crypto.randomUUID(), codice: codice.codice, ingrediente_id: ing.id, nome: nome.trim() || null, quantita: q.valore, unita: q.unita });
+    }
     chiudi();
+  }
+
+  if (scansiona) {
+    return (
+      <ScansionaProdotto
+        indice={indice}
+        chiudi={() => setScansiona(false)}
+        trovato={(x) => {
+          setScansiona(false);
+          setCodice(x);
+          scegli(x.ingrediente);
+          const formato = x.prodotto?.quantita && x.prodotto.unita ? { quantita: x.prodotto.quantita, unita: x.prodotto.unita } : x.esterno?.formato;
+          if (formato && formato.unita === UNITA_BASE[x.ingrediente.dimensione]) {
+            setNumero(String(formato.quantita).replace('.', ','));
+            setUnita(formato.unita);
+          }
+          setNome(x.prodotto?.nome ?? x.esterno?.nome ?? '');
+        }}
+      />
+    );
   }
 
   return (
     <Foglio titolo="Aggiungi in casa" chiudi={chiudi}>
       {!ing ? (
-        <CercaIngrediente indice={indice} scegli={scegli} etichetta="Cosa aggiungi?" autoFocus />
+        <>
+          <button type="button" className="bottone pieno" onClick={() => setScansiona(true)}>
+            <span aria-hidden>📷</span> Scansiona il codice a barre
+          </button>
+          <CercaIngrediente indice={indice} scegli={scegli} etichetta="Cosa aggiungi?" autoFocus />
+        </>
       ) : (
         <form onSubmit={salva} noValidate>
           <div className="riga spazio">
@@ -234,6 +267,11 @@ function NuovoLotto({ indice, luogo: luogoIniziale, chiudi }: { indice: Indice; 
               Cambia
             </button>
           </div>
+          {codice && (
+            <p className="tenue" style={{ margin: '4px 0 0' }}>
+              Codice {codice.codice}: {codice.prodotto ? 'già conosciuto, ho riempito la confezione.' : 'nuovo, lo ricorderò con questi dati.'}
+            </p>
+          )}
           <div className="riga" style={{ alignItems: 'flex-end', marginTop: 12 }}>
             <label className="campo cresce">
               <span>Quantità</span>

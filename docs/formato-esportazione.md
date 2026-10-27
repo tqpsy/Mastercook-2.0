@@ -6,7 +6,7 @@ così è sempre completo anche se il dispositivo non ha ancora scaricato tutto.
 ```json
 {
   "formato": "mastercook-2",
-  "versione_schema": 4,
+  "versione_schema": 5,
   "esportato_il": "2026-10-27T10:00:00.000Z",
   "conteggi": { "famiglia": 1, "membro": 3, "vincolo_alimentare": 4 },
   "tabelle": {
@@ -21,6 +21,7 @@ così è sempre completo anche se il dispositivo non ha ancora scaricato tutto.
   `ricetta`, `ricetta_ingrediente`, `ricetta_passo` (solo della famiglia), `lotto`, `movimento`.
 - Dalla versione 3 (Fase 3) anche il menu: `categoria_pasto`, `portata`, `eccezione_membro`, `gusto`.
 - Dalla versione 4 (Fase 4) anche la spesa: `voce_spesa`, `acquisto`, `acquisto_riga` (con i prezzi pagati).
+- Dalla versione 5 anche scontrini e codici a barre: `scontrino` (con il testo letto), `scontrino_riga`, `prodotto`.
   Il catalogo di sistema non c'è: è uguale per tutti e gli id `ing:…`/`sys:…` restano validi.
 - Le foto non sono nel file (sono immagini nel deposito): le ricette ripristinate restano senza foto.
 - Ogni riga è com'è nel database (campi descritti in `docs/database.md` e nelle migrazioni).
@@ -36,8 +37,8 @@ così è sempre completo anche se il dispositivo non ha ancora scaricato tutto.
 - Gli id vengono rigenerati; i riferimenti tra righe (per esempio il membro di un'allergia) seguono.
 - Chi ripristina diventa amministratore; i profili degli altri restano, scollegati dai loro account,
   e si ricollegano con un nuovo invito.
-- I file delle versioni 1, 2 e 3 si ripristinano ancora; versioni sconosciute sono rifiutate.
-- Le righe d'acquisto restano legate ai loro lotti ripristinati.
+- I file delle versioni 1, 2, 3 e 4 si ripristinano ancora; versioni sconosciute sono rifiutate.
+- Le righe d'acquisto restano legate ai loro lotti ripristinati, e gli scontrini ai loro acquisti e righe.
 - Le portate e le eccezioni che citano una ricetta non più presente nel file si saltano.
 - I movimenti si rigiocano in ordine, così la quantità di ogni lotto torna uguale.
 - Il server ricontrolla tutto con gli stessi vincoli dei comandi: un file non valido non scrive nulla.

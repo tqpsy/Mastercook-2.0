@@ -48,7 +48,10 @@ export type Tabella =
   | 'gusto'
   | 'voce_spesa'
   | 'acquisto'
-  | 'acquisto_riga';
+  | 'acquisto_riga'
+  | 'prodotto'
+  | 'scontrino'
+  | 'scontrino_riga';
 
 export interface Riga {
   id: string;

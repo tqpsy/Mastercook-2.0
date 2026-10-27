@@ -14,8 +14,20 @@ const DIMENSIONI: { id: Dimensione; nome: string }[] = [
  * Cerca un ingrediente nel catalogo e in quelli della famiglia. Se non c'è, lo si aggiunge alla
  * famiglia: allergeni compresi, oppure «non lo so» (le ricette che lo usano saranno «da verificare»).
  */
-export function CercaIngrediente({ indice, scegli, etichetta = 'Ingrediente', autoFocus }: { indice: Indice; scegli: (i: Ingrediente) => void; etichetta?: string; autoFocus?: boolean }) {
-  const [testo, setTesto] = useState('');
+export function CercaIngrediente({
+  indice,
+  scegli,
+  etichetta = 'Ingrediente',
+  autoFocus,
+  iniziale = '',
+}: {
+  indice: Indice;
+  scegli: (i: Ingrediente) => void;
+  etichetta?: string;
+  autoFocus?: boolean;
+  iniziale?: string;
+}) {
+  const [testo, setTesto] = useState(iniziale);
   const [nuovo, setNuovo] = useState(false);
   const trovati = indice.cercaIngredienti(testo, 8);
 
