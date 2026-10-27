@@ -52,6 +52,7 @@ altrimenti è un conflitto e non si scrive nulla. Campi diversi cambiati da due 
 | `crea_invito` | `id`, `giorni` (1–30), `usi_massimi` (1–20) → `codice` | amministratore |
 | `revoca_invito` | `id` | amministratore |
 | `rimuovi_accesso` | `id` di `utente_famiglia` | amministratore (non l'ultimo) |
+| `elimina_famiglia` | `nome` (riscritto come conferma) → cancella tutta la famiglia a cascata (Fase 7) | amministratore |
 | `entra_con_invito` | `codice`, `membro: {id, nome, emoji}` (via `entra_con_invito`) | chi ha il codice |
 
 ## Comandi della Fase 2: ricette e casa

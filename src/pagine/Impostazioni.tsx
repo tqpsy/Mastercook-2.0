@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { righeAttive, useFamiglia, useVista } from '../dati/contesto';
+import { idDispositivo, righeAttive, useFamiglia, useVista } from '../dati/contesto';
 import { esporta } from '../dati/esportazione';
+import { spiegaMotivo } from '../dati/messaggi';
 import { VERSIONE_APP } from '../dati/tipi';
-import { type FamigliaMia, mieFamiglie, trasportoSupabase } from '../piattaforma/supabase';
+import { eliminaFamiglia, type FamigliaMia, mieFamiglie, trasportoSupabase } from '../piattaforma/supabase';
 import { Ripristino } from '../ui/Ripristino';
 
 export function Impostazioni({ email, esci, apriFamiglia }: { email: string; esci: () => void; apriFamiglia: (famiglia: string) => void }) {
@@ -21,6 +22,7 @@ export function Impostazioni({ email, esci, apriFamiglia }: { email: string; esc
       {amministratore && <Inviti />}
       <Accessi amministratore={amministratore} io={utenteId} />
       <IMieiDati nomeFamiglia={String(famiglia?.nome ?? 'famiglia')} apriFamiglia={apriFamiglia} />
+      {amministratore && famiglia && <EliminaFamiglia nome={String(famiglia.nome)} apriFamiglia={apriFamiglia} />}
 
       <h2>Questo dispositivo</h2>
       <div className="scheda">
@@ -238,5 +240,64 @@ function IMieiDati({ nomeFamiglia, apriFamiglia }: { nomeFamiglia: string; apriF
         )}
       </div>
     </>
+  );
+}
+
+/**
+ * Eliminare la famiglia: per tornare indietro dopo un'importazione, o per cancellare i propri dati.
+ * Si conferma riscrivendo il nome; poi si apre un'altra famiglia, se c'è.
+ */
+function EliminaFamiglia({ nome, apriFamiglia }: { nome: string; apriFamiglia: (famiglia: string) => void }) {
+  const { famiglia, archivio } = useFamiglia();
+  const [scritto, setScritto] = useState('');
+  const [attendi, setAttendi] = useState(false);
+  const [errore, setErrore] = useState<string | null>(null);
+
+  async function elimina() {
+    setAttendi(true);
+    setErrore(null);
+    try {
+      const altre = await mieFamiglie().catch(() => [] as FamigliaMia[]);
+      const esito = await eliminaFamiglia(famiglia, scritto.trim(), idDispositivo(), VERSIONE_APP);
+      if (esito.esito !== 'applicato') {
+        setErrore(spiegaMotivo(esito.dettaglio.motivo));
+        return setAttendi(false);
+      }
+      // Anche la copia su questo dispositivo va via.
+      await archivio.transaction('rw', [archivio.righe, archivio.coda, archivio.cursori, archivio.foto], async () => {
+        await archivio.righe.where('famiglia_id').equals(famiglia).delete();
+        await archivio.coda.where('famiglia_id').equals(famiglia).delete();
+        await archivio.cursori.delete(famiglia);
+        await archivio.foto.where('famiglia_id').equals(famiglia).delete();
+      });
+      apriFamiglia(altre.find((f) => f.famiglia_id !== famiglia)?.famiglia_id ?? '');
+    } catch {
+      setErrore('Serve la connessione per eliminare la famiglia. Riprova appena sei online.');
+      setAttendi(false);
+    }
+  }
+
+  return (
+    <div className="scheda">
+      <details>
+        <summary>Elimina questa famiglia</summary>
+        <p className="tenue">
+          Cancella per sempre persone, allergie, ricette, casa, menu, spesa e accessi di «{nome}», per tutti. Serve anche per tornare indietro dopo
+          un’importazione dal vecchio Mastercook. Prima, se vuoi, scarica un’esportazione.
+        </p>
+        <label className="campo">
+          <span>Per confermare scrivi il nome della famiglia</span>
+          <input className="dato" value={scritto} onChange={(e) => setScritto(e.target.value)} placeholder={nome} />
+        </label>
+        <button className="bottone pericolo pieno" disabled={attendi || scritto.trim() !== nome.trim()} onClick={() => void elimina()}>
+          {attendi ? 'Elimino…' : 'Elimina per sempre'}
+        </button>
+        {errore && (
+          <div className="avviso errore" role="alert" style={{ marginTop: 10 }}>
+            {errore}
+          </div>
+        )}
+      </details>
+    </div>
   );
 }

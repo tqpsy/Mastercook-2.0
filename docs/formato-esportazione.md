@@ -36,6 +36,9 @@ così è sempre completo anche se il dispositivo non ha ancora scaricato tutto.
 
 ## Ripristino
 
+Anche il file del vecchio Mastercook (`masterfood-export`) si carica da qui: prima viene convertito in questo
+formato e mostrato in un rapporto, poi ripristinato. Dettagli in `docs/migrazione.md`.
+
 **Impostazioni → I tuoi dati → Ripristina da un file**, oppure dalla prima schermata.
 
 - Crea sempre una **famiglia nuova**, mai sopra una esistente: l'originale, se esiste ancora, resta intatta.
