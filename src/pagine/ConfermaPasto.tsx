@@ -59,9 +59,9 @@ export function ConfermaPasto({
   const { esegui } = useFamiglia();
   const vista = useVista();
   const { righe: consumi } = useConferme(vista);
-  const previsto = useMemo(() => previstoPortata(indice, portata, dati.persone, dati.eccezioni, dati.portate), [indice, portata, dati]);
+  const previsto = useMemo(() => previstoPortata(indice, portata, dati.persone, dati.eccezioni, dati.portate, dati.ospiti), [indice, portata, dati]);
   // Porzioni messe nel menu dei giorni dopo (piatto che dura più giorni): sono l'avanzo atteso.
-  const perDopo = avanziDi(portata, dati.portate).reduce((t, a) => t + porzioniPortata(a, dati.persone, dati.eccezioni), 0);
+  const perDopo = avanziDi(portata, dati.portate).reduce((t, a) => t + porzioniPortata(a, dati.persone, dati.eccezioni, dati.ospiti), 0);
   const usatePrima = attiva ? consumi.filter((c) => c.conferma_id === attiva.id) : [];
   const [esito, setEsito] = useState<EsitoPasto>(attiva?.esito ?? 'come_previsto');
   const [quantita, setQuantita] = useState<Record<string, string>>(() =>

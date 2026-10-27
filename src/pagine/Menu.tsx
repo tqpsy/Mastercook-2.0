@@ -3,6 +3,7 @@ import { useFamiglia, useVista, type Vista } from '../dati/contesto';
 import { useIndice } from '../dati/indice';
 import { type Esito, NOME_ESITO, type Verifica, type Vincolo } from '../dominio/compatibilita';
 import {
+  alPasto,
   type CategoriaPasto,
   categorieDellaFamiglia,
   dataLunga,
@@ -13,14 +14,17 @@ import {
   lunedi,
   nomeGiorno,
   nomeSettimana,
+  type OspitiPasto,
+  ospitiDel,
   type Persona,
   type PortataMenu,
-  porzioniAutomatiche,
+  PORZIONE_BAMBINO,
   ripetiSettimana,
   valutaPortata,
 } from '../dominio/menu';
 import { avanziDi, porzioniPortata } from '../dominio/consumi';
 import { filtra, type Indice } from '../dominio/ricette';
+import { ALLERGENI_UE, ESIGENZE, INTOLLERANZE, type VoceVincolo } from '../dominio/vincoli';
 import { IdeePerPasto, ProponiSettimana } from './Proposte';
 import { oggi, piuGiorni } from '../dominio/scadenze';
 import { Foglio } from '../ui/Foglio';
@@ -53,6 +57,7 @@ export interface DatiMenu {
   categorie: CategoriaPasto[];
   portate: PortataMenu[];
   eccezioni: Eccezione[];
+  ospiti: OspitiPasto[];
 }
 
 const numero = (x: unknown) => (x === null || x === undefined ? null : Number(x));
@@ -80,15 +85,27 @@ export function useDatiMenu(vista: Vista): DatiMenu {
         }))
         .sort((a, b) => a.ordine - b.ordine || String(a.id).localeCompare(String(b.id))),
       eccezioni: attive('eccezione_membro').map((e) => ({ ...(e as unknown as Eccezione), porzioni: numero(e.porzioni) })),
+      ospiti: attive('ospiti_pasto').map((o) => ({
+        ...(o as unknown as OspitiPasto),
+        adulti: Number(o.adulti ?? 0),
+        bambini: Number(o.bambini ?? 0),
+        oggetti: (o.oggetti as string[] | null) ?? [],
+      })),
     };
   }, [r]);
 }
 
-/** Come si presenta un piatto: nome, esito per chi lo mangia, gusti contrari, porzioni. */
+/** I dati del menu visti da un pasto: gli ospiti di quel pasto contano come una persona in più, con le loro esigenze. */
+export function datiAlPasto(dati: DatiMenu, data: string, categoria: string): DatiMenu {
+  return { ...dati, ...alPasto(dati.persone, dati.vincoli, ospitiDel(dati.ospiti, data, categoria)) };
+}
+
+/** Come si presenta un piatto: nome, esito per chi lo mangia (ospiti compresi), gusti contrari, porzioni. */
 function descrivi(indice: Indice, dati: DatiMenu, p: PortataMenu) {
   const ricetta = p.ricetta_id ? (indice.perId.get(p.ricetta_id) ?? null) : null;
   const eccezioni = dati.eccezioni.filter((e) => e.portata_id === p.id);
-  const valutazione = dati.vincoli.length ? valutaPortata(indice, ricetta, dati.persone, dati.vincoli, eccezioni, dati.verifiche) : null;
+  const alTavolo = alPasto(dati.persone, dati.vincoli, ospitiDel(dati.ospiti, p.data, p.categoria));
+  const valutazione = alTavolo.vincoli.length ? valutaPortata(indice, ricetta, alTavolo.persone, alTavolo.vincoli, eccezioni, dati.verifiche) : null;
   const mangiano = dati.persone.filter((x) => !eccezioni.some((e) => e.membro_id === x.id));
   const gusti = ricetta ? gustiPerPiatto(indice, ricetta, mangiano, dati.gusti) : [];
   return {
@@ -98,9 +115,9 @@ function descrivi(indice: Indice, dati: DatiMenu, p: PortataMenu) {
     valutazione,
     gusti,
     nonPiace: gusti.filter((g) => g.valore === 'non_piace'),
-    porzioni: p.porzioni ?? porzioniAutomatiche(dati.persone, eccezioni),
+    porzioni: porzioniPortata(p, dati.persone, dati.eccezioni, dati.ospiti),
     /** Porzioni messe da parte per i giorni dopo (piatto che dura più giorni). */
-    dopo: avanziDi(p, dati.portate).reduce((t, a) => t + porzioniPortata(a, dati.persone, dati.eccezioni), 0),
+    dopo: avanziDi(p, dati.portate).reduce((t, a) => t + porzioniPortata(a, dati.persone, dati.eccezioni, dati.ospiti), 0),
   };
 }
 
@@ -146,6 +163,7 @@ export function Menu() {
   const [aperta, setAperta] = useState<string | null>(null);
   const [pasti, setPasti] = useState(false);
   const [proponi, setProponi] = useState(false);
+  const [ospiti, setOspiti] = useState<{ data: string; categoria: string } | null>(null);
   const fineSettimana = piuGiorni(lun, 6);
   const dueSettimane = piuGiorni(giorno, 13);
   useProlungaFissi(fineSettimana > dueSettimane ? fineSettimana : dueSettimane);
@@ -177,6 +195,7 @@ export function Menu() {
 
   const cella = (data: string, c: CategoriaPasto) => (
     <>
+      <EtichettaOspiti ospiti={ospitiDel(dati.ospiti, data, c.valore)} apri={() => setOspiti({ data, categoria: c.valore })} />
       {piatti(data, c.valore).map((p) => (
         <Piatto key={p.id} indice={indice} dati={dati} portata={p} apri={() => setAperta(p.id)} />
       ))}
@@ -275,8 +294,31 @@ export function Menu() {
 
       {modo === 'panoramica' && <Panoramica indice={indice} dati={dati} giorni={giorni} categorie={categorie} settimana={settimana} apri={setAperta} oggiData={giorno} />}
 
-      {nuova && <NuovoPiatto indice={indice} dati={dati} {...nuova} chiudi={() => setNuova(null)} />}
-      {portataAperta && <SchedaPiatto indice={indice} dati={dati} portata={portataAperta} chiudi={() => setAperta(null)} />}
+      {nuova && (
+        <NuovoPiatto
+          indice={indice}
+          dati={dati}
+          {...nuova}
+          chiudi={() => setNuova(null)}
+          apriOspiti={() => {
+            setOspiti(nuova);
+            setNuova(null);
+          }}
+        />
+      )}
+      {portataAperta && (
+        <SchedaPiatto
+          indice={indice}
+          dati={dati}
+          portata={portataAperta}
+          chiudi={() => setAperta(null)}
+          apriOspiti={() => {
+            setOspiti({ data: portataAperta.data, categoria: portataAperta.categoria });
+            setAperta(null);
+          }}
+        />
+      )}
+      {ospiti && <SchedaOspiti dati={dati} {...ospiti} chiudi={() => setOspiti(null)} />}
       {pasti && <Pasti categorie={dati.categorie} chiudi={() => setPasti(false)} />}
       {proponi && <ProponiSettimana indice={indice} dati={dati} giorni={giorni} chiudi={() => setProponi(false)} />}
     </>
@@ -421,11 +463,27 @@ function nomeCategoria(dati: DatiMenu, valore: string) {
   return dati.categorie.find((c) => c.valore === valore)?.nome ?? 'Pasto';
 }
 
-function NuovoPiatto({ indice, dati, data, categoria, chiudi }: { indice: Indice; dati: DatiMenu; data: string; categoria: string; chiudi: () => void }) {
+function NuovoPiatto({
+  indice,
+  dati: tutti,
+  data,
+  categoria,
+  chiudi,
+  apriOspiti,
+}: {
+  indice: Indice;
+  dati: DatiMenu;
+  data: string;
+  categoria: string;
+  chiudi: () => void;
+  apriOspiti: () => void;
+}) {
   const { esegui } = useFamiglia();
+  const dati = datiAlPasto(tutti, data, categoria);
   const quanti = dati.portate.filter((p) => p.data === data && p.categoria === categoria).length;
   return (
     <Foglio titolo={`${nomeCategoria(dati, categoria)} di ${dataLunga(data)}`} chiudi={chiudi}>
+      <BottoneOspiti ospiti={ospitiDel(tutti.ospiti, data, categoria)} apri={apriOspiti} />
       <IdeePerPasto
         indice={indice}
         dati={dati}
@@ -450,7 +508,7 @@ function NuovoPiatto({ indice, dati, data, categoria, chiudi }: { indice: Indice
   );
 }
 
-function SchedaPiatto({ indice, dati, portata: p, chiudi }: { indice: Indice; dati: DatiMenu; portata: PortataMenu; chiudi: () => void }) {
+function SchedaPiatto({ indice, dati, portata: p, chiudi, apriOspiti }: { indice: Indice; dati: DatiMenu; portata: PortataMenu; chiudi: () => void; apriOspiti: () => void }) {
   const { esegui } = useFamiglia();
   const d = descrivi(indice, dati, p);
   const [cambia, setCambia] = useState(false);
@@ -458,7 +516,7 @@ function SchedaPiatto({ indice, dati, portata: p, chiudi }: { indice: Indice; da
   const [categoria, setCategoria] = useState(p.categoria);
   const [note, setNote] = useState(p.note ?? '');
   const modifica = (campi: Record<string, unknown>) => esegui('modifica_portata', { id: p.id, versione_attesa: p.versione ?? 1, campi });
-  const automatiche = porzioniAutomatiche(dati.persone, d.eccezioni);
+  const automatiche = porzioniPortata({ ...p, porzioni: null }, dati.persone, dati.eccezioni, dati.ospiti);
 
   return (
     <Foglio titolo={d.titolo} chiudi={chiudi}>
@@ -485,7 +543,7 @@ function SchedaPiatto({ indice, dati, portata: p, chiudi }: { indice: Indice; da
       {cambia ? (
         <CercaPiatto
           indice={indice}
-          dati={dati}
+          dati={datiAlPasto(dati, p.data, p.categoria)}
           etichetta="Nuovo piatto"
           scegli={async (s) => {
             await modifica(s);
@@ -561,6 +619,7 @@ function SchedaPiatto({ indice, dati, portata: p, chiudi }: { indice: Indice; da
             <ChiMangia key={x.id} indice={indice} dati={dati} portata={p} persona={x} eccezione={d.eccezioni.find((e) => e.membro_id === x.id)} />
           ))}
         </ul>
+        <BottoneOspiti ospiti={ospitiDel(dati.ospiti, p.data, p.categoria)} apri={apriOspiti} />
       </div>
 
       <form
@@ -753,6 +812,128 @@ function ChiMangia({ indice, dati, portata, persona, eccezione }: { indice: Indi
         </>
       )}
     </li>
+  );
+}
+
+function contaOspiti(o: Pick<OspitiPasto, 'adulti' | 'bambini'>) {
+  const parti = [];
+  if (o.adulti) parti.push(o.adulti === 1 ? '1 adulto' : `${o.adulti} adulti`);
+  if (o.bambini) parti.push(o.bambini === 1 ? '1 bambino' : `${o.bambini} bambini`);
+  return parti.join(' e ');
+}
+
+/** Nel calendario, solo se a quel pasto ci sono ospiti. */
+function EtichettaOspiti({ ospiti, apri }: { ospiti?: OspitiPasto; apri: () => void }) {
+  if (!ospiti) return null;
+  return (
+    <button className="etichetta" onClick={apri} aria-label={`Ospiti: ${contaOspiti(ospiti)}`}>
+      👥 {ospiti.adulti + ospiti.bambini}
+      {ospiti.oggetti.length > 0 && ' ⚠️'}
+      {ospiti.in_attesa && ' · in invio'}
+    </button>
+  );
+}
+
+function BottoneOspiti({ ospiti, apri }: { ospiti?: OspitiPasto; apri: () => void }) {
+  return (
+    <button className="bottone piccolo" onClick={apri}>
+      👥 {ospiti ? `Ospiti: ${contaOspiti(ospiti)}` : 'Ci sono ospiti?'}
+    </button>
+  );
+}
+
+const GRUPPI_OSPITI: { nome: string; voci: VoceVincolo[] }[] = [
+  { nome: 'Allergie', voci: ALLERGENI_UE },
+  { nome: 'Intolleranze', voci: INTOLLERANZE },
+  { nome: 'Esigenze', voci: ESIGENZE },
+];
+
+/**
+ * Ospiti a un pasto: quanti adulti e bambini e cosa non possono mangiare. Niente nomi; le esigenze
+ * si dimenticano appena il pasto è passato, restano solo i numeri per spesa e consumi.
+ */
+function SchedaOspiti({ dati, data, categoria, chiudi }: { dati: DatiMenu; data: string; categoria: string; chiudi: () => void }) {
+  const { esegui } = useFamiglia();
+  const attuali = ospitiDel(dati.ospiti, data, categoria);
+  const [adulti, setAdulti] = useState(attuali?.adulti ?? 1);
+  const [bambini, setBambini] = useState(attuali?.bambini ?? 0);
+  const [oggetti, setOggetti] = useState<string[]>(attuali?.oggetti ?? []);
+  const passato = data < oggi();
+
+  async function salva(a: number, b: number) {
+    await esegui('imposta_ospiti', {
+      data,
+      categoria,
+      adulti: a,
+      bambini: b,
+      oggetti: passato ? [] : oggetti,
+      ...(attuali && !attuali.in_attesa ? { versione_attesa: attuali.versione } : {}),
+    });
+    chiudi();
+  }
+
+  const contatore = (nome: string, valore: number, cambia: (n: number) => void) => (
+    <div className="riga" role="group" aria-label={nome}>
+      <span className="cresce">{nome}</span>
+      <button className="bottone piccolo" aria-label={`${nome}: uno in meno`} onClick={() => cambia(Math.max(0, valore - 1))}>
+        −
+      </button>
+      <span aria-live="polite" style={{ minWidth: 24, textAlign: 'center' }}>
+        {valore}
+      </span>
+      <button className="bottone piccolo" aria-label={`${nome}: uno in più`} onClick={() => cambia(Math.min(50, valore + 1))}>
+        +
+      </button>
+    </div>
+  );
+
+  return (
+    <Foglio titolo={`Ospiti a ${nomeCategoria(dati, categoria).toLowerCase()} di ${dataLunga(data)}`} chiudi={chiudi}>
+      <div className="campo">
+        {contatore('Adulti', adulti, setAdulti)}
+        {contatore('Bambini', bambini, setBambini)}
+        <p className="tenue" style={{ margin: 0 }}>
+          Le porzioni dei piatti crescono da sole: un adulto conta 1, un bambino {PORZIONE_BAMBINO.toLocaleString('it-IT')}.
+        </p>
+      </div>
+      {!passato &&
+        GRUPPI_OSPITI.map((g) => (
+          <div className="campo" key={g.nome}>
+            <span>{g.nome} degli ospiti</span>
+            <div className="riga" style={{ flexWrap: 'wrap', gap: 6 }} role="group" aria-label={`${g.nome} degli ospiti`}>
+              {g.voci.map((v) => {
+                const scelto = oggetti.includes(v.oggetto);
+                return (
+                  <button
+                    key={v.oggetto}
+                    className="etichetta"
+                    aria-pressed={scelto}
+                    onClick={() => setOggetti(scelto ? oggetti.filter((o) => o !== v.oggetto) : [...oggetti, v.oggetto])}
+                  >
+                    {scelto ? '✓ ' : ''}
+                    {v.nome}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      <p className="tenue">
+        {passato
+          ? 'Il pasto è passato: si segnano solo quanti eravate, per i consumi.'
+          : 'Niente nomi. Il menu controlla i piatti anche per gli ospiti; le loro allergie ed esigenze si cancellano da sole dopo il pasto.'}
+      </p>
+      <div className="riga" style={{ flexWrap: 'wrap' }}>
+        <button className="bottone primario" disabled={adulti + bambini === 0} onClick={() => void salva(adulti, bambini)}>
+          Salva gli ospiti
+        </button>
+        {attuali && (
+          <button className="bottone" onClick={() => void salva(0, 0)}>
+            Nessun ospite
+          </button>
+        )}
+      </div>
+    </Foglio>
   );
 }
 

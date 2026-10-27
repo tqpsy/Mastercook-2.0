@@ -282,6 +282,23 @@ massimo 2 MB, JPEG o WebP. Leggono e scrivono solo i membri della famiglia (`tes
 L'app riduce la foto a 1280 px, la tiene sul dispositivo e la carica **prima** del comando che la cita,
 anche più tardi se manca la rete (`tests/sync/sincronizzazione.test.ts`). Una foto non si sostituisce senza conferma.
 
+## Ospiti a un pasto
+
+Migrazione `20261111000000_ospiti.sql`. Tabella `ospiti_pasto`: uno per pasto (`data` + `categoria`), con
+`adulti`, `bambini` (0…50) e `oggetti` (al più 30 codici `all:…`, `ing:…`, `cls:…`, `txt:…`). Niente nomi.
+
+| Comando | Dati → risultato |
+| --- | --- |
+| `imposta_ospiti` | `data`, `categoria`, `adulti`, `bambini`, `oggetti?`, `versione_attesa?` → `{id}`; 0 e 0 = niente ospiti; conflitto `ospiti_cambiati` |
+
+- L'id viene da famiglia, giorno e pasto (`nuovo_id`), quindi due telefoni non creano doppioni.
+- Le porzioni automatiche (`interno.porzioni_portata`, e da lì spesa, previsto e consumi) contano un adulto 1 e un
+  bambino 0,6, come l'app (`alPasto` in `src/dominio/menu.ts`).
+- Il menu valuta i piatti anche per gli ospiti: le loro allergie valgono «anche in tracce».
+- Privacy: gli `oggetti` dei pasti passati si cancellano (`interno.dimentica_ospiti`) a ogni scarico, a ogni
+  `imposta_ospiti` e ogni notte con pg_cron dove c'è; un pasto già passato accetta solo i numeri.
+- Gli ospiti non entrano nell'esportazione.
+
 ## Scaricare le modifiche
 
 `public.scarica_modifiche(famiglia, dopo, limite)` restituisce `{ righe: [{tabella, seq, riga}], altre }`
