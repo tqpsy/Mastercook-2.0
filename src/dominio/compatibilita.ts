@@ -6,10 +6,11 @@
  * - «adatta»: solo quando tutte le informazioni ci sono e nessun vincolo è violato.
  * Non è mai una promessa di sicurezza: è un aiuto a non sbagliare.
  */
-import { nomeOggetto } from './vincoli';
-import type { Indice, Ricetta } from './ricette';
+import { ESIGENZE_CRUDI, righeCrude } from "./crudi";
+import { nomeOggetto } from "./vincoli";
+import type { Indice, Ricetta } from "./ricette";
 
-export type Esito = 'adatta' | 'da_verificare' | 'non_adatta';
+export type Esito = "adatta" | "da_verificare" | "non_adatta";
 
 export interface Vincolo {
   membro_id: string;
@@ -25,87 +26,168 @@ export interface Valutazione {
 }
 
 const CLASSI_ESCLUSE: Record<string, string[]> = {
-  vegetariano: ['carne', 'pesce'],
-  vegano: ['carne', 'pesce', 'latticini', 'uova', 'miele'],
-  senza_maiale: ['maiale'],
-  senza_alcol: ['alcol'],
+  vegetariano: ["carne", "pesce"],
+  vegano: ["carne", "pesce", "latticini", "uova", "miele"],
+  senza_maiale: ["maiale"],
+  senza_alcol: ["alcol"],
 };
 
 /** Intolleranze che l'app sa ricondurre ai dati degli ingredienti. Le altre restano «da verificare». */
 const INTOLLERANZE_NOTE: Record<string, { classe: string; nome: string }> = {
-  lattosio: { classe: 'latticini', nome: 'latticini' },
+  lattosio: { classe: "latticini", nome: "latticini" },
 };
 
-const PEGGIORE: Record<Esito, number> = { adatta: 0, da_verificare: 1, non_adatta: 2 };
+const PEGGIORE: Record<Esito, number> = {
+  adatta: 0,
+  da_verificare: 1,
+  non_adatta: 2,
+};
 
 function peggiore(a: Esito, b: Esito): Esito {
   return PEGGIORE[a] >= PEGGIORE[b] ? a : b;
 }
 
-export function valutaPerVincoli(indice: Indice, r: Ricetta, vincoli: Vincolo[]): Valutazione {
-  let esito: Esito = 'adatta';
+export function valutaPerVincoli(
+  indice: Indice,
+  r: Ricetta,
+  vincoli: Vincolo[],
+): Valutazione {
+  let esito: Esito = "adatta";
   const motivi: string[] = [];
   const segna = (e: Esito, motivo: string) => {
     esito = peggiore(esito, e);
     if (!motivi.includes(motivo)) motivi.push(motivo);
   };
 
-  const righe = r.ingredienti.map((g) => ({ g, ing: indice.ingrediente(g.ingrediente_id) }));
+  const righe = r.ingredienti.map((g) => ({
+    g,
+    ing: indice.ingrediente(g.ingrediente_id),
+  }));
   const sconosciuti = righe.filter((x) => !x.ing || !x.ing.allergeni_noti);
 
   for (const v of vincoli) {
-    const [prefisso, codice] = v.oggetto.split(':') as [string, string];
+    const [prefisso, codice] = v.oggetto.split(":") as [string, string];
     const nome = nomeOggetto(v.oggetto, v.testo);
 
-    if (prefisso === 'all') {
+    if (prefisso === "all") {
       const contengono = righe.filter((x) => x.ing?.allergeni.includes(codice));
       const obbligatori = contengono.filter((x) => !x.g.opzionale);
       if (r.allergeni_dichiarati.includes(codice) || obbligatori.length) {
-        segna('non_adatta', `contiene ${nome.toLowerCase()}${obbligatori.length ? ` (${obbligatori.map((x) => x.ing!.nome.toLowerCase()).join(', ')})` : ''}`);
+        segna(
+          "non_adatta",
+          `contiene ${nome.toLowerCase()}${obbligatori.length ? ` (${obbligatori.map((x) => x.ing!.nome.toLowerCase()).join(", ")})` : ""}`,
+        );
       } else if (contengono.length) {
-        segna('da_verificare', `${nome.toLowerCase()} negli ingredienti facoltativi (${contengono.map((x) => x.ing!.nome.toLowerCase()).join(', ')})`);
+        segna(
+          "da_verificare",
+          `${nome.toLowerCase()} negli ingredienti facoltativi (${contengono.map((x) => x.ing!.nome.toLowerCase()).join(", ")})`,
+        );
       } else if (sconosciuti.length) {
-        segna('da_verificare', `allergeni non noti per ${sconosciuti.map((x) => (x.ing?.nome ?? 'un ingrediente').toLowerCase()).join(', ')}`);
-      } else if (v.severita === 'evitare_anche_tracce') {
-        segna('da_verificare', `possibili tracce di ${nome.toLowerCase()}: controlla le etichette`);
+        segna(
+          "da_verificare",
+          `allergeni non noti per ${sconosciuti.map((x) => (x.ing?.nome ?? "un ingrediente").toLowerCase()).join(", ")}`,
+        );
+      } else if (v.severita === "evitare_anche_tracce") {
+        segna(
+          "da_verificare",
+          `possibili tracce di ${nome.toLowerCase()}: controlla le etichette`,
+        );
       }
       continue;
     }
 
-    if (prefisso === 'cls') {
+    const sulCrudo = ESIGENZE_CRUDI.find((e) => e.oggetto === v.oggetto);
+    if (sulCrudo) {
+      const righe = righeCrude(indice, r, sulCrudo.crudo);
+      const elenca = (xs: typeof righe) => xs.map((x) => x.nome).join(", ");
+      const crudi = righe.filter((x) => x.crudo === true);
+      const sicuri = crudi.filter((x) => !x.forse && !x.opzionale);
+      if (sicuri.length)
+        segna(
+          "non_adatta",
+          `${nome.toLowerCase()}: ${elenca(sicuri)} non si cuoce`,
+        );
+      else if (crudi.length)
+        segna(
+          "da_verificare",
+          `${nome.toLowerCase()}: controlla ${elenca(crudi)} (${crudi.some((x) => x.forse) ? "guarda l’etichetta" : "è facoltativo"})`,
+        );
+      const nonSo = righe.filter((x) => x.crudo === null);
+      if (nonSo.length)
+        segna(
+          "da_verificare",
+          `${nome.toLowerCase()}: controlla se ${elenca(nonSo)} si cuoce`,
+        );
+      else if (sconosciuti.length)
+        segna(
+          "da_verificare",
+          `ingredienti senza informazioni: ${sconosciuti.map((x) => (x.ing?.nome ?? "?").toLowerCase()).join(", ")}`,
+        );
+      continue;
+    }
+
+    if (prefisso === "cls") {
       const classi = CLASSI_ESCLUSE[codice];
       if (!classi) {
-        segna('da_verificare', `da controllare: ${nome}`);
+        segna("da_verificare", `da controllare: ${nome}`);
         continue;
       }
-      const violano = righe.filter((x) => x.ing?.classi.some((c) => classi.includes(c)));
+      const violano = righe.filter((x) =>
+        x.ing?.classi.some((c) => classi.includes(c)),
+      );
       const obbligatori = violano.filter((x) => !x.g.opzionale);
-      if (obbligatori.length) segna('non_adatta', `non ${nome.toLowerCase()}: ${obbligatori.map((x) => x.ing!.nome.toLowerCase()).join(', ')}`);
-      else if (violano.length) segna('da_verificare', `non ${nome.toLowerCase()} se aggiungi ${violano.map((x) => x.ing!.nome.toLowerCase()).join(', ')}`);
-      else if (sconosciuti.length) segna('da_verificare', `ingredienti senza informazioni: ${sconosciuti.map((x) => (x.ing?.nome ?? '?').toLowerCase()).join(', ')}`);
+      if (obbligatori.length)
+        segna(
+          "non_adatta",
+          `non ${nome.toLowerCase()}: ${obbligatori.map((x) => x.ing!.nome.toLowerCase()).join(", ")}`,
+        );
+      else if (violano.length)
+        segna(
+          "da_verificare",
+          `non ${nome.toLowerCase()} se aggiungi ${violano.map((x) => x.ing!.nome.toLowerCase()).join(", ")}`,
+        );
+      else if (sconosciuti.length)
+        segna(
+          "da_verificare",
+          `ingredienti senza informazioni: ${sconosciuti.map((x) => (x.ing?.nome ?? "?").toLowerCase()).join(", ")}`,
+        );
       continue;
     }
 
-    if (prefisso === 'ing') {
+    if (prefisso === "ing") {
       const nota = INTOLLERANZE_NOTE[codice];
       if (nota) {
-        const violano = righe.filter((x) => x.ing?.classi.includes(nota.classe as never) && !x.g.opzionale);
-        if (violano.length) segna('non_adatta', `${nome.toLowerCase()}: contiene ${violano.map((x) => x.ing!.nome.toLowerCase()).join(', ')}`);
-        else if (sconosciuti.length) segna('da_verificare', `${nome.toLowerCase()}: ingredienti senza informazioni`);
+        const violano = righe.filter(
+          (x) => x.ing?.classi.includes(nota.classe as never) && !x.g.opzionale,
+        );
+        if (violano.length)
+          segna(
+            "non_adatta",
+            `${nome.toLowerCase()}: contiene ${violano.map((x) => x.ing!.nome.toLowerCase()).join(", ")}`,
+          );
+        else if (sconosciuti.length)
+          segna(
+            "da_verificare",
+            `${nome.toLowerCase()}: ingredienti senza informazioni`,
+          );
         continue;
       }
       if (!indice.ingrediente(v.oggetto)) {
-        segna('da_verificare', `l’app non ha dati su ${nome.toLowerCase()}`);
+        segna("da_verificare", `l’app non ha dati su ${nome.toLowerCase()}`);
         continue;
       }
-      const violano = righe.filter((x) => indice.antenati(x.g.ingrediente_id).includes(v.oggetto));
-      if (violano.some((x) => !x.g.opzionale)) segna('non_adatta', `contiene ${nome.toLowerCase()}`);
-      else if (violano.length) segna('da_verificare', `${nome.toLowerCase()} tra i facoltativi`);
+      const violano = righe.filter((x) =>
+        indice.antenati(x.g.ingrediente_id).includes(v.oggetto),
+      );
+      if (violano.some((x) => !x.g.opzionale))
+        segna("non_adatta", `contiene ${nome.toLowerCase()}`);
+      else if (violano.length)
+        segna("da_verificare", `${nome.toLowerCase()} tra i facoltativi`);
       continue;
     }
 
     // Testo libero o indicazione del medico: l'app non può valutarla da sola.
-    segna('da_verificare', `da controllare: ${v.testo ?? nome}`);
+    segna("da_verificare", `da controllare: ${v.testo ?? nome}`);
   }
   return { esito, motivi };
 }
@@ -131,11 +213,17 @@ export function valutaPerFamiglia(
       vincoli.filter((v) => v.membro_id === m.id),
     ),
   }));
-  return { esito: perMembro.reduce<Esito>((e, x) => peggiore(e, x.valutazione.esito), 'adatta'), perMembro };
+  return {
+    esito: perMembro.reduce<Esito>(
+      (e, x) => peggiore(e, x.valutazione.esito),
+      "adatta",
+    ),
+    perMembro,
+  };
 }
 
 export const NOME_ESITO: Record<Esito, string> = {
-  adatta: 'Adatta a tutti',
-  da_verificare: 'Da verificare',
-  non_adatta: 'Non adatta a tutti',
+  adatta: "Adatta a tutti",
+  da_verificare: "Da verificare",
+  non_adatta: "Non adatta a tutti",
 };

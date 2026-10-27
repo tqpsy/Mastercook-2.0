@@ -2,7 +2,7 @@
  * Ricette come le vede l'app: quelle di sistema (dal catalogo) e quelle della famiglia (dal database),
  * nella stessa forma. Qui ci sono anche ricerca e filtri, che non dipendono dall'interfaccia.
  */
-import type { Catalogo, Categoria, Classe, IngredienteCatalogo, RicettaCatalogo } from '../catalogo/tipi';
+import { CATEGORIE, type Catalogo, type Categoria, type Classe, type IngredienteCatalogo, type RicettaCatalogo } from '../catalogo/tipi';
 import type { Dimensione, UnitaBase } from './unita';
 
 export interface Ingrediente {
@@ -278,4 +278,23 @@ export function copertura(indice: Indice, r: Ricetta, inCasa: Set<string>): { pr
   const casa = indice.estendi(inCasa);
   const p = principali(indice, r);
   return { presenti: p.filter((g) => casa.has(g.ingrediente_id)).length, totali: p.length };
+}
+
+/** Icone di ingredienti troppo generiche per rappresentare un piatto (la farina). */
+const ICONE_GENERICHE = ['🌾'];
+
+/**
+ * L'icona di una ricetta: quella scelta dalla famiglia, altrimenti quella dell'ingrediente principale
+ * (il primo che conta e ha un'icona), altrimenti quella della categoria. Per dolci e colazioni vale la
+ * categoria: il primo ingrediente è spesso farina o zucchero.
+ */
+export function iconaRicetta(indice: Indice, r: Ricetta, scelta?: string | null): string {
+  if (scelta) return scelta;
+  const categoria = CATEGORIE.find((c) => c.id === r.categoria)?.emoji ?? '🍽️';
+  if (r.categoria === 'dolce' || r.categoria === 'colazione') return categoria;
+  for (const g of principali(indice, r)) {
+    const e = indice.ingrediente(g.ingrediente_id)?.emoji;
+    if (e && !ICONE_GENERICHE.includes(e)) return e;
+  }
+  return categoria;
 }

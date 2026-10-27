@@ -4,6 +4,8 @@
  * una ricetta non viene mai presentata come adatta.
  */
 
+import { ESIGENZE_CRUDI } from './crudi';
+
 export type TipoVincolo = 'allergia' | 'intolleranza' | 'esigenza' | 'indicazione_medica';
 export type Severita = 'evitare' | 'evitare_anche_tracce';
 
@@ -42,6 +44,7 @@ export const ESIGENZE: VoceVincolo[] = [
   { oggetto: 'cls:vegano', nome: 'Vegano' },
   { oggetto: 'cls:senza_maiale', nome: 'Senza maiale' },
   { oggetto: 'cls:senza_alcol', nome: 'Senza alcol' },
+  ...ESIGENZE_CRUDI.map(({ oggetto, nome }) => ({ oggetto, nome })),
 ];
 
 const ELENCHI: Record<Exclude<TipoVincolo, 'indicazione_medica'>, VoceVincolo[]> = {
