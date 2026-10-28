@@ -1,5 +1,5 @@
 /** Aiuti condivisi dalle prove dell'interfaccia: utenti di prova, sessione nel browser, passi ricorrenti. */
-import { type Browser, expect, type Page } from '@playwright/test';
+import { type Browser, type BrowserContext, expect, type Page } from '@playwright/test';
 
 export const SERVER = `http://localhost:${process.env.MC_PORTA_SERVER ?? '14400'}`;
 
@@ -20,8 +20,15 @@ export async function sql<T>(testo: string, valori: unknown[] = []): Promise<T[]
   return r.json();
 }
 
-export async function apri(browser: Browser, u: UtenteProva, opzioni: Parameters<Browser['newContext']>[0] = {}, percorso = '') {
+export async function apri(
+  browser: Browser,
+  u: UtenteProva,
+  opzioni: Parameters<Browser['newContext']>[0] = {},
+  percorso = '',
+  prima?: (contesto: BrowserContext) => Promise<void>,
+) {
   const contesto = await browser.newContext(opzioni);
+  await prima?.(contesto);
   await contesto.addInitScript((utente) => {
     const sessione = {
       access_token: utente.token,

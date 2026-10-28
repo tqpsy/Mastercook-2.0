@@ -7,6 +7,10 @@ import { impostaChiave, type StatoChiave, statoChiave } from '../piattaforma/fot
 import { cancellaLocale, famiglieLocali } from '../piattaforma/locale/motore';
 import { type AnteprimaEliminazione, anteprimaEliminazione, eliminaFamiglia, eliminaMioAccount, type FamigliaMia, mieFamiglie } from '../piattaforma/supabase';
 import { Foglio } from '../ui/Foglio';
+import { leggiCollegamento, salvaSulDrive, scriviCollegamento } from '../dati/copiaDrive';
+import { collegaDrive, scollegaDrive, tokenValido } from '../piattaforma/drive';
+import { useStatoCopia } from '../ui/CopiaAutomatica';
+import { SpiegazioneDrive, spiegaErroreDrive } from '../ui/Drive';
 import { Ripristino } from '../ui/Ripristino';
 import { TestoPrivacy } from './Privacy';
 
@@ -33,7 +37,7 @@ export function Impostazioni({
         {famiglia && amministratore ? <NomeFamiglia nome={String(famiglia.nome)} versione={famiglia.versione ?? 1} /> : <p>{String(famiglia?.nome ?? '')}</p>}
         <p className="tenue" style={{ marginBottom: 0 }}>
           {dove === 'locale'
-            ? '📱 I dati di questa famiglia stanno solo su questo telefono: non escono da qui. Per non perderli, scarica ogni tanto un’esportazione.'
+            ? '📱 I dati di questa famiglia stanno solo su questo telefono: non escono da qui. Per non perderli, collega il tuo Google Drive o salva ogni tanto una copia.'
             : '☁️ I dati di questa famiglia stanno sul server di Mastercook, in Europa, e si vedono da tutti i telefoni della famiglia.'}
         </p>
       </div>
@@ -41,6 +45,7 @@ export function Impostazioni({
       {amministratore && dove === 'server' && <Inviti />}
       <Accessi amministratore={amministratore} io={utenteId} />
       <ChiaveGemini amministratore={amministratore} />
+      {dove === 'locale' && <CopiaSulDrive nome={String(famiglia?.nome ?? 'Famiglia')} />}
       <IMieiDati nomeFamiglia={String(famiglia?.nome ?? 'famiglia')} apriFamiglia={apriFamiglia} />
       {amministratore && famiglia && <EliminaFamiglia nome={String(famiglia.nome)} apriFamiglia={apriFamiglia} />}
       <PrivacyEAccount dimentica={dimentica} />
@@ -189,7 +194,7 @@ function Accessi({ amministratore, io }: { amministratore: boolean; io: string }
 }
 
 function IMieiDati({ nomeFamiglia, apriFamiglia }: { nomeFamiglia: string; apriFamiglia: (famiglia: string) => void }) {
-  const { famiglia, utenteId, trasporto } = useFamiglia();
+  const { famiglia, utenteId, trasporto, dove } = useFamiglia();
   const vista = useVista();
   const io = righeAttive(vista, 'membro').find((m) => m.utente_id === utenteId);
   const [stato, setStato] = useState<string | null>(null);
@@ -212,16 +217,27 @@ function IMieiDati({ nomeFamiglia, apriFamiglia }: { nomeFamiglia: string; apriF
     setStato('Preparo il file…');
     try {
       const file = await esporta(trasporto, famiglia);
-      const blob = new Blob([JSON.stringify(file, null, 2)], { type: 'application/json' });
+      const giorno = new Date().toISOString().slice(0, 10);
+      const nomeFile = `mastercook-${nomeFamiglia.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${giorno}.json`;
+      const blob = new File([JSON.stringify(file, null, 2)], nomeFile, { type: 'application/json' });
+      const fatto = `${file.conteggi.membro} persone, ${file.conteggi.vincolo_alimentare} tra allergie ed esigenze.`;
+      // Sul telefono si apre la scelta di dove metterla (su iPhone: «Salva in File», anche iCloud Drive).
+      if (navigator.canShare?.({ files: [blob] })) {
+        try {
+          await navigator.share({ files: [blob], title: `Mastercook: ${nomeFamiglia}` });
+          return setStato(`Copia salvata: ${fatto}`);
+        } catch (e) {
+          if ((e as Error).name === 'AbortError') return setStato(null);
+        }
+      }
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      const giorno = new Date().toISOString().slice(0, 10);
-      a.download = `mastercook-${nomeFamiglia.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${giorno}.json`;
+      a.download = nomeFile;
       a.click();
       URL.revokeObjectURL(a.href);
-      setStato(`Scaricato: ${file.conteggi.membro} persone, ${file.conteggi.vincolo_alimentare} tra allergie ed esigenze.`);
+      setStato(`Scaricato: ${fatto}`);
     } catch {
-      setStato('Serve la connessione per esportare: il file si prepara dal server, così è completo.');
+      setStato(dove === 'locale' ? 'Non sono riuscito a preparare il file. Riprova.' : 'Serve la connessione per esportare: il file si prepara dal server, così è completo.');
     }
   }
 
@@ -229,9 +245,12 @@ function IMieiDati({ nomeFamiglia, apriFamiglia }: { nomeFamiglia: string; apriF
     <>
       <h2>I tuoi dati</h2>
       <div className="scheda">
-        <p className="tenue">Scarica una copia completa dei dati della famiglia in un file che puoi conservare. Si può ripristinare in qualsiasi momento.</p>
+        <p className="tenue">
+          Salva una copia completa dei dati della famiglia in un file da conservare dove vuoi: sul telefono, su iCloud Drive (su iPhone scegli «Salva in File»),
+          sul computer. Si può ripristinare in qualsiasi momento.
+        </p>
         <button className="bottone pieno" onClick={scarica}>
-          Scarica un’esportazione
+          Salva una copia
         </button>
         {stato && <p className="tenue" style={{ marginTop: 10 }}>{stato}</p>}
         <button className="bottone pieno" style={{ marginTop: 10 }} onClick={() => setRipristino((x) => !x)}>
@@ -513,6 +532,87 @@ function PrivacyEAccount({ dimentica }: { dimentica: () => Promise<void> }) {
           <TestoPrivacy />
         </Foglio>
       )}
+    </>
+  );
+}
+
+/** Per una famiglia sul telefono: collegare il proprio Google Drive per la copia automatica, vederne lo stato, scollegarlo. */
+function CopiaSulDrive({ nome }: { nome: string }) {
+  const { famiglia, trasporto } = useFamiglia();
+  const stato = useStatoCopia(famiglia);
+  const [spiega, setSpiega] = useState(false);
+  const [errore, setErrore] = useState<string | null>(null);
+
+  async function collega() {
+    setSpiega(false);
+    setErrore(null);
+    try {
+      await collegaDrive(true);
+      scriviCollegamento(famiglia, leggiCollegamento(famiglia) ?? {});
+    } catch (e) {
+      setErrore(spiegaErroreDrive(e));
+    }
+  }
+
+  async function salvaOra() {
+    setErrore(null);
+    try {
+      if (!tokenValido()) await collegaDrive(false);
+    } catch (e) {
+      return setErrore(spiegaErroreDrive(e));
+    }
+    await salvaSulDrive({ famiglia, nome, trasporto });
+  }
+
+  async function scollega() {
+    if (!window.confirm('Scollegare il Drive? La cartella Mastercook e la copia restano nel tuo Drive: se vuoi le cancelli da lì.')) return;
+    scriviCollegamento(famiglia, null);
+    await scollegaDrive();
+  }
+
+  const descrizione = !stato
+    ? 'La famiglia è solo su questo telefono. Collega il tuo Google Drive per avere una copia automatica e ritrovarla su un altro telefono.'
+    : stato.tipo === 'aggiornata'
+      ? `Copia aggiornata alle ${new Date(stato.il).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}, nella cartella Mastercook del tuo Drive.`
+      : stato.tipo === 'in_corso'
+        ? 'Salvo la copia sul Drive…'
+        : stato.tipo === 'serve_permesso'
+          ? 'Google chiede di confermare per aggiornare la copia.'
+          : stato.tipo === 'conflitto'
+            ? 'Sul Drive c’è una copia più recente fatta da un altro dispositivo: scegli quale tenere nell’avviso in alto.'
+            : stato.tipo === 'errore'
+              ? stato.testo
+              : 'La copia si aggiorna da sola dopo ogni modifica.';
+
+  return (
+    <>
+      <h2>Google Drive</h2>
+      <div className="scheda" aria-label="Copia sul Google Drive">
+        <p style={{ marginTop: 0 }}>{descrizione}</p>
+        {stato ? (
+          <>
+            <p className="tenue">Mastercook usa solo la sua cartella: non vede né tocca gli altri file del tuo Drive.</p>
+            <div className="riga" style={{ flexWrap: 'wrap' }}>
+              <button className="bottone primario" disabled={stato.tipo === 'in_corso'} onClick={() => void salvaOra()}>
+                Salva ora sul Drive
+              </button>
+              <button className="bottone" onClick={() => void scollega()}>
+                Scollega il Drive
+              </button>
+            </div>
+          </>
+        ) : (
+          <button className="bottone primario pieno" onClick={() => setSpiega(true)}>
+            Collega il mio Google Drive
+          </button>
+        )}
+        {errore && (
+          <div className="avviso errore" role="alert" style={{ marginTop: 10 }}>
+            {errore}
+          </div>
+        )}
+      </div>
+      {spiega && <SpiegazioneDrive continua={() => void collega()} chiudi={() => setSpiega(false)} />}
     </>
   );
 }
