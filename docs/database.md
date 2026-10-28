@@ -312,6 +312,38 @@ Migrazione `20261112000000_privacy_account.sql`.
   entrato prima); poi cancella l'utente di Supabase. `utente_famiglia.utente_id` ora va a null quando l'utente non
   c'è più, così gli altri dispositivi scaricano l'uscita. Le foto delle famiglie cancellate le toglie prima l'app.
 
+## Integrità del nucleo
+
+Migrazione `20261113000000_nucleo_integrita.sql`, test in `tests/db/integrita.test.ts`. Ogni caso era stato riprodotto
+prima della correzione. Le funzioni dei comandi di prima restano (`*_base`); quelle nuove fanno i controlli e le chiamano.
+
+- **Spesa una volta sola.** `conferma_acquisto` salta le righe di voci già acquistate e le restituisce in
+  `gia_acquistate` (due telefoni che confermano lo stesso carrello). `importa_scontrino` segna acquistata la voce nel
+  carrello dello stesso ingrediente e unità che carica, così la conferma del carrello dopo lo scontrino non ricarica.
+- **Stesso scontrino, con o senza QR.** Con data e totale, lo stesso negozio, giorno, ora e totale è lo stesso
+  scontrino anche se una volta c'era il QR e l'altra no (`gia_importato`). Una lettura diversa di ora o totale resta
+  uno scontrino diverso: si rimedia con «Annulla acquisto».
+- **Ospiti.** Senza `versione_attesa` il comando dice «non ce n'erano»: se nel frattempo un altro telefono li ha segnati
+  è un conflitto `ospiti_cambiati`, non una sovrascrittura. Lo stesso telefono (`dispositivo`) che li cambia di nuovo
+  prima di aver ricevuto la sua riga non è in conflitto con sé stesso; rimandare gli stessi valori nemmeno.
+- **La lista non conta i pasti confermati**: sono già stati tolti dalla casa (`fabbisogno_menu`).
+- **Un piatto confermato non si toglie dal menu** (`portata_confermata`): prima si corregge la conferma in «saltato».
+- **Avanzi nelle correzioni.** Una correzione con `avanzi` li sostituisce, «saltato» li toglie; si toglie solo ciò che
+  resta (movimento `annullo`).
+- **Ricette.** Cambiare solo ingredienti o passaggi alza `ricetta.versione`: il «va bene» segnato prima va richiesto.
+- **Scarico senza buchi.** Anche le scritture fuori da un comando (pulizia delle esigenze degli ospiti, uscita da una
+  famiglia con `elimina_mio_account`) prendono il lock della famiglia, così il cursore non salta il comando in corso.
+
+Limiti noti, voluti o rimandati:
+
+- Annullare un acquisto dopo averne usato una parte toglie solo ciò che resta di quel lotto (`gia_usati`): se il pasto
+  aveva preso da quell'acquisto invece che da un altro dello stesso prodotto, la quantità si sistema a mano in Casa.
+- Le intolleranze diverse dal lattosio (fruttosio, istamina, nichel, sorbitolo) non hanno ingredienti segnati nel
+  catalogo: le ricette risultano «da verificare» e il «va bene» della famiglia vale come scelta consapevole.
+- «Proponi la settimana» sceglie per la famiglia; le esigenze degli ospiti si vedono sul piatto nel menu, dopo.
+- Famiglia «sul mio Google Drive»: un dispositivo alla volta. Se due copie divergono si sceglie quale tenere e le
+  modifiche dell'altra si perdono (l'app lo dice). Per usare due dispositivi insieme serve la famiglia sul server.
+
 ## Scaricare le modifiche
 
 `public.scarica_modifiche(famiglia, dopo, limite)` restituisce `{ righe: [{tabella, seq, riga}], altre }`

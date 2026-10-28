@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useFamiglia, useVista, type Vista } from '../dati/contesto';
+import { idDispositivo, useFamiglia, useVista, type Vista } from '../dati/contesto';
 import { useIndice } from '../dati/indice';
 import { type Esito, NOME_ESITO, type Verifica, type Vincolo } from '../dominio/compatibilita';
 import {
@@ -868,6 +868,7 @@ function SchedaOspiti({ dati, data, categoria, chiudi }: { dati: DatiMenu; data:
       bambini: b,
       oggetti: passato ? [] : oggetti,
       ...(attuali && !attuali.in_attesa ? { versione_attesa: attuali.versione } : {}),
+      dispositivo: idDispositivo(),
     });
     chiudi();
   }

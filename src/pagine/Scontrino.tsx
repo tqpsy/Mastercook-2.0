@@ -39,7 +39,7 @@ function useDaAbbinare(indice: Indice): (data: string) => RigaDaAbbinare[] {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return [];
     const vicini = new Set(acquisti.filter((a) => a.stato === 'confermato' && a.fonte !== 'scontrino' && Math.abs(giorniTra(a.data, data)) <= 3).map((a) => a.id));
     return righe
-      .filter((r) => vicini.has(r.acquisto_id) && r.prezzo == null && !abbinate.has(r.id))
+      .filter((r) => vicini.has(r.acquisto_id) && !abbinate.has(r.id))
       .map((r) => ({ id: r.id, ingrediente_id: r.ingrediente_id, nome: r.ingrediente_id ? indice.nome(r.ingrediente_id) : (r.nome ?? 'Voce') }));
   };
 }
