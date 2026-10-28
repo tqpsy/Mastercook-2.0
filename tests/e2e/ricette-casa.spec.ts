@@ -182,17 +182,20 @@ test('foto: si aggiunge anche senza rete, parte prima della ricetta e non si sos
   await expect(tablet.getByRole('img', { name: `Foto di ${titolo} con pomodoro` })).toBeVisible();
 });
 
-test('crudi: il guanciale cotto va bene, la bresaola no finché non la segnate «va bene»; l’icona si sceglie per la famiglia', async ({ browser }, info) => {
+test('crudi e testo libero: il guanciale cotto e «niente funghi» vanno bene sulla carbonara, la bresaola no finché non la segnate «va bene»; l’icona si sceglie per la famiglia', async ({ browser }, info) => {
   const luca = await nuovoUtente('Luca');
   const { page } = await apri(browser, luca, info.project.use);
   await creaFamiglia(page, 'Casa Crudi');
   await aggiungiPersona(page, 'Anna');
   await page.getByRole('button', { name: 'Modifica Anna' }).click();
   await page.getByRole('button', { name: '+ Aggiungi' }).click();
-  await page.getByRole('button', { name: 'Intolleranza' }).click();
-  await page.getByLabel('Altro (scrivilo tu)').fill('prosciutto crudo');
-  await page.getByRole('button', { name: 'Vedi le esigenze sui crudi' }).click();
+  await page.getByRole('button', { name: 'Esigenza' }).click();
   await page.getByRole('button', { name: 'Niente salumi crudi' }).click();
+  // Scritto a parole: l'app dice cosa ha capito e lo controlla come un ingrediente.
+  await page.getByLabel(/Altro: scrivi l’alimento/).fill('Niente funghi');
+  await expect(page.getByText('l’app controlla 🍄 funghi')).toBeVisible();
+  await page.getByRole('button', { name: 'Aggiungi', exact: true }).click();
+  await expect(page.getByText(/«Niente funghi»: l’app controlla 🍄 funghi/)).toBeVisible();
   await page.getByRole('button', { name: 'Fatto' }).click();
   await page.getByRole('button', { name: 'Chiudi' }).click();
 
@@ -204,7 +207,8 @@ test('crudi: il guanciale cotto va bene, la bresaola no finché non la segnate �
   await page.getByLabel('Cerca').fill('bresaola');
   await page.getByRole('button', { name: 'Apri Bresaola, rucola e grana' }).click();
   const bresaola = page.getByRole('dialog', { name: 'Bresaola, rucola e grana' });
-  await expect(bresaola.getByText(/Anna: ⛔ niente salumi crudi: bresaola non si cuoce/)).toBeVisible();
+  await expect(bresaola.getByText(/Anna: ⛔/)).toBeVisible();
+  await expect(bresaola.getByText('⛔ Niente salumi crudi: bresaola senza cottura completa in questa ricetta')).toBeVisible();
   // L'avete controllata e per voi va bene: si segna, con una conferma perché scavalca un'esigenza.
   page.once('dialog', (d) => void d.accept());
   await bresaola.getByRole('button', { name: 'Va bene per Anna' }).click();

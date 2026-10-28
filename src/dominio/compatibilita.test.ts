@@ -51,7 +51,7 @@ describe('compatibilità delle ricette con i vincoli', () => {
     expect(valutaPerVincoli(indice, ricetta('sys:carbonara'), [v('ing:lattosio', { tipo: 'intolleranza' })]).esito).toBe('non_adatta');
     expect(valutaPerVincoli(indice, ricetta('sys:spaghetti_aglio_olio'), [v('ing:nichel', { tipo: 'intolleranza' })]).esito).toBe('da_verificare');
     const medico = valutaPerVincoli(indice, ricetta('sys:spaghetti_aglio_olio'), [v('txt:poco_sale', { tipo: 'indicazione_medica', testo: 'Poco sale' })]);
-    expect(medico).toEqual({ esito: 'da_verificare', motivi: ['da controllare: Poco sale'], verificabile: true });
+    expect(medico).toMatchObject({ esito: 'da_verificare', motivi: ['indicazione del medico: Poco sale'], verificabile: true });
   });
 
   it('per la famiglia vale l’esito peggiore, con il dettaglio di ognuno', () => {
@@ -84,11 +84,19 @@ describe('esigenze sui crudi', () => {
     expect(valutaPerVincoli(indice, ricetta('sys:tiramisu'), e('cls:no_uova_crude')).esito).toBe('non_adatta');
   });
 
-  it('latte crudo: il parmigiano cotto in forno va bene, sopra la pasta no; facoltativo o «dipende» è da verificare', () => {
+  it('latte crudo: i formaggi duri stagionati non contano, quelli «dipende» si controllano in etichetta', () => {
     expect(valutaPerVincoli(indice, ricetta('sys:lasagne'), e('cls:no_latte_crudo')).esito).toBe('adatta');
-    expect(valutaPerVincoli(indice, ricetta('sys:cacio_pepe'), e('cls:no_latte_crudo')).esito).toBe('non_adatta');
-    expect(valutaPerVincoli(indice, ricetta('sys:pasta_pomodoro'), e('cls:no_latte_crudo')).esito).toBe('da_verificare');
+    expect(valutaPerVincoli(indice, ricetta('sys:cacio_pepe'), e('cls:no_latte_crudo')).esito).toBe('adatta');
+    expect(valutaPerVincoli(indice, ricetta('sys:pasta_pomodoro'), e('cls:no_latte_crudo')).esito).toBe('adatta');
     expect(valutaPerVincoli(indice, ricetta('sys:insalata_greca'), e('cls:no_latte_crudo')).esito).toBe('da_verificare');
+  });
+
+  it('carbonara: il guanciale si cuoce e il pecorino va bene, le uova no', () => {
+    const tutte = ['cls:no_salumi_crudi', 'cls:no_latte_crudo', 'cls:no_carne_cruda'].map((o) => v(o, { tipo: 'esigenza' }));
+    expect(valutaPerVincoli(indice, ricetta('sys:carbonara'), tutte).esito).toBe('adatta');
+    const uova = valutaPerVincoli(indice, ricetta('sys:carbonara'), e('cls:no_uova_crude'));
+    expect(uova).toMatchObject({ esito: 'non_adatta', verificabile: true });
+    expect(uova.motivi[0]).toContain('uova pastorizzate');
   });
 
   it('in una ricetta della famiglia non si sa se si cuoce: da verificare', () => {
@@ -109,8 +117,8 @@ describe('esigenze sui crudi', () => {
 describe('«va bene» della famiglia', () => {
   const ver = (ricetta_id: string, versione_ricetta = 1) => [{ membro_id: 'm', ricetta_id, versione_ricetta }];
   it('toglie il dubbio e scavalca un’esigenza, per la versione segnata', () => {
-    const crudo = [v('cls:no_latte_crudo', { tipo: 'esigenza' })];
-    const r = ricetta('sys:cacio_pepe');
+    const crudo = [v('cls:no_salumi_crudi', { tipo: 'esigenza' })];
+    const r = ricetta('sys:bresaola_rucola');
     expect(valutaPerVincoli(indice, r, crudo)).toMatchObject({ esito: 'non_adatta', verificabile: true });
     expect(valutaPerFamiglia(indice, r, [{ id: 'm', nome: 'Anna' }], crudo, ver(r.id)).esito).toBe('adatta');
     expect(valutaPerFamiglia(indice, r, [{ id: 'm', nome: 'Anna' }], crudo, ver(r.id, 2)).esito).toBe('non_adatta');

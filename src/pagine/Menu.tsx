@@ -28,7 +28,7 @@ import { ALLERGENI_UE, ESIGENZE, INTOLLERANZE, type VoceVincolo } from '../domin
 import { IdeePerPasto, ProponiSettimana } from './Proposte';
 import { oggi, piuGiorni } from '../dominio/scadenze';
 import { Foglio } from '../ui/Foglio';
-import { ICONA_ESITO } from './Ricette';
+import { ICONA_ESITO, motiviInBreve } from './Ricette';
 
 type Modo = 'giorni' | 'griglia' | 'panoramica';
 const MODI: { id: Modo; nome: string }[] = [
@@ -529,7 +529,7 @@ function SchedaPiatto({ indice, dati, portata: p, chiudi, apriOspiti }: { indice
       </p>
       {p.avanzo_di && <AvanzoDi dati={dati} portata={p} />}
 
-      {d.valutazione && <EsitoPiatto esito={d.valutazione.esito} righe={d.valutazione.perMembro.filter((m) => m.valutazione).map((m) => `${m.nome}${m.mangia === 'alternativa' ? ' (piatto a parte)' : ''}: ${ICONA_ESITO[m.valutazione!.esito]} ${m.valutazione!.motivi.join('; ') || 'nessun problema noto'}`)} />}
+      {d.valutazione && <EsitoPiatto esito={d.valutazione.esito} righe={d.valutazione.perMembro.filter((m) => m.valutazione).map((m) => `${m.nome}${m.mangia === 'alternativa' ? ' (piatto a parte)' : ''}: ${m.valutazione!.esito === 'adatta' || !m.valutazione!.dettagli?.length ? `${ICONA_ESITO[m.valutazione!.esito]} ` : ''}${motiviInBreve(m.valutazione!) || 'nessun problema noto'}`)} />}
       {d.gusti.length > 0 && (
         <ul className="tenue" style={{ paddingLeft: 18 }}>
           {d.gusti.map((g) => (
