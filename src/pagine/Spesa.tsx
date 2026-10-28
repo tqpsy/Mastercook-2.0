@@ -188,7 +188,7 @@ function NelCarrello({ indice, voci, chiudi }: { indice: Indice; voci: VoceSpesa
         }
         // Solo una voce nella stessa unità: 10 capsule non sono «caffè, 250 g».
         const voce = voci.find(
-          (v) => v.stato === 'da_acquistare' && v.ingrediente_id && v.unita === UNITA_BASE[ingrediente.dimensione] && indice.antenati(ingrediente.id).includes(v.ingrediente_id),
+          (v) => v.stato === 'da_acquistare' && v.ingrediente_id && (v.unita == null || v.unita === UNITA_BASE[ingrediente.dimensione]) && indice.antenati(ingrediente.id).includes(v.ingrediente_id),
         );
         if (voce) return void (await esegui('imposta_stato_voce', { id: voce.id, stato: 'nel_carrello' }));
         const id = crypto.randomUUID();

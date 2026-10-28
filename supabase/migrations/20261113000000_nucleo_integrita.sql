@@ -2,7 +2,8 @@
 --
 -- - Spesa: una voce già acquistata non si carica una seconda volta (due telefoni che confermano lo stesso
 --   carrello, o carrello confermato dopo lo scontrino). Lo scontrino segna acquistate le voci nel carrello
---   che carica. Lo stesso scontrino letto una volta con il QR e una volta senza è riconosciuto.
+--   che carica (se è di questi giorni). Lo stesso scontrino letto una volta con il QR e una volta senza è
+--   riconosciuto.
 -- - Ospiti: chi li segna senza aver visto quelli di un altro riceve un conflitto, invece di sovrascriverli.
 -- - Menu: la lista non conta i pasti già confermati; un piatto confermato non si toglie dal menu.
 -- - Conferme: correggere gli avanzi li sostituisce, «saltato» li toglie (solo quel che resta).
@@ -62,11 +63,13 @@ declare
   v_r record;
   v_voce uuid;
 begin
-  -- Con data e totale, lo stesso negozio, giorno, ora e totale è lo stesso scontrino, con o senza QR.
+  -- Con data e totale, lo stesso negozio, giorno, ora e totale è lo stesso scontrino se uno dei due non ha il QR.
   if (d ->> 'data') is not null and (d ->> 'totale') is not null then
     select s.id into v_esistente from public.scontrino s
      where s.famiglia_id = p_famiglia and s.data = (d ->> 'data')::date and s.totale is not null
        and interno.impronta_dati_scontrino(s) = interno.impronta_scontrino(d - 'qr')
+       -- Due QR diversi sono due scontrini, anche con gli stessi dati (due caffè lo stesso giorno).
+       and not (s.impronta like 'qr:%' and nullif(btrim(d ->> 'qr'), '') is not null)
      limit 1;
     if v_esistente is not null then
       return jsonb_build_object('gia_importato', v_esistente);
@@ -79,6 +82,10 @@ begin
   end if;
 
   -- Ciò che lo scontrino ha messo in casa non resta nel carrello: la conferma del carrello non lo ricarica.
+  -- Solo per uno scontrino di questi giorni (come l'abbinamento nell'app): uno vecchio non è la spesa di oggi.
+  if abs((d ->> 'data')::date - current_date) > 3 then
+    return v_esito;
+  end if;
   for v_r in
     select r.id, r.ingrediente_id, r.unita from public.acquisto_riga r
      where r.acquisto_id = (d ->> 'acquisto_id')::uuid and r.famiglia_id = p_famiglia
@@ -86,9 +93,9 @@ begin
   loop
     select v.id into v_voce from public.voce_spesa v
      where v.famiglia_id = p_famiglia and v.eliminato_il is null and v.stato = 'nel_carrello'
-       and v.ingrediente_id = v_r.ingrediente_id and v.unita = v_r.unita
+       and v.ingrediente_id = any (interno.antenati(v_r.ingrediente_id)) and v.unita = v_r.unita
        and not exists (select 1 from public.acquisto_riga x where x.voce_id = v.id)
-     order by v.creato_il, v.id limit 1;
+     order by v.ingrediente_id = v_r.ingrediente_id desc, v.creato_il, v.id limit 1;
     continue when v_voce is null;
     update public.acquisto_riga set voce_id = v_voce where id = v_r.id;
     update public.voce_spesa set stato = 'acquistata', non_piu_necessaria = false where id = v_voce;
@@ -198,15 +205,42 @@ end $$;
 
 alter function interno.cmd_conferma_pasto(uuid, jsonb, uuid) rename to cmd_conferma_pasto_base;
 
--- Una correzione che indica gli avanzi li sostituisce; «saltato» li toglie. Si toglie solo ciò che resta
--- (quel che si è già mangiato resta mangiato). I controlli di revisione restano quelli della base: se
--- falliscono, tutto il comando, compreso questo, non scrive nulla.
+-- Una correzione che indica gli avanzi li sostituisce; «saltato» li toglie. Quel che degli avanzi di prima si è
+-- già mangiato resta mangiato: si toglie solo ciò che resta, e i nuovi avanzi si caricano al netto di quanto mangiato.
+-- I controlli di revisione restano quelli della base: se falliscono, tutto il comando, compreso questo, non scrive nulla.
 create function interno.cmd_conferma_pasto(p_famiglia uuid, d jsonb, p_utente uuid) returns jsonb
 language plpgsql as $$
 declare
   v_lotto record;
+  v_mangiati numeric;
+  v_avanzi jsonb := '[]'::jsonb;
+  v_x jsonb;
+  v_q numeric;
+  v_tolgo numeric;
 begin
   if (d ->> 'revisione_attesa') is not null and (jsonb_typeof(d -> 'avanzi') = 'array' or d ->> 'esito' = 'saltato') then
+    -- Mangiato (o buttato) dagli avanzi di prima: tutto ciò che è uscito tranne gli annulli delle correzioni.
+    select coalesce(-sum(m.variazione), 0) into v_mangiati
+      from public.movimento m
+      join public.lotto l on l.id = m.lotto_id
+      join public.conferma_pasto c on c.id = l.conferma_id
+      join public.portata p on p.id = c.portata_id
+     where c.portata_id = (d ->> 'portata_id')::uuid and p.famiglia_id = p_famiglia
+       and l.origine = 'avanzo' and m.causale not in ('carico', 'annullo');
+    if jsonb_typeof(d -> 'avanzi') = 'array' and v_mangiati > 0 then
+      for v_x in select * from jsonb_array_elements(d -> 'avanzi') loop
+        v_q := (v_x ->> 'quantita')::numeric;
+        if v_q > 0 then
+          v_tolgo := least(v_q, v_mangiati);
+          v_q := v_q - v_tolgo;
+          v_mangiati := v_mangiati - v_tolgo;
+          continue when v_q <= 0;
+          v_x := jsonb_set(v_x, '{quantita}', to_jsonb(v_q));
+        end if;
+        v_avanzi := v_avanzi || jsonb_build_array(v_x);
+      end loop;
+      d := jsonb_set(d, '{avanzi}', v_avanzi);
+    end if;
     for v_lotto in
       select l.id, l.quantita from public.lotto l
         join public.conferma_pasto c on c.id = l.conferma_id
@@ -238,7 +272,10 @@ begin
   v_esito := interno.cmd_salva_ricetta_base(p_famiglia, d, p_utente);
   select versione into v_dopo from public.ricetta where id = d ->> 'id' and famiglia_id = p_famiglia;
   if v_prima is not null and v_dopo = v_prima
-     and exists (select 1 from jsonb_each(coalesce(d -> 'ingredienti', '{}'::jsonb) || coalesce(d -> 'passi', '{}'::jsonb)) x
+     and exists (select 1 from jsonb_each(coalesce(d -> 'ingredienti', '{}'::jsonb)) x
+                  where jsonb_typeof(x.value) = 'array' and jsonb_array_length(x.value) > 0
+                 union all
+                 select 1 from jsonb_each(coalesce(d -> 'passi', '{}'::jsonb)) x
                   where jsonb_typeof(x.value) = 'array' and jsonb_array_length(x.value) > 0) then
     update public.ricetta set modificato_il = now() where id = d ->> 'id' and famiglia_id = p_famiglia;
   end if;
@@ -253,6 +290,7 @@ language plpgsql security definer set search_path = '' as $$
 declare
   v_utente uuid := auth.uid();
   v_riga record;
+  v_famiglia uuid;
   v_cancellate integer := 0;
   v_lasciate integer := 0;
 begin
@@ -260,13 +298,19 @@ begin
   if p_conferma is distinct from 'ELIMINA' then
     return jsonb_build_object('esito', 'rifiutato', 'dettaglio', jsonb_build_object('motivo', 'conferma_mancante'));
   end if;
+  -- Prima i lock delle famiglie, poi le righe: lo stesso ordine dei comandi, così non ci si blocca a vicenda.
+  for v_famiglia in
+    select distinct uf.famiglia_id from public.utente_famiglia uf
+     where uf.utente_id = v_utente and uf.eliminato_il is null order by uf.famiglia_id
+  loop
+    perform pg_advisory_xact_lock(interno.chiave_lock(v_famiglia));
+  end loop;
   for v_riga in
     select uf.id, uf.famiglia_id, uf.ruolo from public.utente_famiglia uf
      where uf.utente_id = v_utente and uf.eliminato_il is null
      order by uf.famiglia_id
        for update
   loop
-    perform pg_advisory_xact_lock(interno.chiave_lock(v_riga.famiglia_id));
     perform 1 from public.famiglia where id = v_riga.famiglia_id for update;
     if not exists (select 1 from public.utente_famiglia o
                     where o.famiglia_id = v_riga.famiglia_id and o.eliminato_il is null and o.utente_id <> v_utente) then

@@ -21,6 +21,7 @@ async function famigliaCon(): Promise<{ u: Utente; famiglia: string; membro: str
 }
 const oggi = () => new Date().toISOString().slice(0, 10);
 const domani = () => new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+const giorno = (d: number) => new Date(Date.now() + d * 86400000).toISOString().slice(0, 10);
 const ieri = () => new Date(Date.now() - 86400000).toISOString().slice(0, 10);
 
 async function lotto(u: Utente, famiglia: string, ingrediente_id: string, quantita: number, unita = 'g') {
@@ -66,7 +67,7 @@ describe('scontrino importato prima della conferma del carrello', () => {
         id: randomUUID(),
         acquisto_id: randomUUID(),
         negozio: 'Super',
-        data: '2026-11-02',
+        data: oggi(),
         ora: '18:30',
         totale: 1.29,
         righe: [{ id: randomUUID(), descrizione: 'LATTE INTERO 1L', prezzo: 1.29, nuova: { id: randomUUID(), lotto_id: randomUUID(), ingrediente_id: 'ing:latte', quantita: 1000, unita: 'ml' } }],
@@ -77,7 +78,7 @@ describe('scontrino importato prima della conferma del carrello', () => {
     const c = await u.applica(
       comando('conferma_acquisto', famiglia, {
         id: randomUUID(),
-        data: '2026-11-02',
+        data: oggi(),
         righe: [{ id: randomUUID(), voce_id: voce, ingrediente_id: 'ing:latte', quantita: 1000, unita: 'ml', lotto_id: randomUUID() }],
       }),
     );
@@ -250,5 +251,135 @@ describe('stesso scontrino letto una volta con il QR e una senza', () => {
     expect(await totale(altra.famiglia, 'ing:latte')).toBe(1000);
     // Un altro scontrino dello stesso negozio e giorno, con un altro totale, entra.
     expect((await u.applica(s({ totale: 3.5 }))).dettaglio).toMatchObject({ nuove: 1 });
+  });
+});
+
+const totaleDi = async (famiglia: string, ings: string[]) =>
+  Number((await banco.sql<{ q: string }>(`select coalesce(sum(quantita),0)::float as q from lotto where famiglia_id = $1 and ingrediente_id = any($2)`, [famiglia, ings]))[0].q);
+
+describe('ricetta salvata dall’editor (manda sempre anche passi vuoti)', () => {
+  it('aggiungere un ingrediente con passi vuoti alza la versione', async () => {
+    const { u, famiglia } = await famigliaCon();
+    const ricetta = randomUUID();
+    await u.applica(
+      comando('salva_ricetta', famiglia, {
+        id: ricetta,
+        nuova: true,
+        campi: { titolo: 'Insalata', categoria: 'contorno', porzioni: 2 },
+        ingredienti: { aggiungi: [{ id: randomUUID(), ingrediente_id: 'ing:pomodoro', quantita: 200, unita: 'g' }] },
+        passi: { aggiungi: [{ id: randomUUID(), testo: 'Taglia' }] },
+      }),
+    );
+    const v1 = Number((await banco.sql('select versione from ricetta where id = $1', [ricetta]))[0].versione);
+    const m = await u.applica(
+      comando('salva_ricetta', famiglia, {
+        id: ricetta,
+        ingredienti: { aggiungi: [{ id: randomUUID(), ingrediente_id: 'ing:latte', quantita: 50, unita: 'ml' }], modifica: [], rimuovi: [] },
+        passi: { aggiungi: [], modifica: [], rimuovi: [] },
+      }),
+    );
+    expect(m.esito).toBe('applicato');
+    const v2 = Number((await banco.sql('select versione from ricetta where id = $1', [ricetta]))[0].versione);
+    expect(v2).toBe(v1 + 1);
+  });
+});
+
+describe('scontrini con QR diversi', () => {
+  it('stesso negozio, giorno e totale, senza ora: sono due scontrini', async () => {
+    const { u, famiglia } = await famigliaCon();
+    const s = (qr: string) =>
+      comando('importa_scontrino', famiglia, {
+        id: randomUUID(),
+        acquisto_id: randomUUID(),
+        negozio: 'Bar Centrale',
+        data: '2026-11-02',
+        totale: 1.2,
+        qr,
+        righe: [{ id: randomUUID(), descrizione: 'LATTE', prezzo: 1.2, nuova: { id: randomUUID(), lotto_id: randomUUID(), ingrediente_id: 'ing:latte', quantita: 500, unita: 'ml' } }],
+      });
+    expect((await u.applica(s('https://x/doc/111'))).dettaglio).toMatchObject({ nuove: 1 });
+    const b = await u.applica(s('https://x/doc/222'));
+    expect(b.dettaglio).toMatchObject({ nuove: 1 });
+    expect(await totaleDi(famiglia, ['ing:latte'])).toBe(1000);
+  });
+});
+
+describe('scontrino vecchio e carrello di oggi', () => {
+  it('uno scontrino di 10 giorni fa non segna acquistata la voce nel carrello', async () => {
+    const { u, famiglia } = await famigliaCon();
+    const voce = randomUUID();
+    await u.applica(comando('aggiungi_voce', famiglia, { id: voce, ingrediente_id: 'ing:latte', quantita: 2000, unita: 'ml' }));
+    await u.applica(comando('imposta_stato_voce', famiglia, { id: voce, stato: 'nel_carrello' }));
+    const s = await u.applica(
+      comando('importa_scontrino', famiglia, {
+        id: randomUUID(),
+        acquisto_id: randomUUID(),
+        negozio: 'Altro',
+        data: giorno(-10),
+        ora: '10:00',
+        totale: 1.29,
+        righe: [{ id: randomUUID(), descrizione: 'LATTE', prezzo: 1.29, nuova: { id: randomUUID(), lotto_id: randomUUID(), ingrediente_id: 'ing:latte', quantita: 1000, unita: 'ml' } }],
+      }),
+    );
+    expect(s.esito).toBe('applicato');
+    expect((await banco.sql('select stato from voce_spesa where id = $1', [voce]))[0].stato).toBe('nel_carrello');
+    const c = await u.applica(
+      comando('conferma_acquisto', famiglia, {
+        id: randomUUID(),
+        data: giorno(0),
+        righe: [{ id: randomUUID(), voce_id: voce, ingrediente_id: 'ing:latte', quantita: 2000, unita: 'ml', lotto_id: randomUUID() }],
+      }),
+    );
+    expect(c.dettaglio).toMatchObject({ righe: 1, lotti: 1 });
+    expect(await totaleDi(famiglia, ['ing:latte'])).toBe(3000);
+  });
+});
+
+describe('scontrino con un ingrediente più specifico della voce', () => {
+  it('voce «funghi» nel carrello, scontrino «porcini»: la voce è acquistata e la conferma non ricarica', async () => {
+    const { u, famiglia } = await famigliaCon();
+    const voce = randomUUID();
+    await u.applica(comando('aggiungi_voce', famiglia, { id: voce, ingrediente_id: 'ing:funghi', quantita: 300, unita: 'g' }));
+    await u.applica(comando('imposta_stato_voce', famiglia, { id: voce, stato: 'nel_carrello' }));
+    await u.applica(
+      comando('importa_scontrino', famiglia, {
+        id: randomUUID(),
+        acquisto_id: randomUUID(),
+        negozio: 'Super',
+        data: giorno(0),
+        ora: '18:00',
+        totale: 4.5,
+        righe: [{ id: randomUUID(), descrizione: 'PORCINI 300G', prezzo: 4.5, nuova: { id: randomUUID(), lotto_id: randomUUID(), ingrediente_id: 'ing:porcini', quantita: 300, unita: 'g' } }],
+      }),
+    );
+    expect((await banco.sql('select stato from voce_spesa where id = $1', [voce]))[0].stato).toBe('acquistata');
+    const c = await u.applica(
+      comando('conferma_acquisto', famiglia, {
+        id: randomUUID(),
+        data: giorno(0),
+        righe: [{ id: randomUUID(), voce_id: voce, ingrediente_id: 'ing:funghi', quantita: 300, unita: 'g', lotto_id: randomUUID() }],
+      }),
+    );
+    expect(c.dettaglio).toMatchObject({ lotti: 0, gia_acquistate: [voce] });
+    expect(await totaleDi(famiglia, ['ing:funghi', 'ing:porcini'])).toBe(300);
+  });
+});
+
+describe('correzione degli avanzi dopo che una parte è già stata mangiata', () => {
+  it('rev1 3 avanzi, domani se ne mangia 1, rev2 «3 avanzi»: in frigo restano 2; rev3 «4 avanzi»: 3', async () => {
+    const { u, famiglia } = await famigliaCon();
+    const oggiP = randomUUID();
+    const domaniP = randomUUID();
+    await u.applica(comando('aggiungi_portata', famiglia, { id: oggiP, data: giorno(0), categoria: 'cena', ricetta_id: 'sys:carbonara', porzioni: 4 }));
+    expect((await u.applica(comando('aggiungi_avanzo', famiglia, { id: domaniP, avanzo_di: oggiP, data: giorno(1), categoria: 'pranzo', porzioni: 1 }))).esito).toBe('applicato');
+    const av = (q: number) => [{ lotto_id: randomUUID(), nome: 'Carbonara', quantita: q, luogo: 'frigo' }];
+    expect((await u.applica(comando('conferma_pasto', famiglia, { id: randomUUID(), portata_id: oggiP, esito: 'come_previsto', avanzi: av(3) }))).esito).toBe('applicato');
+    const e = await u.applica(comando('conferma_pasto', famiglia, { id: randomUUID(), portata_id: domaniP, esito: 'come_previsto' }));
+    expect(e.esito).toBe('applicato');
+    expect(await totaleDi(famiglia, ['ing:avanzo'])).toBe(2);
+    expect((await u.applica(comando('conferma_pasto', famiglia, { id: randomUUID(), portata_id: oggiP, esito: 'come_previsto', revisione_attesa: 1, avanzi: av(3) }))).esito).toBe('applicato');
+    expect(await totaleDi(famiglia, ['ing:avanzo'])).toBe(2);
+    expect((await u.applica(comando('conferma_pasto', famiglia, { id: randomUUID(), portata_id: oggiP, esito: 'come_previsto', revisione_attesa: 2, avanzi: av(4) }))).esito).toBe('applicato');
+    expect(await totaleDi(famiglia, ['ing:avanzo'])).toBe(3);
   });
 });

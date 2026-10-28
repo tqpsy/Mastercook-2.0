@@ -318,10 +318,12 @@ Migrazione `20261113000000_nucleo_integrita.sql`, test in `tests/db/integrita.te
 prima della correzione. Le funzioni dei comandi di prima restano (`*_base`); quelle nuove fanno i controlli e le chiamano.
 
 - **Spesa una volta sola.** `conferma_acquisto` salta le righe di voci già acquistate e le restituisce in
-  `gia_acquistate` (due telefoni che confermano lo stesso carrello). `importa_scontrino` segna acquistata la voce nel
-  carrello dello stesso ingrediente e unità che carica, così la conferma del carrello dopo lo scontrino non ricarica.
+  `gia_acquistate` (due telefoni che confermano lo stesso carrello). `importa_scontrino`, per uno scontrino di questi
+  giorni (±3), segna acquistata la voce nel carrello dello stesso ingrediente, o di uno più generico («porcini» per
+  «funghi»), nella stessa unità, così la conferma del carrello dopo lo scontrino non ricarica. Se due persone hanno
+  davvero comprato la stessa voce, la seconda si aggiunge a mano in Casa.
 - **Stesso scontrino, con o senza QR.** Con data e totale, lo stesso negozio, giorno, ora e totale è lo stesso
-  scontrino anche se una volta c'era il QR e l'altra no (`gia_importato`). Una lettura diversa di ora o totale resta
+  scontrino se uno dei due non ha il QR (`gia_importato`); due QR diversi restano due scontrini. Una lettura diversa di ora o totale resta
   uno scontrino diverso: si rimedia con «Annulla acquisto».
 - **Ospiti.** Senza `versione_attesa` il comando dice «non ce n'erano»: se nel frattempo un altro telefono li ha segnati
   è un conflitto `ospiti_cambiati`, non una sovrascrittura. Lo stesso telefono (`dispositivo`) che li cambia di nuovo
@@ -329,7 +331,7 @@ prima della correzione. Le funzioni dei comandi di prima restano (`*_base`); que
 - **La lista non conta i pasti confermati**: sono già stati tolti dalla casa (`fabbisogno_menu`).
 - **Un piatto confermato non si toglie dal menu** (`portata_confermata`): prima si corregge la conferma in «saltato».
 - **Avanzi nelle correzioni.** Una correzione con `avanzi` li sostituisce, «saltato» li toglie; si toglie solo ciò che
-  resta (movimento `annullo`).
+  resta (movimento `annullo`) e i nuovi avanzi si caricano al netto di quelli già mangiati.
 - **Ricette.** Cambiare solo ingredienti o passaggi alza `ricetta.versione`: il «va bene» segnato prima va richiesto.
 - **Scarico senza buchi.** Anche le scritture fuori da un comando (pulizia delle esigenze degli ospiti, uscita da una
   famiglia con `elimina_mio_account`) prendono il lock della famiglia, così il cursore non salta il comando in corso.
