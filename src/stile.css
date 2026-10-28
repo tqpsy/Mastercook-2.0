@@ -667,3 +667,30 @@ button.etichetta {
   line-height: 18px;
   text-align: center;
 }
+
+/* Dove tenere i dati della famiglia: una scheda per scelta, quella scelta in evidenza. */
+.scelta-dove {
+  border: 0;
+  padding: 0;
+  margin: 0 0 16px;
+  text-align: left;
+}
+.scelta-dove legend {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.scelta-dove .scelta {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  cursor: pointer;
+  margin-bottom: 8px;
+  border: 2px solid var(--bordo);
+}
+.scelta-dove .scelta input {
+  margin-top: 4px;
+}
+.scelta-dove .scelta-attiva {
+  border-color: var(--primario);
+  background: var(--primario-tenue);
+}

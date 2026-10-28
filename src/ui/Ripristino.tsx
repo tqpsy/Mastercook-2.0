@@ -4,7 +4,7 @@ import { controllaFile, type FileEsportazione } from '../dati/esportazione';
 import { useCatalogo } from '../dati/indice';
 import { spiegaMotivo } from '../dati/messaggi';
 import { convertiVecchio, eFileVecchio, type FileVecchio, leggiVecchio, personeVecchie } from '../dati/migrazione';
-import { VERSIONE_APP } from '../dati/tipi';
+import { type Trasporto, VERSIONE_APP } from '../dati/tipi';
 import { oggi } from '../dominio/scadenze';
 import { supabase, trasportoSupabase } from '../piattaforma/supabase';
 
@@ -12,7 +12,7 @@ import { supabase, trasportoSupabase } from '../piattaforma/supabase';
  * Ripristino di un'esportazione: crea sempre una famiglia nuova, mai sopra quella aperta.
  * Accetta anche il file del vecchio Mastercook: prima mostra il rapporto (cosa entra e cosa no), poi importa.
  */
-export function Ripristino({ nomeUtente, fatto }: { nomeUtente: string; fatto: (famiglia: string) => void }) {
+export function Ripristino({ nomeUtente, fatto, trasporto = trasportoSupabase }: { nomeUtente: string; fatto: (famiglia: string) => void; trasporto?: Trasporto }) {
   const [file, setFile] = useState<FileEsportazione | null>(null);
   const [vecchio, setVecchio] = useState<FileVecchio | null>(null);
   const [errore, setErrore] = useState<string | null>(null);
@@ -46,7 +46,7 @@ export function Ripristino({ nomeUtente, fatto }: { nomeUtente: string; fatto: (
     setAttendi(true);
     setErrore(null);
     try {
-      const esito = await trasportoSupabase.applica({
+      const esito = await trasporto.applica({
         id: ids.comando,
         famiglia_id: ids.famiglia,
         tipo: 'ripristina_famiglia',

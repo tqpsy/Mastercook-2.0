@@ -22,7 +22,7 @@ export async function riduciFoto(file: Blob): Promise<Blob> {
  * e poi tenuta sul dispositivo per le volte successive.
  */
 export function useFoto(percorso: string | null | undefined, file?: Blob | null): { url: string | null; pronta: boolean } {
-  const { archivio, famiglia } = useFamiglia();
+  const { archivio, famiglia, dove } = useFamiglia();
   const [stato, setStato] = useState<{ url: string | null; pronta: boolean }>({ url: null, pronta: false });
   useEffect(() => {
     let valido = true;
@@ -37,7 +37,8 @@ export function useFoto(percorso: string | null | undefined, file?: Blob | null)
       if (!percorso) return setStato({ url: null, pronta: true });
       const locale = await archivio.foto.get(percorso);
       if (locale) return mostra(locale.file);
-      const remoto = await scaricaFoto(percorso);
+      // Le foto di una famiglia locale stanno solo sul dispositivo.
+      const remoto = dove === 'server' ? await scaricaFoto(percorso) : null;
       if (!remoto) return valido && setStato({ url: null, pronta: true });
       await archivio.foto.put({ percorso, famiglia_id: famiglia, file: remoto, caricata: true });
       mostra(remoto);
@@ -46,7 +47,7 @@ export function useFoto(percorso: string | null | undefined, file?: Blob | null)
       valido = false;
       if (creato) URL.revokeObjectURL(creato);
     };
-  }, [archivio, famiglia, percorso, file]);
+  }, [archivio, famiglia, dove, percorso, file]);
   return stato;
 }
 

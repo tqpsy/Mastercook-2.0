@@ -3,21 +3,25 @@
  */
 import { liveQuery } from 'dexie';
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { ascoltaFamiglia, trasportoSupabase } from '../piattaforma/supabase';
+import { trasportoLocale } from '../piattaforma/locale/motore';
+import { ascoltaFamiglia, type Dove, trasportoSupabase } from '../piattaforma/supabase';
 import { Archivio, type VoceCoda } from './archivio';
 import { attive, type RigaInVista, type Righe, vistaConAnteprima } from './anteprima';
 import { pianifica, type Pianificatore } from './pianificatore';
 import { Sincronizzatore, type StatoSincronizzazione } from './sincronizzatore';
-import type { Tabella } from './tipi';
+import type { Tabella, Trasporto } from './tipi';
 
 export interface Sessione {
   utenteId: string;
   famiglia: string;
   ruolo: 'amministratore' | 'membro';
+  dove: Dove;
 }
 
 interface ValoreContesto extends Sessione {
   archivio: Archivio;
+  /** Server o database del dispositivo, secondo dove stanno i dati della famiglia. */
+  trasporto: Trasporto;
   sync: Sincronizzatore;
   /** Mette in coda un comando e chiede di inviarlo subito. */
   esegui(tipo: string, dati: Record<string, unknown>): Promise<string>;
@@ -48,21 +52,23 @@ export function idDispositivo(): string {
 export function FamigliaAperta({ sessione, children }: { sessione: Sessione; children: ReactNode }) {
   const [base] = useState(() => {
     const archivio = new Archivio(nomeArchivio(sessione.utenteId));
-    const sync = new Sincronizzatore({ archivio, trasporto: trasportoSupabase, famiglia: sessione.famiglia, dispositivo: idDispositivo() });
-    return { archivio, sync };
+    const trasporto = sessione.dove === 'locale' ? trasportoLocale(sessione.utenteId) : trasportoSupabase;
+    const sync = new Sincronizzatore({ archivio, trasporto, famiglia: sessione.famiglia, dispositivo: idDispositivo() });
+    return { archivio, sync, trasporto };
   });
   // Il ciclo di sincronizzazione vive finché la famiglia è aperta; `pianificatore` gira le richieste
   // al ciclo attivo (in sviluppo React monta e smonta due volte).
   const attivo = useRef<Pianificatore | null>(null);
   const pianificatore = useMemo<Pianificatore>(() => ({ subito: () => attivo.current?.subito(), ferma: () => attivo.current?.ferma() }), []);
   useEffect(() => {
-    const p = pianifica(base.sync, { ascoltaServer: (avviso) => ascoltaFamiglia(sessione.famiglia, avviso) });
+    // La famiglia locale non ha un server da ascoltare: le modifiche arrivano solo da questo dispositivo.
+    const p = pianifica(base.sync, sessione.dove === 'server' ? { ascoltaServer: (avviso) => ascoltaFamiglia(sessione.famiglia, avviso) } : {});
     attivo.current = p;
     return () => {
       p.ferma();
       if (attivo.current === p) attivo.current = null;
     };
-  }, [base, sessione.famiglia]);
+  }, [base, sessione.famiglia, sessione.dove]);
 
   const valore = useMemo<ValoreContesto>(
     () => ({
