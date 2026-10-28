@@ -4,6 +4,9 @@ import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
   base: '/Mastercook-2.0/',
+  // PGlite carica da sé i suoi file (wasm e dati): Vite non deve preimpacchettarlo.
+  optimizeDeps: { exclude: ['@electric-sql/pglite'] },
+  worker: { format: 'es' },
   plugins: [
     react(),
     VitePWA({
@@ -27,7 +30,20 @@ export default defineConfig({
           { src: 'icona-maschera-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
-      workbox: { navigateFallback: 'index.html', cleanupOutdatedCaches: true },
+      workbox: {
+        navigateFallback: 'index.html',
+        cleanupOutdatedCaches: true,
+        // Il database delle famiglie tenute sul telefono (PGlite, circa 17 MB): non si scarica in anticipo per tutti,
+        // ma la prima volta che serve resta in cache, così poi funziona anche senza rete.
+        globIgnores: ['**/pglite*', '**/initdb*', '**/motore.worker*'],
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) => /\/assets\/((pglite|initdb)[^/]*\.(wasm|data)|motore\.worker[^/]*\.js)$/.test(url.pathname),
+            handler: 'CacheFirst',
+            options: { cacheName: 'mastercook-database-locale', expiration: { maxEntries: 6 } },
+          },
+        ],
+      },
     }),
   ],
 });

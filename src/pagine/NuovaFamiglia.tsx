@@ -1,12 +1,29 @@
 import { type FormEvent, useState } from 'react';
 import { VERSIONE_APP } from '../dati/tipi';
 import { spiegaMotivo } from '../dati/messaggi';
-import { trasportoSupabase } from '../piattaforma/supabase';
+import { trasportoLocale } from '../piattaforma/locale/motore';
+import { type Dove, trasportoSupabase } from '../piattaforma/supabase';
 import { idDispositivo } from '../dati/contesto';
 import { Ripristino } from '../ui/Ripristino';
 
-/** Prima volta: si crea la famiglia. Richiede la rete, perché la famiglia nasce sul server. */
-export function NuovaFamiglia({ nomeSuggerito, creata }: { nomeSuggerito: string; creata: (famiglia: string) => void }) {
+const SCELTE: { dove: Dove; icona: string; titolo: string; testo: string }[] = [
+  {
+    dove: 'server',
+    icona: '☁️',
+    titolo: 'Sul server di Mastercook',
+    testo: 'Potete usarla in tanti, ognuno con il suo telefono: inviti gli altri con un link. I dati stanno su un server in Europa.',
+  },
+  {
+    dove: 'locale',
+    icona: '📱',
+    titolo: 'Solo su questo telefono',
+    testo: 'Niente esce dal telefono e funziona anche senza rete. La usi solo tu, da qui. Se cambi telefono ti serve una copia: la salvi da Impostazioni.',
+  },
+];
+
+/** Prima volta: si crea la famiglia, scegliendo dove tenere i dati. Sul server serve la rete. */
+export function NuovaFamiglia({ nomeSuggerito, creata, utenteId }: { nomeSuggerito: string; creata: (famiglia: string) => void; utenteId: string }) {
+  const [dove, setDove] = useState<Dove>('server');
   const [famiglia, setFamiglia] = useState('');
   const [nome, setNome] = useState(nomeSuggerito);
   const [errore, setErrore] = useState<string | null>(null);
@@ -19,7 +36,8 @@ export function NuovaFamiglia({ nomeSuggerito, creata }: { nomeSuggerito: string
     setAttendi(true);
     setErrore(null);
     try {
-      const esito = await trasportoSupabase.applica({
+      const trasporto = dove === 'locale' ? trasportoLocale(utenteId) : trasportoSupabase;
+      const esito = await trasporto.applica({
         id: comando.id,
         famiglia_id: comando.famiglia,
         tipo: 'crea_famiglia',
@@ -30,7 +48,7 @@ export function NuovaFamiglia({ nomeSuggerito, creata }: { nomeSuggerito: string
       if (esito.esito === 'applicato') return creata(comando.famiglia);
       setErrore(spiegaMotivo(esito.dettaglio.motivo));
     } catch {
-      setErrore('Serve la connessione per creare la famiglia. Riprova appena sei online.');
+      setErrore(dove === 'locale' ? 'Non sono riuscito a preparare i dati sul telefono. Riprova.' : 'Serve la connessione per creare la famiglia. Riprova appena sei online.');
     }
     setAttendi(false);
   }
@@ -39,8 +57,23 @@ export function NuovaFamiglia({ nomeSuggerito, creata }: { nomeSuggerito: string
     <main className="centrata">
       <img className="logo" src={`${import.meta.env.BASE_URL}icona.svg`} alt="" />
       <h1>Crea la tua famiglia</h1>
-      <p className="tenue">Poi potrai invitare gli altri con un link.</p>
       <form onSubmit={crea}>
+        <fieldset className="campo scelta-dove">
+          <legend>Dove tenere i dati</legend>
+          {SCELTE.map((s) => (
+            <label key={s.dove} className={`scheda scelta${dove === s.dove ? ' scelta-attiva' : ''}`}>
+              <input type="radio" name="dove" value={s.dove} checked={dove === s.dove} onChange={() => setDove(s.dove)} />
+              <span>
+                <strong>
+                  <span aria-hidden>{s.icona}</span> {s.titolo}
+                </strong>
+                <span className="tenue" style={{ display: 'block' }}>
+                  {s.testo}
+                </span>
+              </span>
+            </label>
+          ))}
+        </fieldset>
         <label className="campo">
           <span>Nome della famiglia</span>
           <input value={famiglia} onChange={(e) => setFamiglia(e.target.value)} placeholder="Casa Rossi" maxLength={80} required />
@@ -51,13 +84,13 @@ export function NuovaFamiglia({ nomeSuggerito, creata }: { nomeSuggerito: string
         </label>
         {errore && <div className="avviso errore">{errore}</div>}
         <button className="bottone primario pieno" disabled={attendi || !famiglia.trim() || !nome.trim()}>
-          {attendi ? 'Creo…' : 'Crea la famiglia'}
+          {attendi ? (dove === 'locale' ? 'Preparo il telefono…' : 'Creo…') : 'Crea la famiglia'}
         </button>
       </form>
       <details style={{ marginTop: 28 }}>
         <summary className="tenue">Hai un file di esportazione, anche del vecchio Mastercook? Caricalo</summary>
         <div style={{ marginTop: 12 }}>
-          <Ripristino nomeUtente={nome.trim()} fatto={creata} />
+          <Ripristino nomeUtente={nome.trim()} fatto={creata} trasporto={dove === 'locale' ? trasportoLocale(utenteId) : undefined} />
         </div>
       </details>
     </main>

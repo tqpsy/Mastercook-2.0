@@ -33,7 +33,7 @@ function avvisoLetto(): boolean {
  * correggono le quantità; in casa entra solo ciò che confermi.
  */
 export function FotoFrigo({ indice, luogo: luogoIniziale, chiudi }: { indice: Indice; luogo: Luogo; chiudi: () => void }) {
-  const { esegui, famiglia } = useFamiglia();
+  const { esegui, famiglia, dove, utenteId } = useFamiglia();
   const [letto, setLetto] = useState(avvisoLetto);
   const [stato, setStato] = useState<'scatta' | 'leggo' | 'scegli'>('scatta');
   const [errore, setErrore] = useState<string | null>(null);
@@ -46,7 +46,7 @@ export function FotoFrigo({ indice, luogo: luogoIniziale, chiudi }: { indice: In
     if (!file) return;
     setErrore(null);
     setStato('leggo');
-    const r = await riconosciFoto(famiglia, await riduciFoto(file));
+    const r = await riconosciFoto(famiglia, await riduciFoto(file), { dove, utenteId });
     if ('errore' in r) {
       setErrore(SPIEGA_ERRORE[r.errore]);
       return setStato('scatta');

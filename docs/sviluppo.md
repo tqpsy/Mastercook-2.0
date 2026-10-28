@@ -45,6 +45,7 @@ Se le porte sono occupate: `MC_PORTA_SERVER=54410 MC_PORTA_APP=5183 npm run test
 |---|---|---|
 | `tesseract.js` 7.0.0 | Leggere il testo della foto di uno scontrino, sul telefono | Alla prima foto: motore e vocabolario italiano da cdn.jsdelivr.net (solo download, la foto non esce dal dispositivo) |
 | `barcode-detector` 3.2.3 | Leggere codici a barre e QR dove il browser non lo sa fare (Safari su iPhone) | Al primo uso: il lettore ZXing in WebAssembly da cdn.jsdelivr.net |
+| `@electric-sql/pglite` 0.5.10 (Apache-2.0) | Le famiglie «solo su questo telefono»: lo stesso Postgres del server, con le stesse migrazioni, nel browser | Alla prima famiglia locale: circa 17 MB (5 MB compressi) dal sito dell'app, poi in cache; chi usa il server non lo scarica |
 
 Open Food Facts (world.openfoodfacts.org, gratuito e senza account) riceve solo il numero di un codice a barre
 che la famiglia non conosce ancora; se non risponde in 5 secondi si sceglie a mano.

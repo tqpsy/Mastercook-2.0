@@ -90,16 +90,20 @@ export async function scaricaFoto(percorso: string): Promise<Blob | null> {
   }
 }
 
+/** Dove stanno i dati della famiglia: sul server Mastercook o solo su questo dispositivo. */
+export type Dove = 'server' | 'locale';
+
 export interface FamigliaMia {
   famiglia_id: string;
   nome: string;
   ruolo: 'amministratore' | 'membro';
+  dove?: Dove;
 }
 
 export async function mieFamiglie(): Promise<FamigliaMia[]> {
   const r = await chiama<FamigliaMia[] | Esito>('mie_famiglie', {});
   if (!Array.isArray(r)) throw new ErroreRete('accesso scaduto');
-  return r;
+  return r.map((f) => ({ ...f, dove: 'server' as const }));
 }
 
 /** Avvisa quando sul server arriva un comando della famiglia, per scaricare subito. */

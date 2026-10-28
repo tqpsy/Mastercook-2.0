@@ -4,7 +4,8 @@ import { esporta } from '../dati/esportazione';
 import { spiegaMotivo } from '../dati/messaggi';
 import { VERSIONE_APP } from '../dati/tipi';
 import { impostaChiave, type StatoChiave, statoChiave } from '../piattaforma/fotoFrigo';
-import { type AnteprimaEliminazione, anteprimaEliminazione, eliminaFamiglia, eliminaMioAccount, type FamigliaMia, mieFamiglie, trasportoSupabase } from '../piattaforma/supabase';
+import { cancellaLocale, famiglieLocali } from '../piattaforma/locale/motore';
+import { type AnteprimaEliminazione, anteprimaEliminazione, eliminaFamiglia, eliminaMioAccount, type FamigliaMia, mieFamiglie } from '../piattaforma/supabase';
 import { Foglio } from '../ui/Foglio';
 import { Ripristino } from '../ui/Ripristino';
 import { TestoPrivacy } from './Privacy';
@@ -20,7 +21,7 @@ export function Impostazioni({
   apriFamiglia: (famiglia: string) => void;
   dimentica: () => Promise<void>;
 }) {
-  const { ruolo, utenteId } = useFamiglia();
+  const { ruolo, utenteId, dove } = useFamiglia();
   const vista = useVista();
   const famiglia = righeAttive(vista, 'famiglia')[0];
   const amministratore = ruolo === 'amministratore';
@@ -30,9 +31,14 @@ export function Impostazioni({
       <h2>Famiglia</h2>
       <div className="scheda">
         {famiglia && amministratore ? <NomeFamiglia nome={String(famiglia.nome)} versione={famiglia.versione ?? 1} /> : <p>{String(famiglia?.nome ?? '')}</p>}
+        <p className="tenue" style={{ marginBottom: 0 }}>
+          {dove === 'locale'
+            ? '📱 I dati di questa famiglia stanno solo su questo telefono: non escono da qui. Per non perderli, scarica ogni tanto un’esportazione.'
+            : '☁️ I dati di questa famiglia stanno sul server di Mastercook, in Europa, e si vedono da tutti i telefoni della famiglia.'}
+        </p>
       </div>
 
-      {amministratore && <Inviti />}
+      {amministratore && dove === 'server' && <Inviti />}
       <Accessi amministratore={amministratore} io={utenteId} />
       <ChiaveGemini amministratore={amministratore} />
       <IMieiDati nomeFamiglia={String(famiglia?.nome ?? 'famiglia')} apriFamiglia={apriFamiglia} />
@@ -183,7 +189,7 @@ function Accessi({ amministratore, io }: { amministratore: boolean; io: string }
 }
 
 function IMieiDati({ nomeFamiglia, apriFamiglia }: { nomeFamiglia: string; apriFamiglia: (famiglia: string) => void }) {
-  const { famiglia, utenteId } = useFamiglia();
+  const { famiglia, utenteId, trasporto } = useFamiglia();
   const vista = useVista();
   const io = righeAttive(vista, 'membro').find((m) => m.utente_id === utenteId);
   const [stato, setStato] = useState<string | null>(null);
@@ -192,18 +198,20 @@ function IMieiDati({ nomeFamiglia, apriFamiglia }: { nomeFamiglia: string; apriF
 
   useEffect(() => {
     let valido = true;
-    mieFamiglie()
-      .then((f) => valido && setAltre(f))
-      .catch(() => undefined);
+    void Promise.allSettled([mieFamiglie(), famiglieLocali(utenteId)]).then(([s, l]) => {
+      if (!valido) return;
+      const qui = l.status === 'fulfilled' ? l.value.map((f) => ({ ...f, dove: 'locale' as const })) : [];
+      setAltre([...(s.status === 'fulfilled' ? s.value : []), ...qui]);
+    });
     return () => {
       valido = false;
     };
-  }, []);
+  }, [utenteId]);
 
   async function scarica() {
     setStato('Preparo il file…');
     try {
-      const file = await esporta(trasportoSupabase, famiglia);
+      const file = await esporta(trasporto, famiglia);
       const blob = new Blob([JSON.stringify(file, null, 2)], { type: 'application/json' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
@@ -231,7 +239,7 @@ function IMieiDati({ nomeFamiglia, apriFamiglia }: { nomeFamiglia: string; apriF
         </button>
         {ripristino && (
           <div style={{ marginTop: 12 }}>
-            <Ripristino nomeUtente={String(io?.nome ?? '')} fatto={apriFamiglia} />
+            <Ripristino nomeUtente={String(io?.nome ?? '')} fatto={apriFamiglia} trasporto={trasporto} />
           </div>
         )}
         {altre.length > 1 && (
@@ -240,7 +248,10 @@ function IMieiDati({ nomeFamiglia, apriFamiglia }: { nomeFamiglia: string; apriF
             <ul className="elenco">
               {altre.map((f) => (
                 <li key={f.famiglia_id} className="riga">
-                  <span className="cresce">{f.nome}</span>
+                  <span className="cresce">
+                    {f.nome}
+                    {f.dove === 'locale' && <span className="tenue"> · 📱 solo su questo telefono</span>}
+                  </span>
                   {f.famiglia_id === famiglia ? (
                     <span className="tenue">aperta</span>
                   ) : (
@@ -263,7 +274,7 @@ function IMieiDati({ nomeFamiglia, apriFamiglia }: { nomeFamiglia: string; apriF
  * Si conferma riscrivendo il nome; poi si apre un'altra famiglia, se c'è.
  */
 function EliminaFamiglia({ nome, apriFamiglia }: { nome: string; apriFamiglia: (famiglia: string) => void }) {
-  const { famiglia, archivio } = useFamiglia();
+  const { famiglia, archivio, dove, trasporto, utenteId } = useFamiglia();
   const [scritto, setScritto] = useState('');
   const [attendi, setAttendi] = useState(false);
   const [errore, setErrore] = useState<string | null>(null);
@@ -272,8 +283,11 @@ function EliminaFamiglia({ nome, apriFamiglia }: { nome: string; apriFamiglia: (
     setAttendi(true);
     setErrore(null);
     try {
-      const altre = await mieFamiglie().catch(() => [] as FamigliaMia[]);
-      const esito = await eliminaFamiglia(famiglia, scritto.trim(), idDispositivo(), VERSIONE_APP);
+      const altre = [...(await mieFamiglie().catch(() => [] as FamigliaMia[])), ...(await famiglieLocali(utenteId).catch(() => []))];
+      const esito =
+        dove === 'locale'
+          ? await trasporto.applica({ id: crypto.randomUUID(), famiglia_id: famiglia, tipo: 'elimina_famiglia', dati: { nome: scritto.trim() }, versione_app: VERSIONE_APP, dispositivo: idDispositivo() })
+          : await eliminaFamiglia(famiglia, scritto.trim(), idDispositivo(), VERSIONE_APP);
       if (esito.esito !== 'applicato') {
         setErrore(spiegaMotivo(esito.dettaglio.motivo));
         return setAttendi(false);
@@ -322,7 +336,7 @@ function EliminaFamiglia({ nome, apriFamiglia }: { nome: string; apriFamiglia: (
  * non si rilegge più (nemmeno chi l'ha scritta): se ne vedono solo le ultime 4 cifre.
  */
 function ChiaveGemini({ amministratore }: { amministratore: boolean }) {
-  const { famiglia } = useFamiglia();
+  const { famiglia, dove, utenteId } = useFamiglia();
   const [stato, setStato] = useState<StatoChiave | null | undefined>(undefined);
   const [nuova, setNuova] = useState('');
   const [attendi, setAttendi] = useState(false);
@@ -330,16 +344,16 @@ function ChiaveGemini({ amministratore }: { amministratore: boolean }) {
 
   useEffect(() => {
     let valido = true;
-    void statoChiave(famiglia).then((s) => valido && setStato(s));
+    void statoChiave(famiglia, { dove, utenteId }).then((s) => valido && setStato(s));
     return () => {
       valido = false;
     };
-  }, [famiglia]);
+  }, [famiglia, dove, utenteId]);
 
   async function salva(chiave: string) {
     setAttendi(true);
     setErrore(null);
-    const r = await impostaChiave(famiglia, chiave);
+    const r = await impostaChiave(famiglia, chiave, { dove, utenteId });
     setAttendi(false);
     if ('stato' in r) {
       setStato(r.stato);
@@ -375,7 +389,7 @@ function ChiaveGemini({ amministratore }: { amministratore: boolean }) {
           <>
             <p className="tenue">
               Crea una chiave gratuita su aistudio.google.com («Get API key», con un account Google maggiorenne) e incollala qui. Dopo il salvataggio nessuno la può
-              rileggere, nemmeno tu: la usa solo il server per leggere le foto. Consiglio: attiva la fatturazione sul progetto della chiave; con qualche foto al
+              rileggere, nemmeno tu: la usa solo {dove === 'locale' ? 'questo telefono' : 'il server'} per leggere le foto. Consiglio: attiva la fatturazione sul progetto della chiave; con qualche foto al
               giorno si spendono pochi centesimi al mese.
             </p>
             <label className="campo">
@@ -411,7 +425,9 @@ function ChiaveGemini({ amministratore }: { amministratore: boolean }) {
  * famiglie da cui si esce), poi si conferma scrivendo ELIMINA.
  */
 function PrivacyEAccount({ dimentica }: { dimentica: () => Promise<void> }) {
+  const { utenteId } = useFamiglia();
   const [leggi, setLeggi] = useState(false);
+  const [locali, setLocali] = useState<{ famiglia_id: string; nome: string }[]>([]);
   const [anteprima, setAnteprima] = useState<AnteprimaEliminazione | null>(null);
   const [scritto, setScritto] = useState('');
   const [attendi, setAttendi] = useState(false);
@@ -421,6 +437,7 @@ function PrivacyEAccount({ dimentica }: { dimentica: () => Promise<void> }) {
     setErrore(null);
     try {
       setAnteprima(await anteprimaEliminazione());
+      setLocali(await famiglieLocali(utenteId).catch(() => []));
     } catch {
       setErrore('Serve la connessione per eliminare l’account.');
     }
@@ -432,7 +449,11 @@ function PrivacyEAccount({ dimentica }: { dimentica: () => Promise<void> }) {
     setErrore(null);
     try {
       const esito = await eliminaMioAccount(anteprima);
-      if (esito.esito === 'applicato') return await dimentica();
+      if (esito.esito === 'applicato') {
+        // Anche le famiglie tenute solo su questo telefono.
+        await cancellaLocale(utenteId);
+        return await dimentica();
+      }
       setErrore(spiegaMotivo(esito.dettaglio.motivo));
     } catch {
       setErrore('Serve la connessione per eliminare l’account. Riprova appena sei online.');
@@ -457,6 +478,11 @@ function PrivacyEAccount({ dimentica }: { dimentica: () => Promise<void> }) {
               <p>
                 Si cancellano per sempre, con tutti i loro dati: <strong>{anteprima.cancellate.map((f) => f.nome).join(', ')}</strong>. Se vuoi tenerne una copia,
                 esportala prima.
+              </p>
+            )}
+            {locali.length > 0 && (
+              <p>
+                Da questo telefono si cancellano anche: <strong>{locali.map((f) => f.nome).join(', ')}</strong>.
               </p>
             )}
             {anteprima.lasciate.length > 0 && (

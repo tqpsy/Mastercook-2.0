@@ -16,6 +16,7 @@ import { Consenso, VERSIONE_PRIVACY } from './pagine/Privacy';
 import { Oggi } from './pagine/Oggi';
 import { Ricette } from './pagine/Ricette';
 import { Spesa } from './pagine/Spesa';
+import { famiglieLocali } from './piattaforma/locale/motore';
 import { esci, type FamigliaMia, mieFamiglie, mioConsenso, supabase } from './piattaforma/supabase';
 import { oggi, piuGiorni, statoData } from './dominio/scadenze';
 import { StatoSync } from './ui/StatoSync';
@@ -93,19 +94,22 @@ function ConAccesso() {
 
   const utenteId = auth?.user.id;
 
-  // Le famiglie dell'utente si chiedono al server; offline si riapre l'ultima usata su questo dispositivo.
+  // Le famiglie dell'utente: quelle sul server più quelle tenute solo su questo dispositivo.
+  // Offline si riapre l'ultima usata; le famiglie locali si aprono comunque.
   useEffect(() => {
     if (!utenteId) return;
     let valido = true;
-    Promise.all([mieFamiglie(), mioConsenso()])
-      .then(([elenco, consenso]) => valido && setFamiglie({ utente: utenteId, elenco, consenso }))
-      .catch((e) =>
-        valido &&
-        setFamiglie({
-          utente: utenteId,
-          errore: e instanceof ErroreRete ? 'Serve la connessione per il primo accesso su questo dispositivo.' : 'Qualcosa non ha funzionato.',
-        }),
-      );
+    void Promise.allSettled([Promise.all([mieFamiglie(), mioConsenso()]), famiglieLocali(utenteId)]).then(([server, locali]) => {
+      if (!valido) return;
+      const qui = locali.status === 'fulfilled' ? locali.value.map((f) => ({ ...f, dove: 'locale' as const })) : [];
+      if (server.status === 'fulfilled') return setFamiglie({ utente: utenteId, elenco: [...server.value[0], ...qui], consenso: server.value[1] });
+      // Senza server il consenso non si può rileggere: è stato dato al primo accesso, che richiede la rete.
+      if (qui.length) return setFamiglie({ utente: utenteId, elenco: qui, consenso: VERSIONE_PRIVACY });
+      setFamiglie({
+        utente: utenteId,
+        errore: server.reason instanceof ErroreRete ? 'Serve la connessione per il primo accesso su questo dispositivo.' : 'Qualcosa non ha funzionato.',
+      });
+    });
     return () => {
       valido = false;
     };
@@ -125,9 +129,9 @@ function ConAccesso() {
     if (note && 'elenco' in note) {
       const scelta = note.elenco.find((f) => f.famiglia_id === ricordata?.famiglia_id) ?? note.elenco[0];
       if (!scelta) return { tipo: 'nuova' };
-      return { tipo: 'pronta', sessione: { utenteId, famiglia: scelta.famiglia_id, ruolo: scelta.ruolo } };
+      return { tipo: 'pronta', sessione: { utenteId, famiglia: scelta.famiglia_id, ruolo: scelta.ruolo, dove: scelta.dove ?? 'server' } };
     }
-    if (ricordata) return { tipo: 'pronta', sessione: { utenteId, famiglia: ricordata.famiglia_id, ruolo: ricordata.ruolo } };
+    if (ricordata) return { tipo: 'pronta', sessione: { utenteId, famiglia: ricordata.famiglia_id, ruolo: ricordata.ruolo, dove: ricordata.dove ?? 'server' } };
     if (note && 'errore' in note) return { tipo: 'errore', testo: note.errore };
     return { tipo: 'carico' };
   }, [auth, utenteId, invito, famiglie, aperta]);
@@ -137,7 +141,7 @@ function ConAccesso() {
   useEffect(() => {
     if (!sessioneAperta) return;
     const nome = famiglie && 'elenco' in famiglie ? (famiglie.elenco.find((f) => f.famiglia_id === sessioneAperta.famiglia)?.nome ?? '') : '';
-    scrivi(CHIAVE_FAMIGLIA, { famiglia_id: sessioneAperta.famiglia, nome, ruolo: sessioneAperta.ruolo, utente: sessioneAperta.utenteId });
+    scrivi(CHIAVE_FAMIGLIA, { famiglia_id: sessioneAperta.famiglia, nome, ruolo: sessioneAperta.ruolo, dove: sessioneAperta.dove, utente: sessioneAperta.utenteId });
   }, [sessioneAperta, famiglie]);
 
   const apri = useCallback(
@@ -172,7 +176,7 @@ function ConAccesso() {
         />
       );
     case 'nuova':
-      return <NuovaFamiglia nomeSuggerito={nomeGoogle} creata={apri} />;
+      return <NuovaFamiglia nomeSuggerito={nomeGoogle} creata={apri} utenteId={utenteId!} />;
     case 'errore':
       return (
         <main className="centrata">
@@ -184,7 +188,7 @@ function ConAccesso() {
       );
     case 'pronta':
       return (
-        <FamigliaAperta key={`${fase.sessione.utenteId}:${fase.sessione.famiglia}:${fase.sessione.ruolo}`} sessione={fase.sessione}>
+        <FamigliaAperta key={`${fase.sessione.utenteId}:${fase.sessione.famiglia}:${fase.sessione.ruolo}:${fase.sessione.dove}`} sessione={fase.sessione}>
           <Guscio email={auth?.user.email ?? ''} apriFamiglia={apri} />
         </FamigliaAperta>
       );
@@ -213,7 +217,7 @@ function useAvvisi(): Partial<Record<Scheda, { n: number; testo: string }>> {
 
 function Guscio({ email, apriFamiglia }: { email: string; apriFamiglia: (famiglia: string) => void }) {
   const [scheda, setScheda] = useState<Scheda>('oggi');
-  const { sync, utenteId, archivio } = useFamiglia();
+  const { sync, utenteId, archivio, dove } = useFamiglia();
   const avvisi = useAvvisi();
   const schede = useMemo(
     () =>
@@ -241,7 +245,9 @@ function Guscio({ email, apriFamiglia }: { email: string; apriFamiglia: (famigli
     const nonSalvate = s.in_attesa + s.da_sistemare;
     const domanda = nonSalvate
       ? `Ci sono ${nonSalvate} modifiche non ancora salvate sul server: uscendo andranno perse. Uscire lo stesso?`
-      : 'Uscire? I dati della famiglia verranno tolti da questo dispositivo e riscaricati al prossimo accesso.';
+      : dove === 'locale'
+        ? 'Uscire? I dati della famiglia restano su questo telefono: li ritrovi rientrando con lo stesso account Google.'
+        : 'Uscire? I dati della famiglia verranno tolti da questo dispositivo e riscaricati al prossimo accesso.';
     if (!window.confirm(domanda)) return;
     archivio.close();
     await Dexie.delete(nomeArchivio(utenteId));
