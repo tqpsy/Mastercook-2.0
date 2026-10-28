@@ -694,3 +694,14 @@ button.etichetta {
   border-color: var(--primario);
   background: var(--primario-tenue);
 }
+
+/* Spiegazione del Drive: punti brevi, con l'icona davanti. */
+.elenco-spiegazione {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px;
+}
+.elenco-spiegazione li {
+  padding: 6px 0;
+  line-height: 1.4;
+}

@@ -32,7 +32,18 @@ export function TestoPrivacy() {
       </ul>
       <h3>Dove stanno</h3>
       <ul>
-        <li>Sul database Supabase dell’app, in Europa (Irlanda). Ogni famiglia vede solo i propri dati: lo controlla il database, non l’app.</li>
+        <li>
+          Dipende da cosa scegli quando crei la famiglia. <strong>Sul server di Mastercook</strong>: il database Supabase dell’app, in Europa (Irlanda); ogni
+          famiglia vede solo i propri dati, lo controlla il database, non l’app.
+        </li>
+        <li>
+          <strong>Solo su questo telefono</strong>: i dati restano nel dispositivo e non arrivano al server di Mastercook.
+        </li>
+        <li>
+          <strong>Sul mio Google Drive</strong>: come «solo su questo telefono», più una copia nella cartella «Mastercook» del tuo Drive. L’app chiede a Google
+          solo il permesso per i file che crea lei: non vede, non legge e non tocca nessun altro file del tuo Drive. La copia va dal telefono al Drive, senza
+          passare dal server di Mastercook.
+        </li>
         <li>Una copia sul tuo dispositivo, per usare l’app anche senza rete. Uscendo dall’app la copia si cancella.</li>
         <li>L’app si scarica da GitHub Pages; l’accesso passa da Google.</li>
       </ul>

@@ -19,6 +19,7 @@ import { Spesa } from './pagine/Spesa';
 import { famiglieLocali } from './piattaforma/locale/motore';
 import { esci, type FamigliaMia, mieFamiglie, mioConsenso, supabase } from './piattaforma/supabase';
 import { oggi, piuGiorni, statoData } from './dominio/scadenze';
+import { CopiaAutomatica } from './ui/CopiaAutomatica';
 import { StatoSync } from './ui/StatoSync';
 
 const CHIAVE_INVITO = 'mc-invito';
@@ -267,6 +268,7 @@ function Guscio({ email, apriFamiglia }: { email: string; apriFamiglia: (famigli
         </div>
       </header>
       <main className="pagina">
+        <CopiaAutomatica apriFamiglia={apriFamiglia} />
         {scheda === 'oggi' && <Oggi vai={setScheda} />}
         {scheda === 'menu' && <Menu />}
         {scheda === 'spesa' && <Spesa />}
