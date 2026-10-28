@@ -30,7 +30,7 @@ interface RigaInRevisione {
 
 const testoEuro = (n: number | null | undefined) => (n == null ? '' : n.toFixed(2).replace('.', ','));
 
-/** Le righe confermate dal carrello nei giorni vicini allo scontrino, ancora senza prezzo né scontrino. */
+/** Le righe confermate dal carrello nei giorni vicini allo scontrino, ancora senza scontrino (lo scontrino ne aggiorna il prezzo). */
 function useDaAbbinare(indice: Indice): (data: string) => RigaDaAbbinare[] {
   const vista = useVista();
   const { acquisti, righe } = useDatiSpesa(vista);

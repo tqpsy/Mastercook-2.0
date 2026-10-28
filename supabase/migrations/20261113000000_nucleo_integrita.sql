@@ -93,7 +93,7 @@ begin
   loop
     select v.id into v_voce from public.voce_spesa v
      where v.famiglia_id = p_famiglia and v.eliminato_il is null and v.stato = 'nel_carrello'
-       and v.ingrediente_id = any (interno.antenati(v_r.ingrediente_id)) and v.unita = v_r.unita
+       and v.ingrediente_id = any (interno.antenati(v_r.ingrediente_id)) and (v.unita = v_r.unita or v.unita is null)
        and not exists (select 1 from public.acquisto_riga x where x.voce_id = v.id)
      order by v.ingrediente_id = v_r.ingrediente_id desc, v.creato_il, v.id limit 1;
     continue when v_voce is null;
