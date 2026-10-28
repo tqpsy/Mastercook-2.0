@@ -39,13 +39,13 @@ describe('ospiti al pasto', () => {
     expect(await porzioni(fissa)).toBe(2);
 
     // Un ospite per pasto: lo stesso giorno e pasto aggiorna la stessa riga.
-    await u.applica(comando('imposta_ospiti', famiglia, { data, categoria: 'cena', adulti: 4, bambini: 0, oggetti: [] }));
+    await u.applica(comando('imposta_ospiti', famiglia, { data, categoria: 'cena', adulti: 4, bambini: 0, oggetti: [], versione_attesa: 1 }));
     const righe = await banco.sql('select adulti, bambini, oggetti from ospiti_pasto where famiglia_id = $1 and eliminato_il is null', [famiglia]);
     expect(righe).toEqual([{ adulti: 4, bambini: 0, oggetti: [] }]);
     expect(await porzioni(auto)).toBe(5);
 
     // Zero e zero: niente ospiti.
-    await u.applica(comando('imposta_ospiti', famiglia, { data, categoria: 'cena', adulti: 0, bambini: 0 }));
+    await u.applica(comando('imposta_ospiti', famiglia, { data, categoria: 'cena', adulti: 0, bambini: 0, versione_attesa: 2 }));
     expect(await porzioni(auto)).toBe(1);
   });
 

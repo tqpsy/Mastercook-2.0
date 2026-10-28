@@ -102,7 +102,7 @@ export function CopiaAutomatica({ apriFamiglia }: { apriFamiglia: (famiglia: str
       <div className="avviso errore" role="alert">
         <p style={{ marginTop: 0 }}>
           Sul tuo Drive c’è una copia più recente di «{nome}», salvata da un altro dispositivo il{' '}
-          {new Date(stato.modificata).toLocaleString('it-IT', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}. Quale tieni?
+          {new Date(stato.modificata).toLocaleString('it-IT', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}. Quale tieni? Le due copie non si uniscono: le modifiche dell’altra si perdono. Per usare due dispositivi insieme scegli la famiglia sul server di Mastercook.
         </p>
         <div className="riga" style={{ flexWrap: 'wrap' }}>
           <button className="bottone piccolo primario" onClick={() => void usaQuellaDelDrive()}>

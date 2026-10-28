@@ -53,6 +53,8 @@ const MOTIVI: Record<string, string> = {
   gia_confermato: 'Qualcun altro ha già confermato questo pasto: se serve, correggilo.',
   conferma_cambiata: 'Nel frattempo qualcuno ha corretto questo pasto.',
   conferma_non_trovata: 'La conferma di questo pasto non esiste più.',
+  portata_confermata: 'Questo piatto è già confermato: per toglierlo, prima correggi la conferma in «saltato».',
+  ospiti_cambiati: 'Nel frattempo qualcuno ha segnato gli ospiti di questo pasto: controlla e rifai la modifica.',
 };
 
 export function spiegaMotivo(motivo: string | undefined): string {

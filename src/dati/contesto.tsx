@@ -4,7 +4,7 @@
 import { liveQuery } from 'dexie';
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { trasportoLocale } from '../piattaforma/locale/motore';
-import { ascoltaFamiglia, type Dove, trasportoSupabase } from '../piattaforma/supabase';
+import { ascoltaFamiglia, type Dove, supabase, trasportoSupabase } from '../piattaforma/supabase';
 import { Archivio, type VoceCoda } from './archivio';
 import { attive, type RigaInVista, type Righe, vistaConAnteprima } from './anteprima';
 import { pianifica, type Pianificatore } from './pianificatore';
@@ -64,7 +64,19 @@ export function FamigliaAperta({ sessione, children }: { sessione: Sessione; chi
     // La famiglia locale non ha un server da ascoltare: le modifiche arrivano solo da questo dispositivo.
     const p = pianifica(base.sync, sessione.dove === 'server' ? { ascoltaServer: (avviso) => ascoltaFamiglia(sessione.famiglia, avviso) } : {});
     attivo.current = p;
+    // Un tablet in pausa può mandare un comando col permesso scaduto: la coda si ferma («accesso_scaduto»).
+    // Appena Supabase rinnova la sessione da solo, la coda riparte senza chiedere di accedere di nuovo.
+    const sessioneRinnovata =
+      sessione.dove === 'server'
+        ? supabase().auth.onAuthStateChange((_e, s) => {
+            if (s && base.sync.leggiStato().bloccato === 'accesso_scaduto') {
+              base.sync.sblocca();
+              p.subito();
+            }
+          }).data.subscription
+        : null;
     return () => {
+      sessioneRinnovata?.unsubscribe();
       p.ferma();
       if (attivo.current === p) attivo.current = null;
     };

@@ -186,7 +186,10 @@ function NelCarrello({ indice, voci, chiudi }: { indice: Indice; voci: VoceSpesa
           prodotto = { id: crypto.randomUUID(), codice, ingrediente_id: ingrediente.id, nome: esterno?.nome ?? null, quantita: f?.quantita ?? null, unita: f?.unita ?? null };
           await esegui('salva_prodotto', prodotto as unknown as Record<string, unknown>);
         }
-        const voce = voci.find((v) => v.stato === 'da_acquistare' && v.ingrediente_id && indice.antenati(ingrediente.id).includes(v.ingrediente_id));
+        // Solo una voce nella stessa unità: 10 capsule non sono «caffè, 250 g».
+        const voce = voci.find(
+          (v) => v.stato === 'da_acquistare' && v.ingrediente_id && (v.unita == null || v.unita === UNITA_BASE[ingrediente.dimensione]) && indice.antenati(ingrediente.id).includes(v.ingrediente_id),
+        );
         if (voce) return void (await esegui('imposta_stato_voce', { id: voce.id, stato: 'nel_carrello' }));
         const id = crypto.randomUUID();
         const formato = prodotto?.quantita && prodotto.unita ? { quantita: prodotto.quantita, unita: prodotto.unita } : {};
