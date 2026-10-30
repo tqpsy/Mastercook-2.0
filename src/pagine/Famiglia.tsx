@@ -2,6 +2,8 @@ import { type FormEvent, useState } from 'react';
 import type { RigaInVista } from '../dati/anteprima';
 import { righeAttive, useFamiglia, useVista } from '../dati/contesto';
 import { useIndice } from '../dati/indice';
+import { interpreta } from '../dominio/interpreta';
+import type { Indice, Ingrediente } from '../dominio/ricette';
 import { ALLERGENI_UE, ESIGENZE, INTOLLERANZE, NOME_TIPO, nomeOggetto, oggettoDaTesto, type TipoVincolo } from '../dominio/vincoli';
 import { CercaIngrediente } from '../ui/CercaIngrediente';
 import { Foglio } from '../ui/Foglio';
@@ -280,6 +282,7 @@ function CampoTesto({ etichetta, valore, salva, lungo }: { etichetta: string; va
 
 function NuovoVincolo({ membro, esistenti, chiudi }: { membro: string; esistenti: RigaInVista[]; chiudi: () => void }) {
   const { esegui } = useFamiglia();
+  const indice = useIndice(useVista());
   const [tipo, setTipo] = useState<TipoVincolo>('allergia');
   const [tracce, setTracce] = useState(false);
   const [testo, setTesto] = useState('');
@@ -288,6 +291,7 @@ function NuovoVincolo({ membro, esistenti, chiudi }: { membro: string; esistenti
   const elenco = tipo === 'allergia' ? ALLERGENI_UE : tipo === 'intolleranza' ? INTOLLERANZE : tipo === 'esigenza' ? ESIGENZE : [];
   // Quelle scritte a parole (o le indicazioni mediche) non sono nell'elenco: si mostrano lo stesso, per poterle togliere.
   const scritte = esistenti.filter((v) => v.tipo === tipo && !elenco.some((x) => x.oggetto === v.oggetto));
+  const nomeScritta = (v: RigaInVista) => (String(v.oggetto).startsWith('ing:') ? (indice?.ingrediente(String(v.oggetto))?.nome ?? nomeOggetto(String(v.oggetto), v.testo as string | null)) : nomeOggetto(String(v.oggetto), v.testo as string | null));
 
   /** Un tocco aggiunge, un altro toglie. */
   async function cambia(oggetto: string) {
@@ -337,9 +341,9 @@ function NuovoVincolo({ membro, esistenti, chiudi }: { membro: string; esistenti
               key={v.id}
               aria-pressed
               onClick={() => esegui('rimuovi_vincolo', { id: v.id })}
-              aria-label={`Togli ${tipo === 'indicazione_medica' ? String(v.testo ?? '') : nomeOggetto(String(v.oggetto), v.testo as string | null)}`}
+              aria-label={`Togli ${tipo === 'indicazione_medica' ? String(v.testo ?? '') : nomeScritta(v)}`}
             >
-              {tipo === 'indicazione_medica' ? `🩺 ${String(v.testo ?? '')}` : nomeOggetto(String(v.oggetto), v.testo as string | null)}
+              {tipo === 'indicazione_medica' ? `🩺 ${String(v.testo ?? '')}` : nomeScritta(v)}
             </button>
           ))}
         </div>
@@ -369,7 +373,7 @@ function NuovoVincolo({ membro, esistenti, chiudi }: { membro: string; esistenti
           </div>
         )}
         <label className="campo">
-          <span>{tipo === 'indicazione_medica' ? 'Indicazione, così come è stata data' : 'Altro (scrivilo tu)'}</span>
+          <span>{tipo === 'indicazione_medica' ? 'Indicazione, così come è stata data' : 'Altro: scrivi l’alimento (es. «niente funghi», «frutti di mare e sedano»)'}</span>
           <div className="riga">
             <input value={testo} onChange={(e) => setTesto(e.target.value)} maxLength={tipo === 'indicazione_medica' ? 2000 : 60} className="cresce" />
             <button className="bottone primario piccolo" disabled={!oggettoDaTesto(testo)}>
@@ -377,15 +381,16 @@ function NuovoVincolo({ membro, esistenti, chiudi }: { membro: string; esistenti
             </button>
           </div>
         </label>
+        {tipo !== 'indicazione_medica' && indice && testo.trim() && <CosaCapisce indice={indice} testo={testo} scegli={(i) => aggiungi(i.id, i.nome).then(() => setTesto(''))} />}
       </form>
-      {tipo !== 'esigenza' && tipo !== 'indicazione_medica' && /crud/i.test(testo) && (
-        <div className="avviso info">
-          Scritto a parole, l’app non lo sa valutare e mette il punto di domanda su tutte le ricette. Per i crudi ci sono le
-          esigenze apposite, che guardano se nella ricetta l’alimento si cuoce.{' '}
-          <button type="button" className="bottone piccolo" onClick={() => setTipo('esigenza')}>
-            Vedi le esigenze sui crudi
-          </button>
-        </div>
+      {tipo !== 'indicazione_medica' && indice && scritte.length > 0 && (
+        <ul className="tenue" style={{ paddingLeft: 18 }}>
+          {scritte.filter((v) => String(v.oggetto).startsWith('txt:')).map((v) => (
+            <li key={v.id}>
+              «{String(v.testo ?? nomeOggetto(String(v.oggetto)))}»: <Capito indice={indice} testo={String(v.testo ?? nomeOggetto(String(v.oggetto)))} />
+            </li>
+          ))}
+        </ul>
       )}
       {tipo === 'indicazione_medica' && (
         <p className="tenue">L’app conserva l’indicazione e la mostra, ma non la interpreta né la sostituisce con suggerimenti automatici.</p>
@@ -394,5 +399,40 @@ function NuovoVincolo({ membro, esistenti, chiudi }: { membro: string; esistenti
         Fatto
       </button>
     </Foglio>
+  );
+}
+
+/** Quello che l'app ha capito di un testo: cosa controllerà sulle ricette e cosa no. */
+function Capito({ indice, testo }: { indice: Indice; testo: string }) {
+  const { capiti, nonCapiti } = interpreta(indice, testo);
+  return (
+    <>
+      {capiti.length > 0 && <>l’app controlla {capiti.map((c) => `${c.emoji} ${c.ingredienti?.length === 1 ? c.testo : c.nome}`).join(', ')}</>}
+      {capiti.length > 0 && nonCapiti.length > 0 && '; '}
+      {nonCapiti.length > 0 && <>non riconosce «{nonCapiti.join('», «')}»: le ricette resteranno da controllare</>}
+    </>
+  );
+}
+
+/** Mentre si scrive: cosa ha capito l'app e, se serve, gli alimenti del catalogo da scegliere al posto del testo. */
+function CosaCapisce({ indice, testo, scegli }: { indice: Indice; testo: string; scegli: (i: Ingrediente) => void }) {
+  const { nonCapiti } = interpreta(indice, testo);
+  const proposte = nonCapiti.flatMap((n) => indice.cercaIngredienti(n, 4).filter((i) => i.di_sistema));
+  return (
+    <div className="avviso info" style={{ marginTop: 0 }}>
+      <Capito indice={indice} testo={testo} />
+      {proposte.length > 0 && (
+        <>
+          <p style={{ margin: '6px 0' }}>Forse intendi:</p>
+          <div className="scelte">
+            {proposte.map((i) => (
+              <button type="button" key={i.id} onClick={() => scegli(i)}>
+                {i.emoji} {i.nome}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
   );
 }

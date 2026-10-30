@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { CATEGORIE, type Categoria } from '../catalogo/tipi';
 import { righeAttive, useFamiglia, useVista } from '../dati/contesto';
 import { useIndice } from '../dati/indice';
-import { type Esito, NOME_ESITO, valutaPerFamiglia, type ValutazioneFamiglia, type Verifica, type Vincolo } from '../dominio/compatibilita';
+import { type Esito, type Motivo, NOME_ESITO, valutaPerFamiglia, type ValutazioneFamiglia, type Verifica, type Vincolo } from '../dominio/compatibilita';
 import { copertura, filtra, iconaRicetta, type Indice, type Ricetta } from '../dominio/ricette';
 import { formatta, scala } from '../dominio/unita';
 import { Foglio } from '../ui/Foglio';
@@ -17,6 +17,25 @@ const TEMPI = [
 ];
 
 export const ICONA_ESITO: Record<Esito, string> = { adatta: '✅', da_verificare: '❔', non_adatta: '⛔' };
+
+/** I motivi uno per riga: prima quelli da evitare, poi quelli da controllare. */
+export function Motivi({ dettagli }: { dettagli: Motivo[] }) {
+  const ordinati = [...dettagli].sort((a, b) => (a.esito === b.esito ? 0 : a.esito === 'non_adatta' ? -1 : 1));
+  return (
+    <ul style={{ margin: '2px 0 6px', paddingLeft: 4, listStyle: 'none' }}>
+      {ordinati.map((d) => (
+        <li key={d.testo}>
+          {ICONA_ESITO[d.esito]} {d.testo.charAt(0).toUpperCase() + d.testo.slice(1)}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** I motivi in una riga sola, per gli elenchi stretti. */
+export function motiviInBreve(v: { motivi: string[]; dettagli?: Motivo[] }): string {
+  return v.dettagli?.length ? v.dettagli.map((d) => `${ICONA_ESITO[d.esito]} ${d.testo}`).join('; ') : v.motivi.join('; ');
+}
 
 /** Gli ingredienti presenti in casa: i lotti aperti con qualcosa dentro. */
 export function useInCasa(): Set<string> {
@@ -333,7 +352,8 @@ function SchedaRicetta({
           <ul style={{ margin: '6px 0 0', paddingLeft: 18 }}>
             {valutazione.perMembro.map((m) => (
               <li key={m.membro_id}>
-                {m.nome}: {ICONA_ESITO[m.valutazione.esito]} {m.valutazione.motivi.length ? m.valutazione.motivi.join('; ') : 'nessun problema noto'}
+                <strong>{m.nome}</strong>: {ICONA_ESITO[m.valutazione.esito]}{' '}
+                {m.valutazione.dettagli?.length ? null : m.valutazione.motivi.length ? m.valutazione.motivi.join('; ') : 'nessun problema noto'}
                 {m.valutazione.verificabile && (
                   <button
                     className="bottone piccolo"
@@ -344,6 +364,7 @@ function SchedaRicetta({
                     {m.valutazione.verificata ? 'Togli «va bene»' : '✅ Va bene'}
                   </button>
                 )}
+                {!!m.valutazione.dettagli?.length && <Motivi dettagli={m.valutazione.dettagli} />}
               </li>
             ))}
           </ul>

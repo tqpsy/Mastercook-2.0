@@ -2,8 +2,8 @@
  * Alimenti crudi: salumi crudi, pesce e carne crudi, formaggi a latte crudo, uova crude.
  * Lo stesso ingrediente può essere crudo o cotto secondo la ricetta (il guanciale della carbonara si
  * rosola, la bresaola si mangia così): per questo, oltre a cosa è l'ingrediente, conta come lo usa la
- * ricetta. Le ricette di Mastercook sono state lette una per una; per quelle della famiglia l'app non
- * lo sa e chiede di controllare.
+ * ricetta. Le ricette di Mastercook sono state lette una per una; per quelle della famiglia l'app usa la
+ * ricetta da cui sono state copiate, se c'è, altrimenti chiede di controllare.
  */
 import type { Indice, Ricetta } from './ricette';
 
@@ -48,7 +48,13 @@ const SALUMI_CRUDI = [
 ];
 
 /** Formaggi a latte crudo per disciplinare. */
-const LATTE_CRUDO = ['ing:parmigiano', 'ing:grana_padano', 'ing:pecorino', 'ing:fontina', 'ing:emmental'];
+const LATTE_CRUDO = ['ing:fontina'];
+/**
+ * Formaggi duri e a lunga stagionatura: anche se a latte crudo, le linee guida (Ministero della Salute,
+ * NHS) non li considerano a rischio perché hanno poca acqua. Scelta di Luca del 28/10/2026. Contano solo
+ * loro, non i figli (il pecorino da tavola resta da controllare in etichetta).
+ */
+const STAGIONATI_DURI = ['ing:parmigiano', 'ing:grana_padano', 'ing:pecorino', 'ing:emmental'];
 /** Formaggi e preparati che si trovano sia a latte crudo sia pastorizzati: lo dice l'etichetta. */
 const LATTE_FORSE_CRUDO = ['ing:pecorino_dolce', 'ing:asiago', 'ing:caciocavallo', 'ing:provolone', 'ing:taleggio', 'ing:brie', 'ing:feta', 'ing:pesto'];
 /** Preparati con uova che possono essere crude (la maionese fatta in casa). */
@@ -121,7 +127,7 @@ const SEMPRE_COTTI = [
 export function tipoCrudo(indice: Indice, id: string): { crudo: Crudo; forse: boolean } | null {
   const catena = indice.antenati(id);
   const tra = (elenco: string[]) => catena.some((x) => elenco.includes(x));
-  if (tra(SEMPRE_COTTI)) return null;
+  if (tra(SEMPRE_COTTI) || STAGIONATI_DURI.includes(id)) return null;
   if (tra(SALUMI_CRUDI)) return { crudo: 'salumi', forse: false };
   if (tra(LATTE_CRUDO)) return { crudo: 'latte', forse: false };
   if (tra(LATTE_FORSE_CRUDO)) return { crudo: 'latte', forse: true };
@@ -143,14 +149,16 @@ export interface RigaCruda {
 
 /** Gli ingredienti della ricetta del tipo richiesto, e se la ricetta li lascia crudi. */
 export function righeCrude(indice: Indice, r: Ricetta, crudo: Crudo): RigaCruda[] {
-  const lista = r.id.startsWith('sys:') ? (CRUDI_NELLE_RICETTE[r.id] ?? []) : null;
+  // Una ricetta della famiglia copiata da una di Mastercook usa gli ingredienti allo stesso modo.
+  const origine = r.id.startsWith('sys:') ? r : r.derivata_da?.startsWith('sys:') ? indice.perId.get(r.derivata_da) : undefined;
+  const lista = origine ? (CRUDI_NELLE_RICETTE[origine.id] ?? []) : null;
   const righe: RigaCruda[] = [];
   for (const g of r.ingredienti) {
     const t = tipoCrudo(indice, g.ingrediente_id);
     if (!t || t.crudo !== crudo) continue;
     righe.push({
       nome: (indice.ingrediente(g.ingrediente_id)?.nome ?? g.ingrediente_id).toLowerCase(),
-      crudo: lista ? lista.includes(g.ingrediente_id) : null,
+      crudo: lista && origine!.ingredienti.some((x) => x.ingrediente_id === g.ingrediente_id) ? lista.includes(g.ingrediente_id) : null,
       forse: t.forse,
       opzionale: g.opzionale,
     });

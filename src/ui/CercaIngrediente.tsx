@@ -1,8 +1,37 @@
 import { useState } from 'react';
 import { useFamiglia } from '../dati/contesto';
+import type { Classe } from '../catalogo/tipi';
+import { classiDi } from '../dominio/interpreta';
 import type { Indice, Ingrediente } from '../dominio/ricette';
 import { ALLERGENI_UE } from '../dominio/vincoli';
 import type { Dimensione } from '../dominio/unita';
+
+const TIPI: { id: Classe; nome: string }[] = [
+  { id: 'carne', nome: '🥩 Carne' },
+  { id: 'maiale', nome: '🐖 Maiale' },
+  { id: 'pesce', nome: '🐟 Pesce' },
+  { id: 'latticini', nome: '🧀 Latte o formaggi' },
+  { id: 'uova', nome: '🥚 Uova' },
+  { id: 'alcol', nome: '🍷 Alcol' },
+  { id: 'miele', nome: '🍯 Miele' },
+];
+
+const BOZZA: Ingrediente = {
+  id: 'bozza',
+  nome: '',
+  sinonimi: [],
+  reparto: 'altro',
+  dimensione: 'massa',
+  luogo: 'dispensa',
+  giorni: null,
+  allergeni: [],
+  allergeni_noti: false,
+  classi: [],
+  genitore: null,
+  base: false,
+  emoji: '🛒',
+  di_sistema: false,
+};
 
 const DIMENSIONI: { id: Dimensione; nome: string }[] = [
   { id: 'massa', nome: 'Si pesa (g, kg)' },
@@ -67,13 +96,17 @@ function NuovoIngrediente({ nome: iniziale, indice, fatto, annulla }: { nome: st
   const [reparto, setReparto] = useState('altro');
   const [allergeniNoti, setAllergeniNoti] = useState<boolean | null>(null);
   const [allergeni, setAllergeni] = useState<string[]>([]);
+  // Che cos'è: serve per vegetariani, crudi, alcol. Si parte da quello che l'app capisce dal nome.
+  const [classi, setClassi] = useState<Classe[] | null>(null);
+  const capite = classiDi(indice, { ...BOZZA, nome });
+  const scelte = classi ?? capite.classi;
 
   async function salva() {
     if (!dimensione || allergeniNoti === null || !nome.trim()) return;
     const id = crypto.randomUUID();
-    const dati = { id, nome: nome.trim(), dimensione, reparto, allergeni: allergeniNoti ? allergeni : [], allergeni_noti: allergeniNoti, emoji: '🛒' };
+    const dati = { id, nome: nome.trim(), dimensione, reparto, allergeni: allergeniNoti ? allergeni : [], allergeni_noti: allergeniNoti, classi: scelte, emoji: '🛒' };
     await esegui('crea_ingrediente', dati);
-    fatto({ ...dati, sinonimi: [], luogo: 'dispensa', giorni: null, classi: [], genitore: null, base: false, di_sistema: false, versione: 1, in_attesa: true });
+    fatto({ ...dati, sinonimi: [], luogo: 'dispensa', giorni: null, genitore: null, base: false, di_sistema: false, versione: 1, in_attesa: true });
   }
 
   return (
@@ -130,6 +163,19 @@ function NuovoIngrediente({ nome: iniziale, indice, fatto, annulla }: { nome: st
             </div>
           </>
         )}
+      </div>
+      <div className="campo">
+        <span>Contiene (tocca quelli giusti, nessuno se non ne contiene)</span>
+        <div className="scelte">
+          {TIPI.map((t) => {
+            const dentro = scelte.includes(t.id);
+            return (
+              <button type="button" key={t.id} aria-pressed={dentro} onClick={() => setClassi(dentro ? scelte.filter((x) => x !== t.id) : [...scelte, t.id])}>
+                {t.nome}
+              </button>
+            );
+          })}
+        </div>
       </div>
       <div className="riga">
         <button type="button" className="bottone" onClick={annulla}>
