@@ -3,7 +3,8 @@
  */
 import { expect, test } from '@playwright/test';
 import { dataLunga } from '../../src/dominio/menu';
-import { oggi } from '../../src/dominio/scadenze';
+import { oggi, piuGiorni } from '../../src/dominio/scadenze';
+import { formattaGiorno } from '../../src/dominio/unita';
 import { apri, creaFamiglia, nuovoUtente, sql } from './aiuti';
 
 const famigliaDi = '(select famiglia_id from utente_famiglia where utente_id = $1)';
@@ -94,4 +95,41 @@ test('spesa: voci a mano, spesa senza lista e annullo con la cronologia', async 
   ]);
   // Sul telefono la pagina non scorre di lato.
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
+
+test('spesa per giorni scelti: con il menu su più giorni si compra solo per i prossimi tre', async ({ browser }, info) => {
+  const luca = await nuovoUtente('Luca');
+  const { page } = await apri(browser, luca, info.project.use);
+  await creaFamiglia(page, 'Casa Giorni');
+  await page.getByRole('button', { name: 'Menu', exact: true }).click();
+  await page.getByRole('group', { name: 'Vista' }).getByRole('button', { name: 'Giorni' }).click();
+  for (const [giorno, cerca, piatto] of [
+    [oggi(), 'carbonara', /Spaghetti alla carbonara/],
+    [piuGiorni(oggi(), 4), 'aglio', /Spaghetti aglio, olio/],
+  ] as const) {
+    const aggiungi = page.getByRole('button', { name: `Aggiungi a cena di ${dataLunga(giorno)}` });
+    if (!(await aggiungi.count())) await page.getByRole('button', { name: 'Settimana dopo' }).click();
+    await aggiungi.click();
+    await page.getByRole('dialog').getByLabel('Cosa si mangia').fill(cerca);
+    await page.getByRole('dialog').getByRole('button', { name: piatto }).first().click();
+  }
+
+  await page.getByRole('button', { name: 'Spesa', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Apri Guanciale' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Apri Aglio' })).toBeVisible();
+
+  await page.getByRole('group', { name: 'Spesa per i giorni' }).getByRole('button', { name: 'Prossimi 3 giorni' }).click();
+  await expect(page.getByRole('button', { name: 'Apri Aglio' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Apri Guanciale' })).toBeVisible();
+  await expect(page.getByText(/^Solo per /)).toBeVisible();
+  await expect(page.getByRole('button', { name: /Stato del salvataggio: Tutto salvato/ })).toBeVisible();
+
+  // La scelta resta: riaprendo la lista si ritrovano i tre giorni; un giorno in più si accende al tocco.
+  await page.reload();
+  await page.getByRole('button', { name: 'Spesa', exact: true }).click();
+  const giorni = page.getByRole('group', { name: 'Giorni della spesa' });
+  await expect(giorni.getByRole('button', { pressed: true })).toHaveCount(3);
+  await expect(page.getByRole('button', { name: 'Apri Aglio' })).toHaveCount(0);
+  await giorni.getByRole('button', { name: new RegExp(`^${formattaGiorno(piuGiorni(oggi(), 4))},`) }).click();
+  await expect(page.getByRole('button', { name: 'Apri Aglio' })).toBeVisible();
 });

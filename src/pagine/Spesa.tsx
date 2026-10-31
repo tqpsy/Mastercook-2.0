@@ -1,12 +1,14 @@
 import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { LUOGHI, NOME_LUOGO } from '../catalogo/tipi';
-import { useFamiglia, useStatoSync, useVista, type Vista } from '../dati/contesto';
+import { righeAttive, useFamiglia, useStatoSync, useVista, type Vista } from '../dati/contesto';
 import { useIndice } from '../dati/indice';
 import type { Indice, Ingrediente } from '../dominio/ricette';
 import { type Luogo, oggi, piuGiorni } from '../dominio/scadenze';
 import {
   type Acquisto,
+  giorniScelti,
   type Osservazione,
+  periodoSpesa,
   prezziOsservati,
   quantitaVoce,
   type RigaAcquisto,
@@ -65,15 +67,19 @@ export function Spesa() {
   const [scontrino, setScontrino] = useState(false);
   const [scansiona, setScansiona] = useState(false);
   const dal = oggi();
-  const al = piuGiorni(dal, GIORNI_SPESA - 1);
+  const finestra = useMemo(() => Array.from({ length: GIORNI_SPESA }, (_, i) => piuGiorni(dal, i)), [dal]);
+  const famiglia = righeAttive(vista, 'famiglia')[0];
+  const salvati = (famiglia?.impostazioni as { spesa_giorni?: unknown } | undefined)?.spesa_giorni;
+  const scelti = useMemo(() => giorniScelti(finestra, salvati), [finestra, salvati]);
   const ricalcolata = useRef(false);
+  const ricalcola = (giorni: string[]) => esegui('ricalcola_spesa', periodoSpesa(finestra, giorni));
 
-  // All'apertura la lista si allinea al menu (il calcolo lo fa il server: ripeterlo non crea doppioni).
+  // All'apertura la lista si allinea al menu, per i giorni scelti (il calcolo lo fa il server: ripeterlo non crea doppioni).
   useEffect(() => {
     if (!vista.pronta || ricalcolata.current) return;
     ricalcolata.current = true;
-    void esegui('ricalcola_spesa', { dal, al });
-  }, [vista.pronta, esegui, dal, al]);
+    void esegui('ricalcola_spesa', periodoSpesa(finestra, scelti));
+  }, [vista.pronta, esegui, finestra, scelti]);
 
   if (!vista.pronta || !indice) return <p className="tenue">Sto caricando la spesa…</p>;
   const daComprare = voci.filter((v) => v.stato === 'da_acquistare');
@@ -97,9 +103,10 @@ export function Spesa() {
           </button>
         </div>
       </div>
+      <GiorniSpesa finestra={finestra} scelti={scelti} piatti={piattiPerGiorno(vista)} cambia={(g) => void ricalcola(g)} />
       <p className="tenue" style={{ marginTop: 4 }}>
-        Per il menu da {formattaGiorno(dal)} a {formattaGiorno(al)}, tolto ciò che c’è già in casa.{' '}
-        <button className="link" onClick={() => esegui('ricalcola_spesa', { dal, al })} disabled={inCoda}>
+        {descriviGiorni(finestra, scelti)}, tolto ciò che c’è già in casa.{' '}
+        <button className="link" onClick={() => ricalcola(scelti)} disabled={inCoda}>
           {inCoda ? (sync.senza_rete ? 'Si aggiorna appena c’è rete' : 'Aggiorno…') : 'Aggiorna dal menu'}
         </button>
       </p>
@@ -166,6 +173,67 @@ export function Spesa() {
       {scansiona && <NelCarrello indice={indice} voci={voci} chiudi={() => setScansiona(false)} />}
       {acquisto && <SchedaAcquisto indice={indice} acquisto={acquisto} righe={righe.filter((r) => r.acquisto_id === acquisto.id)} chiudi={() => setAcquistoAperto(null)} />}
     </>
+  );
+}
+
+/** Quanti piatti del menu ci sono per giorno (gli avanzi non contano: non si comprano). */
+function piattiPerGiorno(vista: Vista): Map<string, number> {
+  const conta = new Map<string, number>();
+  for (const p of righeAttive(vista, 'portata')) {
+    if (!p.ricetta_id || p.avanzo_di) continue;
+    const g = String(p.data);
+    conta.set(g, (conta.get(g) ?? 0) + 1);
+  }
+  return conta;
+}
+
+function descriviGiorni(finestra: string[], scelti: string[]): string {
+  if (scelti.length === finestra.length) return `Per il menu da ${formattaGiorno(finestra[0])} a ${formattaGiorno(finestra[finestra.length - 1])}`;
+  const nomi = scelti.map((g) => formattaGiorno(g));
+  return `Solo per ${nomi.length === 1 ? nomi[0] : `${nomi.slice(0, -1).join(', ')} e ${nomi[nomi.length - 1]}`}`;
+}
+
+/**
+ * Per quali giorni fare la spesa: anche con tutta la settimana nel menu si può comprare solo per i
+ * prossimi giorni. La scelta vale per la famiglia; almeno un giorno resta sempre acceso.
+ */
+function GiorniSpesa({ finestra, scelti, piatti, cambia }: { finestra: string[]; scelti: string[]; piatti: Map<string, number>; cambia: (giorni: string[]) => void }) {
+  const tutti = scelti.length === finestra.length;
+  const fino = (n: number) => finestra.slice(0, n);
+  const uguale = (a: string[]) => a.length === scelti.length && a.every((g) => scelti.includes(g));
+  return (
+    <div className="giorni-spesa">
+      <div className="scelte" role="group" aria-label="Spesa per i giorni" style={{ marginBottom: 6 }}>
+        {[1, 3].map((n) => (
+          <button key={n} aria-pressed={uguale(fino(n))} onClick={() => cambia(fino(n))}>
+            {n === 1 ? 'Solo oggi' : `Prossimi ${n} giorni`}
+          </button>
+        ))}
+        <button aria-pressed={tutti} onClick={() => cambia(finestra)}>
+          Tutta la settimana
+        </button>
+      </div>
+      <div className="scelte giorni" role="group" aria-label="Giorni della spesa">
+        {finestra.map((g, i) => {
+          const acceso = scelti.includes(g);
+          const n = piatti.get(g) ?? 0;
+          const [nome, numero] = formattaGiorno(g).split(' ');
+          return (
+            <button
+              key={g}
+              aria-pressed={acceso}
+              aria-label={`${formattaGiorno(g)}, ${n === 1 ? '1 piatto' : `${n} piatti`}`}
+              disabled={acceso && scelti.length === 1}
+              onClick={() => cambia(acceso ? scelti.filter((x) => x !== g) : [...scelti, g])}
+            >
+              <span>{i === 0 ? 'oggi' : nome}</span>
+              <strong>{numero}</strong>
+              <small aria-hidden>{n ? '🍽'.repeat(Math.min(n, 3)) : '—'}</small>
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 

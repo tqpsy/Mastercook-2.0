@@ -58,6 +58,28 @@ async function statoCasa(famiglia: string) {
 }
 
 describe('fabbisogno e lista', () => {
+  it('solo i giorni scelti: con il menu su tutta la settimana si compra per i primi tre giorni, e la scelta resta alla famiglia', async () => {
+    const { u, famiglia } = await famigliaCon();
+    await piatto(u, famiglia, 'sys:carbonara', 4, '2026-11-02'); // 320 g di spaghetti
+    await piatto(u, famiglia, 'sys:spaghetti_aglio_olio', 3.75, '2026-11-06'); // 300 g, fuori dai giorni scelti
+    const giorni = ['2026-11-04', '2026-11-02', '2026-11-03'];
+    expect((await u.applica(comando('ricalcola_spesa', famiglia, { ...SETTIMANA, giorni }))).esito).toBe('applicato');
+    expect(await quanto(famiglia, 'ing:spaghetti')).toBe(320);
+    const [f] = await banco.sql<{ g: string[] }>(`select impostazioni -> 'spesa_giorni' as g from famiglia where id = $1`, [famiglia]);
+    expect(f.g).toEqual(['2026-11-02', '2026-11-03', '2026-11-04']);
+    // Un giorno solo che non ha piatti: la lista derivata si svuota.
+    await u.applica(comando('ricalcola_spesa', famiglia, { ...SETTIMANA, giorni: ['2026-11-05'] }));
+    expect(await quanto(famiglia, 'ing:spaghetti')).toBe(0);
+    // Senza giorni conta tutto il periodo, e la scelta si dimentica.
+    await ricalcola(u, famiglia);
+    expect(await quanto(famiglia, 'ing:spaghetti')).toBe(620);
+    const [g] = await banco.sql<{ g: unknown }>(`select impostazioni -> 'spesa_giorni' as g from famiglia where id = $1`, [famiglia]);
+    expect(g.g).toBeNull();
+    // Giorni fuori dal periodo o nessun giorno: rifiutato.
+    expect((await u.applica(comando('ricalcola_spesa', famiglia, { ...SETTIMANA, giorni: ['2026-11-12'] }))).esito).toBe('rifiutato');
+    expect((await u.applica(comando('ricalcola_spesa', famiglia, { ...SETTIMANA, giorni: [] }))).esito).toBe('rifiutato');
+  });
+
   it('T-SPE-7 200 g + 300 g di spaghetti da due ricette = 500 g; con 400 g in casa se ne comprano 100', async () => {
     const { u, famiglia } = await famigliaCon();
     await piatto(u, famiglia, 'sys:carbonara', 2.5); // 320 g × 2,5/4 = 200 g

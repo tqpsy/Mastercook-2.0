@@ -3,7 +3,7 @@ import catalogo from '../catalogo/catalogo.json';
 import type { Catalogo } from '../catalogo/tipi';
 import { Indice } from './ricette';
 import type { PortataMenu } from './menu';
-import { type Acquisto, prezziOsservati, type RigaAcquisto, righeDaConfermare, spesaDelGiorno, stimaPrezzo, totaleStimato, type VoceSpesa } from './spesa';
+import { type Acquisto, giorniScelti, periodoSpesa, prezziOsservati, type RigaAcquisto, righeDaConfermare, spesaDelGiorno, stimaPrezzo, totaleStimato, type VoceSpesa } from './spesa';
 
 const indice = new Indice(catalogo as Catalogo);
 
@@ -104,5 +104,18 @@ describe('spesa del giorno', () => {
   it('un lotto conta una volta sola anche per due piatti', () => {
     const r = spesaDelGiorno(indice, [portata('p'), portata('q')], [], [], [], [], [lotto('l1', 'ing:spaghetti', 400)]);
     expect(r.find((b) => b.ingrediente_id === 'ing:spaghetti')).toMatchObject({ serve: 640, inCasa: 400, manca: 240 });
+  });
+});
+
+describe('giorni della spesa', () => {
+  const finestra = ['2026-10-31', '2026-11-01', '2026-11-02', '2026-11-03'];
+  it('tiene solo i giorni scelti ancora nella finestra, altrimenti tutti', () => {
+    expect(giorniScelti(finestra, ['2026-10-30', '2026-11-01', '2026-11-02'])).toEqual(['2026-11-01', '2026-11-02']);
+    expect(giorniScelti(finestra, ['2026-10-29'])).toEqual(finestra);
+    expect(giorniScelti(finestra, undefined)).toEqual(finestra);
+  });
+  it('manda i giorni solo se non sono tutti', () => {
+    expect(periodoSpesa(finestra, finestra)).toEqual({ dal: '2026-10-31', al: '2026-11-03' });
+    expect(periodoSpesa(finestra, ['2026-11-02', '2026-10-31'])).toEqual({ dal: '2026-10-31', al: '2026-11-03', giorni: ['2026-10-31', '2026-11-02'] });
   });
 });
