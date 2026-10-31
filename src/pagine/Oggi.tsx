@@ -164,7 +164,7 @@ export function Oggi({ vai }: { vai: (scheda: 'spesa' | 'casa' | 'menu') => void
     );
 
   return (
-    <div className="oggi">
+    <div className="pagina-oggi">
       <header className="oggi-saluto">
         <p className="tenue" style={{ marginBottom: 0 }}>
           <span style={{ textTransform: 'capitalize' }}>{data}</span>
