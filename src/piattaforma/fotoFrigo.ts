@@ -23,14 +23,14 @@ async function base64(file: Blob): Promise<string> {
   return btoa(s);
 }
 
-export async function riconosciFoto(famiglia_id: string, foto: Blob, luogo?: Luogo): Promise<{ alimenti: Riconosciuto[] } | { errore: ErroreFoto }> {
+export async function riconosciFoto(famiglia_id: string, foto: Blob, luogo?: Luogo): Promise<{ alimenti: Riconosciuto[] } | { errore: ErroreFoto; dettaglio?: string }> {
   if (!navigator.onLine) return { errore: 'rete' };
   if (luogo?.dove === 'locale') {
     try {
       const chiave = await chiaveGeminiLocale(luogo.utenteId, famiglia_id);
       if (!chiave) return { errore: 'non_configurata' };
       const esito = await riconosci(await base64(foto), chiave);
-      return 'errore' in esito ? { errore: esito.errore } : { alimenti: esito.alimenti };
+      return 'errore' in esito ? { errore: esito.errore, dettaglio: esito.dettaglio } : { alimenti: esito.alimenti };
     } catch {
       return { errore: 'rete' };
     }
@@ -41,7 +41,8 @@ export async function riconosciFoto(famiglia_id: string, foto: Blob, luogo?: Luo
       const risposta = (error as { context?: Response }).context;
       const corpo = risposta && typeof risposta.json === 'function' ? await risposta.json().catch(() => null) : null;
       const e = corpo?.errore as ErroreFoto | undefined;
-      return { errore: e && ['quota', 'chiave', 'non_configurata', 'gemini', 'non_autorizzato'].includes(e) ? e : 'rete' };
+      const dettaglio = typeof corpo?.dettaglio === 'string' ? corpo.dettaglio.slice(0, 200) : undefined;
+      return { errore: e && ['quota', 'chiave', 'non_configurata', 'gemini', 'non_autorizzato'].includes(e) ? e : 'rete', dettaglio };
     }
     return { alimenti: (data?.alimenti ?? []) as Riconosciuto[] };
   } catch {

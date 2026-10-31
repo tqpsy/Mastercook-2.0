@@ -51,6 +51,18 @@ const SCHEMA = {
   },
 };
 
+/** Il messaggio d'errore di Google, breve: si mostra in app per capire cosa non va. Mai la chiave. */
+export function messaggioGoogle(testo: string): string {
+  let m = testo;
+  try {
+    const j = JSON.parse(testo) as { error?: { message?: string; status?: string } };
+    if (j.error?.message) m = `${j.error.status ? `${j.error.status}: ` : ''}${j.error.message}`;
+  } catch {
+    // non è JSON: si tiene il testo
+  }
+  return m.replace(/AIza[0-9A-Za-z_-]+/g, '…').replace(/\s+/g, ' ').trim().slice(0, 200);
+}
+
 /** Legge la risposta di Gemini e tiene solo righe sensate (nomi brevi, quantità positive, al più 40). */
 export function leggiAlimenti(testo: string): Riconosciuto[] {
   let dati: unknown;
@@ -96,14 +108,14 @@ export async function riconosci(immagine: string, chiave: string, chiama: typeof
     }
     if (!r.ok) {
       const testo = await r.text().catch(() => '');
-      if ((r.status === 400 || r.status === 401 || r.status === 403) && CHIAVE_SBAGLIATA.test(testo)) return { errore: 'chiave' };
+      if ((r.status === 400 || r.status === 401 || r.status === 403) && CHIAVE_SBAGLIATA.test(testo)) return { errore: 'chiave', dettaglio: messaggioGoogle(testo) };
       // Modello sparito, non dato a questa chiave o momentaneamente giù: si prova il prossimo.
-      ultimo = `${modello}: HTTP ${r.status} ${testo.slice(0, 160)}`;
+      ultimo = `${modello}: ${r.status} ${messaggioGoogle(testo)}`;
       continue;
     }
     const json = (await r.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
     const testo = json.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('') ?? '';
     return { alimenti: leggiAlimenti(testo), modello };
   }
-  return quota ? { errore: 'quota' } : { errore: 'gemini', dettaglio: ultimo };
+  return quota ? { errore: 'quota', ...(ultimo ? { dettaglio: ultimo } : {}) } : { errore: 'gemini', dettaglio: ultimo };
 }
