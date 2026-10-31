@@ -1621,3 +1621,37 @@ details > summary:has(.primo-presto) {
     display: inline;
   }
 }
+
+/* Icone di cibo disegnate (IconaCibo): grandi quanto un'emoji del testo intorno, un po' di più nei tondi. */
+.icona-cibo {
+  width: 1.15em;
+  height: 1.15em;
+  vertical-align: -0.22em;
+  display: inline-block;
+  flex: none;
+}
+.emoji .icona-cibo {
+  width: 38px;
+  height: 38px;
+  vertical-align: 0;
+}
+.titoletto-icone {
+  font-size: 0.9rem;
+  margin: 10px 0 6px;
+  color: var(--testo-tenue);
+}
+.scelte button.icona-scelta {
+  font-size: 1.6rem;
+  padding: 0 8px;
+  min-width: 52px;
+}
+.scelte button.icona-scelta .icona-cibo {
+  width: 1.35em;
+  height: 1.35em;
+}
+/* Scelta: anello senape, non fondo petrolio (i piatti disegnati sono petrolio e sparirebbero). */
+.scelte button.icona-scelta[aria-pressed='true'] {
+  background: var(--senape-tenue);
+  border: 3px solid var(--senape);
+  color: var(--testo);
+}

@@ -1,4 +1,6 @@
 import { type FormEvent, useState } from 'react';
+import { IconaCibo } from '../ui/IconaCibo';
+import { iconaIngrediente } from '../dominio/iconeCibo';
 import type { RigaInVista } from '../dati/anteprima';
 import { righeAttive, useFamiglia, useVista } from '../dati/contesto';
 import { useIndice } from '../dati/indice';
@@ -427,7 +429,7 @@ function CosaCapisce({ indice, testo, scegli }: { indice: Indice; testo: string;
           <div className="scelte">
             {proposte.map((i) => (
               <button type="button" key={i.id} onClick={() => scegli(i)}>
-                {i.emoji} {i.nome}
+                <IconaCibo valore={iconaIngrediente(i)} /> {i.nome}
               </button>
             ))}
           </div>

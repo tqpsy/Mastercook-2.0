@@ -202,6 +202,11 @@ describe('icona scelta per una ricetta', () => {
     expect(await icone()).toEqual([]);
 
     expect((await scegli('ciao')).esito).not.toBe('applicato');
+    expect((await scegli('mc:Lasagna')).esito).not.toBe('applicato');
+    expect((await scegli('mc:lasagna <b>')).esito).not.toBe('applicato');
+    expect((await scegli('mc:lasagna')).esito).toBe('applicato');
+    expect(await icone()).toEqual([{ ricetta_id: 'sys:riso_basmati_spezie', emoji: 'mc:lasagna', versione: 1 }]);
+    await scegli(null);
     expect((await scegli('🍛', 'sys:non_esiste')).esito).not.toBe('applicato');
     const altra = await famigliaCon();
     const { id, c } = nuovaRicetta(altra.famiglia);

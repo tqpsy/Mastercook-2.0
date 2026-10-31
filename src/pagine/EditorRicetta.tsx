@@ -1,4 +1,6 @@
 import { type FormEvent, useState } from 'react';
+import { IconaCibo } from '../ui/IconaCibo';
+import { iconaIngrediente } from '../dominio/iconeCibo';
 import { CATEGORIE, type Categoria } from '../catalogo/tipi';
 import { useFamiglia } from '../dati/contesto';
 import type { Indice, Ingrediente, Ricetta, RigaRicetta } from '../dominio/ricette';
@@ -231,7 +233,7 @@ export function EditorRicetta({ indice, bozza, chiudi }: { indice: Indice; bozza
               <li key={r.chiave}>
                 <div className="riga spazio">
                   <strong>
-                    {ing?.emoji} {ing?.nome ?? 'Ingrediente sconosciuto'}
+                    <IconaCibo valore={iconaIngrediente(ing)} /> {ing?.nome ?? 'Ingrediente sconosciuto'}
                   </strong>
                   <span className="riga">
                     <button type="button" className="bottone piccolo" onClick={() => setRighe(sposta(righe, i, -1))} aria-label={`Sposta su ${ing?.nome}`} disabled={i === 0}>

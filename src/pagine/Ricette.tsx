@@ -1,4 +1,7 @@
 import { type ReactNode, useCallback, useMemo, useState } from 'react';
+import { IconaCibo } from '../ui/IconaCibo';
+import { DISEGNI_CIBO, DISEGNO_PER_ID } from '../ui/disegniCibo';
+import { disegno, eDisegno, iconaIngrediente, PREFISSO_DISEGNO } from '../dominio/iconeCibo';
 import { CATEGORIE, type Categoria } from '../catalogo/tipi';
 import { righeAttive, useFamiglia, useVista } from '../dati/contesto';
 import { useIndice } from '../dati/indice';
@@ -67,24 +70,37 @@ function CambiaIcona({ indice, ricetta: r, scelta, chiudi }: { indice: Indice; r
   const [scritta, setScritta] = useState('');
   const [errore, setErrore] = useState<string | null>(null);
   const attuale = iconaRicetta(indice, r, scelta);
-  const proposte = [...new Set([...r.ingredienti.map((g) => indice.ingrediente(g.ingrediente_id)?.emoji).filter((e): e is string => !!e), ...ICONE_PIATTI])];
+  const automatica = iconaRicetta(indice, r);
+  const proposte = [...new Set([automatica, ...r.ingredienti.map((g) => iconaIngrediente(indice.ingrediente(g.ingrediente_id))).filter((e): e is string => !!e), ...ICONE_PIATTI])];
   async function scegli(emoji: string | null) {
     await esegui('scegli_icona', { id: crypto.randomUUID(), ricetta_id: r.id, emoji });
     chiudi();
   }
+  const bottone = (valore: string, nome: string) => (
+    <button key={valore} className="bottone icona-scelta" aria-label={`Usa ${nome}`} title={nome} aria-pressed={valore === attuale} onClick={() => scegli(valore)}>
+      <IconaCibo valore={valore} />
+    </button>
+  );
+  const nomeDi = (valore: string) => (eDisegno(valore) ? (DISEGNO_PER_ID.get(valore.slice(PREFISSO_DISEGNO.length))?.nome ?? valore) : valore);
+  const gruppi = [...new Set(DISEGNI_CIBO.map((x) => x.gruppo))];
   return (
     <Foglio titolo="Cambia icona" chiudi={chiudi}>
       <p className="tenue" style={{ marginTop: 0 }}>
-        {r.titolo}: ora <span aria-hidden>{attuale}</span>
-        {scelta ? ' (scelta dalla famiglia)' : ' (automatica, dall’ingrediente principale)'}. Vale per tutta la famiglia.
+        {r.titolo}: ora <IconaCibo valore={attuale} />
+        {scelta ? ' (scelta dalla famiglia)' : ' (automatica)'}. Vale per tutta la famiglia.
       </p>
+      <h3 className="titoletto-icone">Per questa ricetta</h3>
       <div className="scelte" role="group" aria-label="Icone proposte">
-        {proposte.map((e) => (
-          <button key={e} className="bottone" aria-label={`Usa ${e}`} aria-pressed={e === attuale} onClick={() => scegli(e)}>
-            {e}
-          </button>
-        ))}
+        {proposte.map((e) => bottone(e, nomeDi(e)))}
       </div>
+      {gruppi.map((g) => (
+        <div key={g}>
+          <h3 className="titoletto-icone">{g}</h3>
+          <div className="scelte" role="group" aria-label={`Icone disegnate: ${g}`}>
+            {DISEGNI_CIBO.filter((x) => x.gruppo === g).map((x) => bottone(disegno(x.id), x.nome))}
+          </div>
+        </div>
+      ))}
       <label className="campo">
         <span>Oppure scrivi un’emoji</span>
         <input value={scritta} onChange={(e) => setScritta(e.target.value)} maxLength={16} style={{ width: 90 }} />
@@ -261,7 +277,7 @@ function VoceRicetta({
     <li>
       <button className="voce" onClick={apri} aria-label={`Apri ${r.titolo}`}>
         <span className="emoji" aria-hidden>
-          {icona}
+          <IconaCibo valore={icona} />
         </span>
         <span className="cresce">
           <strong>{r.titolo}</strong>
@@ -346,7 +362,7 @@ export function SchedaRicetta({
       <p className="tenue">
         {modifica && (
           <button className="bottone piccolo" onClick={() => setCambiaIcona(true)} aria-label={`Cambia icona: ${r.titolo}`} style={{ marginRight: 8 }}>
-            <span aria-hidden>{iconaRicetta(indice, r, iconaScelta)}</span> Cambia icona
+            <IconaCibo valore={iconaRicetta(indice, r, iconaScelta)} /> Cambia icona
           </button>
         )}
 

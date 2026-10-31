@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { IconaCibo } from '../ui/IconaCibo';
+import { iconaIngrediente } from '../dominio/iconeCibo';
 import { righeAttive, useFamiglia, useVista } from '../dati/contesto';
 import { useIndice } from '../dati/indice';
 import { valutaPerFamiglia } from '../dominio/compatibilita';
@@ -509,7 +511,7 @@ function SpesaDiOggi({ indice, bisogni, aMano, chiudi, tutta }: { indice: Indice
               const voce = voceDi(b);
               return (
                 <li key={`${b.ingrediente_id}|${b.unita}`} className="riga" style={{ flexWrap: 'wrap' }}>
-                  <span aria-hidden>{indice.ingrediente(b.ingrediente_id)?.emoji}</span>
+                  <span aria-hidden><IconaCibo valore={iconaIngrediente(indice.ingrediente(b.ingrediente_id))} /></span>
                   <span className="cresce">
                     {indice.nome(b.ingrediente_id)} <span className="tenue">· {formatta({ valore: b.manca, unita: b.unita })}</span>
                   </span>
@@ -538,7 +540,7 @@ function SpesaDiOggi({ indice, bisogni, aMano, chiudi, tutta }: { indice: Indice
           <ul className="elenco">
             {ci.map((b) => (
               <li key={`${b.ingrediente_id}|${b.unita}`} className="riga">
-                <span aria-hidden>{indice.ingrediente(b.ingrediente_id)?.emoji}</span>
+                <span aria-hidden><IconaCibo valore={iconaIngrediente(indice.ingrediente(b.ingrediente_id))} /></span>
                 <span className="cresce">{indice.nome(b.ingrediente_id)}</span>
                 <span className="tenue">{formatta({ valore: b.serve, unita: b.unita })}</span>
               </li>
