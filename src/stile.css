@@ -1363,3 +1363,157 @@ p > .link {
     column-gap: 20px;
   }
 }
+
+/* Modalità cucina: sempre scura, a tutto schermo, testi e tasti grandi per le mani sporche. */
+.modalita-cucina {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: calc(16px + env(safe-area-inset-top)) calc(20px + env(safe-area-inset-right)) calc(20px + env(safe-area-inset-bottom)) calc(20px + env(safe-area-inset-left));
+  background: #1a1b1d;
+  color: #f3efe8;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.modalita-cucina .tenue {
+  color: #aeaaa3;
+}
+.cucina-testa {
+  gap: 14px;
+  font-family: var(--carattere-titoli);
+  font-size: 1.05rem;
+}
+.cucina-chiudi {
+  width: 56px;
+  height: 56px;
+  flex: none;
+  border-radius: 50%;
+  border: 1px solid #3a3c40;
+  background: #232528;
+  color: inherit;
+  font-size: 1.4rem;
+  cursor: pointer;
+}
+.cucina-schermo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #8fc9cf;
+  font-size: 0.9rem;
+  text-align: right;
+}
+.cucina-progresso {
+  display: flex;
+  gap: 6px;
+}
+.cucina-progresso span {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: #3a3c40;
+}
+.cucina-progresso span.fatto {
+  background: #2a8c97;
+}
+.cucina-progresso span.ora {
+  background: #f0b840;
+}
+.cucina-numero {
+  margin: 8px 0 0;
+  font-family: var(--carattere-titoli);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #f0b840;
+}
+.cucina-passo {
+  margin: 0;
+  font-family: var(--carattere-titoli);
+  font-weight: 600;
+  font-size: clamp(1.6rem, 6.5vw, 2.6rem);
+  line-height: 1.25;
+}
+.cucina-serve {
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: #232528;
+  font-size: 1.15rem;
+}
+.cucina-serve ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  text-align: right;
+  font-weight: 600;
+}
+.cucina-timer {
+  min-height: 64px;
+  border: 2px solid #2a8c97;
+  border-radius: 16px;
+  background: transparent;
+  color: #8fc9cf;
+  font: inherit;
+  font-family: var(--carattere-titoli);
+  font-size: 1.3rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.cucina-timer.in-corso {
+  background: #1d3b3f;
+  font-variant-numeric: tabular-nums;
+}
+.cucina-timer.finito {
+  background: #d9772f;
+  border-color: #d9772f;
+  color: #1a1b1d;
+}
+.cucina-comandi {
+  margin-top: auto;
+  display: grid;
+  grid-template-columns: 2fr 3fr;
+  gap: 12px;
+}
+.cucina-comandi button {
+  min-height: 72px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 18px;
+  font: inherit;
+  font-family: var(--carattere-titoli);
+  font-size: 1.35rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.cucina-indietro {
+  background: #2d2f33;
+  color: #f3efe8;
+}
+.cucina-indietro:disabled {
+  opacity: 0.4;
+}
+.cucina-avanti {
+  background: #f0b840;
+  color: #2b2c2e;
+}
+@media (min-width: 900px) {
+  .modalita-cucina {
+    padding-left: max(48px, calc((100vw - 960px) / 2));
+    padding-right: max(48px, calc((100vw - 960px) / 2));
+  }
+  .cucina-serve,
+  .cucina-timer {
+    max-width: 640px;
+  }
+}
+.bottone.cucina-apri {
+  margin: 4px 0 12px;
+}
