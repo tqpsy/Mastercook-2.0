@@ -20,6 +20,7 @@ import { famiglieLocali } from './piattaforma/locale/motore';
 import { esci, type FamigliaMia, mieFamiglie, mioConsenso, supabase } from './piattaforma/supabase';
 import { oggi, piuGiorni, statoData } from './dominio/scadenze';
 import { CopiaAutomatica } from './ui/CopiaAutomatica';
+import { Icona } from './ui/Icona';
 import { aggiungiPasso, togliPasso } from './ui/indietro';
 import { StatoSync } from './ui/StatoSync';
 
@@ -246,12 +247,11 @@ function Guscio({ email, apriFamiglia }: { email: string; apriFamiglia: (famigli
   const schede = useMemo(
     () =>
       [
-        { id: 'oggi', nome: 'Oggi', icona: '☀️' },
-        { id: 'menu', nome: 'Menu', icona: '📅' },
-        { id: 'spesa', nome: 'Spesa', icona: '🛒' },
-        { id: 'ricette', nome: 'Ricette', icona: '📖' },
-        { id: 'casa', nome: 'Casa', icona: '🏠' },
-        { id: 'famiglia', nome: 'Famiglia', icona: '👪' },
+        { id: 'oggi', nome: 'Oggi' },
+        { id: 'menu', nome: 'Menu' },
+        { id: 'spesa', nome: 'Spesa' },
+        { id: 'casa', nome: 'Casa' },
+        { id: 'ricette', nome: 'Ricette' },
       ] as const,
     [],
   );
@@ -282,11 +282,16 @@ function Guscio({ email, apriFamiglia }: { email: string; apriFamiglia: (famigli
   return (
     <>
       <header className="testata">
-        <h1>{scheda === 'impostazioni' ? 'Impostazioni' : schede.find((s) => s.id === scheda)?.nome}</h1>
+        <h1>{scheda === 'impostazioni' ? 'Impostazioni' : scheda === 'famiglia' ? 'Famiglia' : schede.find((s) => s.id === scheda)?.nome}</h1>
         <div className="riga">
           <StatoSync />
-          <button className="bottone piccolo" aria-label="Impostazioni" aria-pressed={scheda === 'impostazioni'} onClick={() => vai('impostazioni')}>
-            <span aria-hidden>⚙️</span>
+          <button
+            className="bottone piccolo tondo"
+            aria-label="Impostazioni"
+            aria-pressed={scheda === 'impostazioni' || scheda === 'famiglia'}
+            onClick={() => vai('impostazioni')}
+          >
+            <Icona nome="impostazioni" />
           </button>
         </div>
       </header>
@@ -297,10 +302,22 @@ function Guscio({ email, apriFamiglia }: { email: string; apriFamiglia: (famigli
         {scheda === 'spesa' && <Spesa />}
         {scheda === 'ricette' && <Ricette />}
         {scheda === 'casa' && <Casa />}
-        {scheda === 'famiglia' && <Famiglia />}
-        {scheda === 'impostazioni' && <Impostazioni email={email} esci={esciDaQui} apriFamiglia={apriFamiglia} dimentica={dimenticaDispositivo} />}
+        {scheda === 'famiglia' && (
+          <>
+            {/* Famiglia sta dentro Impostazioni: anche senza tasto Indietro (iPhone) si torna su. */}
+            <button className="link torna" onClick={() => vai('impostazioni')}>
+              <Icona nome="indietro" grandezza={20} />
+              Indietro
+            </button>
+            <Famiglia />
+          </>
+        )}
+        {scheda === 'impostazioni' && (
+          <Impostazioni email={email} esci={esciDaQui} apriFamiglia={apriFamiglia} dimentica={dimenticaDispositivo} vaiFamiglia={() => vai('famiglia')} />
+        )}
       </main>
-      <nav className="schede">
+      <nav className="schede" aria-label="Schede">
+        <img className="logo-barra" src={`${import.meta.env.BASE_URL}icona.svg`} alt="" />
         {schede.map((s) => (
           <button
             key={s.id}
@@ -309,10 +326,10 @@ function Guscio({ email, apriFamiglia }: { email: string; apriFamiglia: (famigli
             onClick={() => vai(s.id)}
           >
             <span className="icona" aria-hidden>
-              {s.icona}
+              <Icona nome={s.id} />
               {avvisi[s.id] && <span className="contatore">{avvisi[s.id]!.n}</span>}
             </span>
-            {s.nome}
+            <span className="nome-scheda">{s.nome}</span>
             {avvisi[s.id] && (
               <span id={`avviso-${s.id}`} hidden>
                 {avvisi[s.id]!.testo}

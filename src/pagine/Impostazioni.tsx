@@ -7,6 +7,7 @@ import { impostaChiave, type StatoChiave, statoChiave } from '../piattaforma/fot
 import { cancellaLocale, famiglieLocali } from '../piattaforma/locale/motore';
 import { type AnteprimaEliminazione, anteprimaEliminazione, eliminaFamiglia, eliminaMioAccount, type FamigliaMia, mieFamiglie } from '../piattaforma/supabase';
 import { Foglio } from '../ui/Foglio';
+import { Icona } from '../ui/Icona';
 import { leggiCollegamento, salvaSulDrive, scriviCollegamento } from '../dati/copiaDrive';
 import { collegaDrive, scollegaDrive, tokenValido } from '../piattaforma/drive';
 import { useStatoCopia } from '../ui/CopiaAutomatica';
@@ -21,11 +22,13 @@ export function Impostazioni({
   esci,
   apriFamiglia,
   dimentica,
+  vaiFamiglia,
 }: {
   email: string;
   esci: () => void;
   apriFamiglia: (famiglia: string) => void;
   dimentica: () => Promise<void>;
+  vaiFamiglia: () => void;
 }) {
   const { ruolo, utenteId, dove } = useFamiglia();
   const vista = useVista();
@@ -34,7 +37,22 @@ export function Impostazioni({
 
   return (
     <>
-      <h2>Famiglia</h2>
+      <div className="scheda">
+        <button className="voce" onClick={vaiFamiglia}>
+          <span className="emoji" aria-hidden>
+            <Icona nome="famiglia" />
+          </span>
+          <span className="cresce">
+            <strong>Famiglia</strong>
+            <span className="tenue" style={{ display: 'block' }}>
+              Persone, allergie, gusti e pasti fuori casa
+            </span>
+          </span>
+          <Icona nome="avanti" />
+        </button>
+      </div>
+
+      <h2>La tua famiglia</h2>
       <div className="scheda">
         {famiglia && amministratore ? <NomeFamiglia nome={String(famiglia.nome)} versione={famiglia.versione ?? 1} /> : <p>{String(famiglia?.nome ?? '')}</p>}
         <p className="tenue" style={{ marginBottom: 0 }}>

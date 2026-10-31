@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { useFamiglia, useStatoSync, useVista } from '../dati/contesto';
 import { descriviAzione, spiegaMotivo } from '../dati/messaggi';
 import { Foglio } from './Foglio';
+import { Icona } from './Icona';
 
-/** Indicatore sempre visibile: tutto salvato, modifiche in attesa, cose da sistemare, blocchi. */
+/** Indicatore del salvataggio: una spunta se è tutto salvato, per esteso le modifiche in attesa, le cose da sistemare e i blocchi. */
 export function StatoSync() {
   const s = useStatoSync();
   const [aperto, setAperto] = useState(false);
@@ -18,8 +19,9 @@ export function StatoSync() {
   else if (s.senza_rete) [testo, classe] = ['Senza rete', 'attesa'];
   return (
     <>
+      {/* Quando tutto è salvato resta solo una piccola spunta: la scritta compare quando c'è qualcosa da sapere. */}
       <button className={`stato-sync ${classe}`} onClick={() => setAperto(true)} aria-label={`Stato del salvataggio: ${testo}`}>
-        {testo}
+        {classe === 'ok' ? <Icona nome="spunta" grandezza={20} /> : testo}
       </button>
       {aperto && <PannelloSync chiudi={() => setAperto(false)} />}
     </>

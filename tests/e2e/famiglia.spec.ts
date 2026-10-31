@@ -4,7 +4,7 @@
  */
 import { expect, test } from '@playwright/test';
 import { fileVecchio } from '../vecchio-esempio';
-import { aggiungiPersona, apri, creaFamiglia, nuovoUtente, sql } from './aiuti';
+import { aggiungiPersona, apri, creaFamiglia, nuovoUtente, sql, vaiAFamiglia } from './aiuti';
 
 test('primo accesso: crea la famiglia, aggiunge una persona con un’allergia, tutto resta dopo la riapertura', async ({ browser }, info) => {
   const luca = await nuovoUtente('Luca');
@@ -21,7 +21,7 @@ test('primo accesso: crea la famiglia, aggiunge una persona con un’allergia, t
   await expect(page.getByRole('button', { name: /Stato del salvataggio: Tutto salvato/ })).toBeVisible();
 
   await page.reload();
-  await page.getByRole('button', { name: 'Famiglia' }).click();
+  await vaiAFamiglia(page);
   await expect(page.getByText('⚠️ Arachidi')).toBeVisible();
   const [r] = await sql<{ n: number }>(
     `select count(*)::int as n from vincolo_alimentare v join membro m on m.id = v.membro_id where m.nome = 'Sara' and v.oggetto = 'all:arachidi' and m.famiglia_id in (select famiglia_id from utente_famiglia where utente_id = $1)`,
@@ -94,7 +94,7 @@ test('invito: chi apre il link entra con un tocco e vede la famiglia; le modific
   await aggiungiPersona(telefono, 'Nonna');
   // Prima che il tablet chieda gli aggiornamenti, la Nonna deve essere arrivata al server.
   await expect(telefono.getByRole('button', { name: /Stato del salvataggio: Tutto salvato/ })).toBeVisible();
-  await tablet.getByRole('button', { name: 'Famiglia' }).click();
+  await vaiAFamiglia(tablet);
   await tablet.getByRole('button', { name: /Stato del salvataggio/ }).click();
   await tablet.getByRole('button', { name: 'Aggiorna adesso' }).click();
   await tablet.getByRole('button', { name: 'Chiudi' }).click();
@@ -106,7 +106,7 @@ test('senza rete: la modifica resta in attesa, visibile, e parte al ritorno dell
   const { contesto, page } = await apri(browser, luca, info.project.use);
   const marco = `Marco ${info.project.name} ${luca.id.slice(0, 6)}`;
   await creaFamiglia(page, 'Casa Offline');
-  await page.getByRole('button', { name: 'Famiglia' }).click();
+  await vaiAFamiglia(page);
 
   await contesto.setOffline(true);
   await aggiungiPersona(page, marco);
@@ -136,7 +136,7 @@ test('importazione dal vecchio Mastercook: rapporto prima, poi famiglia nuova; s
 
   await page.getByRole('button', { name: 'Importa in una famiglia nuova' }).click();
   await expect(page.getByRole('heading', { name: 'Ciao, Casa Topsidakis (importata)' })).toBeVisible();
-  await page.getByRole('button', { name: 'Famiglia' }).click();
+  await vaiAFamiglia(page);
   await expect(page.getByRole('button', { name: 'Modifica Sara' })).toBeVisible();
   const membri = await sql<{ nome: string; mio: boolean }>(
     'select m.nome, m.utente_id is not distinct from $1 as mio from membro m join utente_famiglia u on u.famiglia_id = m.famiglia_id where u.utente_id = $1 order by m.nome',

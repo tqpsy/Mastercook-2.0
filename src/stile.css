@@ -96,12 +96,15 @@
   box-sizing: border-box;
 }
 
+html {
+  font-size: 100%;
+}
 html,
 body {
   margin: 0;
   background: var(--sfondo);
   color: var(--testo);
-  font: 17px/1.45 var(--carattere-testo);
+  font: 1.0625rem/1.45 var(--carattere-testo);
   font-variant-numeric: tabular-nums;
   -webkit-text-size-adjust: 100%;
 }
@@ -201,7 +204,11 @@ p {
   font-weight: 600;
 }
 .schede .icona {
-  font-size: 1.3rem;
+  display: grid;
+  place-items: center;
+}
+.logo-barra {
+  display: none;
 }
 
 .scheda {
@@ -363,12 +370,14 @@ p {
   font-size: 0.85rem;
   white-space: nowrap;
 }
-.stato-sync.ok::before {
-  content: '';
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--primario);
+.stato-sync.ok {
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  justify-content: center;
+  border-color: transparent;
+  background: transparent;
+  color: var(--primario);
 }
 .stato-sync.attesa {
   background: var(--attenzione-tenue);
@@ -839,3 +848,113 @@ button.etichetta {
   margin: 0;
 }
 
+
+.icona-linea {
+  flex: none;
+  display: block;
+}
+.bottone.tondo {
+  border-radius: 50%;
+  padding: 0;
+}
+.link.torna {
+  gap: 4px;
+  text-decoration: none;
+  margin-bottom: 4px;
+}
+
+/*
+ * Schermo largo almeno 900 px (tablet, o telefono girato): le schede diventano una barra laterale a sinistra,
+ * e il contenuto usa la larghezza. Sotto i 900 px (anche con lo schermo diviso) resta lo schema del telefono.
+ */
+@media (min-width: 900px) {
+  :root {
+    --larghezza-barra: calc(200px + env(safe-area-inset-left));
+  }
+  .schede {
+    top: 0;
+    right: auto;
+    width: var(--larghezza-barra);
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 6px;
+    padding: calc(16px + env(safe-area-inset-top)) 12px calc(16px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left));
+  }
+  .schede button {
+    flex: none;
+    max-width: none;
+    width: 100%;
+    min-height: 52px;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 0 14px;
+    font-size: 1rem;
+  }
+  .logo-barra {
+    display: block;
+    width: 48px;
+    height: 48px;
+    margin: 0 0 18px 8px;
+  }
+  .testata,
+  .pagina {
+    margin-left: var(--larghezza-barra);
+  }
+  .testata {
+    padding-right: calc(16px + env(safe-area-inset-right));
+  }
+  /* Contenuto largo al massimo 1040 px, al centro dello spazio accanto alla barra. */
+  .pagina {
+    --margine: max(24px, calc((100vw - var(--larghezza-barra) - 1040px) / 2));
+    max-width: none;
+    padding: 20px calc(var(--margine) + env(safe-area-inset-right)) calc(32px + env(safe-area-inset-bottom)) var(--margine);
+  }
+  .griglia-menu {
+    width: calc(100vw - var(--larghezza-barra) - 16px);
+  }
+  .avviso-uscita {
+    left: calc(50% + var(--larghezza-barra) / 2);
+    bottom: calc(24px + env(safe-area-inset-bottom));
+  }
+}
+
+/* Tablet vero (alto almeno 700 px): testi più grandi del 10%, perché si legge dal piano della cucina. */
+@media (min-width: 900px) and (min-height: 700px) {
+  html {
+    font-size: 110%;
+  }
+}
+
+/* Telefono girato: poca altezza, quindi barra stretta con le sole icone. */
+@media (min-width: 900px) and (max-height: 600px) {
+  :root {
+    --larghezza-barra: calc(76px + env(safe-area-inset-left));
+  }
+  .schede {
+    padding-left: calc(8px + env(safe-area-inset-left));
+    padding-right: 8px;
+    gap: 2px;
+  }
+  .schede button {
+    min-height: 48px;
+    justify-content: center;
+    padding: 0;
+  }
+  .logo-barra {
+    display: none;
+  }
+  /* Il nome resta per chi usa il lettore dello schermo. */
+  .schede .nome-scheda {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .testata {
+    padding-top: calc(6px + env(safe-area-inset-top));
+    padding-bottom: 6px;
+  }
+}
