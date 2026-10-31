@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { leggiAlimenti, MODELLI, riconosci } from './nucleo';
+import { leggiAlimenti, messaggioGoogle, MODELLI, riconosci } from './nucleo';
 
 const risposta = (stato: number, corpo: unknown) => new Response(typeof corpo === 'string' ? corpo : JSON.stringify(corpo), { status: stato });
 const gemini = (testo: string) => risposta(200, { candidates: [{ content: { parts: [{ text: testo }] } }] });
@@ -39,7 +39,7 @@ describe('foto del frigo con Gemini', () => {
     const sempre429 = (async () => risposta(429, 'quota')) as typeof fetch;
     expect(await riconosci('AAAA', 'k', sempre429, ['a', 'b'])).toEqual({ errore: 'quota' });
     const chiaveSbagliata = (async () => risposta(400, '{"error":{"message":"API key not valid"}}')) as typeof fetch;
-    expect(await riconosci('AAAA', 'k', chiaveSbagliata, ['a'])).toEqual({ errore: 'chiave' });
+    expect(await riconosci('AAAA', 'k', chiaveSbagliata, ['a'])).toMatchObject({ errore: 'chiave' });
   });
 
   it('un modello non dato a questa chiave (403/404) non fa dire «chiave non valida»: si prova il prossimo', async () => {
@@ -54,7 +54,8 @@ describe('foto del frigo con Gemini', () => {
     const tuttiGiu = (async () => risposta(404, 'non trovato')) as typeof fetch;
     expect(await riconosci('AAAA', 'k', tuttiGiu, ['a', 'b'])).toMatchObject({ errore: 'gemini' });
     const scaduta = (async () => risposta(400, '{"error":{"message":"API key expired. Please renew the API key.","status":"INVALID_ARGUMENT"}}')) as typeof fetch;
-    expect(await riconosci('AAAA', 'k', scaduta, ['a', 'b'])).toEqual({ errore: 'chiave' });
+    expect(await riconosci('AAAA', 'k', scaduta, ['a', 'b'])).toEqual({ errore: 'chiave', dettaglio: 'INVALID_ARGUMENT: API key expired. Please renew the API key.' });
+    expect(messaggioGoogle('chiave AIzaSyQualcosa123 rifiutata')).toBe('chiave … rifiutata');
   });
 
   it('i modelli nuovi vengono prima dei 2.5', () => {

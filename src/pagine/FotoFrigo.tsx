@@ -48,7 +48,7 @@ export function FotoFrigo({ indice, luogo: luogoIniziale, chiudi }: { indice: In
     setStato('leggo');
     const r = await riconosciFoto(famiglia, await riduciFoto(file), { dove, utenteId });
     if ('errore' in r) {
-      setErrore(SPIEGA_ERRORE[r.errore]);
+      setErrore(SPIEGA_ERRORE[r.errore] + (r.dettaglio ? ` (Risposta di Google: ${r.dettaglio})` : ''));
       return setStato('scatta');
     }
     const p = abbinaAlimenti(indice, r.alimenti);
