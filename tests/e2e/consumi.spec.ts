@@ -108,13 +108,13 @@ test('ciò che scade: in Casa le ricette che lo usano, «stasera» in un tocco, 
   await nuovo.getByRole('button', { name: 'Aggiungi', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Casa', exact: true })).toHaveAccessibleDescription('1 prodotto scaduto o da usare oggi');
 
-  // Ciò che scade e le ricette che lo usano stanno in Casa, non più in Oggi.
+  // L'elenco di ciò che scade e le ricette che lo usano stanno in Casa; Oggi ne mostra solo le prime mattonelle.
   await page.getByRole('region', { name: 'Da usare presto' }).locator('summary').click();
   const ricette = page.getByRole('region', { name: 'Da usare presto' }).getByRole('list', { name: 'Ricette che li usano' });
   await expect(ricette.getByRole('listitem').first()).toContainText('usa guanciale');
   await ricette.getByRole('button', { name: /Metti a cena stasera/ }).first().click();
   await page.getByRole('button', { name: 'Oggi', exact: true }).click();
-  await expect(page.getByRole('region', { name: 'Da usare presto' })).toHaveCount(0);
+  await expect(page.getByRole('region', { name: 'Da usare presto' }).getByRole('button', { name: /Guanciale/ })).toContainText('oggi');
   await expect(page.getByRole('region', { name: 'Oggi si mangia' }).getByRole('button', { name: /Mangiato come previsto/ })).toBeVisible();
   await salvato(page);
   await expect

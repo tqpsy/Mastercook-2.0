@@ -5,11 +5,12 @@ import { valutaPerFamiglia } from '../dominio/compatibilita';
 import { type ConfermaPasto as Conferma, daConfermare, NOME_ESITO } from '../dominio/consumi';
 import type { CategoriaPasto, Eccezione, PortataMenu } from '../dominio/menu';
 import type { Indice, Ricetta } from '../dominio/ricette';
-import { oggi, piuGiorni } from '../dominio/scadenze';
+import { daUsarePresto, giorniTra, oggi, piuGiorni, statoData } from '../dominio/scadenze';
 import { spesaDelGiorno, type BisognoDelGiorno } from '../dominio/spesa';
 import { formatta, formattaGiorno } from '../dominio/unita';
 import { Foglio } from '../ui/Foglio';
 import { Foto, riduciFoto } from '../ui/Foto';
+import { Icona } from '../ui/Icona';
 import { useLotti } from './Casa';
 import { ConfermaPasto, useConferme } from './ConfermaPasto';
 import { chiLoMangia, type DatiMenu, descrivi, useDatiMenu, useProlungaFissi } from './Menu';
@@ -76,7 +77,7 @@ function StatoPasto({ titolo, conferma, apri, portata }: { titolo: string; confe
         ✓ Mangiato
       </button>
       <button className="bottone piccolo" onClick={apri} aria-label={`Com’è andato: ${titolo}`}>
-        Altro…
+        Cambia
       </button>
     </span>
   );
@@ -95,93 +96,173 @@ const SEMPRE = new Set(['colazione', 'pranzo', 'merenda', 'cena']);
 const mezze = (n: number) => Math.max(0.5, Math.round(n * 2) / 2);
 const porzioniTesto = (n: number) => (n === 1 ? '1 porzione' : `${n.toLocaleString('it-IT')} porzioni`);
 
+/** Da che ora un pasto è passato e conta il successivo (ore e minuti in minuti dalla mezzanotte). */
+const FINE_PASTO: Record<string, number> = { colazione: 10 * 60 + 30, pranzo: 15 * 60, merenda: 17 * 60 + 30, cena: 24 * 60 };
+
+function saluto(adesso: Date) {
+  const ora = adesso.getHours();
+  return ora < 5 ? 'Buonanotte' : ora < 13 ? 'Buongiorno' : ora < 18 ? 'Buon pomeriggio' : 'Buonasera';
+}
+
+/** Il pasto da mettere in evidenza: il primo, da adesso in poi, con un piatto ancora da mangiare; altrimenti quello di adesso. */
+function pastoInEvidenza(pasti: CategoriaPasto[], diOggi: PortataMenu[], attive: Map<string, Conferma>, adesso: Date): CategoriaPasto | undefined {
+  const minuti = adesso.getHours() * 60 + adesso.getMinutes();
+  const ora = pasti.findIndex((c) => (FINE_PASTO[c.valore] ?? -1) > minuti);
+  if (ora < 0) return undefined;
+  const avanti = pasti.slice(ora);
+  return avanti.find((c) => diOggi.some((p) => p.categoria === c.valore && !attive.has(p.id))) ?? avanti[0];
+}
+
 /**
- * Oggi: il menu della giornata pasto per pasto (colazione, pranzo, merenda, cena…), con i piatti a parte
- * di chi mangia altro (bambini piccoli, intolleranze) e gli avvisi per chi ha esigenze. Toccando un piatto
- * si apre la ricetta; la spesa mostra solo ciò che manca per i piatti di oggi.
+ * Oggi: in grande il prossimo pasto (Mangiato, Cambia, ricetta), poi ciò che è da usare presto e il resto
+ * della giornata, con i piatti a parte di chi mangia altro e gli avvisi per chi ha esigenze. Toccando un
+ * piatto si apre la ricetta; la spesa mostra solo ciò che manca per i piatti di oggi.
+ * Da 900 px in su: il pasto e la giornata a sinistra, scadenze e spesa a destra.
  */
-export function Oggi({ vai }: { vai: (scheda: 'spesa') => void }) {
+export function Oggi({ vai }: { vai: (scheda: 'spesa' | 'casa' | 'menu') => void }) {
   const vista = useVista();
+  const { utenteId } = useFamiglia();
   const indice = useIndice(vista);
   const dati = useDatiMenu(vista);
   const lotti = useLotti();
   const famiglia = righeAttive(vista, 'famiglia')[0];
+  const io = righeAttive(vista, 'membro').find((m) => m.utente_id === utenteId);
   const giorno = oggi();
   useProlungaFissi(piuGiorni(giorno, 13));
   const { attive } = useConferme(vista);
   const [aperto, setAperto] = useState<string | null>(null);
   const [ricetta, setRicetta] = useState<Aperta | null>(null);
   const [spesa, setSpesa] = useState(false);
+  const adesso = new Date();
   const diOggi = dati.portate.filter((p) => p.data === giorno);
   // Colazione, pranzo, merenda e cena ci sono sempre; gli altri pasti se accesi o se oggi hanno un piatto.
   const pasti = dati.categorie.filter((c) => SEMPRE.has(c.valore) || c.attiva || diOggi.some((p) => p.categoria === c.valore));
+  const evidenza = pastoInEvidenza(pasti, diOggi, attive, adesso);
   const arretrati = daConfermare(dati.portate, attive, giorno).filter((p) => p.data < giorno);
   const portataAperta = aperto ? dati.portate.find((p) => p.id === aperto) : undefined;
   const daMangiare = diOggi.filter((p) => !attive.has(p.id));
   const bisogni = indice ? spesaDelGiorno(indice, daMangiare, dati.persone, dati.eccezioni, dati.portate, dati.ospiti, lotti) : [];
   const mancano = bisogni.filter((b) => b.manca > 0).length;
-  const data = new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
+  const presto = daUsarePresto(lotti, giorno).slice(0, 3);
+  const data = adesso.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
+  const nome = String(io?.nome ?? famiglia?.nome ?? '').split(' ')[0];
+
+  const pasto = (c: CategoriaPasto, inEvidenza = false) =>
+    indice && (
+      <Pasto
+        key={c.valore}
+        indice={indice}
+        dati={dati}
+        categoria={c}
+        portate={diOggi.filter((p) => p.categoria === c.valore)}
+        attive={attive}
+        inEvidenza={inEvidenza}
+        apriConferma={setAperto}
+        apriRicetta={setRicetta}
+        aggiungi={() => vai('menu')}
+      />
+    );
 
   return (
-    <>
-      <p className="tenue" style={{ textTransform: 'capitalize', marginBottom: 0 }}>
-        {data}
-      </p>
-      <div className="riga spazio" style={{ flexWrap: 'wrap', marginBottom: 12 }}>
-        <h2 style={{ margin: 0 }}>{famiglia ? `Ciao, ${String(famiglia.nome)}` : 'Ciao'}</h2>
-        <button className="bottone piccolo" onClick={() => setSpesa(true)} disabled={!indice}>
-          🛒 Lista della spesa{mancano ? ` (${mancano})` : ''}
-        </button>
-      </div>
+    <div className="oggi">
+      <header className="oggi-saluto">
+        <p className="tenue" style={{ marginBottom: 0 }}>
+          <span style={{ textTransform: 'capitalize' }}>{data}</span>
+          {famiglia && (
+            <>
+              {' · '}
+              <span>{String(famiglia.nome)}</span>
+            </>
+          )}
+        </p>
+        <h2 className="titolo-grande">{nome ? `${saluto(adesso)}, ${nome}` : saluto(adesso)}</h2>
+      </header>
 
-      <section aria-label="Oggi si mangia">
+      <section aria-label="Oggi si mangia" className="oggi-pasti">
         {!indice ? (
           <p className="tenue">Sto caricando il menu…</p>
         ) : (
           <>
-            {diOggi.length === 0 && <div className="avviso info">Niente in menu per oggi: lo prepari dalla scheda Menu qui sotto.</div>}
-            {pasti.map((c) => (
-              <Pasto
-                key={c.valore}
-                indice={indice}
-                dati={dati}
-                categoria={c}
-                portate={diOggi.filter((p) => p.categoria === c.valore)}
-                attive={attive}
-                apriConferma={setAperto}
-                apriRicetta={setRicetta}
-              />
-            ))}
+            {evidenza && pasto(evidenza, true)}
+            {diOggi.length === 0 && <div className="avviso info">Niente in menu per oggi: lo prepari dalla scheda Menu.</div>}
+            {presto.length > 0 && (
+              <section aria-label="Da usare presto" className="oggi-presto">
+                <div className="riga spazio">
+                  <h3 className="sopratitolo">Da usare presto</h3>
+                  <button className="link" onClick={() => vai('casa')}>
+                    Tutto
+                  </button>
+                </div>
+                <ul className="mattonelle">
+                  {presto.map((l) => {
+                    const s = statoData(l, giorno);
+                    const mancano = l.data_limite ? giorniTra(giorno, l.data_limite) : null;
+                    const quando =
+                      s === 'sconosciuta' || mancano === null
+                        ? 'da controllare'
+                        : mancano < 0
+                          ? 'scaduto'
+                          : mancano === 0
+                            ? 'oggi'
+                            : mancano === 1
+                              ? 'domani'
+                              : `${mancano} giorni`;
+                    const tono = mancano !== null && mancano <= 1 ? 'urgente' : s === 'presto' ? 'presto' : 'calmo';
+                    return (
+                      <li key={l.id}>
+                        <button className={`mattonella ${tono}`} onClick={() => vai('casa')}>
+                          <strong>{indice.nome(l.ingrediente_id)}</strong>
+                          <span>{quando}</span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            )}
+            {pasti.some((c) => c !== evidenza) && (
+              <section aria-label="Il resto di oggi" className="oggi-resto">
+                <h3 className="sopratitolo">{evidenza ? 'Il resto di oggi' : 'Oggi'}</h3>
+                <div className="scheda elenco-pasti">{pasti.filter((c) => c !== evidenza).map((c) => pasto(c))}</div>
+              </section>
+            )}
           </>
         )}
       </section>
 
-      {indice && arretrati.length > 0 && (
-        <section className="scheda" aria-label="Pasti da confermare">
-          <h3 style={{ marginTop: 0 }}>Pasti da confermare</h3>
-          <p className="tenue" style={{ marginTop: 0 }}>
-            Confermare toglie dalla casa ciò che è stato usato: così frigo e dispensa restano veri.
-          </p>
-          <ul className="elenco">
-            {arretrati.map((p) => {
-              const titolo = titoloDi(indice, p);
-              const categoria = dati.categorie.find((c) => c.valore === p.categoria);
-              return (
-                <li key={p.id} className="riga" style={{ flexWrap: 'wrap' }}>
-                  <span className="cresce">
-                    {titolo}{' '}
-                    <span className="tenue">
-                      · {formattaGiorno(p.data)}
-                      {categoria && `, ${categoria.nome.toLowerCase()}`}
+      <div className="oggi-lato">
+        <button className="bottone pieno spesa-oggi" onClick={() => setSpesa(true)} disabled={!indice}>
+          <Icona nome="spesa" />
+          Spesa per oggi{mancano ? ` · ${mancano} ${mancano === 1 ? 'cosa' : 'cose'}` : ''}
+        </button>
+
+        {indice && arretrati.length > 0 && (
+          <section className="scheda" aria-label="Pasti da confermare">
+            <h3 style={{ marginTop: 0 }}>Pasti da confermare</h3>
+            <p className="tenue" style={{ marginTop: 0 }}>
+              Confermare toglie dalla casa ciò che è stato usato: così frigo e dispensa restano veri.
+            </p>
+            <ul className="elenco">
+              {arretrati.map((p) => {
+                const titolo = titoloDi(indice, p);
+                const categoria = dati.categorie.find((c) => c.valore === p.categoria);
+                return (
+                  <li key={p.id} className="riga" style={{ flexWrap: 'wrap' }}>
+                    <span className="cresce">
+                      {titolo}{' '}
+                      <span className="tenue">
+                        · {formattaGiorno(p.data)}
+                        {categoria && `, ${categoria.nome.toLowerCase()}`}
+                      </span>
                     </span>
-                  </span>
-                  <StatoPasto titolo={titolo} portata={p} apri={() => setAperto(p.id)} />
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      )}
+                    <StatoPasto titolo={titolo} portata={p} apri={() => setAperto(p.id)} />
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        )}
+      </div>
 
       {indice && portataAperta && (
         <ConfermaPasto
@@ -206,7 +287,7 @@ export function Oggi({ vai }: { vai: (scheda: 'spesa') => void }) {
           }}
         />
       )}
-    </>
+    </div>
   );
 }
 
@@ -217,26 +298,52 @@ function Pasto({
   categoria: c,
   portate,
   attive,
+  inEvidenza,
   apriConferma,
   apriRicetta,
+  aggiungi,
 }: {
   indice: Indice;
   dati: DatiMenu;
   categoria: CategoriaPasto;
   portate: PortataMenu[];
   attive: Map<string, Conferma>;
+  inEvidenza: boolean;
   apriConferma: (id: string) => void;
   apriRicetta: (a: Aperta) => void;
+  aggiungi: () => void;
 }) {
+  const fatto = portate.length > 0 && portate.every((p) => attive.has(p.id));
+  const aTavola = dati.persone.length;
   return (
-    <section className="scheda" aria-label={c.nome}>
-      <h3 style={{ margin: '0 0 8px' }}>
-        <span aria-hidden>{c.emoji}</span> {c.nome}
-      </h3>
+    <section className={inEvidenza ? 'pasto-ora' : `pasto-riga${fatto ? ' fatto' : ''}`} aria-label={c.nome}>
+      <div className="riga spazio testa-pasto">
+        {inEvidenza ? (
+          <h3>
+            <span className="pillola-testo">
+              <span aria-hidden>{c.emoji}</span>&nbsp;{c.nome}
+            </span>
+          </h3>
+        ) : (
+          <h3>
+            <span className="tessera" aria-hidden>
+              {c.emoji}
+            </span>
+            {c.nome}
+          </h3>
+        )}
+        {inEvidenza && aTavola > 0 && <span className="a-tavola">{aTavola} a tavola</span>}
+        {!inEvidenza && fatto && <Icona nome="spunta" />}
+      </div>
       {portate.length === 0 ? (
-        <p className="tenue" style={{ margin: 0 }}>
-          Niente in menu.
-        </p>
+        <div className="riga spazio">
+          <p className="tenue" style={{ margin: 0 }}>
+            Niente in menu.
+          </p>
+          <button className="bottone piccolo tondo aggiungi-pasto" aria-label={`Aggiungi a ${c.nome.toLowerCase()} dal Menu`} onClick={aggiungi}>
+            +
+          </button>
+        </div>
       ) : (
         <ul className="elenco">
           {portate.map((p) => (

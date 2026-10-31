@@ -75,7 +75,7 @@ test('menu: un piatto per cena, Sara mangia altro, nessun movimento in casa', as
   await principale.getByRole('button', { name: 'Chiudi' }).click();
 
   // La spesa da Oggi: solo ciò che serve ai piatti di oggi.
-  await page.getByRole('button', { name: /Lista della spesa/ }).click();
+  await page.getByRole('button', { name: /Spesa per oggi/ }).click();
   const spesa = page.getByRole('dialog', { name: 'Spesa per oggi' });
   const daComprare = spesa.getByRole('region', { name: 'Da comprare per oggi' });
   await expect(daComprare).toContainText('Guanciale');

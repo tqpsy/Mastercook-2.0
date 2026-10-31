@@ -89,7 +89,7 @@ test('invito: chi apre il link entra con un tocco e vede la famiglia; le modific
   const { page: tablet } = await apri(browser, sara, info.project.use, `#invito=${invito.codice}`);
   await expect(tablet.getByLabel('Il tuo nome')).toHaveValue('Sara');
   await tablet.getByRole('button', { name: 'Entra' }).click();
-  await expect(tablet.getByRole('heading', { name: 'Ciao, Casa Invito' })).toBeVisible();
+  await expect(tablet.getByText('Casa Invito', { exact: true })).toBeVisible();
 
   await aggiungiPersona(telefono, 'Nonna');
   // Prima che il tablet chieda gli aggiornamenti, la Nonna deve essere arrivata al server.
@@ -135,7 +135,7 @@ test('importazione dal vecchio Mastercook: rapporto prima, poi famiglia nuova; s
   expect((await sql<{ n: number }>('select count(*)::int as n from utente_famiglia where utente_id = $1', [luca.id]))[0].n).toBe(0);
 
   await page.getByRole('button', { name: 'Importa in una famiglia nuova' }).click();
-  await expect(page.getByRole('heading', { name: 'Ciao, Casa Topsidakis (importata)' })).toBeVisible();
+  await expect(page.getByText('Casa Topsidakis (importata)', { exact: true })).toBeVisible();
   await vaiAFamiglia(page);
   await expect(page.getByRole('button', { name: 'Modifica Sara' })).toBeVisible();
   const membri = await sql<{ nome: string; mio: boolean }>(

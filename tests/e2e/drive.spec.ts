@@ -37,7 +37,7 @@ test('sul mio Drive: spiegazione, copia automatica, ritrovata su un altro telefo
   await expect(spiegazione.getByText(/Non vede, non legge e non tocca/)).toBeVisible();
   await expect(spiegazione.getByText(/non passa dal server di Mastercook/)).toBeVisible();
   await spiegazione.getByRole('button', { name: 'Ho capito, continua' }).click();
-  await expect(a.getByRole('heading', { name: `Ciao, ${nome}` })).toBeVisible({ timeout: 120_000 });
+  await expect(a.getByText(nome, { exact: true })).toBeVisible({ timeout: 120_000 });
 
   // La prima copia si salva da sola, nella cartella Mastercook.
   await expect.poll(() => drive.copie().length, { timeout: 30_000 }).toBe(1);
@@ -55,7 +55,7 @@ test('sul mio Drive: spiegazione, copia automatica, ritrovata su un altro telefo
   await b.getByRole('button', { name: 'Cerca nel mio Google Drive' }).click();
   await b.getByRole('dialog', { name: 'Il tuo Google Drive' }).getByRole('button', { name: 'Ho capito, continua' }).click();
   await b.getByRole('list', { name: 'Famiglie sul Drive' }).getByRole('button', { name: 'Usa questa' }).click();
-  await expect(b.getByRole('heading', { name: `Ciao, ${nome}` })).toBeVisible({ timeout: 120_000 });
+  await expect(b.getByText(nome, { exact: true })).toBeVisible({ timeout: 120_000 });
   await b.getByRole('button', { name: 'Menu', exact: true }).click();
   await expect(b.getByRole('button', { name: 'Apri Spaghetti alla carbonara' })).toBeVisible();
 
