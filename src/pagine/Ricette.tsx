@@ -6,7 +6,8 @@ import { CATEGORIE, type Categoria } from '../catalogo/tipi';
 import { righeAttive, useFamiglia, useVista } from '../dati/contesto';
 import { useIndice } from '../dati/indice';
 import { type Esito, type Motivo, NOME_ESITO, valutaPerFamiglia, type ValutazioneFamiglia, type Verifica, type Vincolo } from '../dominio/compatibilita';
-import { copertura, filtra, iconaRicetta, type Indice, type Ricetta } from '../dominio/ricette';
+import { righeEBasi, testoDosi, titoloBase } from '../dominio/basi';
+import { copertura, filtra, iconaRicetta, type Indice, type Ricetta, type RigaRicetta } from '../dominio/ricette';
 import { formatta, scala } from '../dominio/unita';
 import { Foglio } from '../ui/Foglio';
 import { Foto } from '../ui/Foto';
@@ -341,6 +342,25 @@ export function SchedaRicetta({
     await esegui('verifica_ricetta', { id: crypto.randomUUID(), membro_id, ricetta_id: r.id, versione_ricetta: r.versione ?? 1, va_bene: scelta === 'va_bene', scelta });
   }
 
+  // Le basi collegate (la besciamella…): ingredienti raggruppati e la loro preparazione prima dei passaggi.
+  const collegate = righeEBasi(r);
+  const passiBasi = collegate.basi.flatMap((b) => (indice.perId.get(b.ricetta_id)?.passi ?? []).map((p) => `${titoloBase(indice, b.ricetta_id)}: ${p.testo}`));
+  const rigaIngrediente = (g: RigaRicetta) => {
+    const ing = indice.ingrediente(g.ingrediente_id);
+    const presente = !!ing?.base || casa.has(g.ingrediente_id);
+    return (
+      <li key={g.id} className="riga">
+        <span aria-hidden>{ing?.emoji}</span>
+        <span className="cresce">
+          {g.testo || indice.nome(g.ingrediente_id)}
+          {g.opzionale && <span className="tenue"> (facoltativo)</span>}
+          {inCasa.size > 0 && presente && <span className="tenue"> · in casa</span>}
+        </span>
+        <span>{g.qb ? 'q.b.' : formatta(g.quantita === null ? null : scala({ valore: g.quantita, unita: g.unita }, r.porzioni, porzioni))}</span>
+      </li>
+    );
+  };
+
   async function archivia(archiviata: boolean) {
     await esegui('salva_ricetta', { id: r.id, versione_attesa: r.versione, campi: { archiviata } });
   }
@@ -424,23 +444,15 @@ export function SchedaRicetta({
           </button>
         </div>
       </div>
-      <ul className="elenco">
-        {r.ingredienti.map((g) => {
-          const ing = indice.ingrediente(g.ingrediente_id);
-          const presente = !!ing?.base || casa.has(g.ingrediente_id);
-          return (
-            <li key={g.id} className="riga">
-              <span aria-hidden>{ing?.emoji}</span>
-              <span className="cresce">
-                {g.testo || indice.nome(g.ingrediente_id)}
-                {g.opzionale && <span className="tenue"> (facoltativo)</span>}
-                {inCasa.size > 0 && presente && <span className="tenue"> · in casa</span>}
-              </span>
-              <span>{g.qb ? 'q.b.' : formatta(g.quantita === null ? null : scala({ valore: g.quantita, unita: g.unita }, r.porzioni, porzioni))}</span>
-            </li>
-          );
-        })}
-      </ul>
+      <ul className="elenco">{collegate.proprie.map(rigaIngrediente)}</ul>
+      {collegate.basi.map((b) => (
+        <div key={b.ricetta_id}>
+          <h4 style={{ margin: '12px 0 4px' }}>
+            🥣 {titoloBase(indice, b.ricetta_id)} <span className="tenue">· {testoDosi(b.dosi)}</span>
+          </h4>
+          <ul className="elenco">{b.righe.map(rigaIngrediente)}</ul>
+        </div>
+      ))}
       {porzioni !== r.porzioni && <p className="tenue">Quantità ricalcolate da {r.porzioni} porzioni: i pezzi sono arrotondati al mezzo.</p>}
 
       <h3>Preparazione</h3>
@@ -452,7 +464,7 @@ export function SchedaRicetta({
       {cucina && (
         <ModalitaCucina
           titolo={r.titolo}
-          passi={r.passi.map((p) => p.testo)}
+          passi={[...passiBasi, ...r.passi.map((p) => p.testo)]}
           ingredienti={r.ingredienti.map((g) => {
             const ing = indice.ingrediente(g.ingrediente_id);
             return {
@@ -464,6 +476,18 @@ export function SchedaRicetta({
           chiudi={chiudiCucina}
         />
       )}
+      {collegate.basi.map((b) => (
+        <details key={b.ricetta_id} style={{ marginBottom: 8 }}>
+          <summary>🥣 Come si fa: {titoloBase(indice, b.ricetta_id)}</summary>
+          <ol style={{ paddingLeft: 20 }}>
+            {(indice.perId.get(b.ricetta_id)?.passi ?? []).map((p) => (
+              <li key={p.id} style={{ marginBottom: 8 }}>
+                {p.testo}
+              </li>
+            ))}
+          </ol>
+        </details>
+      ))}
       <ol style={{ paddingLeft: 20 }}>
         {r.passi.map((p) => (
           <li key={p.id} style={{ marginBottom: 8 }}>

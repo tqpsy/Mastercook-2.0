@@ -258,3 +258,66 @@ describe('ricetta segnata «va bene» per un membro', () => {
     expect((await scegli('forse')).esito).not.toBe('applicato');
   });
 });
+
+describe('ricette collegate: una base dentro la ricetta', () => {
+  const lasagna = (famiglia: string, basi: Record<string, unknown>) => {
+    const { id, c } = nuovaRicetta(famiglia, { titolo: 'Lasagna di Luca', categoria: 'piatto_unico' }, [riga('ing:carne_macinata', 500, 'g')]);
+    c.dati.basi = basi;
+    return { id, c };
+  };
+  const righeBase = (id: string) =>
+    banco.sql<{ ingrediente_id: string; quantita: string | null; dosi: string }>(
+      'select ingrediente_id, quantita, dosi from ricetta_ingrediente where ricetta_id = $1 and da_ricetta_id is not null and eliminato_il is null order by ingrediente_id collate "C"',
+      [id],
+    );
+
+  it('la besciamella fatta in casa entra con le sue righe moltiplicate per le dosi', async () => {
+    const { u, famiglia } = await famigliaCon();
+    const { id, c } = lasagna(famiglia, { imposta: [{ ricetta_id: 'sys:besciamella', dosi: 0.5 }] });
+    expect((await u.applica(c)).esito).toBe('applicato');
+    const righe = await righeBase(id);
+    expect(righe.map((r) => [r.ingrediente_id, Number(r.quantita)])).toEqual([
+      ['ing:burro', 50],
+      ['ing:farina', 50],
+      ['ing:latte', 500],
+      ['ing:noce_moscata', 0.5],
+      ['ing:sale', 2.5],
+    ]);
+    expect(righe.every((r) => Number(r.dosi) === 0.5)).toBe(true);
+    const p = await u.scarica(famiglia, 0);
+    expect(p.righe.filter((r) => r.tabella === 'ricetta_ingrediente')).toHaveLength(6);
+  });
+
+  it('cambiare le dosi o togliere la base riscrive le righe', async () => {
+    const { u, famiglia } = await famigliaCon();
+    const { id, c } = lasagna(famiglia, { imposta: [{ ricetta_id: 'sys:besciamella', dosi: 1 }] });
+    await u.applica(c);
+    expect((await u.applica(comando('salva_ricetta', famiglia, { id, basi: { imposta: [{ ricetta_id: 'sys:besciamella', dosi: 2 }] } }))).esito).toBe('applicato');
+    expect(Number((await righeBase(id)).find((r) => r.ingrediente_id === 'ing:latte')!.quantita)).toBe(2000);
+    expect((await u.applica(comando('salva_ricetta', famiglia, { id, basi: { rimuovi: ['sys:besciamella'] } }))).esito).toBe('applicato');
+    expect(await righeBase(id)).toEqual([]);
+  });
+
+  it('se la base della famiglia cambia, la ricetta che la usa si aggiorna', async () => {
+    const { u, famiglia } = await famigliaCon();
+    const latte = riga('ing:latte', 800, 'ml');
+    const salsa = nuovaRicetta(famiglia, { titolo: 'Besciamella mia', categoria: 'base' }, [latte, riga('ing:burro', 80, 'g')]);
+    await u.applica(salsa.c);
+    const { id, c } = lasagna(famiglia, { imposta: [{ ricetta_id: salsa.id, dosi: 1 }] });
+    await u.applica(c);
+    await u.applica(comando('salva_ricetta', famiglia, { id: salsa.id, ingredienti: { modifica: [{ id: latte.id, versione_attesa: 1, campi: { quantita: 1000 } }] } }));
+    expect(Number((await righeBase(id)).find((r) => r.ingrediente_id === 'ing:latte')!.quantita)).toBe(1000);
+  });
+
+  it('solo le basi, e un solo livello', async () => {
+    const { u, famiglia } = await famigliaCon();
+    const nonBase = lasagna(famiglia, { imposta: [{ ricetta_id: 'sys:carbonara', dosi: 1 }] });
+    expect((await u.applica(nonBase.c)).dettaglio.motivo).toBe('base_non_valida');
+    const salsa = nuovaRicetta(famiglia, { titolo: 'Salsa', categoria: 'base' }, [riga('ing:latte', 500, 'ml')]);
+    await u.applica(salsa.c);
+    const { c } = lasagna(famiglia, { imposta: [{ ricetta_id: salsa.id, dosi: 1 }] });
+    await u.applica(c);
+    const dentro = await u.applica(comando('salva_ricetta', famiglia, { id: salsa.id, basi: { imposta: [{ ricetta_id: 'sys:besciamella', dosi: 1 }] } }));
+    expect(dentro.dettaglio.motivo).toBe('base_non_valida');
+  });
+});
