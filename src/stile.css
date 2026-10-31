@@ -761,6 +761,27 @@ button.etichetta {
   padding: 4px 0;
   border-bottom: 0;
 }
+
+/* «Premi di nuovo Indietro per uscire», sopra le schede in basso. */
+.avviso-uscita {
+  position: fixed;
+  left: 50%;
+  bottom: calc(84px + env(safe-area-inset-bottom));
+  z-index: 50;
+  transform: translate(-50%, 8px);
+  max-width: calc(100% - 32px);
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: var(--testo);
+  color: var(--superficie);
+  font-size: 0.95rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s, transform 0.15s;
+}
+.avviso-uscita.visibile {
+  opacity: 1;
+  transform: translate(-50%, 0);
 .spunte input[type='checkbox'] {
   width: 24px;
   height: 24px;

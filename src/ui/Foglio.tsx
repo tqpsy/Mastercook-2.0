@@ -1,5 +1,6 @@
-import { type ReactNode, useEffect } from 'react';
+import { type ReactNode, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { aggiungiPasso, togliPasso } from './indietro';
 
 /** Fogli aperti uno sopra l'altro: la pagina sotto resta ferma finché ce n'è almeno uno. */
 let aperti = 0;
@@ -15,6 +16,15 @@ export function Foglio({ titolo, chiudi, alto, children }: { titolo: string; chi
     window.addEventListener('keydown', esc);
     return () => window.removeEventListener('keydown', esc);
   }, [chiudi]);
+  // Il tasto Indietro del telefono chiude il foglio in cima.
+  const chiudiOra = useRef(chiudi);
+  useEffect(() => {
+    chiudiOra.current = chiudi;
+  }, [chiudi]);
+  useEffect(() => {
+    const passo = aggiungiPasso(() => chiudiOra.current());
+    return () => togliPasso(passo);
+  }, []);
   useEffect(() => {
     if (aperti++ === 0) document.documentElement.classList.add('foglio-aperto');
     return () => {
