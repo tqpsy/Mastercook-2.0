@@ -18,7 +18,7 @@ test('primo accesso: crea la famiglia, aggiunge una persona con un’allergia, t
   await page.getByRole('button', { name: 'Fatto' }).click();
   await page.getByRole('button', { name: 'Chiudi' }).click();
   await expect(page.getByText('⚠️ Arachidi')).toBeVisible();
-  await expect(page.getByRole('button', { name: /Stato del salvataggio: Tutto salvato/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
 
   await page.reload();
   await vaiAFamiglia(page);
@@ -68,7 +68,7 @@ test('allergie: il pannello non cambia altezza tra le schede, un secondo tocco t
   for (const p of ['Adulto', 'Ragazzo', 'Adulto', 'Bambino']) await scheda.getByRole('button', { name: p, exact: true }).click();
   await scheda.getByRole('button', { name: 'Chiudi' }).click();
   expect(await page.evaluate(() => getComputedStyle(document.body).overflow)).not.toBe('hidden');
-  await expect(page.getByRole('button', { name: /Stato del salvataggio: Tutto salvato/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
   const [r] = await sql<{ porzione: string }>(
     `select porzione::text from membro where nome = 'Sara' and famiglia_id in (select famiglia_id from utente_famiglia where utente_id = $1)`,
     [luca.id],
@@ -93,11 +93,12 @@ test('invito: chi apre il link entra con un tocco e vede la famiglia; le modific
 
   await aggiungiPersona(telefono, 'Nonna');
   // Prima che il tablet chieda gli aggiornamenti, la Nonna deve essere arrivata al server.
-  await expect(telefono.getByRole('button', { name: /Stato del salvataggio: Tutto salvato/ })).toBeVisible();
-  await vaiAFamiglia(tablet);
+  await expect(telefono.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
+  await tablet.getByRole('button', { name: 'Impostazioni' }).click();
   await tablet.getByRole('button', { name: /Stato del salvataggio/ }).click();
   await tablet.getByRole('button', { name: 'Aggiorna adesso' }).click();
   await tablet.getByRole('button', { name: 'Chiudi' }).click();
+  await vaiAFamiglia(tablet);
   await expect(tablet.getByRole('button', { name: 'Modifica Nonna' })).toBeVisible();
 });
 
@@ -115,7 +116,7 @@ test('senza rete: la modifica resta in attesa, visibile, e parte al ritorno dell
   expect((await sql<{ n: number }>(`select count(*)::int as n from membro where nome = $1`, [marco]))[0].n).toBe(0);
 
   await contesto.setOffline(false);
-  await expect(page.getByRole('button', { name: /Tutto salvato/ })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato', { timeout: 20_000 });
   expect((await sql<{ n: number }>(`select count(*)::int as n from membro where nome = $1`, [marco]))[0].n).toBe(1);
   await expect(page.locator('.etichetta', { hasText: 'in invio' })).toHaveCount(0);
 });

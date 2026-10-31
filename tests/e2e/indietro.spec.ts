@@ -6,7 +6,7 @@ import { expect, type Page, test } from '@playwright/test';
 import { apri, creaFamiglia, nuovoUtente } from './aiuti';
 
 const indietro = (page: Page) => page.evaluate(() => history.back());
-const titolo = (page: Page, nome: string) => expect(page.locator('header.testata h1')).toHaveText(nome);
+const titolo = (page: Page, nome: string) => expect(page.locator('main h1')).toHaveText(nome);
 
 test('Indietro segue la navigazione, chiude i pannelli e alla fine chiede conferma per uscire', async ({ browser }, info) => {
   const luca = await nuovoUtente('Luca');

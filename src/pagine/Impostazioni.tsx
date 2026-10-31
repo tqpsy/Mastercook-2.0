@@ -7,6 +7,7 @@ import { impostaChiave, type StatoChiave, statoChiave } from '../piattaforma/fot
 import { cancellaLocale, famiglieLocali } from '../piattaforma/locale/motore';
 import { type AnteprimaEliminazione, anteprimaEliminazione, eliminaFamiglia, eliminaMioAccount, type FamigliaMia, mieFamiglie } from '../piattaforma/supabase';
 import { Foglio } from '../ui/Foglio';
+import { VoceSalvataggio } from '../ui/StatoSync';
 import { Icona } from '../ui/Icona';
 import { leggiCollegamento, salvaSulDrive, scriviCollegamento } from '../dati/copiaDrive';
 import { collegaDrive, scollegaDrive, tokenValido } from '../piattaforma/drive';
@@ -50,6 +51,7 @@ export function Impostazioni({
           </span>
           <Icona nome="avanti" />
         </button>
+        <VoceSalvataggio />
       </div>
 
       <h2>La tua famiglia</h2>

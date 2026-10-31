@@ -22,7 +22,7 @@ import { oggi, piuGiorni, statoData } from './dominio/scadenze';
 import { CopiaAutomatica } from './ui/CopiaAutomatica';
 import { Icona } from './ui/Icona';
 import { aggiungiPasso, togliPasso } from './ui/indietro';
-import { StatoSync } from './ui/StatoSync';
+import { AvvisoSync, useStatoBreve } from './ui/StatoSync';
 
 const CHIAVE_INVITO = 'mc-invito';
 const CHIAVE_FAMIGLIA = 'mc-famiglia';
@@ -256,6 +256,9 @@ function Guscio({ email, apriFamiglia }: { email: string; apriFamiglia: (famigli
     [],
   );
 
+  const statoBreve = useStatoBreve();
+  const titoloScheda = scheda === 'impostazioni' ? 'Impostazioni' : scheda === 'famiglia' ? 'Famiglia' : schede.find((x) => x.id === scheda)?.nome;
+
   /** Dopo l'eliminazione dell'account: via la copia locale e la famiglia ricordata. */
   async function dimenticaDispositivo() {
     archivio.close();
@@ -281,21 +284,10 @@ function Guscio({ email, apriFamiglia }: { email: string; apriFamiglia: (famigli
 
   return (
     <>
-      <header className="testata">
-        <h1>{scheda === 'impostazioni' ? 'Impostazioni' : scheda === 'famiglia' ? 'Famiglia' : schede.find((s) => s.id === scheda)?.nome}</h1>
-        <div className="riga">
-          <StatoSync />
-          <button
-            className="bottone piccolo tondo"
-            aria-label="Impostazioni"
-            aria-pressed={scheda === 'impostazioni' || scheda === 'famiglia'}
-            onClick={() => vai('impostazioni')}
-          >
-            <Icona nome="impostazioni" />
-          </button>
-        </div>
-      </header>
       <main className="pagina">
+        {/* Il nome della scheda si vede già evidenziato nella barra: qui resta solo per il lettore dello schermo. */}
+        <h1 className="solo-lettore">{titoloScheda}</h1>
+        <AvvisoSync />
         <CopiaAutomatica apriFamiglia={apriFamiglia} />
         {scheda === 'oggi' && <Oggi vai={vai} />}
         {scheda === 'menu' && <Menu />}
@@ -337,6 +329,24 @@ function Guscio({ email, apriFamiglia }: { email: string; apriFamiglia: (famigli
             )}
           </button>
         ))}
+        <button
+          className="scheda-impostazioni"
+          aria-label="Impostazioni"
+          aria-describedby="stato-salvataggio"
+          aria-current={scheda === 'impostazioni' || scheda === 'famiglia' ? 'page' : undefined}
+          onClick={() => vai('impostazioni')}
+        >
+          <span className="icona" aria-hidden>
+            <Icona nome="impostazioni" />
+            {statoBreve.classe !== 'ok' && <span className={`pallino ${statoBreve.classe}`} />}
+          </span>
+          <span className="nome-scheda" aria-hidden>
+            Impostazioni
+          </span>
+          <span id="stato-salvataggio" hidden>
+            Stato del salvataggio: {statoBreve.testo}
+          </span>
+        </button>
       </nav>
     </>
   );

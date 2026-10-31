@@ -6,7 +6,7 @@ import { expect, type Page, test } from '@playwright/test';
 import { apri, creaFamiglia, nuovoUtente, sql } from './aiuti';
 
 const famigliaDi = '(select famiglia_id from utente_famiglia where utente_id = $1)';
-const salvato = (page: Page) => expect(page.getByRole('button', { name: /Stato del salvataggio: Tutto salvato/ })).toBeVisible();
+const salvato = (page: Page) => expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
 
 function scontrino(data: string) {
   const [a, m, g] = data.split('-');

@@ -145,7 +145,7 @@ p {
 .pagina {
   max-width: 720px;
   margin: 0 auto;
-  padding: 16px 16px calc(96px + env(safe-area-inset-bottom));
+  padding: calc(16px + env(safe-area-inset-top)) 16px calc(96px + env(safe-area-inset-bottom));
 }
 
 .centrata {
@@ -915,7 +915,7 @@ button.etichetta {
   .pagina {
     --margine: max(24px, calc((100vw - var(--larghezza-barra) - 1040px) / 2));
     max-width: none;
-    padding: 20px calc(var(--margine) + env(safe-area-inset-right)) calc(32px + env(safe-area-inset-bottom)) var(--margine);
+    padding: calc(20px + env(safe-area-inset-top)) calc(var(--margine) + env(safe-area-inset-right)) calc(32px + env(safe-area-inset-bottom)) var(--margine);
   }
   .griglia-menu {
     width: calc(100vw - var(--larghezza-barra) - 16px);
@@ -975,7 +975,7 @@ button.etichetta {
     font-size: 1.15rem;
   }
   .pagina {
-    padding-top: 12px;
+    padding-top: calc(12px + env(safe-area-inset-top));
   }
 }
 
@@ -1552,5 +1552,72 @@ details > summary:has(.primo-presto) {
     align-items: center;
     gap: 8px;
     margin-top: 0;
+  }
+}
+
+/*
+ * Niente barra in alto (Luca: ripeteva il nome della scheda). Impostazioni è l'ultima voce della barra delle schede;
+ * il salvataggio è un pallino sull'ingranaggio e un avviso in cima alla pagina solo quando c'è qualcosa da sapere.
+ */
+.solo-lettore {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  margin: 0;
+}
+.schede .scheda-impostazioni {
+  flex: 0 0 52px;
+}
+.schede .scheda-impostazioni .nome-scheda {
+  display: none;
+}
+.pallino {
+  position: absolute;
+  top: -2px;
+  right: -4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--barra);
+  box-sizing: content-box;
+}
+.pallino.attesa {
+  background: var(--arancio);
+}
+.pallino.errore {
+  background: var(--errore);
+}
+.avviso-sync {
+  display: flex;
+  width: fit-content;
+  min-height: 40px;
+  margin: 0 0 12px auto;
+}
+.pallino-sync.ok {
+  color: var(--primario);
+}
+.pallino-sync.attesa {
+  color: var(--attenzione);
+}
+.pallino-sync.errore {
+  color: var(--errore);
+}
+.scheda > .voce + .voce {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--bordo);
+}
+@media (min-width: 900px), (orientation: landscape) and (min-width: 560px) and (max-height: 600px) {
+  .schede .scheda-impostazioni {
+    flex: none;
+    margin-top: auto;
+  }
+}
+@media (min-width: 900px) and (min-height: 601px) {
+  .schede .scheda-impostazioni .nome-scheda {
+    display: inline;
   }
 }
