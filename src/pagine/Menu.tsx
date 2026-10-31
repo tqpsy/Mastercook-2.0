@@ -177,6 +177,8 @@ export function Menu() {
 
   if (!vista.pronta || !indice) return <p className="tenue">Sto caricando il menu…</p>;
   const giorni = giorniDellaSettimana(lun);
+  // La striscia parte da questa settimana finché si guarda questa o la prossima; più in là, dalla settimana scelta.
+  const baseStriscia = lun === lunedi(giorno) || lun === piuGiorni(lunedi(giorno), 7) ? lunedi(giorno) : lun;
   const fine = giorni[6];
   const settimana = dati.portate.filter((p) => p.data >= lun && p.data <= fine);
   const precedente = dati.portate.filter((p) => p.data >= piuGiorni(lun, -7) && p.data < lun);
@@ -271,25 +273,38 @@ export function Menu() {
         </div>
       </div>
       {modo === 'giorni' && (
-        <div className="striscia-giorni" role="group" aria-label="Giorni della settimana">
-          {giorni.map((g) => {
-            const pieni = categorie.filter((c) => piatti(g, c.valore).length).length;
-            return (
-              <button
-                key={g}
-                className={`${g < giorno ? 'passato' : ''}${g === giorno ? ' oggi' : ''}`}
-                aria-pressed={g === scelto}
-                aria-label={`Mostra ${dataLunga(g)}`}
-                onClick={() => setScelto(g)}
-              >
-                <small>{nomeGiorno(g, true)}</small>
-                <strong>{Number(g.slice(8))}</strong>
-                <span className="puntini" aria-hidden>
-                  {'•'.repeat(Math.min(pieni, 4))}
-                </span>
-              </button>
-            );
-          })}
+        // Due settimane di fila, questa e la prossima: nel fine settimana si programma la settimana dopo con un tocco.
+        <div className="due-settimane">
+          {[baseStriscia, piuGiorni(baseStriscia, 7)].map((l) => (
+            <div key={l}>
+              <p className="sopratitolo striscia-titolo">
+                {l === lunedi(giorno) ? 'Questa settimana' : l === piuGiorni(lunedi(giorno), 7) ? 'Settimana prossima' : nomeSettimana(l)}
+              </p>
+              <div className="striscia-giorni" role="group" aria-label={`Giorni: ${nomeSettimana(l)}`}>
+                {giorniDellaSettimana(l).map((g) => {
+                  const pieni = new Set(dati.portate.filter((p) => p.data === g).map((p) => p.categoria)).size;
+                  return (
+                    <button
+                      key={g}
+                      className={`${g < giorno ? 'passato' : ''}${g === giorno ? ' oggi' : ''}`}
+                      aria-pressed={g === scelto}
+                      aria-label={`Mostra ${dataLunga(g)}`}
+                      onClick={() => {
+                        setLunStato(lunedi(g));
+                        setScelto(g);
+                      }}
+                    >
+                      <small>{nomeGiorno(g, true)}</small>
+                      <strong>{Number(g.slice(8))}</strong>
+                      <span className="puntini" aria-hidden>
+                        {'•'.repeat(Math.min(pieni, 4))}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
       )}
       {dati.vincoli.length > 0 && <p className="tenue">✅ adatto · ❔ da verificare · ⛔ non adatto a chi lo mangia · 🙅 a qualcuno non piace</p>}

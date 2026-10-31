@@ -1331,3 +1331,21 @@ p > .link {
   display: inline;
   min-height: 0;
 }
+.due-settimane {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 14px;
+}
+.due-settimane .striscia-giorni {
+  margin-bottom: 4px;
+}
+.sopratitolo.striscia-titolo {
+  margin: 4px 0 6px;
+  font-size: 0.78rem;
+}
+@media (min-width: 900px) {
+  .due-settimane {
+    grid-template-columns: 1fr 1fr;
+    column-gap: 20px;
+  }
+}
