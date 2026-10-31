@@ -292,6 +292,8 @@ export function iconaRicetta(indice: Indice, r: Ricetta, scelta?: string | null)
   if (scelta) return scelta;
   const categoria = CATEGORIE.find((c) => c.id === r.categoria)?.emoji ?? '🍽️';
   if (r.categoria === 'dolce' || r.categoria === 'colazione') return categoria;
+  // Una pizza è una pizza, qualunque sia il condimento (il primo ingrediente sarebbe il lievito).
+  if (/^pizza\b/i.test(r.titolo.trim())) return '🍕';
   for (const g of principali(indice, r)) {
     const e = indice.ingrediente(g.ingrediente_id)?.emoji;
     if (e && !ICONE_GENERICHE.includes(e)) return e;

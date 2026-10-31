@@ -13,7 +13,7 @@
  * Con errori scrive solo il rapporto ed esce con codice 1.
  */
 import { execFileSync } from 'node:child_process';
-import { writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { runnerImport } from 'vite';
 
@@ -116,6 +116,9 @@ const ricette = RICETTE_SISTEMA.map((r) => ({
   }),
   passi: [...r.passaggi],
 }));
+// Ricette di sistema nate in Mastercook 2.0 (le pizze bianche, 31/10/2026): non vengono dal vecchio
+// repository. Nel database le carica la migrazione 20261115000000_pizze.sql.
+ricette.push(...JSON.parse(readFileSync(join(RADICE, 'src', 'catalogo', 'ricette-nuove.json'), 'utf8')).ricette);
 
 const catalogo = {
   versione: VERSIONE_CATALOGO,

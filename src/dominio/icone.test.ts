@@ -15,6 +15,11 @@ describe('icona di una ricetta', () => {
     expect(icona('sys:torta_mele')).toBe('🍰');
     expect(icona('sys:focaccia')).not.toBe('🌾');
   });
+  it('le pizze hanno la pizza, qualunque sia il condimento', () => {
+    expect(icona('sys:pizza_margherita')).toBe('🍕');
+    expect(icona('sys:pizza_wurstel_patatine')).toBe('🍕');
+    expect(icona('sys:pizzaiola')).not.toBe('🍕');
+  });
   it('quella scelta dalla famiglia vince', () => {
     expect(icona('sys:riso_basmati_spezie', '🍛')).toBe('🍛');
   });
