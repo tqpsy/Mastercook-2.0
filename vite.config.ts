@@ -27,9 +27,9 @@ export default defineConfig({
         start_url: '/Mastercook-2.0/',
         scope: '/Mastercook-2.0/',
         icons: [
-          { src: 'icona-192.png', sizes: '192x192', type: 'image/png' },
-          { src: 'icona-512.png', sizes: '512x512', type: 'image/png' },
-          { src: 'icona-maschera-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: 'icona-192.png?v=2', sizes: '192x192', type: 'image/png' },
+          { src: 'icona-512.png?v=2', sizes: '512x512', type: 'image/png' },
+          { src: 'icona-maschera-512.png?v=2', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
       workbox: {
@@ -39,7 +39,7 @@ export default defineConfig({
         // ma la prima volta che serve resta in cache, così poi funziona anche senza rete.
         // I caratteri (Outfit e Figtree) stanno nell'app: niente richieste a Google, e funzionano anche senza rete.
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
-        globIgnores: ['**/pglite*', '**/initdb*', '**/motore.worker*'],
+        globIgnores: ['**/anteprima-link.png', '**/pglite*', '**/initdb*', '**/motore.worker*'],
         runtimeCaching: [
           {
             urlPattern: ({ url }) => /\/assets\/((pglite|initdb)[^/]*\.(wasm|data)|motore\.worker[^/]*\.js)$/.test(url.pathname),
