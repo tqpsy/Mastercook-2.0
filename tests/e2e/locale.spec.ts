@@ -22,7 +22,7 @@ test('solo su questo telefono: i dati restano qui e il server non ne sa nulla', 
   await page.getByRole('dialog').getByLabel('Cosa si mangia').fill('carbonara');
   await page.getByRole('dialog').getByRole('button', { name: /Spaghetti alla carbonara/ }).click();
   await expect(page.getByRole('button', { name: 'Apri Spaghetti alla carbonara' })).toBeVisible();
-  await expect(page.getByRole('button', { name: /Stato del salvataggio: Tutto salvato/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
 
   // Il server non ha né la famiglia né il piatto.
   expect(await sql('select 1 from famiglia where nome = $1', [nome])).toEqual([]);

@@ -45,7 +45,7 @@ test('menu: un piatto per cena, Sara mangia altro, nessun movimento in casa', as
   await altro.getByRole('button', { name: /Spaghetti aglio, olio e peperoncino/ }).click();
   await expect(page.getByRole('button', { name: 'Apri Spaghetti aglio, olio e peperoncino' })).toContainText('per Sara');
   await expect(page.getByRole('button', { name: 'Apri Spaghetti alla carbonara' })).toContainText('per Luca');
-  await expect(page.getByRole('button', { name: /Stato del salvataggio: Tutto salvato/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
 
   const famiglia = `(select famiglia_id from utente_famiglia where utente_id = $1)`;
   const [r] = await sql<{ portate: number; eccezioni: string; movimenti: number }>(
@@ -111,7 +111,7 @@ test('menu: ripeti la settimana prima, accendi la merenda, la vista scelta resta
   await expect(merenda).toBeChecked();
   await page.getByRole('button', { name: 'Chiudi' }).click();
   await expect(page.getByRole('button', { name: `Aggiungi a merenda di ${dataLunga(piuGiorni(lun, 7))}` })).toBeVisible();
-  await expect(page.getByRole('button', { name: /Stato del salvataggio: Tutto salvato/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
 
   const righe = await sql<{ data: string; origine: string }>(
     `select data::text, origine from portata where famiglia_id = (select famiglia_id from utente_famiglia where utente_id = $1) order by data`,
@@ -166,7 +166,7 @@ test('colazione fissa: ogni giorno da oggi, cambiata da un giorno in poi, poi fe
   await scheda.getByLabel('Nuovo piatto').fill('Cappuccino');
   page.once('dialog', (d) => void d.accept());
   await scheda.getByRole('button', { name: 'Scrivi «Cappuccino» senza ricetta' }).click();
-  await expect(page.getByRole('button', { name: /Stato del salvataggio: Tutto salvato/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
   await expect
     .poll(async () => (await colazioni()).slice(0, 4).map((r) => r.testo))
     .toEqual(['Latte e caffè', 'Latte e caffè', 'Cappuccino', 'Cappuccino']);
@@ -197,7 +197,7 @@ test('torta che dura più giorni: avanzo domani, la conferma la mette in casa', 
 
   await page.getByRole('button', { name: 'Oggi', exact: true }).click();
   await page.getByRole('button', { name: 'Mangiato come previsto: Torta di mele' }).click();
-  await expect(page.getByRole('button', { name: /Stato del salvataggio: Tutto salvato/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
   await expect
     .poll(async () =>
       sql<{ nome: string; q: number }>(
@@ -224,7 +224,7 @@ test('proposte: l’app propone i pasti vuoti, si cambia o si toglie, entra solo
   await expect(voci.first()).not.toHaveText(prima);
   await voci.nth(0).getByRole('checkbox').uncheck();
   await foglio.getByRole('button', { name: `Metti nel menu (${quante - 1})` }).click();
-  await expect(page.getByRole('button', { name: /Stato del salvataggio: Tutto salvato/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
   const proposte = () =>
     sql<{ n: number }>(
       `select count(*)::int as n from portata where origine = 'automatica' and eliminato_il is null
@@ -263,7 +263,7 @@ test('ospiti a cena: porzioni che crescono, allergia controllata, niente nomi', 
   await expect(scheda.getByText(/Non adatta a tutti/)).toBeVisible();
   await expect(scheda.getByText(/Ospiti: ⛔/)).toBeVisible();
   await scheda.getByRole('button', { name: 'Chiudi' }).click();
-  await expect(page.getByRole('button', { name: /Stato del salvataggio: Tutto salvato/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
 
   const famiglia = `(select famiglia_id from utente_famiglia where utente_id = $1)`;
   expect(await sql(`select adulti, bambini, oggetti from ospiti_pasto where famiglia_id = ${famiglia} and eliminato_il is null`, [luca.id])).toEqual([

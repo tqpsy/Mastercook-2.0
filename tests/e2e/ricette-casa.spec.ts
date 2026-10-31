@@ -36,7 +36,7 @@ test('ricette: cerca, scala le porzioni, segnala l’allergia e crea la propria 
   await editor.getByLabel('Quantità di Guanciale').fill('200');
   await editor.getByRole('button', { name: 'Salva ricetta' }).click();
   await expect(page.getByRole('dialog', { name: 'Carbonara di casa' })).toBeVisible();
-  await expect(page.getByRole('button', { name: /Stato del salvataggio: Tutto salvato/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
 
   const [r] = await sql<{ derivata_da: string; n: number; guanciale: string }>(
     `select r.derivata_da, (select count(*)::int from ricetta_ingrediente where ricetta_id = r.id) as n,
@@ -101,7 +101,7 @@ test('casa: aggiunge, mostra cosa usare presto, scala la quantità usata e stima
   await lotto.getByLabel('Quantità').fill('200');
   await lotto.getByRole('button', { name: 'Conferma' }).click();
   await expect(lotto.getByText('300 g', { exact: true })).toBeVisible();
-  await expect(page.getByRole('button', { name: /Stato del salvataggio: Tutto salvato/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
   await lotto.getByRole('button', { name: 'Chiudi' }).click();
 
   await page.getByRole('button', { name: '+ Aggiungi' }).click();
@@ -112,7 +112,7 @@ test('casa: aggiunge, mostra cosa usare presto, scala la quantità usata e stima
   await expect(nuovo.getByText(/Stima indicativa: entro 5 giorni in frigo/)).toBeVisible();
   await nuovo.getByRole('button', { name: 'Aggiungi', exact: true }).click();
   await expect(page.getByText('Entro 5 giorni (stima)').first()).toBeVisible();
-  await expect(page.getByRole('button', { name: /Stato del salvataggio: Tutto salvato/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
 
   const righe = await sql<{ ingrediente_id: string; quantita: string; tipo_data: string; movimenti: number }>(
     `select l.ingrediente_id, l.quantita::text, l.tipo_data, (select count(*)::int from movimento m where m.lotto_id = l.id) as movimenti
@@ -157,7 +157,7 @@ test('foto: si aggiunge anche senza rete, parte prima della ricetta e non si sos
   expect(await sql(fotoDiLuca, [luca.id])).toHaveLength(0);
 
   await contesto.setOffline(false);
-  await expect(page.getByRole('button', { name: /Tutto salvato/ })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato', { timeout: 20_000 });
   const [r] = await sql<{ foto: string; caricata: boolean }>(
     `select r.foto, exists (select 1 from storage.objects o where o.bucket_id = 'foto' and o.name = r.foto) as caricata from ricetta r where r.titolo = $1`,
     [titolo],
@@ -172,7 +172,7 @@ test('foto: si aggiunge anche senza rete, parte prima della ricetta e non si sos
   await modifica.getByLabel('Titolo').fill(`${titolo} con pomodoro`);
   await modifica.getByRole('button', { name: 'Salva ricetta' }).click();
   await expect(page.getByRole('dialog', { name: `${titolo} con pomodoro` })).toBeVisible();
-  await expect(page.getByRole('button', { name: /Tutto salvato/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
   const [dopo] = await sql<{ foto: string }>(`select foto from ricetta where titolo = $1`, [`${titolo} con pomodoro`]);
   expect(dopo.foto).toBe(r.foto);
 
@@ -216,7 +216,7 @@ test('crudi e testo libero: il guanciale cotto e «niente funghi» vanno bene su
   await bresaola.getByRole('button', { name: 'Va bene per Anna' }).click();
   await expect(bresaola.getByText('Adatta a tutti')).toBeVisible();
   await expect(bresaola.getByText(/Anna: ✅ segnata «va bene» da voi/)).toBeVisible();
-  await expect(page.getByRole('button', { name: /Stato del salvataggio: Tutto salvato/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
   await expect
     .poll(() => sql(`select ricetta_id from ricetta_verificata where famiglia_id in (select famiglia_id from utente_famiglia where utente_id = $1) and eliminato_il is null`, [luca.id]))
     .toEqual([{ ricetta_id: 'sys:bresaola_rucola' }]);
@@ -229,7 +229,7 @@ test('crudi e testo libero: il guanciale cotto e «niente funghi» vanno bene su
   await page.getByRole('button', { name: 'Cambia icona: Riso basmati speziato (pulao)' }).click();
   await page.getByRole('dialog', { name: 'Cambia icona' }).getByRole('button', { name: 'Usa 🍛' }).click();
   await expect(page.getByRole('button', { name: 'Cambia icona: Riso basmati speziato (pulao)' })).toContainText('🍛');
-  await expect(page.getByRole('button', { name: /Stato del salvataggio: Tutto salvato/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
   await expect
     .poll(() => sql(`select ricetta_id, emoji from icona_ricetta where famiglia_id in (select famiglia_id from utente_famiglia where utente_id = $1)`, [luca.id]))
     .toEqual([{ ricetta_id: 'sys:riso_basmati_spezie', emoji: '🍛' }]);
@@ -255,7 +255,7 @@ test('una ricetta da verificare si chiude anche con «❌ non va bene», e si pu
   await greca.getByRole('button', { name: 'Non va bene per Anna' }).click();
   await expect(greca.getByText(/Anna: ⛔ segnata «non va bene» da voi/)).toBeVisible();
   await expect(greca.getByRole('button', { name: 'Va bene per Anna' })).toHaveCount(0);
-  await expect(page.getByRole('button', { name: /Stato del salvataggio: Tutto salvato/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
   const segnate = () =>
     sql(`select ricetta_id, va_bene from ricetta_verificata where famiglia_id in (select famiglia_id from utente_famiglia where utente_id = $1) and eliminato_il is null`, [luca.id]);
   await expect.poll(segnate).toEqual([{ ricetta_id: 'sys:insalata_greca', va_bene: false }]);
@@ -300,7 +300,7 @@ test('foto del frigo: prima l’avviso su Google, poi si controlla e in casa ent
   await expect(foglio.getByRole('alert')).toContainText('Scrivi la quantità di zucchine');
   await foglio.getByLabel('Quantità di Zucchine').fill('300');
   await foglio.getByRole('button', { name: 'Aggiungi in casa (2)' }).click();
-  await expect(page.getByRole('button', { name: /Stato del salvataggio: Tutto salvato/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
   await expect
     .poll(async () =>
       sql<{ ingrediente_id: string; q: number; unita: string; luogo: string }>(

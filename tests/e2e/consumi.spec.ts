@@ -8,7 +8,7 @@ import { oggi } from '../../src/dominio/scadenze';
 import { apri, creaFamiglia, nuovoUtente, sql } from './aiuti';
 
 const famigliaDi = '(select famiglia_id from utente_famiglia where utente_id = $1)';
-const salvato = (page: Page) => expect(page.getByRole('button', { name: /Stato del salvataggio: Tutto salvato/ })).toBeVisible();
+const salvato = (page: Page) => expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
 const CARBONARA = 'Spaghetti alla carbonara';
 // Un'immagine PNG di 1×1 pixel.
 const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==';

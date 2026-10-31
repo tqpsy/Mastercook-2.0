@@ -21,7 +21,7 @@ test('sposta: dal freezer alla dispensa, con la data della confezione', async ({
   await nuovo.getByRole('button', { name: 'Preferibilmente entro' }).click();
   await nuovo.getByLabel('Data').fill(fra(669));
   await nuovo.getByRole('button', { name: 'Aggiungi', exact: true }).click();
-  await expect(page.getByRole('button', { name: /Stato del salvataggio: Tutto salvato/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
 
   // Sul tablet frigo, freezer e dispensa sono affiancati: la scheda serve solo sul telefono.
   const freezer = page.getByRole('tab', { name: /Freezer/ });
@@ -32,7 +32,7 @@ test('sposta: dal freezer alla dispensa, con la data della confezione', async ({
   await lotto.getByRole('button', { name: 'Dispensa' }).click();
   await lotto.getByRole('button', { name: 'Conferma' }).click();
   await expect(lotto.getByText(/in dispensa/)).toBeVisible();
-  await expect(page.getByRole('button', { name: /Stato del salvataggio: Tutto salvato/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
 
   const righe = await sql<{ luogo: string; fonte_data: string }>(
     `select luogo, fonte_data from lotto where famiglia_id in (select famiglia_id from utente_famiglia where utente_id = $1)`,
@@ -60,7 +60,7 @@ test('sposta solo sul telefono: dal freezer alla dispensa', async ({ browser }, 
   await nuovo.getByRole('button', { name: 'Preferibilmente entro' }).click();
   await nuovo.getByLabel('Data').fill(fra(669));
   await nuovo.getByRole('button', { name: 'Aggiungi', exact: true }).click();
-  await expect(page.getByRole('button', { name: /Stato del salvataggio: Tutto salvato/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
 
   // Sul tablet frigo, freezer e dispensa sono affiancati: la scheda serve solo sul telefono.
   const freezer = page.getByRole('tab', { name: /Freezer/ });
@@ -71,6 +71,6 @@ test('sposta solo sul telefono: dal freezer alla dispensa', async ({ browser }, 
   await lotto.getByRole('button', { name: 'Dispensa' }).click();
   await lotto.getByRole('button', { name: 'Conferma' }).click();
   await expect(lotto.getByText(/in dispensa/)).toBeVisible();
-  await expect(page.getByRole('button', { name: /Stato del salvataggio: Tutto salvato/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
 
 });

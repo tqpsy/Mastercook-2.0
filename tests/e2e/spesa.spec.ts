@@ -27,7 +27,7 @@ test('spesa: la lista nasce dal menu, il carrello non tocca la casa, la conferma
   const guanciale = page.getByRole('checkbox', { name: 'Metti Guanciale nel carrello' });
   await guanciale.click();
   await expect(page.getByRole('region', { name: 'Nel carrello' }).getByRole('button', { name: 'Apri Guanciale' })).toBeVisible();
-  await expect(page.getByRole('button', { name: /Stato del salvataggio: Tutto salvato/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
   expect((await sql<{ n: number }>(`select count(*)::int as n from lotto where famiglia_id = ${famigliaDi}`, [luca.id]))[0].n).toBe(0);
 
   // Due tocchi: «Conferma la spesa», poi «Conferma». Il prezzo è facoltativo: qui lo scriviamo.
@@ -36,7 +36,7 @@ test('spesa: la lista nasce dal menu, il carrello non tocca la casa, la conferma
   await conferma.getByLabel('Prezzo di Guanciale').fill('3,50');
   await conferma.getByRole('button', { name: 'Conferma', exact: true }).click();
   await expect(page.getByRole('region', { name: 'Acquisti recenti' })).toContainText('Guanciale');
-  await expect(page.getByRole('button', { name: /Stato del salvataggio: Tutto salvato/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
 
   const [r] = await sql<{ origine: string; q: string; prezzo: string; stato: string }>(
     `select l.origine, l.quantita::text as q, ar.prezzo::text as prezzo, v.stato
@@ -48,7 +48,7 @@ test('spesa: la lista nasce dal menu, il carrello non tocca la casa, la conferma
 
   // Il guanciale ora è in casa: aggiornando la lista non serve più.
   await page.getByRole('button', { name: 'Aggiorna dal menu' }).click();
-  await expect(page.getByRole('button', { name: /Stato del salvataggio: Tutto salvato/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
   await expect(page.getByRole('button', { name: 'Apri Guanciale' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Apri Spaghetti' })).toBeVisible();
 });
@@ -78,13 +78,13 @@ test('spesa: voci a mano, spesa senza lista e annullo con la cronologia', async 
   await expect(conferma.getByLabel('Quantità di Latte')).toHaveValue('2000');
   await conferma.getByLabel('Prezzo di Detersivo piatti').fill('2,10');
   await conferma.getByRole('button', { name: 'Conferma', exact: true }).click();
-  await expect(page.getByRole('button', { name: /Stato del salvataggio: Tutto salvato/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
 
   page.once('dialog', (d) => d.accept());
   await page.getByRole('button', { name: /Apri l’acquisto di/ }).click();
   await page.getByRole('button', { name: 'Annulla l’acquisto' }).click();
   await expect(page.getByRole('region', { name: 'Acquisti recenti' })).toContainText('annullato');
-  await expect(page.getByRole('button', { name: /Stato del salvataggio: Tutto salvato/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
   const storia = await sql<{ causale: string; v: string }>(
     `select causale, variazione::text as v from movimento where famiglia_id = ${famigliaDi} order by seq`,
     [luca.id],
@@ -121,7 +121,7 @@ test('spesa per giorni scelti: con il menu su più giorni si compra solo per i p
   await expect(page.getByRole('button', { name: 'Apri Aglio' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Apri Guanciale' })).toBeVisible();
   await expect(page.getByText(/^Solo per /)).toBeVisible();
-  await expect(page.getByRole('button', { name: /Stato del salvataggio: Tutto salvato/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
 
   // La scelta resta: riaprendo la lista si ritrovano i tre giorni; un giorno in più si accende al tocco.
   await page.reload();

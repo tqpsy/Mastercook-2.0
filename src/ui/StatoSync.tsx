@@ -4,24 +4,58 @@ import { descriviAzione, spiegaMotivo } from '../dati/messaggi';
 import { Foglio } from './Foglio';
 import { Icona } from './Icona';
 
-/** Indicatore del salvataggio: una spunta se è tutto salvato, per esteso le modifiche in attesa, le cose da sistemare e i blocchi. */
-export function StatoSync() {
+type StatoBreve = { testo: string; classe: 'ok' | 'attesa' | 'errore' };
+
+/** Lo stato del salvataggio in due parole: «Tutto salvato», «2 in invio», «Senza rete · 1 in attesa»… */
+export function useStatoBreve(): StatoBreve {
   const s = useStatoSync();
+  if (s.bloccato === 'app_da_aggiornare') return { testo: 'Aggiorna l’app', classe: 'errore' };
+  if (s.bloccato === 'accesso_scaduto') return { testo: 'Accedi di nuovo', classe: 'errore' };
+  if (s.bloccato === 'non_autorizzato') return { testo: 'Accesso tolto', classe: 'errore' };
+  if (s.da_sistemare) return { testo: `${s.da_sistemare} da sistemare`, classe: 'errore' };
+  if (s.in_attesa && s.senza_rete) return { testo: `Senza rete · ${s.in_attesa} in attesa`, classe: 'attesa' };
+  if (s.in_attesa) return { testo: `${s.in_attesa} in invio`, classe: 'attesa' };
+  if (s.senza_rete) return { testo: 'Senza rete', classe: 'attesa' };
+  return { testo: 'Tutto salvato', classe: 'ok' };
+}
+
+/**
+ * Avviso del salvataggio in cima alla pagina: compare solo quando c'è qualcosa da sapere (modifiche in attesa,
+ * senza rete, cose da sistemare). Quando tutto è salvato non occupa spazio: lo stato si vede in Impostazioni
+ * e come pallino sull'ingranaggio.
+ */
+export function AvvisoSync() {
+  const { testo, classe } = useStatoBreve();
   const [aperto, setAperto] = useState(false);
-  let testo = 'Tutto salvato';
-  let classe = 'ok';
-  if (s.bloccato === 'app_da_aggiornare') [testo, classe] = ['Aggiorna l’app', 'errore'];
-  else if (s.bloccato === 'accesso_scaduto') [testo, classe] = ['Accedi di nuovo', 'errore'];
-  else if (s.bloccato === 'non_autorizzato') [testo, classe] = ['Accesso tolto', 'errore'];
-  else if (s.da_sistemare) [testo, classe] = [`${s.da_sistemare} da sistemare`, 'errore'];
-  else if (s.in_attesa && s.senza_rete) [testo, classe] = [`Senza rete · ${s.in_attesa} in attesa`, 'attesa'];
-  else if (s.in_attesa) [testo, classe] = [`${s.in_attesa} in invio`, 'attesa'];
-  else if (s.senza_rete) [testo, classe] = ['Senza rete', 'attesa'];
   return (
     <>
-      {/* Quando tutto è salvato resta solo una piccola spunta: la scritta compare quando c'è qualcosa da sapere. */}
-      <button className={`stato-sync ${classe}`} onClick={() => setAperto(true)} aria-label={`Stato del salvataggio: ${testo}`}>
-        {classe === 'ok' ? <Icona nome="spunta" grandezza={20} /> : testo}
+      {classe !== 'ok' && (
+        <button className={`stato-sync avviso-sync ${classe}`} onClick={() => setAperto(true)} aria-label={`Stato del salvataggio: ${testo}`}>
+          {testo}
+        </button>
+      )}
+      {aperto && <PannelloSync chiudi={() => setAperto(false)} />}
+    </>
+  );
+}
+
+/** La voce «Salvataggio» in Impostazioni, che apre il pannello con i dettagli. */
+export function VoceSalvataggio() {
+  const { testo, classe } = useStatoBreve();
+  const [aperto, setAperto] = useState(false);
+  return (
+    <>
+      <button className="voce" onClick={() => setAperto(true)} aria-label={`Stato del salvataggio: ${testo}`}>
+        <span className={`emoji pallino-sync ${classe}`} aria-hidden>
+          <Icona nome="spunta" />
+        </span>
+        <span className="cresce">
+          <strong>Salvataggio</strong>
+          <span className="tenue" style={{ display: 'block' }}>
+            {testo}
+          </span>
+        </span>
+        <Icona nome="avanti" />
       </button>
       {aperto && <PannelloSync chiudi={() => setAperto(false)} />}
     </>
