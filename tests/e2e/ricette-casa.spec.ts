@@ -240,7 +240,6 @@ test('una ricetta da verificare si chiude anche con «❌ non va bene», e si pu
   await page.getByRole('button', { name: '+ Aggiungi' }).click();
   await page.getByRole('button', { name: 'Esigenza' }).click();
   await page.getByRole('button', { name: 'Niente formaggi a latte crudo' }).click();
-  await page.getByRole('button', { name: 'Aggiungi', exact: true }).click();
   await page.getByRole('button', { name: 'Fatto' }).click();
   await page.getByRole('button', { name: 'Chiudi' }).click();
 
