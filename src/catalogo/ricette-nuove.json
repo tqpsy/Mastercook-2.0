@@ -656,6 +656,507 @@
     "Distribuisci la mozzarella a pezzetti, poi zucca e salsiccia; condisci con l'olio rimasto, un pizzico di sale e il rosmarino.",
     "Cuoci in forno a 250 °C per 15–20 minuti, finché la zucca è morbida."
    ]
+  },
+  {
+   "id": "sys:peperoni_ripieni_carne",
+   "titolo": "Peperoni ripieni di carne al forno",
+   "categoria": "secondo",
+   "cucina": "italiana",
+   "provenienza": null,
+   "porzioni": 4,
+   "minuti_totali": 75,
+   "difficolta": 2,
+   "conservazione": "carne_cotta",
+   "mesi": [
+    6,
+    7,
+    8,
+    9
+   ],
+   "allergeni_dichiarati": [],
+   "ingredienti": [
+    {
+     "ingrediente_id": "ing:peperone",
+     "quantita": 800,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "4 peperoni"
+    },
+    {
+     "ingrediente_id": "ing:carne_macinata",
+     "quantita": 400,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Carne macinata (manzo o misto manzo e maiale)"
+    },
+    {
+     "ingrediente_id": "ing:uova",
+     "quantita": 1,
+     "unita": "pz",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Uova"
+    },
+    {
+     "ingrediente_id": "ing:parmigiano",
+     "quantita": 50,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Parmigiano Reggiano"
+    },
+    {
+     "ingrediente_id": "ing:pane",
+     "quantita": 60,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Pane raffermo (solo la mollica)"
+    },
+    {
+     "ingrediente_id": "ing:latte",
+     "quantita": 60,
+     "unita": "ml",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Latte"
+    },
+    {
+     "ingrediente_id": "ing:prezzemolo",
+     "quantita": 10,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Prezzemolo"
+    },
+    {
+     "ingrediente_id": "ing:aglio",
+     "quantita": 3,
+     "unita": "g",
+     "qb": false,
+     "opzionale": true,
+     "testo": "Aglio"
+    },
+    {
+     "ingrediente_id": "ing:pane_grattugiato",
+     "quantita": 20,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Pangrattato"
+    },
+    {
+     "ingrediente_id": "ing:olio_evo",
+     "quantita": 40,
+     "unita": "ml",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Olio extravergine d'oliva"
+    },
+    {
+     "ingrediente_id": "ing:sale",
+     "quantita": 6,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Sale"
+    },
+    {
+     "ingrediente_id": "ing:pepe",
+     "quantita": 1,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Pepe nero"
+    }
+   ],
+   "passi": [
+    "Ammolla la mollica di pane nel latte per 10 minuti, poi strizzala.",
+    "Taglia i peperoni a metà nel senso della lunghezza ed elimina picciolo, semi e filamenti.",
+    "Impasta la carne con l'uovo, il parmigiano, la mollica strizzata, prezzemolo e aglio tritati, sale e pepe.",
+    "Riempi i peperoni premendo bene, cospargi di pangrattato e disponili in una teglia unta.",
+    "Versa l'olio rimasto a filo e un dito d'acqua sul fondo della teglia.",
+    "Cuoci in forno a 190 °C per 45–50 minuti, finché la superficie è dorata e la carne è ben cotta al centro."
+   ]
+  },
+  {
+   "id": "sys:peperoni_ripieni_carne_riso",
+   "titolo": "Peperoni ripieni di carne e riso al forno",
+   "categoria": "piatto_unico",
+   "cucina": "italiana",
+   "provenienza": null,
+   "porzioni": 4,
+   "minuti_totali": 90,
+   "difficolta": 2,
+   "conservazione": "carne_cotta",
+   "mesi": [
+    6,
+    7,
+    8,
+    9
+   ],
+   "allergeni_dichiarati": [],
+   "ingredienti": [
+    {
+     "ingrediente_id": "ing:peperone",
+     "quantita": 800,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "4 peperoni"
+    },
+    {
+     "ingrediente_id": "ing:carne_macinata",
+     "quantita": 300,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Carne macinata (manzo o misto manzo e maiale)"
+    },
+    {
+     "ingrediente_id": "ing:riso",
+     "quantita": 120,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Riso"
+    },
+    {
+     "ingrediente_id": "ing:uova",
+     "quantita": 1,
+     "unita": "pz",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Uova"
+    },
+    {
+     "ingrediente_id": "ing:parmigiano",
+     "quantita": 50,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Parmigiano Reggiano"
+    },
+    {
+     "ingrediente_id": "ing:passata",
+     "quantita": 250,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Passata di pomodoro"
+    },
+    {
+     "ingrediente_id": "ing:cipolla",
+     "quantita": 50,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Cipolle"
+    },
+    {
+     "ingrediente_id": "ing:prezzemolo",
+     "quantita": 10,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Prezzemolo"
+    },
+    {
+     "ingrediente_id": "ing:pane_grattugiato",
+     "quantita": 20,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Pangrattato"
+    },
+    {
+     "ingrediente_id": "ing:olio_evo",
+     "quantita": 40,
+     "unita": "ml",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Olio extravergine d'oliva"
+    },
+    {
+     "ingrediente_id": "ing:sale",
+     "quantita": 8,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Sale"
+    },
+    {
+     "ingrediente_id": "ing:pepe",
+     "quantita": 1,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Pepe nero"
+    }
+   ],
+   "passi": [
+    "Lessa il riso in acqua salata per 8 minuti (deve restare al dente), scolalo e allargalo a raffreddare.",
+    "Taglia i peperoni a metà nel senso della lunghezza ed elimina picciolo, semi e filamenti.",
+    "Rosola la cipolla tritata con un cucchiaio d'olio per 3 minuti, unisci metà della passata e cuoci altri 5 minuti.",
+    "Mescola la carne con il riso, il sugo intiepidito, l'uovo, il parmigiano, il prezzemolo tritato, sale e pepe.",
+    "Riempi i peperoni, cospargi di pangrattato e disponili in una teglia.",
+    "Versa intorno la passata rimasta allungata con mezzo bicchiere d'acqua e completa con l'olio a filo.",
+    "Copri con carta stagnola e cuoci in forno a 190 °C per 35 minuti, poi scopri e cuoci altri 20 minuti, finché il riso è morbido e la superficie dorata."
+   ]
+  },
+  {
+   "id": "sys:zucchine_ripiene_carne",
+   "titolo": "Zucchine ripiene di carne al forno",
+   "categoria": "secondo",
+   "cucina": "italiana",
+   "provenienza": null,
+   "porzioni": 4,
+   "minuti_totali": 65,
+   "difficolta": 2,
+   "conservazione": "carne_cotta",
+   "mesi": [
+    5,
+    6,
+    7,
+    8,
+    9
+   ],
+   "allergeni_dichiarati": [],
+   "ingredienti": [
+    {
+     "ingrediente_id": "ing:zucchina",
+     "quantita": 1000,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "6 zucchine medie"
+    },
+    {
+     "ingrediente_id": "ing:carne_macinata",
+     "quantita": 400,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Carne macinata (manzo o misto manzo e maiale)"
+    },
+    {
+     "ingrediente_id": "ing:uova",
+     "quantita": 1,
+     "unita": "pz",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Uova"
+    },
+    {
+     "ingrediente_id": "ing:parmigiano",
+     "quantita": 50,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Parmigiano Reggiano"
+    },
+    {
+     "ingrediente_id": "ing:pane",
+     "quantita": 60,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Pane raffermo (solo la mollica)"
+    },
+    {
+     "ingrediente_id": "ing:latte",
+     "quantita": 60,
+     "unita": "ml",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Latte"
+    },
+    {
+     "ingrediente_id": "ing:prezzemolo",
+     "quantita": 10,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Prezzemolo"
+    },
+    {
+     "ingrediente_id": "ing:aglio",
+     "quantita": 3,
+     "unita": "g",
+     "qb": false,
+     "opzionale": true,
+     "testo": "Aglio"
+    },
+    {
+     "ingrediente_id": "ing:pane_grattugiato",
+     "quantita": 20,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Pangrattato"
+    },
+    {
+     "ingrediente_id": "ing:olio_evo",
+     "quantita": 40,
+     "unita": "ml",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Olio extravergine d'oliva"
+    },
+    {
+     "ingrediente_id": "ing:sale",
+     "quantita": 6,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Sale"
+    },
+    {
+     "ingrediente_id": "ing:pepe",
+     "quantita": 1,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Pepe nero"
+    }
+   ],
+   "passi": [
+    "Ammolla la mollica di pane nel latte per 10 minuti, poi strizzala.",
+    "Taglia le zucchine a metà nel senso della lunghezza e scava la polpa con un cucchiaino, lasciando un bordo di mezzo centimetro.",
+    "Trita la polpa e rosolala in padella con un cucchiaio d'olio per 5 minuti; lasciala intiepidire.",
+    "Impasta la carne con l'uovo, il parmigiano, la mollica strizzata, la polpa di zucchine, prezzemolo e aglio tritati, sale e pepe.",
+    "Riempi le zucchine premendo bene, cospargi di pangrattato e disponile in una teglia unta.",
+    "Versa l'olio rimasto a filo e un dito d'acqua sul fondo della teglia.",
+    "Cuoci in forno a 190 °C per 35–40 minuti, finché la superficie è dorata e la carne è ben cotta al centro."
+   ]
+  },
+  {
+   "id": "sys:zucchine_ripiene_carne_riso",
+   "titolo": "Zucchine ripiene di carne e riso al forno",
+   "categoria": "piatto_unico",
+   "cucina": "italiana",
+   "provenienza": null,
+   "porzioni": 4,
+   "minuti_totali": 80,
+   "difficolta": 2,
+   "conservazione": "carne_cotta",
+   "mesi": [
+    5,
+    6,
+    7,
+    8,
+    9
+   ],
+   "allergeni_dichiarati": [],
+   "ingredienti": [
+    {
+     "ingrediente_id": "ing:zucchina",
+     "quantita": 1000,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "6 zucchine medie"
+    },
+    {
+     "ingrediente_id": "ing:carne_macinata",
+     "quantita": 300,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Carne macinata (manzo o misto manzo e maiale)"
+    },
+    {
+     "ingrediente_id": "ing:riso",
+     "quantita": 120,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Riso"
+    },
+    {
+     "ingrediente_id": "ing:uova",
+     "quantita": 1,
+     "unita": "pz",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Uova"
+    },
+    {
+     "ingrediente_id": "ing:parmigiano",
+     "quantita": 50,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Parmigiano Reggiano"
+    },
+    {
+     "ingrediente_id": "ing:passata",
+     "quantita": 250,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Passata di pomodoro"
+    },
+    {
+     "ingrediente_id": "ing:cipolla",
+     "quantita": 50,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Cipolle"
+    },
+    {
+     "ingrediente_id": "ing:prezzemolo",
+     "quantita": 10,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Prezzemolo"
+    },
+    {
+     "ingrediente_id": "ing:pane_grattugiato",
+     "quantita": 20,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Pangrattato"
+    },
+    {
+     "ingrediente_id": "ing:olio_evo",
+     "quantita": 40,
+     "unita": "ml",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Olio extravergine d'oliva"
+    },
+    {
+     "ingrediente_id": "ing:sale",
+     "quantita": 8,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Sale"
+    },
+    {
+     "ingrediente_id": "ing:pepe",
+     "quantita": 1,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Pepe nero"
+    }
+   ],
+   "passi": [
+    "Lessa il riso in acqua salata per 8 minuti (deve restare al dente), scolalo e allargalo a raffreddare.",
+    "Taglia le zucchine a metà nel senso della lunghezza e scava la polpa con un cucchiaino, lasciando un bordo di mezzo centimetro.",
+    "Rosola la cipolla tritata e la polpa delle zucchine tritata con un cucchiaio d'olio per 5 minuti; unisci metà della passata e cuoci altri 5 minuti.",
+    "Mescola la carne con il riso, il sugo di zucchine intiepidito, l'uovo, il parmigiano, il prezzemolo tritato, sale e pepe.",
+    "Riempi le zucchine, cospargi di pangrattato e disponile in una teglia.",
+    "Versa intorno la passata rimasta allungata con mezzo bicchiere d'acqua e completa con l'olio a filo.",
+    "Copri con carta stagnola e cuoci in forno a 190 °C per 25 minuti, poi scopri e cuoci altri 20 minuti, finché il riso è morbido e la superficie dorata."
+   ]
   }
  ]
 }

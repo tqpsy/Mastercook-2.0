@@ -14,16 +14,20 @@ describe('catalogo di sistema pubblicato', () => {
   });
 
   it('ha le ricette e gli ingredienti attesi dal vecchio Mastercook', () => {
-    expect(c.ricette).toHaveLength(216);
+    expect(c.ricette).toHaveLength(220);
     expect(c.ingredienti.length).toBeGreaterThan(400);
     expect(new Set(c.ricette.map((r) => r.categoria))).toEqual(new Set(['antipasto', 'primo', 'secondo', 'contorno', 'piatto_unico', 'dolce', 'colazione']));
   });
 
   it('le ricette nate in Mastercook 2.0 sono nel catalogo e nella loro migrazione, uguali', () => {
     for (const r of nuove.ricette) expect(c.ricette.find((x) => x.id === r.id)).toEqual(r);
-    const sql = readFileSync(resolve(import.meta.dirname, '../../supabase/migrations/20261115000000_pizze.sql'), 'utf8');
-    const json = JSON.parse(sql.split('$catalogo$')[1]) as { ricette: unknown[] };
-    expect(json.ricette).toEqual(nuove.ricette);
+    // Ogni gruppo di ricette nuove ha la sua migrazione: insieme, nell'ordine, devono dare ricette-nuove.json.
+    const migrazioni = ['20261115000000_pizze.sql', '20261115000100_verdure_ripiene_carne.sql'];
+    const caricate = migrazioni.flatMap((f) => {
+      const sql = readFileSync(resolve(import.meta.dirname, '../../supabase/migrations', f), 'utf8');
+      return (JSON.parse(sql.split('$catalogo$')[1]) as { ricette: unknown[] }).ricette;
+    });
+    expect(caricate).toEqual(nuove.ricette);
   });
 
   it('i controlli si accorgono dei problemi', () => {
