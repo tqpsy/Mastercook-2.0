@@ -92,3 +92,31 @@ export function formattaGiorno(data: Date | string): string {
   const d = typeof data === 'string' ? new Date(`${data.slice(0, 10)}T12:00:00`) : data;
   return new Intl.DateTimeFormat('it-IT', { weekday: 'short', day: 'numeric', month: 'short' }).format(d).replace(/\./g, '');
 }
+
+/** Ciò che serve sapere di un ingrediente per dire quanto comprarne. */
+export interface PerNegozio {
+  id: string;
+  dimensione: Dimensione;
+  sottocategoria: string | null;
+  peso_pz: number | null;
+}
+
+const suPerGiu = (valore: number, passo: number) => Math.ceil(valore / passo - 1e-9) * passo;
+const pezzi = (n: number, uno: string, tanti: string) => `${n} ${n === 1 ? uno : tanti}`;
+
+/**
+ * Quanto comprare, come lo si dice in negozio: «1 testa» d'aglio invece di 1,9 g, «2 pz» di banane
+ * invece di 193,8 g, «1 confezione» di cannella invece di 0,4 g, 330 g → «350 g». Sempre arrotondato
+ * per eccesso; la quantità esatta resta salvata e si vede aprendo la voce.
+ */
+export function quantitaDaNegozio(q: Quantita, ing?: PerNegozio): string {
+  const v = q.valore;
+  if (q.unita === 'pz') return pezzi(Math.max(1, Math.ceil(v - 1e-9)), 'pz', 'pz');
+  if (ing?.id === 'ing:aglio' && q.unita === 'g') return pezzi(Math.max(1, Math.ceil(v / 50 - 1e-9)), 'testa', 'teste');
+  if (ing?.sottocategoria === 'Erbe aromatiche' && v <= 50) return '1 mazzetto';
+  if (ing?.sottocategoria === 'Sale e spezie' && v <= 100) return '1 confezione';
+  if (q.unita === 'g' && ing?.peso_pz) return pezzi(Math.max(1, Math.ceil(v / ing.peso_pz - 1e-9)), 'pz', 'pz');
+  if (v <= 30) return '1 confezione';
+  const passo = v <= 500 ? 50 : v <= 2000 ? 100 : 250;
+  return formatta({ valore: suPerGiu(v, passo), unita: q.unita });
+}

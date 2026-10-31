@@ -117,7 +117,7 @@ test('spesa per giorni scelti: con il menu su più giorni si compra solo per i p
   await expect(page.getByRole('button', { name: 'Apri Guanciale' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Apri Aglio' })).toBeVisible();
 
-  await page.getByRole('group', { name: 'Spesa per i giorni' }).getByRole('button', { name: 'Prossimi 3 giorni' }).click();
+  await page.getByRole('group', { name: 'Spesa per i giorni' }).getByRole('button', { name: '3 giorni' }).click();
   await expect(page.getByRole('button', { name: 'Apri Aglio' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Apri Guanciale' })).toBeVisible();
   await expect(page.getByText(/^Solo per /)).toBeVisible();
@@ -126,6 +126,8 @@ test('spesa per giorni scelti: con il menu su più giorni si compra solo per i p
   // La scelta resta: riaprendo la lista si ritrovano i tre giorni; un giorno in più si accende al tocco.
   await page.reload();
   await page.getByRole('button', { name: 'Spesa', exact: true }).click();
+  // I giorni uno per uno stanno in «Personalizza».
+  await page.getByRole('group', { name: 'Spesa per i giorni' }).getByRole('button', { name: 'Personalizza' }).click();
   const giorni = page.getByRole('group', { name: 'Giorni della spesa' });
   await expect(giorni.getByRole('button', { pressed: true })).toHaveCount(3);
   await expect(page.getByRole('button', { name: 'Apri Aglio' })).toHaveCount(0);
