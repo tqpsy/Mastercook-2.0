@@ -1,0 +1,8 @@
+-- Nuova categoria di ricetta «base» (basi e salse: non si propone nei pasti) e besciamella fatta in casa
+-- con le dosi di Luca (richiesta del 31/10/2026). Stesso contenuto dell'ultima ricetta di src/catalogo/ricette-nuove.json.
+
+alter table public.ricetta drop constraint ricetta_categoria_check;
+alter table public.ricetta add constraint ricetta_categoria_check
+  check (categoria in ('antipasto', 'primo', 'secondo', 'contorno', 'piatto_unico', 'dolce', 'colazione', 'base'));
+
+select interno.carica_catalogo($catalogo${"ingredienti":[],"ricette":[{"id":"sys:besciamella","titolo":"Besciamella fatta in casa","categoria":"base","cucina":"italiana","provenienza":null,"porzioni":4,"minuti_totali":20,"difficolta":1,"conservazione":null,"mesi":null,"allergeni_dichiarati":[],"ingredienti":[{"ingrediente_id":"ing:latte","quantita":1000,"unita":"ml","qb":false,"opzionale":false,"testo":"Latte"},{"ingrediente_id":"ing:farina","quantita":100,"unita":"g","qb":false,"opzionale":false,"testo":"Farina 00"},{"ingrediente_id":"ing:burro","quantita":100,"unita":"g","qb":false,"opzionale":false,"testo":"Burro"},{"ingrediente_id":"ing:sale","quantita":5,"unita":"g","qb":false,"opzionale":false,"testo":"Sale"},{"ingrediente_id":"ing:noce_moscata","quantita":1,"unita":"g","qb":false,"opzionale":false,"testo":"Noce moscata"}],"passi":["Sciogli il burro in una pentola a fuoco basso.","Aggiungi la farina tutta insieme e mescola con una frusta finché è sciolta e senza grumi.","Versa il latte piano piano, un po' alla volta, mescolando sempre con la frusta.","Continua a cuocere a fuoco basso, sempre mescolando, finché la besciamella si addensa.","Verso la fine aggiungi il sale e una grattata di noce moscata."]}]}$catalogo$::jsonb);

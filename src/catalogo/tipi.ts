@@ -13,7 +13,7 @@ export const NOME_LUOGO: Record<Luogo, string> = { frigo: 'Frigo', freezer: 'Fre
 export type Classe = 'carne' | 'maiale' | 'pesce' | 'latticini' | 'uova' | 'miele' | 'alcol';
 export const CLASSI: Classe[] = ['carne', 'maiale', 'pesce', 'latticini', 'uova', 'miele', 'alcol'];
 
-export type Categoria = 'antipasto' | 'primo' | 'secondo' | 'contorno' | 'piatto_unico' | 'dolce' | 'colazione';
+export type Categoria = 'antipasto' | 'primo' | 'secondo' | 'contorno' | 'piatto_unico' | 'dolce' | 'colazione' | 'base';
 export const CATEGORIE: { id: Categoria; nome: string; emoji: string }[] = [
   { id: 'antipasto', nome: 'Antipasto', emoji: '🥗' },
   { id: 'primo', nome: 'Primo', emoji: '🍝' },
@@ -22,6 +22,8 @@ export const CATEGORIE: { id: Categoria; nome: string; emoji: string }[] = [
   { id: 'piatto_unico', nome: 'Piatto unico', emoji: '🥘' },
   { id: 'dolce', nome: 'Dolce', emoji: '🍰' },
   { id: 'colazione', nome: 'Colazione', emoji: '☕' },
+  // Basi e salse (besciamella…): si usano dentro altre ricette, non si propongono nei pasti.
+  { id: 'base', nome: 'Basi e salse', emoji: '🥣' },
 ];
 
 export interface Reparto {
