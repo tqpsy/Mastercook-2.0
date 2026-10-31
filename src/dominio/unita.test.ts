@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatta, formattaEuro, formattaGiorno, inBase, leggiNumero, scala, somma } from './unita';
+import { formatta, formattaEuro, formattaGiorno, inBase, leggiNumero, type PerNegozio, quantitaDaNegozio, scala, somma } from './unita';
 
 describe('unità e quantità (T-UNI)', () => {
   it('T-UNI-1 1,5 kg diventa 1.500 g; 0,75 l diventa 750 ml', () => {
@@ -55,5 +55,24 @@ describe('unità e quantità (T-UNI)', () => {
     expect(scala({ valore: 3, unita: 'pz' }, 4, 2)).toEqual({ valore: 1.5, unita: 'pz' });
     expect(scala({ valore: 1, unita: 'pz' }, 4, 1)).toEqual({ valore: 0.5, unita: 'pz' });
     expect(scala({ valore: 2, unita: 'g' }, 4, 1)).toEqual({ valore: 0.5, unita: 'g' });
+  });
+});
+
+describe('quantitaDaNegozio', () => {
+  const ing = (id: string, x: Partial<PerNegozio> = {}): PerNegozio => ({ id, dimensione: 'massa', sottocategoria: null, peso_pz: null, ...x });
+  it('aglio a teste, frutta a pezzi, spezie ed erbe a confezioni', () => {
+    expect(quantitaDaNegozio({ valore: 1.9, unita: 'g' }, ing('ing:aglio', { peso_pz: 5 }))).toBe('1 testa');
+    expect(quantitaDaNegozio({ valore: 120, unita: 'g' }, ing('ing:aglio', { peso_pz: 5 }))).toBe('3 teste');
+    expect(quantitaDaNegozio({ valore: 193.8, unita: 'g' }, ing('ing:banana', { peso_pz: 150 }))).toBe('2 pz');
+    expect(quantitaDaNegozio({ valore: 0.4, unita: 'g' }, ing('ing:cannella', { sottocategoria: 'Sale e spezie' }))).toBe('1 confezione');
+    expect(quantitaDaNegozio({ valore: 10, unita: 'g' }, ing('ing:basilico', { sottocategoria: 'Erbe aromatiche' }))).toBe('1 mazzetto');
+  });
+  it('il resto arrotondato per eccesso a passi da negozio', () => {
+    expect(quantitaDaNegozio({ valore: 2.5, unita: 'pz' })).toBe('3 pz');
+    expect(quantitaDaNegozio({ valore: 12, unita: 'g' }, ing('ing:parmigiano'))).toBe('1 confezione');
+    expect(quantitaDaNegozio({ valore: 330, unita: 'g' }, ing('ing:pasta'))).toBe('350 g');
+    expect(quantitaDaNegozio({ valore: 1250, unita: 'g' }, ing('ing:farina'))).toBe('1,3 kg');
+    expect(quantitaDaNegozio({ valore: 500, unita: 'ml' })).toBe('500 ml');
+    expect(quantitaDaNegozio({ valore: 2100, unita: 'ml' })).toBe('2,25 l');
   });
 });

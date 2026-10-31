@@ -18,7 +18,7 @@ import {
   totaleStimato,
   type VoceSpesa,
 } from '../dominio/spesa';
-import { formatta, formattaEuro, formattaGiorno, leggiNumero, UNITA, type Unita, UNITA_BASE, unitaPer } from '../dominio/unita';
+import { formatta, formattaEuro, formattaGiorno, leggiNumero, type PerNegozio, quantitaDaNegozio, UNITA, type Unita, UNITA_BASE, unitaPer } from '../dominio/unita';
 import { CercaIngrediente } from '../ui/CercaIngrediente';
 import { Foglio } from '../ui/Foglio';
 import { ScansionaProdotto } from '../ui/CodiceProdotto';
@@ -49,9 +49,21 @@ function nomeVoce(indice: Indice, v: Pick<VoceSpesa, 'ingrediente_id' | 'testo'>
   return v.ingrediente_id ? indice.nome(v.ingrediente_id) : (v.testo ?? 'Voce');
 }
 
-function quantitaTesto(v: Pick<VoceSpesa, 'quantita_richiesta' | 'quantita_scelta' | 'unita'>) {
+/** Peso di un pezzo e sottocategoria vengono dal catalogo; per gli ingredienti della famiglia non si sanno. */
+function perNegozio(indice: Indice, id: string | null): PerNegozio | undefined {
+  if (!id) return undefined;
+  const c = indice.catalogo.ingredienti.find((x) => x.id === id);
+  if (c) return c;
+  const i = indice.ingrediente(id);
+  return i && { id, dimensione: i.dimensione, sottocategoria: null, peso_pz: null };
+}
+
+/** Nella lista, la quantità come si compra («1 testa», «2 pz»); quella esatta si vede aprendo la voce. */
+function quantitaNegozio(v: Pick<VoceSpesa, 'quantita_richiesta' | 'quantita_scelta' | 'unita' | 'tipo'>, ing?: PerNegozio) {
   const q = quantitaVoce(v);
-  return q != null && v.unita ? formatta({ valore: q, unita: v.unita }) : null;
+  if (q == null || !v.unita) return null;
+  // Una quantità scritta a mano resta com'è stata scritta; si arrotonda solo quella calcolata dal menu.
+  return v.quantita_scelta != null || v.tipo !== 'derivata' ? formatta({ valore: q, unita: v.unita }) : quantitaDaNegozio({ valore: q, unita: v.unita }, ing);
 }
 
 export function Spesa() {
@@ -111,11 +123,15 @@ export function Spesa() {
         </button>
       </p>
       {totale.voci > 0 && (
-        <p className="tenue" aria-live="polite">
-          {totale.voci > totale.senzaPrezzo
-            ? `Circa ${formattaEuro(totale.euro)} su ${totale.voci} voci${totale.senzaPrezzo ? `, ${totale.senzaPrezzo} senza prezzo` : ''} (stima dai prezzi già pagati).`
-            : `${totale.voci} voci, nessuna con un prezzo noto: i prezzi arrivano dagli acquisti confermati.`}
-        </p>
+        <div className="avanzamento" aria-live="polite">
+          <progress max={totale.voci} value={carrello.length} aria-label="Voci nel carrello" />
+          <p className="tenue">
+            {carrello.length} di {totale.voci} nel carrello
+            {totale.voci > totale.senzaPrezzo
+              ? ` · circa ${formattaEuro(totale.euro)}${totale.senzaPrezzo ? ` (${totale.senzaPrezzo} senza prezzo)` : ''}`
+              : ' · i prezzi arrivano dagli acquisti confermati'}
+          </p>
+        </div>
       )}
 
       {carrello.length > 0 && (
@@ -198,21 +214,29 @@ function descriviGiorni(finestra: string[], scelti: string[]): string {
  * prossimi giorni. La scelta vale per la famiglia; almeno un giorno resta sempre acceso.
  */
 function GiorniSpesa({ finestra, scelti, piatti, cambia }: { finestra: string[]; scelti: string[]; piatti: Map<string, number>; cambia: (giorni: string[]) => void }) {
-  const tutti = scelti.length === finestra.length;
   const fino = (n: number) => finestra.slice(0, n);
   const uguale = (a: string[]) => a.length === scelti.length && a.every((g) => scelti.includes(g));
+  const preimpostati = [
+    { nome: 'Oggi', giorni: fino(1) },
+    { nome: '3 giorni', giorni: fino(3) },
+    { nome: 'Settimana', giorni: finestra },
+  ];
+  const suMisura = !preimpostati.some((p) => uguale(p.giorni));
+  // Un solo selettore; i giorni uno per uno stanno in «Personalizza» (aperto da sé se la scelta è su misura).
+  const [personalizza, setPersonalizza] = useState(suMisura);
   return (
     <div className="giorni-spesa">
-      <div className="scelte" role="group" aria-label="Spesa per i giorni" style={{ marginBottom: 6 }}>
-        {[1, 3].map((n) => (
-          <button key={n} aria-pressed={uguale(fino(n))} onClick={() => cambia(fino(n))}>
-            {n === 1 ? 'Solo oggi' : `Prossimi ${n} giorni`}
+      <div className="scelte segmenti larghi" role="group" aria-label="Spesa per i giorni">
+        {preimpostati.map((p) => (
+          <button key={p.nome} aria-pressed={!personalizza && uguale(p.giorni)} onClick={() => (setPersonalizza(false), cambia(p.giorni))}>
+            {p.nome}
           </button>
         ))}
-        <button aria-pressed={tutti} onClick={() => cambia(finestra)}>
-          Tutta la settimana
+        <button aria-pressed={personalizza || suMisura} onClick={() => setPersonalizza(!personalizza)}>
+          Personalizza
         </button>
       </div>
+      {(personalizza || suMisura) && (
       <div className="scelte giorni" role="group" aria-label="Giorni della spesa">
         {finestra.map((g, i) => {
           const acceso = scelti.includes(g);
@@ -228,11 +252,12 @@ function GiorniSpesa({ finestra, scelti, piatti, cambia }: { finestra: string[];
             >
               <span>{i === 0 ? 'oggi' : nome}</span>
               <strong>{numero}</strong>
-              <small aria-hidden>{n ? '🍽'.repeat(Math.min(n, 3)) : '—'}</small>
+              <small aria-hidden>{n ? '•'.repeat(Math.min(n, 4)) : '—'}</small>
             </button>
           );
         })}
       </div>
+      )}
     </div>
   );
 }
@@ -302,7 +327,7 @@ function RigaVoce({ indice, voce: v, prezzi, apri }: { indice: Indice; voce: Voc
         <span className="cresce">
           <span style={nelCarrello ? { textDecoration: 'line-through' } : undefined}>{nome}</span>
           <span className="tenue" style={{ display: 'block', fontSize: '0.85rem' }}>
-            {[quantitaTesto(v), v.tipo === 'manuale' && 'aggiunta a mano', v.nota, prezzo && `~${formattaEuro(prezzo.euro)}`, v.in_attesa && 'in invio'].filter(Boolean).join(' · ')}
+            {[quantitaNegozio(v, perNegozio(indice, v.ingrediente_id)), v.tipo === 'manuale' && 'aggiunta a mano', v.nota, prezzo && `~${formattaEuro(prezzo.euro)}`, v.in_attesa && 'in invio'].filter(Boolean).join(' · ')}
           </span>
         </span>
         {v.non_piu_necessaria && <span className="etichetta avviso-data">non più necessaria</span>}
