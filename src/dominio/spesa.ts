@@ -214,3 +214,21 @@ export function spesaDelGiorno(
     })
     .sort((a, b) => indice.nome(a.ingrediente_id).localeCompare(indice.nome(b.ingrediente_id), 'it'));
 }
+
+/**
+ * I giorni per cui si fa la spesa, dentro la finestra della lista (da oggi in avanti). La scelta è della
+ * famiglia (`impostazioni.spesa_giorni`); i giorni ormai passati non contano. Senza scelta, o se nessun
+ * giorno scelto è ancora nella finestra, si fa la spesa per tutti.
+ */
+export function giorniScelti(finestra: string[], salvati: unknown): string[] {
+  const scelti = Array.isArray(salvati) ? finestra.filter((g) => salvati.includes(g)) : [];
+  return scelti.length ? scelti : finestra;
+}
+
+/** I dati di `ricalcola_spesa`: con tutti i giorni della finestra non si mandano i giorni (vale tutto il periodo). */
+export function periodoSpesa(finestra: string[], scelti: string[]): { dal: string; al: string; giorni?: string[] } {
+  const dal = finestra[0];
+  const al = finestra[finestra.length - 1];
+  const giorni = finestra.filter((g) => scelti.includes(g));
+  return giorni.length === 0 || giorni.length === finestra.length ? { dal, al } : { dal, al, giorni };
+}

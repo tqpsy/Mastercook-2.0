@@ -54,6 +54,16 @@ const EFFETTI: Record<string, Effetto> = {
     righe.invito = (righe.invito ?? []).map((r) => (r.id === d.id ? { ...r, revocato: true, in_attesa: true } : r));
   },
   modifica_famiglia: (righe, d, famiglia) => modifica('famiglia')(righe, { ...d, id: famiglia }, famiglia),
+  // I giorni scelti per la spesa si vedono subito; le voci le ricalcola il server.
+  ricalcola_spesa: (righe, d, famiglia) => {
+    righe.famiglia = (righe.famiglia ?? []).map((r) => {
+      if (r.id !== famiglia) return r;
+      const impostazioni = { ...((r.impostazioni as Record<string, unknown> | undefined) ?? {}) };
+      if (Array.isArray(d.giorni)) impostazioni.spesa_giorni = d.giorni;
+      else delete impostazioni.spesa_giorni;
+      return { ...r, impostazioni };
+    });
+  },
 
   crea_ingrediente: aggiungi('ingrediente', (d) => ({
     nome: d.nome,
