@@ -146,6 +146,34 @@ describe('lotti e movimenti', () => {
     expect(v.luogo).toBe('freezer');
   });
 
+  it('spostare dal frigo alla dispensa come fa l’app (stima, quantità e nuovo_id a null) funziona', async () => {
+    const { u, famiglia } = await famigliaCon();
+    // Data letta dalla confezione: l'app non ricalcola niente e manda stima: null.
+    const l = lotto({ ingrediente_id: 'ing:manzo', unita: 'g', quantita: 800, nome: 'Fettine', luogo: 'frigo' });
+    await u.applica(comando('aggiungi_lotto', famiglia, l));
+    const tutto = await u.applica(comando('sposta_lotto', famiglia, { lotto_id: l.id, luogo: 'dispensa', quantita: null, nuovo_id: null, stima: null }));
+    expect(tutto.esito).toBe('applicato');
+    const [v] = await banco.sql('select luogo, data_limite::text as d, tipo_data, fonte_data from lotto where id = $1', [l.id]);
+    expect(v).toEqual({ luogo: 'dispensa', d: '2026-11-05', tipo_data: 'scadenza', fonte_data: 'confezione' });
+
+    // Una parte, sempre con stima: null: lotto nuovo con le stesse date.
+    const nuovo = randomUUID();
+    const parte = await u.applica(comando('sposta_lotto', famiglia, { lotto_id: l.id, luogo: 'frigo', quantita: 200, nuovo_id: nuovo, stima: null }));
+    expect(parte.esito).toBe('applicato');
+    const [n] = await banco.sql('select luogo, data_limite::text as d, fonte_data from lotto where id = $1', [nuovo]);
+    expect(n).toEqual({ luogo: 'frigo', d: '2026-11-05', fonte_data: 'confezione' });
+    expect(await quantita(l.id)).toMatchObject({ quantita: 600, somma: 600 });
+
+    // Data stimata e nessun ricalcolo (stima: null): la fonte della data resta quella di prima.
+    const s = lotto({ tipo_data: 'stimata', fonte_data: 'app', calcolata_il: '2026-10-30T10:00:00Z', luogo: 'frigo' });
+    expect((await u.applica(comando('aggiungi_lotto', famiglia, s))).esito).toBe('applicato');
+    expect((await u.applica(comando('sposta_lotto', famiglia, { lotto_id: s.id, luogo: 'dispensa', quantita: null, nuovo_id: null, stima: null }))).esito).toBe(
+      'applicato',
+    );
+    const [st] = await banco.sql('select luogo, tipo_data, fonte_data from lotto where id = $1', [s.id]);
+    expect(st).toEqual({ luogo: 'dispensa', tipo_data: 'stimata', fonte_data: 'app' });
+  });
+
   it('i movimenti non si modificano', async () => {
     const { u, famiglia } = await famigliaCon();
     const l = lotto();
