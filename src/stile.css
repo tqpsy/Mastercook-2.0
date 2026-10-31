@@ -1178,3 +1178,116 @@ button.etichetta {
     margin-top: 0;
   }
 }
+
+/* Menu: vista, «Oggi» e «⋯» su una riga; i giorni come striscia; «Riempi i vuoti» sempre a portata di pollice. */
+.comandi-menu {
+  flex-wrap: wrap;
+  margin: 8px 0 12px;
+  gap: 8px;
+}
+.scelte.segmenti {
+  margin: 0;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--superficie-2);
+}
+.scelte.segmenti button {
+  border-color: transparent;
+  background: transparent;
+  min-height: 44px;
+}
+.scelte.segmenti button[aria-pressed='true'] {
+  background: var(--primario);
+  color: var(--primario-testo);
+}
+.altre-azioni {
+  position: relative;
+}
+.tendina {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 10;
+  min-width: 260px;
+  padding: 6px 14px;
+  background: var(--superficie);
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.14);
+}
+.tendina .voce + .voce {
+  border-top: 1px solid var(--bordo);
+}
+.striscia-giorni {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.striscia-giorni button {
+  min-height: 64px;
+  padding: 4px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.15;
+  border: 1px solid var(--bordo);
+  border-radius: 12px;
+  background: var(--superficie);
+  color: var(--testo);
+  font: inherit;
+  cursor: pointer;
+}
+.striscia-giorni small {
+  font-size: 0.8rem;
+  color: var(--testo-tenue);
+}
+.striscia-giorni strong {
+  font-family: var(--carattere-titoli);
+  font-size: 1.2rem;
+}
+.striscia-giorni .puntini {
+  min-height: 1em;
+  font-size: 0.7rem;
+  letter-spacing: 1px;
+  color: var(--primario);
+}
+.striscia-giorni button.passato {
+  opacity: 0.55;
+}
+.striscia-giorni button.oggi {
+  border: 2px solid var(--primario);
+}
+.striscia-giorni button[aria-pressed='true'] {
+  background: var(--primario);
+  border-color: var(--primario);
+  color: var(--primario-testo);
+  opacity: 1;
+}
+.striscia-giorni button[aria-pressed='true'] small,
+.striscia-giorni button[aria-pressed='true'] .puntini {
+  color: inherit;
+}
+.bottone.fluttuante {
+  position: fixed;
+  right: calc(16px + env(safe-area-inset-right));
+  bottom: calc(84px + env(safe-area-inset-bottom));
+  z-index: 6;
+  min-height: 56px;
+  border-radius: 16px;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.18);
+}
+.pagina {
+  padding-bottom: calc(160px + env(safe-area-inset-bottom));
+}
+@media (min-width: 900px) {
+  .bottone.fluttuante {
+    bottom: calc(24px + env(safe-area-inset-bottom));
+    right: calc(24px + env(safe-area-inset-right));
+  }
+  .pagina {
+    padding-bottom: calc(96px + env(safe-area-inset-bottom));
+  }
+}

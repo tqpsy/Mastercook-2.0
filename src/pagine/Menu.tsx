@@ -46,7 +46,7 @@ function modoIniziale(): Modo {
   } catch {
     // Archivio del browser non disponibile.
   }
-  return window.innerWidth >= 700 ? 'griglia' : 'giorni';
+  return window.innerWidth >= 900 ? 'griglia' : 'giorni';
 }
 
 export interface DatiMenu {
@@ -157,7 +157,14 @@ export function Menu() {
   const dati = useDatiMenu(vista);
   const { esegui } = useFamiglia();
   const giorno = oggi();
-  const [lun, setLun] = useState(() => lunedi(giorno));
+  const [lun, setLunStato] = useState(() => lunedi(giorno));
+  // Il giorno mostrato nella vista «Giorni»: oggi, oppure il lunedì delle altre settimane.
+  const [scelto, setScelto] = useState(giorno);
+  const [altro, setAltro] = useState(false);
+  const setLun = (l: string) => {
+    setLunStato(l);
+    setScelto(l === lunedi(giorno) ? giorno : l);
+  };
   const [modo, setModo] = useState<Modo>(modoIniziale);
   const [nuova, setNuova] = useState<{ data: string; categoria: string; per?: string[] } | null>(null);
   const [aperta, setAperta] = useState<string | null>(null);
@@ -218,29 +225,73 @@ export function Menu() {
           ›
         </button>
       </div>
-      <div className="riga" style={{ flexWrap: 'wrap', marginBottom: 12, justifyContent: 'center' }}>
+      {/* Pochi comandi in testa: la vista, «Questa settimana» se serve e il resto nel «⋯». */}
+      <div className="riga comandi-menu">
+        <div className="scelte segmenti" role="group" aria-label="Vista">
+          {MODI.map((m) => (
+            <button key={m.id} aria-pressed={modo === m.id} onClick={() => cambiaModo(m.id)}>
+              {m.nome}
+            </button>
+          ))}
+        </div>
+        <span className="cresce" />
         {lun !== lunedi(giorno) && (
           <button className="bottone piccolo" onClick={() => setLun(lunedi(giorno))}>
-            Questa settimana
+            Oggi
           </button>
         )}
-        <button className="bottone piccolo" onClick={ripeti} disabled={!precedente.length} title={precedente.length ? undefined : 'La settimana prima è vuota'}>
-          ↻ Ripeti la settimana prima
-        </button>
-        <button className="bottone piccolo" onClick={() => setProponi(true)} disabled={fine < giorno}>
-          ✨ Proponi la settimana
-        </button>
-        <button className="bottone piccolo" onClick={() => setPasti(true)}>
-          Pasti
-        </button>
-      </div>
-      <div className="scelte" role="group" aria-label="Vista" style={{ justifyContent: 'center' }}>
-        {MODI.map((m) => (
-          <button key={m.id} aria-pressed={modo === m.id} onClick={() => cambiaModo(m.id)}>
-            {m.nome}
+        <div className="altre-azioni">
+          <button className="bottone piccolo tondo" aria-label="Altre azioni" aria-expanded={altro} onClick={() => setAltro(!altro)}>
+            ⋯
           </button>
-        ))}
+          {altro && (
+            <div className="tendina" role="group" aria-label="Altre azioni sul menu">
+              {precedente.length > 0 && (
+                <button
+                  className="voce"
+                  onClick={() => {
+                    setAltro(false);
+                    void ripeti();
+                  }}
+                >
+                  ↻ Ripeti la settimana prima
+                </button>
+              )}
+              <button
+                className="voce"
+                onClick={() => {
+                  setAltro(false);
+                  setPasti(true);
+                }}
+              >
+                Pasti
+              </button>
+            </div>
+          )}
+        </div>
       </div>
+      {modo === 'giorni' && (
+        <div className="striscia-giorni" role="group" aria-label="Giorni della settimana">
+          {giorni.map((g) => {
+            const pieni = categorie.filter((c) => piatti(g, c.valore).length).length;
+            return (
+              <button
+                key={g}
+                className={`${g < giorno ? 'passato' : ''}${g === giorno ? ' oggi' : ''}`}
+                aria-pressed={g === scelto}
+                aria-label={`Mostra ${dataLunga(g)}`}
+                onClick={() => setScelto(g)}
+              >
+                <small>{nomeGiorno(g, true)}</small>
+                <strong>{Number(g.slice(8))}</strong>
+                <span className="puntini" aria-hidden>
+                  {'•'.repeat(Math.min(pieni, 4))}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
       {dati.vincoli.length > 0 && <p className="tenue">✅ adatto · ❔ da verificare · ⛔ non adatto a chi lo mangia · 🙅 a qualcuno non piace</p>}
 
       {modo === 'griglia' && (
@@ -275,7 +326,9 @@ export function Menu() {
       )}
 
       {modo === 'giorni' &&
-        giorni.map((g) => (
+        giorni
+          .filter((g) => g === scelto)
+          .map((g) => (
           <section key={g} className={`scheda giorno${g === giorno ? ' oggi' : ''}`} aria-label={dataLunga(g)}>
             <h3 style={{ marginTop: 0, textTransform: 'capitalize' }}>
               {dataLunga(g)}
@@ -291,6 +344,12 @@ export function Menu() {
             ))}
           </section>
         ))}
+
+      {fine >= giorno && (
+        <button className="bottone primario fluttuante" onClick={() => setProponi(true)}>
+          ✨ Riempi i vuoti
+        </button>
+      )}
 
       {modo === 'panoramica' && <Panoramica indice={indice} dati={dati} giorni={giorni} categorie={categorie} settimana={settimana} apri={setAperta} oggiData={giorno} />}
 

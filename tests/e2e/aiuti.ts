@@ -1,5 +1,6 @@
 /** Aiuti condivisi dalle prove dell'interfaccia: utenti di prova, sessione nel browser, passi ricorrenti. */
 import { type Browser, type BrowserContext, expect, type Page } from '@playwright/test';
+import { dataLunga } from '../../src/dominio/menu';
 
 export const SERVER = `http://localhost:${process.env.MC_PORTA_SERVER ?? '14400'}`;
 
@@ -49,6 +50,13 @@ export async function creaFamiglia(page: Page, nome = 'Casa Prova') {
   await page.getByLabel('Nome della famiglia').fill(nome);
   await page.getByRole('button', { name: 'Crea la famiglia' }).click();
   await expect(page.getByText(nome, { exact: true })).toBeVisible();
+}
+
+/** Menu, vista «Giorni»: si mostra un giorno alla volta, scelto dalla striscia (passando alla settimana dopo se serve). */
+export async function scegliGiorno(page: Page, data: string) {
+  const giorno = page.getByRole('button', { name: `Mostra ${dataLunga(data)}` });
+  if (!(await giorno.count())) await page.getByRole('button', { name: 'Settimana dopo' }).click();
+  await giorno.click();
 }
 
 /** Famiglia sta dentro Impostazioni (la barra in basso ha cinque schede). */

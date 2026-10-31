@@ -5,7 +5,7 @@ import { expect, test } from '@playwright/test';
 import { dataLunga } from '../../src/dominio/menu';
 import { oggi, piuGiorni } from '../../src/dominio/scadenze';
 import { formattaGiorno } from '../../src/dominio/unita';
-import { apri, creaFamiglia, nuovoUtente, sql } from './aiuti';
+import { apri, creaFamiglia, nuovoUtente, scegliGiorno, sql } from './aiuti';
 
 const famigliaDi = '(select famiglia_id from utente_famiglia where utente_id = $1)';
 
@@ -107,9 +107,8 @@ test('spesa per giorni scelti: con il menu su più giorni si compra solo per i p
     [oggi(), 'carbonara', /Spaghetti alla carbonara/],
     [piuGiorni(oggi(), 4), 'aglio', /Spaghetti aglio, olio/],
   ] as const) {
-    const aggiungi = page.getByRole('button', { name: `Aggiungi a cena di ${dataLunga(giorno)}` });
-    if (!(await aggiungi.count())) await page.getByRole('button', { name: 'Settimana dopo' }).click();
-    await aggiungi.click();
+    await scegliGiorno(page, giorno);
+    await page.getByRole('button', { name: `Aggiungi a cena di ${dataLunga(giorno)}` }).click();
     await page.getByRole('dialog').getByLabel('Cosa si mangia').fill(cerca);
     await page.getByRole('dialog').getByRole('button', { name: piatto }).first().click();
   }
