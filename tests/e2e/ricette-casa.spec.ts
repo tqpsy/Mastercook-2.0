@@ -89,6 +89,10 @@ test('casa: aggiunge, mostra cosa usare presto, scala la quantità usata e stima
   await nuovo.getByRole('button', { name: 'Aggiungi', exact: true }).click();
 
   const presto = page.getByRole('region', { name: 'Da usare presto' });
+  // La tendina è chiusa di base e dice quanti prodotti stanno per scadere.
+  await expect(presto.getByText('Entro 1 giorno')).toBeHidden();
+  await expect(presto.locator('summary')).toContainText('Da usare presto 1');
+  await presto.locator('summary').click();
   await expect(presto.getByText('Entro 1 giorno')).toBeVisible();
   await presto.getByRole('button', { name: /Apri Yogurt/ }).click();
   const lotto = page.getByRole('dialog', { name: /Yogurt/ });
