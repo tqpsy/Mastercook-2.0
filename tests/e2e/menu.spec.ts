@@ -4,7 +4,7 @@
 import { expect, test } from '@playwright/test';
 import { dataLunga, lunedi } from '../../src/dominio/menu';
 import { oggi, piuGiorni } from '../../src/dominio/scadenze';
-import { aggiungiPersona, apri, creaFamiglia, nuovoUtente, sql } from './aiuti';
+import { aggiungiPersona, apri, creaFamiglia, nuovoUtente, scegliGiorno, sql } from './aiuti';
 
 test('menu: un piatto per cena, Sara mangia altro, nessun movimento in casa', async ({ browser }, info) => {
   const luca = await nuovoUtente('Luca');
@@ -100,9 +100,11 @@ test('menu: ripeti la settimana prima, accendi la merenda, la vista scelta resta
 
   await page.getByRole('button', { name: 'Settimana dopo' }).click();
   await expect(page.getByRole('button', { name: 'Apri Pizza da asporto' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Altre azioni' }).click();
   await page.getByRole('button', { name: '↻ Ripeti la settimana prima' }).click();
   await expect(page.getByRole('button', { name: 'Apri Pizza da asporto' })).toBeVisible();
 
+  await page.getByRole('button', { name: 'Altre azioni' }).click();
   await page.getByRole('button', { name: 'Pasti' }).click();
   const merenda = page.getByRole('dialog', { name: 'Pasti della famiglia' }).getByLabel('Merenda');
   await merenda.click();
@@ -156,7 +158,7 @@ test('colazione fissa: ogni giorno da oggi, cambiata da un giorno in poi, poi fe
     `select id from portata where categoria = 'colazione' and data = $2 and famiglia_id in (select famiglia_id from utente_famiglia where utente_id = $1)`,
     [luca.id, dopodomani],
   );
-  if (lunedi(dopodomani) !== lunedi(oggi())) await page.getByRole('button', { name: 'Settimana dopo' }).click();
+  await scegliGiorno(page, dopodomani);
   await page.getByRole('region', { name: dataLunga(dopodomani) }).getByRole('button', { name: 'Apri Latte e caffè' }).click();
   const scheda = page.getByRole('dialog', { name: 'Latte e caffè' });
   await expect(scheda).toContainText(dataLunga(dopodomani));
@@ -189,6 +191,7 @@ test('torta che dura più giorni: avanzo domani, la conferma la mette in casa', 
   await expect(scheda).toContainText('Si cucinano 2 porzioni');
   await page.getByRole('button', { name: 'Chiudi' }).click();
   if (lunedi(domani) === lunedi(oggi())) {
+    await scegliGiorno(page, domani);
     await expect(page.getByRole('region', { name: dataLunga(domani) }).getByRole('button', { name: 'Apri Torta di mele' })).toContainText('avanzo');
   }
 
@@ -211,7 +214,7 @@ test('proposte: l’app propone i pasti vuoti, si cambia o si toglie, entra solo
   const { page } = await apri(browser, luca, info.project.use);
   await creaFamiglia(page, 'Casa Proposte');
   await page.getByRole('button', { name: 'Menu', exact: true }).click();
-  await page.getByRole('button', { name: '✨ Proponi la settimana' }).click();
+  await page.getByRole('button', { name: '✨ Riempi i vuoti' }).click();
   const foglio = page.getByRole('dialog', { name: 'Proposte per la settimana' });
   const voci = foglio.getByRole('list', { name: 'Proposte' }).getByRole('listitem');
   const quante = await voci.count();
@@ -230,7 +233,7 @@ test('proposte: l’app propone i pasti vuoti, si cambia o si toglie, entra solo
     );
   await expect.poll(async () => (await proposte())[0].n).toBe(quante - 1);
   // Riaprendo, resta da proporre solo il pasto tolto.
-  await page.getByRole('button', { name: '✨ Proponi la settimana' }).click();
+  await page.getByRole('button', { name: '✨ Riempi i vuoti' }).click();
   await expect(foglio.getByRole('list', { name: 'Proposte' }).getByRole('listitem')).toHaveCount(1);
 });
 
