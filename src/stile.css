@@ -18,8 +18,26 @@
   color-scheme: light;
 }
 
+/* Tema: «Automatico» segue il telefono; «Chiaro» o «Scuro» si scelgono da Impostazioni (data-tema su <html>). */
+:root[data-tema='scuro'] {
+  --sfondo: #141a17;
+  --superficie: #1d2521;
+  --superficie-2: #252f2a;
+  --testo: #eef2ef;
+  --testo-tenue: #a7b3ad;
+  --bordo: #33403a;
+  --primario: #6fbf95;
+  --primario-testo: #0f1a14;
+  --primario-tenue: #23362c;
+  --attenzione: #f2b84b;
+  --attenzione-tenue: #3a2f17;
+  --errore: #ff8a80;
+  --errore-tenue: #3b1f1d;
+  color-scheme: dark;
+}
+
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-tema='chiaro']) {
     --sfondo: #141a17;
     --superficie: #1d2521;
     --superficie-2: #252f2a;

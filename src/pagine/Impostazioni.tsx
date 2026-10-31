@@ -13,6 +13,7 @@ import { useStatoCopia } from '../ui/CopiaAutomatica';
 import { SpiegazioneDrive, spiegaErroreDrive } from '../ui/Drive';
 import { Ripristino } from '../ui/Ripristino';
 import { TestoPrivacy } from './Privacy';
+import { leggiTema, scegliTema, type Tema } from '../ui/tema';
 
 export function Impostazioni({
   email,
@@ -52,6 +53,7 @@ export function Impostazioni({
 
       <h2>Questo dispositivo</h2>
       <div className="scheda">
+        <SceltaTema />
         <p>
           Accesso come <strong>{email}</strong>
         </p>
@@ -614,5 +616,39 @@ function CopiaSulDrive({ nome }: { nome: string }) {
       </div>
       {spiega && <SpiegazioneDrive continua={() => void collega()} chiudi={() => setSpiega(false)} />}
     </>
+  );
+}
+
+const TEMI: { id: Tema; nome: string }[] = [
+  { id: 'automatico', nome: 'Automatico' },
+  { id: 'chiaro', nome: 'Chiaro' },
+  { id: 'scuro', nome: 'Scuro' },
+];
+
+/** Chiaro, scuro o come il telefono: vale solo per questo dispositivo. */
+function SceltaTema() {
+  const [tema, setTema] = useState<Tema>(leggiTema);
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <p style={{ marginTop: 0, marginBottom: 6 }}>Aspetto</p>
+      <div className="scelte" role="group" aria-label="Aspetto dell’app">
+        {TEMI.map((t) => (
+          <button
+            key={t.id}
+            className="bottone"
+            aria-pressed={tema === t.id}
+            onClick={() => {
+              scegliTema(t.id);
+              setTema(t.id);
+            }}
+          >
+            {t.nome}
+          </button>
+        ))}
+      </div>
+      <p className="tenue" style={{ marginBottom: 0 }}>
+        {tema === 'automatico' ? 'Segue l’impostazione del telefono.' : 'Vale solo su questo dispositivo.'}
+      </p>
+    </div>
   );
 }
