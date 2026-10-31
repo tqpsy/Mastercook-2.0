@@ -159,7 +159,7 @@ export function Menu() {
   const giorno = oggi();
   const [lun, setLun] = useState(() => lunedi(giorno));
   const [modo, setModo] = useState<Modo>(modoIniziale);
-  const [nuova, setNuova] = useState<{ data: string; categoria: string } | null>(null);
+  const [nuova, setNuova] = useState<{ data: string; categoria: string; per?: string[] } | null>(null);
   const [aperta, setAperta] = useState<string | null>(null);
   const [pasti, setPasti] = useState(false);
   const [proponi, setProponi] = useState(false);
@@ -301,7 +301,7 @@ export function Menu() {
           {...nuova}
           chiudi={() => setNuova(null)}
           apriOspiti={() => {
-            setOspiti(nuova);
+            setOspiti({ data: nuova.data, categoria: nuova.categoria });
             setNuova(null);
           }}
         />
@@ -314,6 +314,10 @@ export function Menu() {
           chiudi={() => setAperta(null)}
           apriOspiti={() => {
             setOspiti({ data: portataAperta.data, categoria: portataAperta.categoria });
+            setAperta(null);
+          }}
+          apriNuovo={(per) => {
+            setNuova({ data: portataAperta.data, categoria: portataAperta.categoria, per });
             setAperta(null);
           }}
         />
@@ -342,11 +346,18 @@ function Piatto({ indice, dati, portata: p, apri }: { indice: Indice; dati: Dati
         {formattaPorzioni(d.porzioni)}
         {p.avanzo_di && ' · avanzo'}
         {d.dopo > 0 && ` · +${d.dopo.toLocaleString('it-IT')} per i giorni dopo`}
-        {d.eccezioni.length > 0 && ` · ${d.eccezioni.length} a parte`}
+        {d.eccezioni.length > 0 && ` · ${chiLoMangia(dati, d.eccezioni)}`}
         {p.in_attesa && ' · in invio'}
       </span>
     </button>
   );
+}
+
+/** «per Luca e Anna» quando non tutti mangiano il piatto. */
+export function chiLoMangia(dati: DatiMenu, eccezioni: Eccezione[]): string {
+  const nomi = dati.persone.filter((x) => !eccezioni.some((e) => e.membro_id === x.id)).map((x) => x.nome);
+  if (!nomi.length) return 'nessuno della famiglia';
+  return `per ${nomi.length > 1 ? `${nomi.slice(0, -1).join(', ')} e ${nomi[nomi.length - 1]}` : nomi[0]}`;
 }
 
 function formattaPorzioni(n: number) {
@@ -468,6 +479,7 @@ function NuovoPiatto({
   dati: tutti,
   data,
   categoria,
+  per,
   chiudi,
   apriOspiti,
 }: {
@@ -475,42 +487,75 @@ function NuovoPiatto({
   dati: DatiMenu;
   data: string;
   categoria: string;
+  /** Per chi è il piatto (id dei membri); di base per tutti. */
+  per?: string[];
   chiudi: () => void;
   apriOspiti: () => void;
 }) {
   const { esegui } = useFamiglia();
   const dati = datiAlPasto(tutti, data, categoria);
   const quanti = dati.portate.filter((p) => p.data === data && p.categoria === categoria).length;
+  const [chi, setChi] = useState<Set<string>>(() => new Set(per ?? tutti.persone.map((x) => x.id)));
+  // Le proposte e gli avvisi guardano solo chi lo mangia (e gli ospiti del pasto, se ci sono).
+  const perLoro = { ...dati, persone: dati.persone.filter((x) => chi.has(x.id) || !tutti.persone.some((m) => m.id === x.id)) };
+
+  /** Il piatto nuovo e, per chi non è spuntato, «non mangia questo piatto». */
+  async function aggiungi(campi: Record<string, unknown>) {
+    const id = crypto.randomUUID();
+    await esegui('aggiungi_portata', { id, data, categoria, ...campi, ordine: quanti });
+    for (const x of tutti.persone) if (!chi.has(x.id)) await esegui('imposta_eccezione', { id: crypto.randomUUID(), portata_id: id, membro_id: x.id, tipo: 'non_mangia' });
+    chiudi();
+  }
+
   return (
     <Foglio titolo={`${nomeCategoria(dati, categoria)} di ${dataLunga(data)}`} chiudi={chiudi}>
       <BottoneOspiti ospiti={ospitiDel(tutti.ospiti, data, categoria)} apri={apriOspiti} />
-      <IdeePerPasto
-        indice={indice}
-        dati={dati}
-        data={data}
-        categoria={categoria}
-        scegli={async (ricetta_id) => {
-          await esegui('aggiungi_portata', { id: crypto.randomUUID(), data, categoria, ricetta_id, ordine: quanti, origine: 'automatica' });
-          chiudi();
-        }}
-      />
-      <CercaPiatto
-        indice={indice}
-        dati={dati}
-        etichetta="Cosa si mangia"
-        scegli={async (s) => {
-          await esegui('aggiungi_portata', { id: crypto.randomUUID(), data, categoria, ...s, ordine: quanti });
-          chiudi();
-        }}
-      />
+      {tutti.persone.length > 1 && (
+        <SpunteChiMangia
+          persone={tutti.persone}
+          mangia={(id) => chi.has(id)}
+          cambia={(id, si) => {
+            const n = new Set(chi);
+            if (si) n.add(id);
+            else n.delete(id);
+            setChi(n);
+          }}
+        />
+      )}
+      {chi.size === 0 ? (
+        <p className="tenue">Spunta almeno una persona.</p>
+      ) : (
+        <>
+          <IdeePerPasto indice={indice} dati={perLoro} data={data} categoria={categoria} scegli={(ricetta_id) => aggiungi({ ricetta_id, origine: 'automatica' })} />
+          <CercaPiatto indice={indice} dati={perLoro} etichetta="Cosa si mangia" scegli={(s) => aggiungi(s)} />
+        </>
+      )}
       <p className="tenue">Le porzioni si calcolano da sole su chi mangia a casa. Aggiungere un piatto al menu non toglie nulla dalla casa.</p>
     </Foglio>
   );
 }
 
-function SchedaPiatto({ indice, dati, portata: p, chiudi, apriOspiti }: { indice: Indice; dati: DatiMenu; portata: PortataMenu; chiudi: () => void; apriOspiti: () => void }) {
+function SchedaPiatto({
+  indice,
+  dati,
+  portata: p,
+  chiudi,
+  apriOspiti,
+  apriNuovo,
+}: {
+  indice: Indice;
+  dati: DatiMenu;
+  portata: PortataMenu;
+  chiudi: () => void;
+  apriOspiti: () => void;
+  /** Apre «aggiungi un piatto» allo stesso pasto, per queste persone. */
+  apriNuovo: (per: string[]) => void;
+}) {
   const { esegui } = useFamiglia();
   const d = descrivi(indice, dati, p);
+  // Chi non mangia questo piatto e a questo pasto non ha ancora nessun altro piatto.
+  const delPasto = dati.portate.filter((x) => x.data === p.data && x.categoria === p.categoria);
+  const senzaPiatto = dati.persone.filter((x) => delPasto.every((q) => dati.eccezioni.some((e) => e.portata_id === q.id && e.membro_id === x.id && e.tipo === 'non_mangia')));
   const [cambia, setCambia] = useState(false);
   const [data, setData] = useState(p.data);
   const [categoria, setCategoria] = useState(p.categoria);
@@ -613,12 +658,28 @@ function SchedaPiatto({ indice, dati, portata: p, chiudi, apriOspiti }: { indice
       {p.ricetta_id && !p.avanzo_di && <DuraPiuGiorni dati={dati} portata={p} cucinate={d.porzioni + d.dopo} />}
 
       <div className="campo">
-        <span>Chi mangia</span>
-        <ul className="elenco">
-          {dati.persone.map((x) => (
-            <ChiMangia key={x.id} indice={indice} dati={dati} portata={p} persona={x} eccezione={d.eccezioni.find((e) => e.membro_id === x.id)} />
-          ))}
-        </ul>
+        {dati.persone.length > 1 && (
+          <>
+            <SpunteChiMangia
+              persone={dati.persone}
+              mangia={(id) => !d.eccezioni.some((e) => e.membro_id === id)}
+              nota={(id) => {
+                const e = d.eccezioni.find((x) => x.membro_id === id && x.tipo === 'alternativa');
+                return e ? `piatto a parte: ${e.ricetta_id ? (indice.perId.get(e.ricetta_id)?.titolo ?? 'ricetta') : e.testo}` : null;
+              }}
+              cambia={(id, si) => {
+                const e = d.eccezioni.find((x) => x.membro_id === id);
+                if (si && e) void esegui('rimuovi_eccezione', { id: e.id });
+                if (!si) void esegui('imposta_eccezione', { id: crypto.randomUUID(), portata_id: p.id, membro_id: id, tipo: 'non_mangia', versione_attesa: e?.versione });
+              }}
+            />
+            {senzaPiatto.length > 0 && (
+              <button className="bottone piccolo" onClick={() => apriNuovo(senzaPiatto.map((x) => x.id))}>
+                + Un altro piatto per {senzaPiatto.map((x) => x.nome).join(', ')}
+              </button>
+            )}
+          </>
+        )}
         <BottoneOspiti ospiti={ospitiDel(dati.ospiti, p.data, p.categoria)} apri={apriOspiti} />
       </div>
 
@@ -769,49 +830,32 @@ function EsitoPiatto({ esito, righe }: { esito: Esito; righe: string[] }) {
   );
 }
 
-function ChiMangia({ indice, dati, portata, persona, eccezione }: { indice: Indice; dati: DatiMenu; portata: PortataMenu; persona: Persona; eccezione?: Eccezione }) {
-  const { esegui } = useFamiglia();
-  const [scegli, setScegli] = useState(false);
-  const stato = eccezione?.tipo ?? 'mangia';
-  const imposta = (dati: Record<string, unknown>) =>
-    esegui('imposta_eccezione', { id: crypto.randomUUID(), portata_id: portata.id, membro_id: persona.id, versione_attesa: eccezione?.versione, ...dati });
-  const alternativa = eccezione?.tipo === 'alternativa' ? (eccezione.ricetta_id ? indice.perId.get(eccezione.ricetta_id)?.titolo : eccezione.testo) : null;
-
+/** Chi mangia il piatto: una spunta per persona. Chi non è spuntato può avere un altro piatto nello stesso pasto. */
+function SpunteChiMangia({
+  persone,
+  mangia,
+  cambia,
+  nota,
+}: {
+  persone: Persona[];
+  mangia: (id: string) => boolean;
+  cambia: (id: string, mangia: boolean) => void;
+  nota?: (id: string) => string | null;
+}) {
   return (
-    <li>
-      <div className="riga spazio" style={{ flexWrap: 'wrap' }}>
-        <strong>{persona.nome}</strong>
-        <div className="scelte" role="group" aria-label={`Cosa mangia ${persona.nome}`} style={{ margin: 0 }}>
-          <button aria-pressed={stato === 'mangia'} onClick={() => eccezione && esegui('rimuovi_eccezione', { id: eccezione.id })}>
-            Mangia
-          </button>
-          <button aria-pressed={stato === 'non_mangia'} onClick={() => stato !== 'non_mangia' && imposta({ tipo: 'non_mangia' })}>
-            Non c’è
-          </button>
-          <button aria-pressed={stato === 'alternativa'} onClick={() => setScegli(true)}>
-            Altro
-          </button>
-        </div>
-      </div>
-      {alternativa && !scegli && <p className="tenue" style={{ margin: '4px 0 0' }}>Mangia: {alternativa}</p>}
-      {scegli && (
-        <>
-          <CercaPiatto
-            indice={indice}
-            dati={dati}
-            persone={[persona]}
-            etichetta={`Cosa mangia ${persona.nome}`}
-            scegli={async (s) => {
-              await imposta({ tipo: 'alternativa', ...s });
-              setScegli(false);
-            }}
-          />
-          <button className="bottone piccolo" onClick={() => setScegli(false)}>
-            Annulla
-          </button>
-        </>
-      )}
-    </li>
+    <fieldset className="spunte" style={{ border: 0, padding: 0, margin: '0 0 8px' }}>
+      <legend style={{ fontWeight: 600, marginBottom: 4 }}>Chi mangia questo piatto</legend>
+      {persone.map((x) => (
+        <label key={x.id} className="riga" style={{ minHeight: 44 }}>
+          <input type="checkbox" checked={mangia(x.id)} onChange={(e) => cambia(x.id, e.target.checked)} />
+          <span className="cresce">
+            {x.porzione < 1 && <span aria-hidden>🧒 </span>}
+            {x.nome}
+            {nota?.(x.id) && <span className="tenue"> · {nota(x.id)}</span>}
+          </span>
+        </label>
+      ))}
+    </fieldset>
   );
 }
 
