@@ -1,4 +1,4 @@
-import { type ReactNode, useMemo, useState } from 'react';
+import { type ReactNode, useCallback, useMemo, useState } from 'react';
 import { CATEGORIE, type Categoria } from '../catalogo/tipi';
 import { righeAttive, useFamiglia, useVista } from '../dati/contesto';
 import { useIndice } from '../dati/indice';
@@ -7,6 +7,7 @@ import { copertura, filtra, iconaRicetta, type Indice, type Ricetta } from '../d
 import { formatta, scala } from '../dominio/unita';
 import { Foglio } from '../ui/Foglio';
 import { Foto } from '../ui/Foto';
+import { ModalitaCucina } from '../ui/ModalitaCucina';
 import { EditorRicetta, type Bozza } from './EditorRicetta';
 
 const PAGINA = 40;
@@ -315,6 +316,8 @@ export function SchedaRicetta({
   const casa = indice.estendi(inCasa);
   const origine = r.derivata_da ? indice.perId.get(r.derivata_da) : undefined;
   const [cambiaIcona, setCambiaIcona] = useState(false);
+  const [cucina, setCucina] = useState(false);
+  const chiudiCucina = useCallback(() => setCucina(false), [setCucina]);
 
   /** ✅ «va bene» o ❌ «non va bene» chiudono il dubbio per quella persona; «togli» lo riapre. */
   async function segna(membro_id: string, nome: string, scelta: 'va_bene' | 'non_va_bene' | 'togli', escluso: boolean) {
@@ -425,6 +428,26 @@ export function SchedaRicetta({
       {porzioni !== r.porzioni && <p className="tenue">Quantità ricalcolate da {r.porzioni} porzioni: i pezzi sono arrotondati al mezzo.</p>}
 
       <h3>Preparazione</h3>
+      {r.passi.length > 0 && (
+        <button className="bottone primario pieno cucina-apri" onClick={() => setCucina(true)}>
+          👩‍🍳 Cucina passo passo
+        </button>
+      )}
+      {cucina && (
+        <ModalitaCucina
+          titolo={r.titolo}
+          passi={r.passi.map((p) => p.testo)}
+          ingredienti={r.ingredienti.map((g) => {
+            const ing = indice.ingrediente(g.ingrediente_id);
+            return {
+              nome: indice.nome(g.ingrediente_id),
+              parole: [indice.nome(g.ingrediente_id), ...(ing?.sinonimi ?? [])],
+              quantita: g.qb ? 'q.b.' : formatta(g.quantita === null ? null : scala({ valore: g.quantita, unita: g.unita }, r.porzioni, porzioni)),
+            };
+          })}
+          chiudi={chiudiCucina}
+        />
+      )}
       <ol style={{ paddingLeft: 20 }}>
         {r.passi.map((p) => (
           <li key={p.id} style={{ marginBottom: 8 }}>
