@@ -1,4 +1,6 @@
 import { type ChangeEvent, useState } from 'react';
+import { IconaCibo } from '../ui/IconaCibo';
+import { iconaIngrediente } from '../dominio/iconeCibo';
 import { LUOGHI, NOME_LUOGO } from '../catalogo/tipi';
 import { useFamiglia, useVista } from '../dati/contesto';
 import type { Indice, Ingrediente } from '../dominio/ricette';
@@ -279,7 +281,7 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
               ) : (
                 <div className="riga" style={{ flexWrap: 'wrap', marginTop: 6 }}>
                   <button className="bottone piccolo" onClick={() => cambia(i, { cerca: true })} aria-label={`Cambia l’ingrediente di ${r.descrizione}`}>
-                    {r.ing.emoji} {r.ing.nome}
+                    <IconaCibo valore={iconaIngrediente(r.ing)} /> {r.ing.nome}
                   </button>
                   <input className="dato" inputMode="decimal" aria-label={`Quantità di ${r.descrizione}`} value={r.numero} onChange={(e) => cambia(i, { numero: e.target.value })} style={{ width: 80 }} />
                   <select className="dato" aria-label={`Unità di ${r.descrizione}`} value={r.unita} onChange={(e) => cambia(i, { unita: e.target.value as Unita })} style={{ width: 'auto' }}>

@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { IconaCibo } from '../ui/IconaCibo';
+import { iconaIngrediente } from '../dominio/iconeCibo';
 import { LUOGHI, NOME_LUOGO } from '../catalogo/tipi';
 import { useFamiglia } from '../dati/contesto';
 import { abbinaAlimenti, type PropostaFoto } from '../dominio/fotoFrigo';
@@ -162,7 +164,7 @@ export function FotoFrigo({ indice, luogo: luogoIniziale, chiudi }: { indice: In
                       <label className="riga cresce">
                         <input type="checkbox" checked={!!scelte[i]} onChange={(e) => setScelte((s) => ({ ...s, [i]: e.target.checked }))} />
                         <span>
-                          {p.ingrediente.emoji} {p.ingrediente.nome}
+                          <IconaCibo valore={iconaIngrediente(p.ingrediente)} /> {p.ingrediente.nome}
                         </span>
                       </label>
                       <input

@@ -1,4 +1,6 @@
 import { useMemo, useState } from 'react';
+import { IconaCibo } from '../ui/IconaCibo';
+import { iconaIngrediente } from '../dominio/iconeCibo';
 import { useFamiglia, useVista, type Vista } from '../dati/contesto';
 import { avanziDi, type ConfermaPasto as Conferma, type Consumo, type EsitoPasto, giorniAvanzo, NOME_ESITO, porzioniPortata, previstoPortata } from '../dominio/consumi';
 import type { PortataMenu } from '../dominio/menu';
@@ -155,7 +157,7 @@ export function ConfermaPasto({
               return (
                 <li key={k} className="riga spazio">
                   <span>
-                    {indice.ingrediente(c.ingrediente_id)?.emoji} {nome}
+                    <IconaCibo valore={iconaIngrediente(indice.ingrediente(c.ingrediente_id))} /> {nome}
                   </span>
                   {esito === 'quantita_diverse' ? (
                     <label className="riga">

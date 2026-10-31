@@ -4,6 +4,7 @@
  */
 import { CATEGORIE, type Catalogo, type Categoria, type Classe, type IngredienteCatalogo, type RicettaCatalogo } from '../catalogo/tipi';
 import type { Dimensione, UnitaBase } from './unita';
+import { disegnoDalTitolo, iconaIngrediente } from './iconeCibo';
 
 export interface Ingrediente {
   id: string;
@@ -284,18 +285,21 @@ export function copertura(indice: Indice, r: Ricetta, inCasa: Set<string>): { pr
 const ICONE_GENERICHE = ['🌾'];
 
 /**
- * L'icona di una ricetta: quella scelta dalla famiglia, altrimenti quella dell'ingrediente principale
+ * L'icona di una ricetta: quella scelta dalla famiglia, altrimenti il disegno del piatto riconosciuto dal titolo
+ * (lasagna, risotto…, vedi iconeCibo.ts), altrimenti quella dell'ingrediente principale
  * (il primo che conta e ha un'icona), altrimenti quella della categoria. Per dolci e colazioni vale la
  * categoria: il primo ingrediente è spesso farina o zucchero.
  */
 export function iconaRicetta(indice: Indice, r: Ricetta, scelta?: string | null): string {
   if (scelta) return scelta;
+  const piatto = disegnoDalTitolo(r.titolo);
+  if (piatto) return piatto;
   const categoria = CATEGORIE.find((c) => c.id === r.categoria)?.emoji ?? '🍽️';
   if (r.categoria === 'dolce' || r.categoria === 'colazione') return categoria;
   // Una pizza è una pizza, qualunque sia il condimento (il primo ingrediente sarebbe il lievito).
   if (/^pizza\b/i.test(r.titolo.trim())) return '🍕';
   for (const g of principali(indice, r)) {
-    const e = indice.ingrediente(g.ingrediente_id)?.emoji;
+    const e = iconaIngrediente(indice.ingrediente(g.ingrediente_id));
     if (e && !ICONE_GENERICHE.includes(e)) return e;
   }
   return categoria;

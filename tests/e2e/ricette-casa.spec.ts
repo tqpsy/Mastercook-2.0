@@ -233,6 +233,14 @@ test('crudi e testo libero: il guanciale cotto e «niente funghi» vanno bene su
   await expect
     .poll(() => sql(`select ricetta_id, emoji from icona_ricetta where famiglia_id in (select famiglia_id from utente_famiglia where utente_id = $1)`, [luca.id]))
     .toEqual([{ ricetta_id: 'sys:riso_basmati_spezie', emoji: '🍛' }]);
+
+  // Anche un'icona disegnata da Mastercook, per i piatti che non hanno un'emoji.
+  await page.getByRole('button', { name: 'Cambia icona: Riso basmati speziato (pulao)' }).click();
+  await page.getByRole('dialog', { name: 'Cambia icona' }).getByRole('group', { name: 'Icone disegnate: Piatti' }).getByRole('button', { name: 'Usa Risotto' }).click();
+  await expect(page.getByRole('button', { name: 'Cambia icona: Riso basmati speziato (pulao)' }).locator('svg.icona-cibo')).toBeVisible();
+  await expect
+    .poll(() => sql(`select emoji from icona_ricetta where famiglia_id in (select famiglia_id from utente_famiglia where utente_id = $1) and eliminato_il is null`, [luca.id]))
+    .toEqual([{ emoji: 'mc:risotto' }]);
 });
 
 test('una ricetta da verificare si chiude anche con «❌ non va bene», e si può togliere', async ({ browser }, info) => {

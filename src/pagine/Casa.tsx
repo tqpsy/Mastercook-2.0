@@ -1,4 +1,6 @@
 import { type FormEvent, useMemo, useState } from 'react';
+import { IconaCibo } from '../ui/IconaCibo';
+import { iconaIngrediente } from '../dominio/iconeCibo';
 import { LUOGHI, NOME_LUOGO } from '../catalogo/tipi';
 import type { RigaInVista } from '../dati/anteprima';
 import { useFamiglia, useVista } from '../dati/contesto';
@@ -143,7 +145,7 @@ export function Casa() {
             {sprecati.slice(0, 6).map((v) => (
               <li key={`${v.ingrediente_id}|${v.unita}`} className="riga spazio">
                 <span>
-                  {indice.ingrediente(v.ingrediente_id)?.emoji} {indice.nome(v.ingrediente_id)}
+                  <IconaCibo valore={iconaIngrediente(indice.ingrediente(v.ingrediente_id))} /> {indice.nome(v.ingrediente_id)}
                 </span>
                 <span className="tenue">
                   {formatta({ valore: v.quantita, unita: v.unita as UnitaBase })} · {v.volte === 1 ? '1 volta' : `${v.volte} volte`}
@@ -215,7 +217,7 @@ function ElencoLotti({ indice, lotti, giorno, apri, conLuogo }: { indice: Indice
           <li key={l.id}>
             <button className="voce" onClick={() => apri(l.id)} aria-label={`Apri ${l.nome ?? ing?.nome}`}>
               <span className="emoji" aria-hidden>
-                {ing?.emoji}
+                <IconaCibo valore={iconaIngrediente(ing)} />
               </span>
               <span className="cresce">
                 <strong>{l.nome ?? ing?.nome ?? 'Ingrediente sconosciuto'}</strong>
@@ -336,7 +338,7 @@ function NuovoLotto({ indice, luogo: luogoIniziale, chiudi }: { indice: Indice; 
         <form onSubmit={salva} noValidate>
           <div className="riga spazio">
             <strong>
-              {ing.emoji} {ing.nome}
+              <IconaCibo valore={iconaIngrediente(ing)} /> {ing.nome}
             </strong>
             <button type="button" className="bottone piccolo" onClick={() => setIng(null)}>
               Cambia
