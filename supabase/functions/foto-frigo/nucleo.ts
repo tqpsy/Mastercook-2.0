@@ -5,8 +5,24 @@
  * Il risultato è solo una proposta: l'app la mostra e in casa entra solo ciò che la persona conferma.
  */
 
-/** Modelli gratuiti in ordine: la quota gratuita è per modello, a fine quota si passa al successivo. */
-export const MODELLI = ['gemini-2.5-flash', 'gemini-flash-latest', 'gemini-2.5-flash-lite', 'gemini-flash-lite-latest'];
+/**
+ * Modelli gratuiti in ordine: la quota gratuita è per modello, a fine quota (o se un modello non è disponibile
+ * per questa chiave) si passa al successivo. Da ottobre 2026 Google dà i modelli 2.5 solo a chi li usava già:
+ * con una chiave nuova rispondono «non disponibile», quindi vengono per ultimi.
+ */
+export const MODELLI = [
+  'gemini-3.8-flash',
+  'gemini-3.6-flash',
+  'gemini-3.5-flash-lite',
+  'gemini-3.1-flash-lite',
+  'gemini-flash-latest',
+  'gemini-flash-lite-latest',
+  'gemini-2.5-flash',
+  'gemini-2.5-flash-lite',
+];
+
+/** La chiave stessa è sbagliata, scaduta o bloccata (non solo il modello che non va per lei). */
+const CHIAVE_SBAGLIATA = /API_KEY_INVALID|API key not valid|API key expired|API_KEY_SERVICE_BLOCKED|API key.*(leaked|revoked|blocked)|has been suspended|CONSUMER_SUSPENDED/i;
 
 export interface Riconosciuto {
   nome: string;
@@ -66,22 +82,28 @@ export async function riconosci(immagine: string, chiave: string, chiama: typeof
     contents: [{ parts: [{ inline_data: { mime_type: 'image/jpeg', data: immagine } }, { text: ISTRUZIONI }] }],
     generationConfig: { responseMimeType: 'application/json', responseSchema: SCHEMA, temperature: 0.1 },
   });
+  let quota = false;
+  let ultimo = '';
   for (const modello of modelli) {
     const r = await chiama(`https://generativelanguage.googleapis.com/v1beta/models/${modello}:generateContent`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-goog-api-key': chiave },
       body: corpo,
     });
-    if (r.status === 429 || r.status === 404) continue; // quota finita o modello non disponibile: il prossimo
-    if (r.status === 400 || r.status === 401 || r.status === 403) {
-      const testo = await r.text();
-      if (/api key|API_KEY|permission/i.test(testo)) return { errore: 'chiave' };
-      return { errore: 'gemini', dettaglio: testo.slice(0, 200) };
+    if (r.status === 429) {
+      quota = true; // quota di questo modello finita: il prossimo
+      continue;
     }
-    if (!r.ok) return { errore: 'gemini', dettaglio: `HTTP ${r.status}` };
+    if (!r.ok) {
+      const testo = await r.text().catch(() => '');
+      if ((r.status === 400 || r.status === 401 || r.status === 403) && CHIAVE_SBAGLIATA.test(testo)) return { errore: 'chiave' };
+      // Modello sparito, non dato a questa chiave o momentaneamente giù: si prova il prossimo.
+      ultimo = `${modello}: HTTP ${r.status} ${testo.slice(0, 160)}`;
+      continue;
+    }
     const json = (await r.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
     const testo = json.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('') ?? '';
     return { alimenti: leggiAlimenti(testo), modello };
   }
-  return { errore: 'quota' };
+  return quota ? { errore: 'quota' } : { errore: 'gemini', dettaglio: ultimo };
 }
