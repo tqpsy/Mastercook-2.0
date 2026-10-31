@@ -416,7 +416,7 @@ function ChiaveGemini({ amministratore }: { amministratore: boolean }) {
             </p>
             <label className="campo">
               <span>Chiave Gemini della famiglia</span>
-              <input className="dato" type="password" autoComplete="off" value={nuova} onChange={(e) => setNuova(e.target.value)} placeholder="AIza…" />
+              <input className="dato" type="password" autoComplete="off" value={nuova} onChange={(e) => setNuova(e.target.value)} placeholder="Incolla qui la chiave" />
             </label>
             <div className="riga" style={{ flexWrap: 'wrap' }}>
               <button className="bottone primario" disabled={attendi || !nuova.trim()} onClick={() => void salva(nuova)}>
