@@ -8,6 +8,7 @@ const MOTIVI: Record<string, string> = {
   solo_amministratore: 'Solo chi amministra la famiglia può farlo.',
   ultimo_amministratore: 'Serve almeno un amministratore nella famiglia.',
   membro_non_trovato: 'La persona non esiste più.',
+  due_account: 'Sono due persone con due account diversi: non si possono unire.',
   famiglia_esistente: 'Questa famiglia esiste già.',
   nome_non_corrisponde: 'Il nome scritto non è quello della famiglia: niente è stato eliminato.',
   conferma_mancante: 'Per confermare scrivi ELIMINA: niente è stato eliminato.',
