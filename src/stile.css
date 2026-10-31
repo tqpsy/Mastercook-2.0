@@ -1517,3 +1517,40 @@ p > .link {
 .bottone.cucina-apri {
   margin: 4px 0 12px;
 }
+
+/* Casa: sul telefono un luogo per volta; da 900 px (o telefono girato) frigo, freezer e dispensa affiancati. */
+.titolo-luogo {
+  display: none;
+}
+.scheda.luogo:not(.attivo) {
+  display: none;
+}
+details > summary:has(.primo-presto) {
+  flex-wrap: wrap;
+  padding: 4px 0;
+}
+.primo-presto {
+  flex-basis: 100%;
+  font-size: 0.92rem;
+  color: var(--attenzione);
+}
+@media (min-width: 900px), (orientation: landscape) and (min-width: 560px) and (max-height: 600px) {
+  .schede-luogo {
+    display: none;
+  }
+  .colonne-luoghi {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    align-items: start;
+  }
+  .scheda.luogo:not(.attivo) {
+    display: block;
+  }
+  .titolo-luogo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 0;
+  }
+}

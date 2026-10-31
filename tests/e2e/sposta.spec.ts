@@ -23,7 +23,9 @@ test('sposta: dal freezer alla dispensa, con la data della confezione', async ({
   await nuovo.getByRole('button', { name: 'Aggiungi', exact: true }).click();
   await expect(page.getByRole('button', { name: /Stato del salvataggio: Tutto salvato/ })).toBeVisible();
 
-  await page.getByRole('tab', { name: /Freezer/ }).click();
+  // Sul tablet frigo, freezer e dispensa sono affiancati: la scheda serve solo sul telefono.
+  const freezer = page.getByRole('tab', { name: /Freezer/ });
+  if (await freezer.isVisible()) await freezer.click();
   await page.getByRole('button', { name: /Apri Lievito/ }).first().click();
   const lotto = page.getByRole('dialog', { name: /Lievito/ });
   await lotto.getByRole('button', { name: 'Sposta' }).click();
@@ -60,7 +62,9 @@ test('sposta solo sul telefono: dal freezer alla dispensa', async ({ browser }, 
   await nuovo.getByRole('button', { name: 'Aggiungi', exact: true }).click();
   await expect(page.getByRole('button', { name: /Stato del salvataggio: Tutto salvato/ })).toBeVisible();
 
-  await page.getByRole('tab', { name: /Freezer/ }).click();
+  // Sul tablet frigo, freezer e dispensa sono affiancati: la scheda serve solo sul telefono.
+  const freezer = page.getByRole('tab', { name: /Freezer/ });
+  if (await freezer.isVisible()) await freezer.click();
   await page.getByRole('button', { name: /Apri Lievito/ }).first().click();
   const lotto = page.getByRole('dialog', { name: /Lievito/ });
   await lotto.getByRole('button', { name: 'Sposta' }).click();
