@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react';
 import { useFamiglia } from '../dati/contesto';
 import { dataLunga } from '../dominio/menu';
-import { candidate, type ContestoProposte, proponi, RICETTE_PER_PASTO, tipoPiatto } from '../dominio/proposte';
-import type { Indice, Ricetta } from '../dominio/ricette';
+import { CATEGORIE } from '../catalogo/tipi';
+import { candidate, type ContestoProposte, type FiltroProposte, proponi, RICETTE_PER_PASTO, tipoPiatto } from '../dominio/proposte';
+import { iconaRicetta, type Indice, type Ricetta } from '../dominio/ricette';
 import { daUsarePresto, oggi, piuGiorni } from '../dominio/scadenze';
 import { Foglio } from '../ui/Foglio';
+import { IconaCibo } from '../ui/IconaCibo';
 import { useLotti } from './Casa';
 import type { DatiMenu } from './Menu';
 
@@ -129,27 +131,83 @@ export function ProponiSettimana({ indice, dati, giorni, chiudi }: { indice: Ind
 }
 
 /** Tre idee per un pasto, quando si aggiunge un piatto: le stesse regole della settimana proposta. */
-export function IdeePerPasto({ indice, dati, data, categoria, scegli }: { indice: Indice; dati: DatiMenu; data: string; categoria: string; scegli: (ricetta_id: string) => void }) {
+/**
+ * Un'idea alla volta per il pasto, con i filtri scelti (categoria, ingrediente principale).
+ * «Un'altra» passa alla successiva finché ce ne sono; prima quelle di tipo diverso da ciò che c'è già nel giorno.
+ */
+export function IdeePerPasto({
+  indice,
+  dati,
+  data,
+  categoria,
+  filtro,
+  icone,
+  scegli,
+}: {
+  indice: Indice;
+  dati: DatiMenu;
+  data: string;
+  categoria: string;
+  filtro: FiltroProposte;
+  icone?: Map<string, string>;
+  scegli: (ricetta_id: string) => void;
+}) {
   const contesto = useContestoProposte(dati, data, data);
-  const tipi = useMemo(() => {
-    const gia = dati.portate.filter((p) => p.data === data && p.ricetta_id).map((p) => p.ricetta_id!);
-    return new Map([[data, gia.map((id) => indice.perId.get(id)).filter((r): r is Ricetta => !!r).map((r) => tipoPiatto(indice, r))]]);
-  }, [indice, dati, data]);
   const idee = useMemo(() => {
-    const [prima] = proponi(indice, [{ data, categoria }], contesto, tipi);
-    return prima ? [prima.ricetta, ...prima.altre.slice(0, 2)] : [];
-  }, [indice, data, categoria, contesto, tipi]);
-  if (!idee.length) return null;
+    const gia = new Set(dati.portate.filter((p) => p.data === data && p.ricetta_id).map((p) => p.ricetta_id!));
+    const tipi = [...gia].map((id) => indice.perId.get(id)).filter((r): r is Ricetta => !!r).map((r) => tipoPiatto(indice, r));
+    const tutte = candidate(indice, categoria, contesto, filtro).filter((x) => !gia.has(x.ricetta.id));
+    return [...tutte.filter((x) => !tipi.includes(x.tipo)), ...tutte.filter((x) => tipi.includes(x.tipo))];
+  }, [indice, dati, data, categoria, contesto, filtro]);
+  const [quale, setQuale] = useState(0);
+  // Cambiando i filtri si riparte dalla migliore.
+  const chiave = `${filtro.categoria ?? ''}|${filtro.principale ?? ''}`;
+  const [ultima, setUltima] = useState(chiave);
+  if (ultima !== chiave) {
+    setUltima(chiave);
+    setQuale(0);
+  }
+  const idea = idee[quale];
   return (
-    <div className="campo">
-      <span>Idee per questo pasto</span>
-      <div className="riga" style={{ flexWrap: 'wrap' }} role="group" aria-label="Idee per questo pasto">
-        {idee.map((r) => (
-          <button key={r.id} className="bottone piccolo" onClick={() => scegli(r.id)}>
-            ✨ {r.titolo}
-          </button>
-        ))}
+    <section className="idea-pasto" aria-label="Idea per questo pasto">
+      <div className="riga spazio">
+        <span className="titoletto">✨ Idea per questo pasto</span>
+        {idee.length > 0 && (
+          <span className="tenue piccolo">
+            {quale + 1} di {idee.length}
+          </span>
+        )}
       </div>
-    </div>
+      {!idea ? (
+        <p className="tenue" style={{ margin: '4px 0 0' }}>
+          {filtro.categoria || filtro.principale ? 'Nessuna idea adatta con questi filtri: prova a toglierne uno.' : 'Nessuna idea per questo pasto: cerca qui sotto.'}
+        </p>
+      ) : (
+        <>
+          <button type="button" className="voce idea" onClick={() => scegli(idea.ricetta.id)} aria-label={`Metti nel menu ${idea.ricetta.titolo}`}>
+            <span className="icona-voce grande" aria-hidden>
+              <IconaCibo valore={iconaRicetta(indice, idea.ricetta, icone?.get(idea.ricetta.id))} />
+            </span>
+            <span className="cresce">
+              <strong>{idea.ricetta.titolo}</strong>
+              <span className="tenue" style={{ display: 'block' }}>
+                {[CATEGORIE.find((c) => c.id === idea.ricetta.categoria)?.nome, minuti(idea.ricetta), ...idea.motivi].filter(Boolean).join(' · ')}
+              </span>
+            </span>
+            <span className="tenue" aria-hidden>
+              ＋
+            </span>
+          </button>
+          <button type="button" className="bottone piccolo pieno" onClick={() => setQuale(quale + 1)} disabled={quale + 1 >= idee.length}>
+            {quale + 1 >= idee.length ? 'Nessun’altra idea con questi filtri' : '🔄 Un’altra'}
+          </button>
+        </>
+      )}
+    </section>
   );
+}
+
+function minuti(r: Ricetta) {
+  const m = r.minuti_totali ?? ((r.minuti_preparazione ?? 0) + (r.minuti_cottura ?? 0) || null);
+  return m ? `${m} min` : null;
 }

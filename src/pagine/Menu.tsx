@@ -23,12 +23,16 @@ import {
   valutaPortata,
 } from '../dominio/menu';
 import { avanziDi, porzioniPortata } from '../dominio/consumi';
-import { filtra, type Indice } from '../dominio/ricette';
+import { CATEGORIE, type Categoria } from '../catalogo/tipi';
+import { haPrincipale, PRINCIPALI, type Principale } from '../dominio/principale';
+import { RICETTE_PER_PASTO } from '../dominio/proposte';
+import { filtra, iconaRicetta, type Indice } from '../dominio/ricette';
 import { ALLERGENI_UE, ESIGENZE, INTOLLERANZE, type VoceVincolo } from '../dominio/vincoli';
 import { IdeePerPasto, ProponiSettimana } from './Proposte';
 import { oggi, piuGiorni } from '../dominio/scadenze';
 import { Foglio } from '../ui/Foglio';
-import { ICONA_ESITO, motiviInBreve } from './Ricette';
+import { ICONA_ESITO, motiviInBreve, useIcone } from './Ricette';
+import { IconaCibo } from '../ui/IconaCibo';
 
 type Modo = 'giorni' | 'griglia' | 'panoramica';
 const MODI: { id: Modo; nome: string }[] = [
@@ -501,45 +505,127 @@ function Panoramica({
 
 type Scelta = { ricetta_id: string; testo: null } | { ricetta_id: null; testo: string };
 
-/** Cerca una ricetta (con l'esito per la famiglia) oppure scrivi il piatto a mano. */
-function CercaPiatto({ indice, dati, scegli, etichetta, persone }: { indice: Indice; dati: DatiMenu; scegli: (s: Scelta) => void; etichetta: string; persone?: Persona[] }) {
+/** Filtri della scelta del piatto, gli stessi per l'idea e per la ricerca. */
+interface FiltroPiatto {
+  categoria: Categoria | null;
+  principale: Principale | null;
+}
+const SENZA_FILTRI: FiltroPiatto = { categoria: null, principale: null };
+const PER_PAGINA = 12;
+
+/** Cerca una ricetta (con l'esito per la famiglia) oppure scrivi il piatto a mano. Con un filtro attivo l'elenco c'è anche senza scrivere. */
+function CercaPiatto({
+  indice,
+  dati,
+  scegli,
+  etichetta,
+  persone,
+  filtro = SENZA_FILTRI,
+  icone,
+  autoFocus = true,
+}: {
+  indice: Indice;
+  dati: DatiMenu;
+  scegli: (s: Scelta) => void;
+  etichetta: string;
+  persone?: Persona[];
+  filtro?: FiltroPiatto;
+  icone?: Map<string, string>;
+  autoFocus?: boolean;
+}) {
   const [testo, setTesto] = useState('');
+  const [quante, setQuante] = useState(PER_PAGINA);
   const chi = persone ?? dati.persone;
-  const trovate = testo.trim() ? filtra(indice, { testo, categoria: null, cucina: null, minuti: null, inCasa: null, origine: 'tutte', archiviate: false }).slice(0, 8) : [];
+  const filtrato = !!(filtro.categoria || filtro.principale);
+  const cerca = !!testo.trim() || filtrato;
+  const tutte = useMemo(
+    () =>
+      cerca
+        ? filtra(indice, { testo, categoria: filtro.categoria, cucina: null, minuti: null, inCasa: null, origine: 'tutte', archiviate: false })
+            .filter((r) => r.categoria !== 'base' || filtro.categoria === 'base')
+            .filter((r) => haPrincipale(indice, r, filtro.principale))
+        : [],
+    [indice, testo, cerca, filtro],
+  );
+  const trovate = tutte.slice(0, quante);
   return (
-    <div className="campo">
+    <div className="campo cerca-piatto">
       <label>
         <span>{etichetta}</span>
-        <input type="search" value={testo} onChange={(e) => setTesto(e.target.value)} placeholder="Carbonara, minestrone, pizza…" autoFocus />
+        <input type="search" value={testo} onChange={(e) => (setTesto(e.target.value), setQuante(PER_PAGINA))} placeholder="Carbonara, minestrone, pizza…" autoFocus={autoFocus} />
       </label>
-      {testo.trim() && (
-        <ul className="elenco risultati" aria-label="Risultati">
-          {trovate.map((r) => {
-            const v = dati.vincoli.length ? valutaPortata(indice, r, chi, dati.vincoli, [], dati.verifiche) : null;
-            const no = gustiPerPiatto(indice, r, chi, dati.gusti).filter((g) => g.valore === 'non_piace');
-            return (
-              <li key={r.id}>
-                <button type="button" className="voce" onClick={() => scegli({ ricetta_id: r.id, testo: null })}>
-                  <span className="cresce">
-                    {r.titolo}
-                    {(v || no.length > 0) && (
-                      <span className="tenue" style={{ display: 'block' }}>
-                        {[v && NOME_ESITO[v.esito], no.length > 0 && `non piace a ${no.map((g) => g.nome).join(', ')}`].filter(Boolean).join(' · ')}
-                      </span>
-                    )}
-                  </span>
-                  {v && <span aria-hidden>{ICONA_ESITO[v.esito]}</span>}
+      {cerca && (
+        <>
+          {filtrato && (
+            <p className="tenue piccolo" style={{ margin: '6px 0 0' }}>
+              {tutte.length === 1 ? '1 ricetta' : `${tutte.length} ricette`} con questi filtri
+            </p>
+          )}
+          <ul className="elenco risultati compatti" aria-label="Risultati">
+            {trovate.map((r) => {
+              const v = dati.vincoli.length ? valutaPortata(indice, r, chi, dati.vincoli, [], dati.verifiche) : null;
+              const no = gustiPerPiatto(indice, r, chi, dati.gusti).filter((g) => g.valore === 'non_piace');
+              return (
+                <li key={r.id}>
+                  <button type="button" className="voce" onClick={() => scegli({ ricetta_id: r.id, testo: null })}>
+                    <span className="icona-voce" aria-hidden>
+                      <IconaCibo valore={iconaRicetta(indice, r, icone?.get(r.id))} />
+                    </span>
+                    <span className="cresce">
+                      {r.titolo}
+                      {(v || no.length > 0) && (
+                        <span className="tenue" style={{ display: 'block' }}>
+                          {[v && NOME_ESITO[v.esito], no.length > 0 && `non piace a ${no.map((g) => g.nome).join(', ')}`].filter(Boolean).join(' · ')}
+                        </span>
+                      )}
+                    </span>
+                    {v && <span aria-hidden>{ICONA_ESITO[v.esito]}</span>}
+                  </button>
+                </li>
+              );
+            })}
+            {tutte.length > quante && (
+              <li>
+                <button type="button" className="voce" onClick={() => setQuante(quante + PER_PAGINA)}>
+                  Mostra altre ({tutte.length - quante})
                 </button>
               </li>
-            );
-          })}
-          <li>
-            <button type="button" className="voce" onClick={() => scegli({ ricetta_id: null, testo: testo.trim() })}>
-              ✏️ Scrivi «{testo.trim()}» senza ricetta
-            </button>
-          </li>
-        </ul>
+            )}
+            {testo.trim() && (
+              <li>
+                <button type="button" className="voce" onClick={() => scegli({ ricetta_id: null, testo: testo.trim() })}>
+                  ✏️ Scrivi «{testo.trim()}» senza ricetta
+                </button>
+              </li>
+            )}
+          </ul>
+        </>
       )}
+    </div>
+  );
+}
+
+/** Categoria e ingrediente principale: due righe di bottoni che scorrono di lato. */
+function FiltriPiatto({ pasto, filtro, cambia }: { pasto: string; filtro: FiltroPiatto; cambia: (f: FiltroPiatto) => void }) {
+  // Prima le categorie adatte al pasto (a cena secondi, piatti unici, primi), poi le altre.
+  const adatte = RICETTE_PER_PASTO[pasto] ?? [];
+  const categorie = [...CATEGORIE.filter((c) => adatte.includes(c.id)), ...CATEGORIE.filter((c) => !adatte.includes(c.id))];
+  return (
+    <div className="filtri-piatto">
+      <div className="scelte compatte" role="group" aria-label="Categoria">
+        {categorie.map((c) => (
+          <button key={c.id} type="button" aria-pressed={filtro.categoria === c.id} onClick={() => cambia({ ...filtro, categoria: filtro.categoria === c.id ? null : c.id })}>
+            {c.emoji} {c.nome}
+          </button>
+        ))}
+      </div>
+      <div className="scelte compatte" role="group" aria-label="Ingrediente principale">
+        {PRINCIPALI.map((p) => (
+          <button key={p.id} type="button" aria-pressed={filtro.principale === p.id} onClick={() => cambia({ ...filtro, principale: filtro.principale === p.id ? null : p.id })}>
+            {p.emoji} {p.nome}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -570,6 +656,8 @@ function NuovoPiatto({
   const dati = datiAlPasto(tutti, data, categoria);
   const quanti = dati.portate.filter((p) => p.data === data && p.categoria === categoria).length;
   const [chi, setChi] = useState<Set<string>>(() => new Set(per ?? tutti.persone.map((x) => x.id)));
+  const [filtro, setFiltro] = useState<FiltroPiatto>(SENZA_FILTRI);
+  const icone = useIcone();
   // Le proposte e gli avvisi guardano solo chi lo mangia (e gli ospiti del pasto, se ci sono).
   const perLoro = { ...dati, persone: dati.persone.filter((x) => chi.has(x.id) || !tutti.persone.some((m) => m.id === x.id)) };
 
@@ -582,29 +670,35 @@ function NuovoPiatto({
   }
 
   return (
-    <Foglio titolo={`${nomeCategoria(dati, categoria)} di ${dataLunga(data)}`} chiudi={chiudi}>
-      <BottoneOspiti ospiti={ospitiDel(tutti.ospiti, data, categoria)} apri={apriOspiti} />
-      {tutti.persone.length > 1 && (
-        <SpunteChiMangia
-          persone={tutti.persone}
-          mangia={(id) => chi.has(id)}
-          cambia={(id, si) => {
-            const n = new Set(chi);
-            if (si) n.add(id);
-            else n.delete(id);
-            setChi(n);
-          }}
-        />
-      )}
-      {chi.size === 0 ? (
-        <p className="tenue">Spunta almeno una persona.</p>
-      ) : (
-        <>
-          <IdeePerPasto indice={indice} dati={perLoro} data={data} categoria={categoria} scegli={(ricetta_id) => aggiungi({ ricetta_id, origine: 'automatica' })} />
-          <CercaPiatto indice={indice} dati={perLoro} etichetta="Cosa si mangia" scegli={(s) => aggiungi(s)} />
-        </>
-      )}
-      <p className="tenue">Le porzioni si calcolano da sole su chi mangia a casa. Aggiungere un piatto al menu non toglie nulla dalla casa.</p>
+    <Foglio titolo={`${nomeCategoria(dati, categoria)} di ${dataLunga(data)}`} chiudi={chiudi} alto>
+      <div className="nuovo-piatto">
+        <FiltriPiatto pasto={categoria} filtro={filtro} cambia={setFiltro} />
+        {chi.size === 0 ? (
+          <p className="tenue">Spunta almeno una persona qui sotto.</p>
+        ) : (
+          <>
+            <IdeePerPasto indice={indice} dati={perLoro} data={data} categoria={categoria} filtro={filtro} icone={icone} scegli={(ricetta_id) => aggiungi({ ricetta_id, origine: 'automatica' })} />
+            <CercaPiatto indice={indice} dati={perLoro} etichetta="Cosa si mangia" filtro={filtro} icone={icone} autoFocus={false} scegli={(s) => aggiungi(s)} />
+          </>
+        )}
+        <div className="chi-e-ospiti">
+          {tutti.persone.length > 1 && (
+            <SpunteChiMangia
+              compatte
+              persone={tutti.persone}
+              mangia={(id) => chi.has(id)}
+              cambia={(id, si) => {
+                const n = new Set(chi);
+                if (si) n.add(id);
+                else n.delete(id);
+                setChi(n);
+              }}
+            />
+          )}
+          <BottoneOspiti ospiti={ospitiDel(tutti.ospiti, data, categoria)} apri={apriOspiti} />
+        </div>
+        <p className="tenue piccolo">Le porzioni si calcolano da sole su chi mangia a casa. Aggiungere un piatto al menu non toglie nulla dalla casa.</p>
+      </div>
     </Foglio>
   );
 }
@@ -910,17 +1004,20 @@ function SpunteChiMangia({
   mangia,
   cambia,
   nota,
+  compatte,
 }: {
+  /** In una riga di bottoni, come nella scelta di un piatto nuovo. */
+  compatte?: boolean;
   persone: Persona[];
   mangia: (id: string) => boolean;
   cambia: (id: string, mangia: boolean) => void;
   nota?: (id: string) => string | null;
 }) {
   return (
-    <fieldset className="spunte" style={{ border: 0, padding: 0, margin: '0 0 8px' }}>
+    <fieldset className={`spunte${compatte ? ' compatte' : ''}`} style={{ border: 0, padding: 0, margin: '0 0 8px' }}>
       <legend style={{ fontWeight: 600, marginBottom: 4 }}>Chi mangia questo piatto</legend>
       {persone.map((x) => (
-        <label key={x.id} className="riga" style={{ minHeight: 44 }}>
+        <label key={x.id} className={compatte ? 'spunta-chip' : 'riga'} style={compatte ? undefined : { minHeight: 44 }}>
           <input type="checkbox" checked={mangia(x.id)} onChange={(e) => cambia(x.id, e.target.checked)} />
           <span className="cresce">
             {x.porzione < 1 && <span aria-hidden>🧒 </span>}

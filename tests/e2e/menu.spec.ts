@@ -295,3 +295,35 @@ test('menu: si apre su oggi e la settimana prossima si programma dalla stessa st
   await expect(page.getByRole('region', { name: dataLunga(lunediProssimo) }).getByRole('button', { name: 'Apri Pizza' })).toBeVisible();
   await expect(page.getByRole('button', { name: '✨ Riempi i vuoti' })).toBeVisible();
 });
+
+test('scelta del piatto: filtri per categoria e ingrediente, un’idea alla volta, chi mangia in fondo', async ({ browser }, info) => {
+  const luca = await nuovoUtente('Luca');
+  const { page } = await apri(browser, luca, info.project.use);
+  await creaFamiglia(page, 'Casa Filtri');
+  await aggiungiPersona(page, 'Sara');
+  await page.getByRole('button', { name: 'Menu', exact: true }).click();
+  await page.getByRole('group', { name: 'Vista' }).getByRole('button', { name: 'Giorni' }).click();
+  await page.getByRole('button', { name: `Aggiungi a cena di ${dataLunga(oggi())}` }).click();
+  const foglio = page.getByRole('dialog');
+
+  // Chi mangia è sotto l'idea e la ricerca.
+  const idea = foglio.getByRole('region', { name: 'Idea per questo pasto' });
+  const chi = foglio.getByRole('group', { name: 'Chi mangia questo piatto' });
+  expect((await chi.boundingBox())!.y).toBeGreaterThan((await idea.boundingBox())!.y);
+
+  // Primo di pesce: l'idea e la ricerca seguono gli stessi filtri.
+  await foglio.getByRole('group', { name: 'Categoria' }).getByRole('button', { name: /Primo/ }).click();
+  await foglio.getByRole('group', { name: 'Ingrediente principale' }).getByRole('button', { name: /Pesce/ }).click();
+  const risultati = foglio.getByRole('list', { name: 'Risultati' });
+  await expect(risultati.getByRole('button', { name: /Spaghetti alle vongole/ })).toBeVisible();
+  await expect(risultati.getByRole('button', { name: /carbonara/ })).toHaveCount(0);
+
+  // Un'idea alla volta: «Un'altra» ne mostra una diversa, fino all'ultima.
+  const prima = await idea.getByRole('button', { name: /^Metti nel menu/ }).getAttribute('aria-label');
+  await idea.getByRole('button', { name: '🔄 Un’altra' }).click();
+  await expect(idea.getByRole('button', { name: /^Metti nel menu/ })).not.toHaveAttribute('aria-label', prima!);
+  await expect(idea.getByText(/^2 di \d+$/)).toBeVisible();
+  const scelta = (await idea.getByRole('button', { name: /^Metti nel menu/ }).getAttribute('aria-label'))!.replace('Metti nel menu ', '');
+  await idea.getByRole('button', { name: /^Metti nel menu/ }).click();
+  await expect(page.getByRole('button', { name: `Apri ${scelta}` })).toBeVisible();
+});
