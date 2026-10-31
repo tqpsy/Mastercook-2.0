@@ -51,8 +51,14 @@ export async function creaFamiglia(page: Page, nome = 'Casa Prova') {
   await expect(page.getByRole('heading', { name: `Ciao, ${nome}` })).toBeVisible();
 }
 
+/** Famiglia sta dentro Impostazioni (la barra in basso ha cinque schede). */
+export async function vaiAFamiglia(page: Page) {
+  await page.getByRole('button', { name: 'Impostazioni' }).click();
+  await page.getByRole('button', { name: /^Famiglia/ }).click();
+}
+
 export async function aggiungiPersona(page: Page, nome: string) {
-  await page.getByRole('button', { name: 'Famiglia' }).click();
+  await vaiAFamiglia(page);
   await page.getByRole('button', { name: '+ Persona' }).click();
   await page.getByLabel('Nome', { exact: true }).fill(nome);
   await page.getByRole('button', { name: 'Bambino' }).click();
