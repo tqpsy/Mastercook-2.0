@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { type ReactNode, useMemo, useState } from 'react';
 import { CATEGORIE, type Categoria } from '../catalogo/tipi';
 import { righeAttive, useFamiglia, useVista } from '../dati/contesto';
 import { useIndice } from '../dati/indice';
@@ -285,7 +285,8 @@ export function minutiDi(r: Ricetta): number | null {
   return r.minuti_totali ?? (r.minuti_preparazione || r.minuti_cottura ? (r.minuti_preparazione ?? 0) + (r.minuti_cottura ?? 0) : null);
 }
 
-function SchedaRicetta({
+/** La ricetta aperta. Senza `modifica` (da Oggi) si legge soltanto: niente icona, copie, modifiche o eliminazioni. */
+export function SchedaRicetta({
   indice,
   ricetta: r,
   iconaScelta,
@@ -293,6 +294,8 @@ function SchedaRicetta({
   valutazione,
   chiudi,
   modifica,
+  porzioniIniziali,
+  sopra,
 }: {
   indice: Indice;
   ricetta: Ricetta;
@@ -300,12 +303,15 @@ function SchedaRicetta({
   inCasa: Set<string>;
   valutazione: ValutazioneFamiglia | null;
   chiudi: () => void;
-  modifica: (b: Bozza) => void;
+  modifica?: (b: Bozza) => void;
+  porzioniIniziali?: number;
+  /** Cosa mostrare in cima, per esempio il pasto e chi mangia il piatto. */
+  sopra?: ReactNode;
 }) {
   const { esegui } = useFamiglia();
   const vista = useVista();
   const nelMenu = righeAttive(vista, 'portata').some((p) => p.ricetta_id === r.id) || righeAttive(vista, 'eccezione_membro').some((e) => e.ricetta_id === r.id);
-  const [porzioni, setPorzioni] = useState(r.porzioni);
+  const [porzioni, setPorzioni] = useState(() => (porzioniIniziali && porzioniIniziali > 0 ? porzioniIniziali : r.porzioni));
   const casa = indice.estendi(inCasa);
   const origine = r.derivata_da ? indice.perId.get(r.derivata_da) : undefined;
   const [cambiaIcona, setCambiaIcona] = useState(false);
@@ -331,11 +337,14 @@ function SchedaRicetta({
   if (cambiaIcona) return <CambiaIcona indice={indice} ricetta={r} scelta={iconaScelta} chiudi={() => setCambiaIcona(false)} />;
   return (
     <Foglio titolo={r.titolo} chiudi={chiudi}>
+      {sopra}
       <Foto percorso={r.foto} alt={`Foto di ${r.titolo}`} />
       <p className="tenue">
-        <button className="bottone piccolo" onClick={() => setCambiaIcona(true)} aria-label={`Cambia icona: ${r.titolo}`} style={{ marginRight: 8 }}>
-          <span aria-hidden>{iconaRicetta(indice, r, iconaScelta)}</span> Cambia icona
-        </button>
+        {modifica && (
+          <button className="bottone piccolo" onClick={() => setCambiaIcona(true)} aria-label={`Cambia icona: ${r.titolo}`} style={{ marginRight: 8 }}>
+            <span aria-hidden>{iconaRicetta(indice, r, iconaScelta)}</span> Cambia icona
+          </button>
+        )}
 
         {[CATEGORIE.find((c) => c.id === r.categoria)?.nome, minutiDi(r) && `${minutiDi(r)} min`, r.difficolta && ['facile', 'media', 'impegnativa'][r.difficolta - 1], r.di_sistema ? 'ricetta di Mastercook' : 'ricetta della famiglia']
           .filter(Boolean)
@@ -377,7 +386,7 @@ function SchedaRicetta({
           <button className="bottone piccolo" onClick={() => setPorzioni(Math.max(1, porzioni - 1))} aria-label="Una porzione in meno">
             −
           </button>
-          <span aria-live="polite">{porzioni === 1 ? '1 porzione' : `${porzioni} porzioni`}</span>
+          <span aria-live="polite">{porzioni === 1 ? '1 porzione' : `${porzioni.toLocaleString('it-IT')} porzioni`}</span>
           <button className="bottone piccolo" onClick={() => setPorzioni(Math.min(50, porzioni + 1))} aria-label="Una porzione in più">
             +
           </button>
@@ -411,25 +420,29 @@ function SchedaRicetta({
         ))}
       </ol>
 
-      <div className="riga" style={{ flexWrap: 'wrap', marginTop: 16 }}>
-        <button className="bottone" onClick={() => modifica({ tipo: 'copia', da: r })}>
-          {r.di_sistema ? 'Crea la mia versione' : 'Duplica'}
-        </button>
-        {!r.di_sistema && (
-          <>
-            <button className="bottone primario" onClick={() => modifica({ tipo: 'modifica', ricetta: r })}>
-              Modifica
+      {modifica && (
+        <>
+          <div className="riga" style={{ flexWrap: 'wrap', marginTop: 16 }}>
+            <button className="bottone" onClick={() => modifica({ tipo: 'copia', da: r })}>
+              {r.di_sistema ? 'Crea la mia versione' : 'Duplica'}
             </button>
-            <button className="bottone" onClick={() => archivia(!r.archiviata)}>
-              {r.archiviata ? 'Riporta tra le ricette' : 'Archivia'}
-            </button>
-            <button className="bottone pericolo" onClick={elimina}>
-              Elimina
-            </button>
-          </>
-        )}
-      </div>
-      {r.di_sistema && <p className="tenue">Le ricette di Mastercook non si modificano: crea la tua versione e cambiala come vuoi.</p>}
+            {!r.di_sistema && (
+              <>
+                <button className="bottone primario" onClick={() => modifica({ tipo: 'modifica', ricetta: r })}>
+                  Modifica
+                </button>
+                <button className="bottone" onClick={() => archivia(!r.archiviata)}>
+                  {r.archiviata ? 'Riporta tra le ricette' : 'Archivia'}
+                </button>
+                <button className="bottone pericolo" onClick={elimina}>
+                  Elimina
+                </button>
+              </>
+            )}
+          </div>
+          {r.di_sistema && <p className="tenue">Le ricette di Mastercook non si modificano: crea la tua versione e cambiala come vuoi.</p>}
+        </>
+      )}
     </Foglio>
   );
 }

@@ -101,7 +101,7 @@ export function datiAlPasto(dati: DatiMenu, data: string, categoria: string): Da
 }
 
 /** Come si presenta un piatto: nome, esito per chi lo mangia (ospiti compresi), gusti contrari, porzioni. */
-function descrivi(indice: Indice, dati: DatiMenu, p: PortataMenu) {
+export function descrivi(indice: Indice, dati: DatiMenu, p: PortataMenu) {
   const ricetta = p.ricetta_id ? (indice.perId.get(p.ricetta_id) ?? null) : null;
   const eccezioni = dati.eccezioni.filter((e) => e.portata_id === p.id);
   const alTavolo = alPasto(dati.persone, dati.vincoli, ospitiDel(dati.ospiti, p.data, p.categoria));
@@ -981,20 +981,4 @@ function Pasti({ categorie, chiudi }: { categorie: CategoriaPasto[]; chiudi: () 
       <p className="tenue">Un pasto spento sparisce dal calendario, ma i piatti già messi restano visibili.</p>
     </Foglio>
   );
-}
-
-/** I piatti di oggi, per la schermata Oggi. */
-export function useOggiSiMangia(): { indice: Indice | null; dati: DatiMenu; piatti: { categoria: CategoriaPasto; portata: PortataMenu; titolo: string }[] } {
-  const vista = useVista();
-  const indice = useIndice(vista);
-  const dati = useDatiMenu(vista);
-  const giorno = oggi();
-  const piatti = indice
-    ? dati.categorie.flatMap((c) =>
-        dati.portate
-          .filter((p) => p.data === giorno && p.categoria === c.valore)
-          .map((p) => ({ categoria: c, portata: p, titolo: descrivi(indice, dati, p).titolo })),
-      )
-    : [];
-  return { indice, dati, piatti };
 }

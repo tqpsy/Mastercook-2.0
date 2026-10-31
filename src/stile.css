@@ -705,3 +705,13 @@ button.etichetta {
   padding: 6px 0;
   line-height: 1.4;
 }
+
+/* Oggi: chi mangia altro e gli avvisi sotto un piatto */
+.elenco.varianti {
+  margin: 0 0 4px 14px;
+  font-size: 0.9rem;
+}
+.elenco.varianti > li {
+  padding: 4px 0;
+  border-bottom: 0;
+}

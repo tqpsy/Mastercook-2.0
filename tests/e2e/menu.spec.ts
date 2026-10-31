@@ -46,8 +46,33 @@ test('menu: un piatto per cena, Sara mangia altro, nessun movimento in casa', as
   );
   expect(r).toEqual({ portate: 1, eccezioni: 'alternativa:sys:spaghetti_aglio_olio', movimenti: 0 });
 
+  // Oggi: la cena con il piatto, il piatto a parte di Sara e le ricette che si aprono con un tocco.
   await page.getByRole('button', { name: 'Oggi', exact: true }).click();
-  await expect(page.getByRole('region', { name: 'Oggi si mangia' }).getByText('Spaghetti alla carbonara')).toBeVisible();
+  const cena = page.getByRole('region', { name: 'Oggi si mangia' }).getByRole('region', { name: 'Cena' });
+  await expect(cena.getByText('Spaghetti alla carbonara')).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Colazione' })).toContainText('Niente in menu');
+  await expect(page.getByRole('button', { name: 'Apri il menu della settimana' })).toHaveCount(0);
+  await cena.getByRole('button', { name: 'Ricetta per Sara: Spaghetti aglio, olio e peperoncino' }).click();
+  const alternativa = page.getByRole('dialog', { name: 'Spaghetti aglio, olio e peperoncino' });
+  await expect(alternativa.getByText('Cena di oggi · per Sara')).toBeVisible();
+  await expect(alternativa.getByRole('heading', { name: 'Preparazione' })).toBeVisible();
+  await expect(alternativa.getByRole('button', { name: 'Duplica' })).toHaveCount(0);
+  await alternativa.getByRole('button', { name: 'Chiudi' }).click();
+  await cena.getByRole('button', { name: 'Ricetta: Spaghetti alla carbonara' }).click();
+  const principale = page.getByRole('dialog', { name: 'Spaghetti alla carbonara' });
+  await expect(principale.getByText('1 porzione', { exact: true })).toBeVisible();
+  await principale.getByRole('button', { name: 'Chiudi' }).click();
+
+  // La spesa da Oggi: solo ciò che serve ai piatti di oggi.
+  await page.getByRole('button', { name: /Lista della spesa/ }).click();
+  const spesa = page.getByRole('dialog', { name: 'Spesa per oggi' });
+  const daComprare = spesa.getByRole('region', { name: 'Da comprare per oggi' });
+  await expect(daComprare).toContainText('Guanciale');
+  await expect(daComprare).toContainText('Peperoncino');
+  await daComprare.getByRole('button', { name: 'Metti in lista: Guanciale' }).click();
+  await expect(daComprare.getByRole('listitem').filter({ hasText: 'Guanciale' })).toContainText('in lista');
+  await spesa.getByRole('button', { name: 'Apri tutta la lista della spesa' }).click();
+  await expect(page.getByRole('heading', { name: 'Lista della spesa' })).toBeVisible();
 });
 
 test('menu: ripeti la settimana prima, accendi la merenda, la vista scelta resta', async ({ browser }, info) => {

@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import catalogo from '../catalogo/catalogo.json';
 import type { Catalogo } from '../catalogo/tipi';
 import { Indice } from './ricette';
-import { type Acquisto, prezziOsservati, type RigaAcquisto, righeDaConfermare, stimaPrezzo, totaleStimato, type VoceSpesa } from './spesa';
+import type { PortataMenu } from './menu';
+import { type Acquisto, prezziOsservati, type RigaAcquisto, righeDaConfermare, spesaDelGiorno, stimaPrezzo, totaleStimato, type VoceSpesa } from './spesa';
 
 const indice = new Indice(catalogo as Catalogo);
 
@@ -72,5 +73,36 @@ describe('conferma dal carrello', () => {
     expect(righe[1]).toMatchObject({ ingrediente_id: 'ing:spaghetti', quantita: 1000, luogo: 'dispensa', tipo_data: 'sconosciuta' });
     expect(righe[1]).not.toHaveProperty('data_limite');
     expect(righe[2]).toMatchObject({ ingrediente_id: null, nome: 'Detersivo', quantita: null });
+  });
+});
+
+describe('spesa del giorno', () => {
+  const portata = (id: string, extra: Partial<PortataMenu> = {}): PortataMenu => ({
+    id,
+    data: '2026-11-03',
+    categoria: 'cena',
+    ricetta_id: 'sys:carbonara',
+    testo: null,
+    porzioni: 4,
+    origine: 'manuale',
+    bloccata: false,
+    ordine: 0,
+    note: null,
+    ...extra,
+  });
+  const lotto = (id: string, ingrediente_id: string, quantita: number, data_limite: string | null = null) => ({ id, ingrediente_id, unita: 'g', quantita, data_limite });
+
+  it('toglie ciò che c’è in casa, prima i lotti specifici; gli avanzi non si comprano', () => {
+    const p = portata('p');
+    const r = spesaDelGiorno(indice, [p, portata('a', { avanzo_di: 'x' })], [], [], [p], [], [lotto('l1', 'ing:spaghetti', 200), lotto('l2', 'ing:guanciale', 500)]);
+    expect(r.find((b) => b.ingrediente_id === 'ing:spaghetti')).toEqual({ ingrediente_id: 'ing:spaghetti', unita: 'g', serve: 320, inCasa: 200, manca: 120 });
+    expect(r.find((b) => b.ingrediente_id === 'ing:guanciale')?.manca).toBe(0);
+    expect(r.find((b) => b.ingrediente_id === 'ing:uova')?.manca).toBe(4);
+    expect(r.some((b) => b.ingrediente_id === 'ing:sale')).toBe(false);
+  });
+
+  it('un lotto conta una volta sola anche per due piatti', () => {
+    const r = spesaDelGiorno(indice, [portata('p'), portata('q')], [], [], [], [], [lotto('l1', 'ing:spaghetti', 400)]);
+    expect(r.find((b) => b.ingrediente_id === 'ing:spaghetti')).toMatchObject({ serve: 640, inCasa: 400, manca: 240 });
   });
 });

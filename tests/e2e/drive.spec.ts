@@ -68,6 +68,6 @@ test('sul mio Drive: spiegazione, copia automatica, ritrovata su un altro telefo
   await b.getByRole('button', { name: 'Usa quella del Drive' }).click();
   // Il telefono passa alla copia del Drive (si riapre su «Oggi»): niente più avviso, c'è anche il minestrone.
   await expect(b.getByRole('alert')).toHaveCount(0, { timeout: 60_000 });
-  await expect(b.getByText('Minestrone di verdure · cena')).toBeVisible({ timeout: 60_000 });
+  await expect(b.getByRole('region', { name: 'Cena' }).getByText('Minestrone di verdure')).toBeVisible({ timeout: 60_000 });
   expect(drive.copie()).toHaveLength(1);
 });

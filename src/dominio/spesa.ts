@@ -6,7 +6,9 @@
  * dei prezzi per unità degli ultimi 6 mesi di quell'ingrediente, dichiarata come stima con la data
  * dell'ultima osservazione. Un ingrediente mai comprato con un prezzo non ha prezzo: lo si dice.
  */
-import type { Ingrediente } from './ricette';
+import { type Consumo, previstoPortata } from './consumi';
+import type { Eccezione, OspitiPasto, Persona, PortataMenu } from './menu';
+import type { Indice, Ingrediente } from './ricette';
 import { giorniTra, type Luogo, REPARTI_SFUSI, stima } from './scadenze';
 import type { UnitaBase } from './unita';
 
@@ -155,4 +157,60 @@ export function righeDaConfermare(
       ...(s ? { data_limite: s.data_limite, tipo_data: 'stimata' as const, fonte_data: 'app' as const, calcolata_il: s.calcolata_il } : { tipo_data: 'sconosciuta' as const }),
     };
   });
+}
+
+export interface BisognoDelGiorno {
+  ingrediente_id: string;
+  unita: UnitaBase;
+  /** Quanto chiedono i piatti. */
+  serve: number;
+  /** Quanto ne copre la casa. */
+  inCasa: number;
+  /** Quanto manca: da comprare. */
+  manca: number;
+}
+
+/**
+ * La spesa di alcune portate (quelle di oggi non ancora confermate), con lo stesso calcolo di `ricalcola_spesa`:
+ * la casa copre prima gli ingredienti più specifici (spaghetti), poi quelli generici (pasta), usando prima
+ * i lotti che scadono prima. Gli avanzi non si comprano.
+ */
+export function spesaDelGiorno(
+  indice: Indice,
+  portate: PortataMenu[],
+  persone: Persona[],
+  eccezioni: Eccezione[],
+  tutte: PortataMenu[],
+  ospiti: OspitiPasto[],
+  lotti: { id: string; ingrediente_id: string; unita: string; quantita: number; data_limite: string | null }[],
+): BisognoDelGiorno[] {
+  const somme = new Map<string, Consumo>();
+  for (const p of portate) {
+    if (p.avanzo_di) continue;
+    for (const c of previstoPortata(indice, p, persone, eccezioni, tutte, ospiti)) {
+      const k = `${c.ingrediente_id}|${c.unita}`;
+      const prima = somme.get(k);
+      somme.set(k, prima ? { ...prima, quantita: prima.quantita + c.quantita } : { ...c });
+    }
+  }
+  const ordinati = [...lotti].sort((a, b) => (a.data_limite ?? '9999').localeCompare(b.data_limite ?? '9999'));
+  const usato = new Map<string, number>();
+  const bisogni = [...somme.values()]
+    .filter((c) => c.quantita > 0)
+    .sort((a, b) => indice.antenati(b.ingrediente_id).length - indice.antenati(a.ingrediente_id).length || a.ingrediente_id.localeCompare(b.ingrediente_id));
+  return bisogni
+    .map((b) => {
+      let resta = b.quantita;
+      for (const l of ordinati) {
+        if (resta <= 0) break;
+        if (l.unita !== b.unita || !indice.antenati(l.ingrediente_id).includes(b.ingrediente_id)) continue;
+        const prendo = Math.min(resta, l.quantita - (usato.get(l.id) ?? 0));
+        if (prendo <= 0) continue;
+        usato.set(l.id, (usato.get(l.id) ?? 0) + prendo);
+        resta -= prendo;
+      }
+      const tondo = (x: number) => Math.round(x * 10) / 10;
+      return { ingrediente_id: b.ingrediente_id, unita: b.unita, serve: tondo(b.quantita), inCasa: tondo(b.quantita - Math.max(resta, 0)), manca: tondo(Math.max(resta, 0)) };
+    })
+    .sort((a, b) => indice.nome(a.ingrediente_id).localeCompare(indice.nome(b.ingrediente_id), 'it'));
 }
