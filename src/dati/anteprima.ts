@@ -38,6 +38,9 @@ function elimina(tabella: Tabella): Effetto {
 }
 
 const EFFETTI: Record<string, Effetto> = {
+  unisci_membri: (righe, d) => {
+    righe.membro = (righe.membro ?? []).map((r) => (r.id === d.toglie ? { ...r, eliminato_il: 'in_attesa', in_attesa: true } : r));
+  },
   aggiungi_membro: aggiungi('membro', (d) => ({ nome: d.nome, emoji: d.emoji ?? null, porzione: d.porzione ?? 1, note: d.note ?? null, archiviato: false })),
   modifica_membro: modifica('membro'),
   aggiungi_vincolo: aggiungi('vincolo_alimentare', (d) => ({

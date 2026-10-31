@@ -68,6 +68,7 @@ export function Famiglia() {
       {aperto && aperto !== 'nuovo' && (
         <SchedaPersona
           membro={membri.find((m) => m.id === aperto)}
+          omonimi={membri.filter((m) => m.id !== aperto && stessoNome(m.nome, membri.find((x) => x.id === aperto)?.nome))}
           vincoli={vincoli.filter((v) => v.membro_id === aperto)}
           chiudi={() => setAperto(null)}
         />
@@ -148,8 +149,14 @@ function SceltaPorzione({ valore, cambia }: { valore: number; cambia: (p: number
   );
 }
 
-function SchedaPersona({ membro, vincoli, chiudi }: { membro?: RigaInVista; vincoli: RigaInVista[]; chiudi: () => void }) {
-  const { esegui } = useFamiglia();
+/** Stesso nome, senza badare a maiuscole e spazi: probabilmente la stessa persona. */
+export function stessoNome(a: unknown, b: unknown): boolean {
+  const norma = (x: unknown) => String(x ?? '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('it-IT');
+  return norma(a) !== '' && norma(a) === norma(b);
+}
+
+function SchedaPersona({ membro, omonimi, vincoli, chiudi }: { membro?: RigaInVista; omonimi: RigaInVista[]; vincoli: RigaInVista[]; chiudi: () => void }) {
+  const { esegui, ruolo } = useFamiglia();
   const [aggiungi, setAggiungi] = useState(false);
   if (!membro) return null;
   const versione = membro.versione ?? 1;
@@ -176,6 +183,30 @@ function SchedaPersona({ membro, vincoli, chiudi }: { membro?: RigaInVista; vinc
       <Gusti membro={membro.id} />
 
       <CampoTesto etichetta="Note" valore={String(membro.note ?? '')} lungo salva={(note) => modifica({ note: note || null })} />
+
+      {ruolo === 'amministratore' && omonimi.length > 0 && (
+        <div className="campo">
+          <span>{String(membro.nome)} compare più volte</span>
+          <p className="tenue">Se è la stessa persona, uniscile: allergie, gusti e piatti passano a questa.</p>
+          {omonimi.map((o) => (
+            <button
+              key={o.id}
+              className="bottone pieno"
+              style={{ marginTop: 8 }}
+              disabled={!!membro.utente_id && !!o.utente_id}
+              onClick={async () => {
+                if (window.confirm(`Unire le due schede di ${String(membro.nome)} in una sola?`)) {
+                  const tiene = o.utente_id ? o : membro;
+                  await esegui('unisci_membri', { tiene: tiene.id, toglie: tiene === o ? membro.id : o.id });
+                  chiudi();
+                }
+              }}
+            >
+              Unisci con l'altra «{String(o.nome)}»{o.utente_id ? ' (con account)' : ''}
+            </button>
+          ))}
+        </div>
+      )}
 
       {!membro.utente_id && (
         <button
