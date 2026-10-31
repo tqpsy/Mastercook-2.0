@@ -73,6 +73,49 @@ test('editor: una quantità senza numero non si salva, «q.b.» sì', async ({ b
   await expect(page.getByRole('dialog', { name: 'Pane e olio' }).getByText('q.b.')).toBeVisible();
 });
 
+test('lasagna con la besciamella fatta in casa dentro: dosi, ingredienti raggruppati e come si fa', async ({ browser }, info) => {
+  const luca = await nuovoUtente('Luca');
+  const { page } = await apri(browser, luca, info.project.use);
+  await creaFamiglia(page, 'Casa Lasagna');
+  await page.getByRole('button', { name: 'Ricette' }).click();
+  await page.getByRole('button', { name: '+ Ricetta' }).click();
+  const editor = page.getByRole('dialog', { name: 'Nuova ricetta' });
+  await editor.getByLabel('Titolo').fill('Lasagna di Luca');
+  await editor.getByRole('button', { name: /Piatto unico/ }).click();
+  await editor.getByRole('button', { name: '+ Ingrediente' }).click();
+  await editor.getByLabel('Ingrediente').fill('carne macinata');
+  await editor.getByRole('button', { name: 'Carne macinata', exact: true }).click();
+  await editor.getByLabel('Quantità di Carne macinata', { exact: true }).fill('500');
+  await editor.getByRole('button', { name: '+ Base o salsa (es. besciamella)' }).click();
+  await editor.getByRole('group', { name: 'Quanta' }).getByRole('button', { name: 'mezza dose' }).click();
+  await editor.getByRole('button', { name: 'Aggiungi alla ricetta' }).click();
+  await expect(editor.getByText('🥣 Besciamella fatta in casa')).toBeVisible();
+  await editor.getByRole('textbox', { name: 'Passaggio 1' }).fill('Alterna sfoglia, ragù e besciamella e inforna a 180 °C per 40 minuti.');
+  await editor.getByRole('button', { name: 'Salva ricetta' }).click();
+
+  const scheda = page.getByRole('dialog', { name: 'Lasagna di Luca' });
+  await expect(scheda.getByText('🥣 Besciamella fatta in casa')).toBeVisible();
+  await expect(scheda.getByText('500 ml')).toBeVisible();
+  await expect(scheda.getByText('Come si fa: Besciamella fatta in casa')).toBeVisible();
+  await page.screenshot({ path: info.outputPath('lasagna-besciamella.png'), fullPage: false });
+
+  await scheda.getByRole('button', { name: 'Modifica' }).click();
+  const modifica = page.getByRole('dialog', { name: 'Modifica ricetta' });
+  await modifica.getByRole('group', { name: 'Quanta Besciamella fatta in casa' }).getByRole('button', { name: '1 dose' }).click();
+  await page.screenshot({ path: info.outputPath('editor-besciamella.png'), fullPage: false });
+  await modifica.getByRole('button', { name: 'Salva ricetta' }).click();
+  await expect(scheda.getByText('1 l', { exact: true })).toBeVisible();
+
+  const righe = await sql<{ ingrediente_id: string; quantita: string; dosi: string | null }>(
+    `select g.ingrediente_id, g.quantita::text as quantita, g.dosi::text as dosi from ricetta_ingrediente g join ricetta r on r.id = g.ricetta_id
+      where r.titolo = 'Lasagna di Luca' and g.eliminato_il is null and r.famiglia_id in (select famiglia_id from utente_famiglia where utente_id = $1)
+      order by g.ordine`,
+    [luca.id],
+  );
+  expect(righe.map((g) => g.ingrediente_id)).toEqual(['ing:carne_macinata', 'ing:latte', 'ing:farina', 'ing:burro', 'ing:sale', 'ing:noce_moscata']);
+  expect(righe.find((g) => g.ingrediente_id === 'ing:latte')).toMatchObject({ quantita: '1000.00', dosi: '1' });
+});
+
 test('casa: aggiunge, mostra cosa usare presto, scala la quantità usata e stima la data dello sfuso', async ({ browser }, info) => {
   const luca = await nuovoUtente('Luca');
   const { page } = await apri(browser, luca, info.project.use);

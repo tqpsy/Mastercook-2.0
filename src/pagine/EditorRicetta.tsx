@@ -3,6 +3,7 @@ import { IconaCibo } from '../ui/IconaCibo';
 import { iconaIngrediente } from '../dominio/iconeCibo';
 import { CATEGORIE, type Categoria } from '../catalogo/tipi';
 import { useFamiglia } from '../dati/contesto';
+import { basiDisponibili, DOSI, righeEBasi, testoDosi, titoloBase } from '../dominio/basi';
 import type { Indice, Ingrediente, Ricetta, RigaRicetta } from '../dominio/ricette';
 import { inBase, leggiNumero, UNITA, type Unita, UNITA_BASE, unitaPer } from '../dominio/unita';
 import { CercaIngrediente } from '../ui/CercaIngrediente';
@@ -33,7 +34,8 @@ const CAMPI = ['titolo', 'descrizione', 'categoria', 'cucina', 'provenienza', 'p
 const numeroInTesto = (n: number | null) => (n === null ? '' : String(n).replace('.', ','));
 
 function righeDa(r: Ricetta | undefined, copia: boolean): RigaBozza[] {
-  return (r?.ingredienti ?? []).map((g) => ({
+  // Le righe che vengono da una base (la besciamella…) non si scrivono a mano: si sceglie la base e le dosi.
+  return (r ? righeEBasi(r).proprie : []).map((g) => ({
     chiave: crypto.randomUUID(),
     originale: copia ? undefined : g,
     ingrediente_id: g.ingrediente_id,
@@ -66,6 +68,11 @@ export function EditorRicetta({ indice, bozza, chiudi }: { indice: Indice; bozza
   );
   const [foto, setFoto] = useState<{ percorso: string | null; file: Blob | null }>({ percorso: base?.foto ?? null, file: null });
   const [cerca, setCerca] = useState(false);
+  const basiIniziali = base ? righeEBasi(base).basi.map((b) => ({ ricetta_id: b.ricetta_id, dosi: b.dosi })) : [];
+  const [basi, setBasi] = useState<{ ricetta_id: string; dosi: number }[]>(basiIniziali);
+  const disponibili = basiDisponibili(indice, bozza.tipo === 'modifica' ? bozza.ricetta.id : undefined).filter((b) => !basi.some((x) => x.ricetta_id === b.id));
+  const [nuovaBase, setNuovaBase] = useState<{ ricetta_id: string; dosi: number } | null>(null);
+  const cambiaDosi = (id: string, dosi: number) => setBasi(basi.map((x) => (x.ricetta_id === id ? { ...x, dosi } : x)));
   const [errori, setErrori] = useState<string[]>([]);
 
   const cambiaRiga = (chiave: string, campi: Partial<RigaBozza>) => setRighe((rs) => rs.map((r) => (r.chiave === chiave ? { ...r, ...campi } : r)));
@@ -154,7 +161,13 @@ export function EditorRicetta({ indice, bozza, chiudi }: { indice: Indice; bozza
         const campi = Object.fromEntries(Object.entries(x.campi).filter(([k, v]) => !uguali(o[k], v)));
         return Object.keys(campi).length ? [{ id: o.id, versione_attesa: o.versione, campi }] : [];
       }),
-      rimuovi: copia ? [] : (base?.ingredienti ?? []).filter((g) => !tenute.has(g.id)).map((g) => g.id),
+      rimuovi: copia ? [] : (base?.ingredienti ?? []).filter((g) => !g.da_ricetta_id && !tenute.has(g.id)).map((g) => g.id),
+    };
+    const prima = new Map((copia ? [] : basiIniziali).map((b) => [b.ricetta_id, b.dosi]));
+    const tenuteBasi = categoria === 'base' ? [] : basi;
+    dati.basi = {
+      imposta: tenuteBasi.filter((b) => prima.get(b.ricetta_id) !== b.dosi),
+      rimuovi: [...prima.keys()].filter((id) => !tenuteBasi.some((b) => b.ricetta_id === id)),
     };
     const passiTenuti = new Set(passiFinali.map((x) => x.p.originale?.id).filter(Boolean));
     dati.passi = {
@@ -286,6 +299,66 @@ export function EditorRicetta({ indice, bozza, chiudi }: { indice: Indice; bozza
           <button type="button" className="bottone pieno" onClick={() => setCerca(true)}>
             + Ingrediente
           </button>
+        )}
+
+        {categoria !== 'base' && (
+          <>
+            <h3>Basi e salse fatte in casa</h3>
+            {basi.length > 0 && (
+              <ul className="elenco">
+                {basi.map((b) => (
+                  <li key={b.ricetta_id}>
+                    <div className="riga spazio">
+                      <strong>🥣 {titoloBase(indice, b.ricetta_id)}</strong>
+                      <button type="button" className="bottone piccolo pericolo" onClick={() => setBasi(basi.filter((x) => x.ricetta_id !== b.ricetta_id))} aria-label={`Togli ${titoloBase(indice, b.ricetta_id)}`}>
+                        ✕
+                      </button>
+                    </div>
+                    <div className="scelte" role="group" aria-label={`Quanta ${titoloBase(indice, b.ricetta_id)}`} style={{ marginTop: 6 }}>
+                      {DOSI.map((d) => (
+                        <button type="button" key={d} aria-pressed={b.dosi === d} onClick={() => cambiaDosi(b.ricetta_id, d)}>
+                          {testoDosi(d)}
+                        </button>
+                      ))}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {nuovaBase ? (
+              <div className="campo">
+                <span>Quale base</span>
+                <select value={nuovaBase.ricetta_id} onChange={(e) => setNuovaBase({ ...nuovaBase, ricetta_id: e.target.value })}>
+                  {disponibili.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.titolo}
+                    </option>
+                  ))}
+                </select>
+                <div className="scelte" role="group" aria-label="Quanta" style={{ marginTop: 6 }}>
+                  {DOSI.map((d) => (
+                    <button type="button" key={d} aria-pressed={nuovaBase.dosi === d} onClick={() => setNuovaBase({ ...nuovaBase, dosi: d })}>
+                      {testoDosi(d)}
+                    </button>
+                  ))}
+                </div>
+                <div className="riga" style={{ marginTop: 6 }}>
+                  <button type="button" className="bottone primario" onClick={() => (setBasi([...basi, nuovaBase]), setNuovaBase(null))}>
+                    Aggiungi alla ricetta
+                  </button>
+                  <button type="button" className="bottone" onClick={() => setNuovaBase(null)}>
+                    Annulla
+                  </button>
+                </div>
+              </div>
+            ) : disponibili.length > 0 ? (
+              <button type="button" className="bottone pieno" onClick={() => setNuovaBase({ ricetta_id: disponibili[0].id, dosi: 1 })}>
+                + Base o salsa (es. besciamella)
+              </button>
+            ) : (
+              basi.length === 0 && <p className="tenue">Qui si mettono le ricette della categoria «Basi e salse».</p>
+            )}
+          </>
         )}
 
         <h3>Preparazione</h3>
