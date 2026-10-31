@@ -1,56 +1,93 @@
 :root {
-  --sfondo: #fbf7f0;
+  /* «La cucina di Luca»: bianco muro, petrolio delle ante, senape dei pensili, piano antracite, rovere, salvia,
+     arancio della sedia (solo come fondo o bordo, mai come testo su bianco). */
+  --sfondo: #f6f2ea;
   --superficie: #ffffff;
-  --superficie-2: #f3ede3;
-  --testo: #1f2a24;
-  --testo-tenue: #5d6862;
-  --bordo: #e2d9cb;
-  --primario: #2f6b4f;
+  --superficie-2: #eee8dd;
+  --testo: #2b2c2e;
+  --testo-tenue: #5f5d58;
+  --bordo: #e2d9ca;
+  --primario: #12656f;
   --primario-testo: #ffffff;
-  --primario-tenue: #e3efe8;
-  --accento: #f2b84b;
-  --attenzione: #9a5b00;
-  --attenzione-tenue: #fff1d6;
+  --primario-tenue: #dfeced;
+  --senape: #e3a530;
+  --senape-testo: #2b2c2e;
+  --senape-tenue: #fbeccb;
+  --salvia: #a9c2c1;
+  --salvia-tenue: #e2ebea;
+  --rovere: #b07d52;
+  --arancio: #d9772f;
+  --accento: var(--senape);
+  --attenzione: #9a4512;
+  --attenzione-tenue: #f9e2d0;
   --errore: #a3302a;
   --errore-tenue: #fde7e5;
-  --raggio: 14px;
-  --ombra: 0 1px 2px rgb(0 0 0 / 0.06), 0 4px 14px rgb(0 0 0 / 0.05);
+  --barra: #2b2c2e;
+  --barra-testo: #c9c6c0;
+  --barra-attiva: #4a3d22;
+  --barra-attiva-testo: #f0b840;
+  --raggio: 12px;
+  --ombra: 0 1px 2px rgb(43 44 46 / 0.05);
+  --carattere-titoli: 'Outfit Variable', 'Outfit', system-ui, sans-serif;
+  --carattere-testo: 'Figtree Variable', 'Figtree', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   color-scheme: light;
 }
 
 /* Tema: «Automatico» segue il telefono; «Chiaro» o «Scuro» si scelgono da Impostazioni (data-tema su <html>). */
 :root[data-tema='scuro'] {
-  --sfondo: #141a17;
-  --superficie: #1d2521;
-  --superficie-2: #252f2a;
-  --testo: #eef2ef;
-  --testo-tenue: #a7b3ad;
-  --bordo: #33403a;
-  --primario: #6fbf95;
-  --primario-testo: #0f1a14;
-  --primario-tenue: #23362c;
-  --attenzione: #f2b84b;
-  --attenzione-tenue: #3a2f17;
+  --sfondo: #1a1b1d;
+  --superficie: #232528;
+  --superficie-2: #2d2f33;
+  --testo: #f3efe8;
+  --testo-tenue: #aeaaa3;
+  --bordo: #3a3c40;
+  --primario: #6cc3cc;
+  --primario-testo: #0f2427;
+  --primario-tenue: #1d3b3f;
+  --senape: #f0b840;
+  --senape-testo: #2b2c2e;
+  --senape-tenue: #3d3218;
+  --salvia: #8fb0af;
+  --salvia-tenue: #22302f;
+  --rovere: #c99a70;
+  --arancio: #e58a45;
+  --attenzione: #f2a766;
+  --attenzione-tenue: #3d2619;
   --errore: #ff8a80;
   --errore-tenue: #3b1f1d;
+  --barra: #141517;
+  --barra-testo: #b9b5ae;
+  --barra-attiva: #3d3218;
+  --barra-attiva-testo: #f0b840;
   color-scheme: dark;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-tema='chiaro']) {
-    --sfondo: #141a17;
-    --superficie: #1d2521;
-    --superficie-2: #252f2a;
-    --testo: #eef2ef;
-    --testo-tenue: #a7b3ad;
-    --bordo: #33403a;
-    --primario: #6fbf95;
-    --primario-testo: #0f1a14;
-    --primario-tenue: #23362c;
-    --attenzione: #f2b84b;
-    --attenzione-tenue: #3a2f17;
+    --sfondo: #1a1b1d;
+    --superficie: #232528;
+    --superficie-2: #2d2f33;
+    --testo: #f3efe8;
+    --testo-tenue: #aeaaa3;
+    --bordo: #3a3c40;
+    --primario: #6cc3cc;
+    --primario-testo: #0f2427;
+    --primario-tenue: #1d3b3f;
+    --senape: #f0b840;
+    --senape-testo: #2b2c2e;
+    --senape-tenue: #3d3218;
+    --salvia: #8fb0af;
+    --salvia-tenue: #22302f;
+    --rovere: #c99a70;
+    --arancio: #e58a45;
+    --attenzione: #f2a766;
+    --attenzione-tenue: #3d2619;
     --errore: #ff8a80;
     --errore-tenue: #3b1f1d;
+    --barra: #141517;
+    --barra-testo: #b9b5ae;
+    --barra-attiva: #3d3218;
+    --barra-attiva-testo: #f0b840;
     color-scheme: dark;
   }
 }
@@ -64,7 +101,8 @@ body {
   margin: 0;
   background: var(--sfondo);
   color: var(--testo);
-  font: 17px/1.45 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font: 17px/1.45 var(--carattere-testo);
+  font-variant-numeric: tabular-nums;
   -webkit-text-size-adjust: 100%;
 }
 
@@ -75,11 +113,14 @@ body {
 h1,
 h2,
 h3 {
+  font-family: var(--carattere-titoli);
+  font-weight: 700;
+  letter-spacing: -0.01em;
   line-height: 1.2;
   margin: 0 0 0.5rem;
 }
 h1 {
-  font-size: 1.5rem;
+  font-size: 1.75rem;
 }
 h2 {
   font-size: 1.2rem;
@@ -117,7 +158,7 @@ p {
   border-bottom: 1px solid var(--bordo);
 }
 .testata h1 {
-  font-size: 1.15rem;
+  font-size: 1.3rem;
   margin: 0;
   flex: 1;
   min-width: 0;
@@ -135,9 +176,8 @@ p {
   display: flex;
   justify-content: center;
   gap: 4px;
-  padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
-  background: var(--superficie);
-  border-top: 1px solid var(--bordo);
+  padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+  background: var(--barra);
 }
 .schede button {
   flex: 1;
@@ -146,7 +186,7 @@ p {
   border: 0;
   border-radius: 12px;
   background: transparent;
-  color: var(--testo-tenue);
+  color: var(--barra-testo);
   font: inherit;
   font-size: 0.85rem;
   display: flex;
@@ -156,8 +196,8 @@ p {
   gap: 2px;
 }
 .schede button[aria-current='page'] {
-  background: var(--primario-tenue);
-  color: var(--testo);
+  background: var(--barra-attiva);
+  color: var(--barra-attiva-testo);
   font-weight: 600;
 }
 .schede .icona {
@@ -189,16 +229,18 @@ p {
   cursor: pointer;
   text-decoration: none;
 }
+/* L'azione principale è senape, come i pensili; il petrolio resta per le scelte attive e i collegamenti. */
 .bottone.primario {
-  background: var(--primario);
-  border-color: var(--primario);
-  color: var(--primario-testo);
+  background: var(--senape);
+  border-color: var(--senape);
+  color: var(--senape-testo);
 }
 .bottone.pericolo {
   color: var(--errore);
 }
 .bottone.piccolo {
-  min-height: 40px;
+  min-height: 48px;
+  min-width: 48px;
   padding: 0 12px;
   font-size: 0.92rem;
 }
@@ -403,7 +445,7 @@ html.foglio-aperto body {
   margin-bottom: 14px;
 }
 .scelte button {
-  min-height: 44px;
+  min-height: 48px;
   padding: 0 14px;
   border-radius: 999px;
   border: 1px solid var(--bordo);
@@ -439,7 +481,7 @@ html.foglio-aperto body {
   font-size: 1.05rem;
 }
 .scelte.giorni button small {
-  font-size: 0.65rem;
+  font-size: 0.8rem;
   min-height: 1em;
 }
 .scelte.giorni button:disabled {
@@ -462,7 +504,7 @@ html.foglio-aperto body {
   gap: 12px;
   align-items: center;
   width: 100%;
-  min-height: 44px;
+  min-height: 48px;
 }
 .voce:focus-visible {
   outline: 2px solid var(--primario);
@@ -489,7 +531,7 @@ html.foglio-aperto body {
 }
 details > summary {
   cursor: pointer;
-  min-height: 44px;
+  min-height: 48px;
   display: flex;
   align-items: center;
   color: var(--testo-tenue);
@@ -531,7 +573,7 @@ details > summary {
   flex-direction: column;
   gap: 2px;
   width: 100%;
-  min-height: 44px;
+  min-height: 48px;
   padding: 6px 10px;
   margin-bottom: 6px;
   border-radius: 10px;
@@ -560,7 +602,7 @@ details > summary {
 }
 .aggiungi-piatto {
   width: 100%;
-  min-height: 44px;
+  min-height: 48px;
   border: 1px dashed var(--bordo);
   border-radius: 10px;
   background: transparent;
@@ -636,7 +678,8 @@ button.etichetta {
   border: 0;
   font: inherit;
   font-size: 0.85rem;
-  min-height: 36px;
+  min-height: 48px;
+  padding: 0 14px;
   cursor: pointer;
 }
 
@@ -645,8 +688,12 @@ button.etichetta {
   all: unset;
   cursor: pointer;
   color: var(--primario);
+  font-weight: 600;
   text-decoration: underline;
-  min-height: 44px;
+  text-underline-offset: 3px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
 }
 .link:disabled {
   color: var(--testo-tenue);
@@ -665,7 +712,7 @@ button.etichetta {
   margin: 8px 4px 8px 0;
 }
 .dato {
-  min-height: 44px;
+  min-height: 48px;
   padding: 0 10px;
   border: 1px solid var(--bordo);
   border-radius: 10px;
@@ -699,6 +746,7 @@ button.etichetta {
   position: relative;
 }
 .contatore {
+  /* Arancio della sedia: un avviso da guardare, non un errore. */
   position: absolute;
   top: -4px;
   right: -12px;
@@ -706,8 +754,8 @@ button.etichetta {
   height: 18px;
   padding: 0 4px;
   border-radius: 9px;
-  background: var(--errore);
-  color: #fff;
+  background: var(--arancio);
+  color: #2b2c2e;
   font-size: 0.7rem;
   font-weight: 700;
   line-height: 18px;
@@ -782,6 +830,7 @@ button.etichetta {
 .avviso-uscita.visibile {
   opacity: 1;
   transform: translate(-50%, 0);
+}
 .spunte input[type='checkbox'] {
   width: 24px;
   height: 24px;
@@ -789,3 +838,4 @@ button.etichetta {
   flex: none;
   margin: 0;
 }
+
