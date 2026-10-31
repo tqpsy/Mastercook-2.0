@@ -12,7 +12,7 @@ import { Foglio } from '../ui/Foglio';
 import { Foto, riduciFoto } from '../ui/Foto';
 import { useLotti } from './Casa';
 import { ConfermaPasto, useConferme } from './ConfermaPasto';
-import { type DatiMenu, descrivi, useDatiMenu, useProlungaFissi } from './Menu';
+import { chiLoMangia, type DatiMenu, descrivi, useDatiMenu, useProlungaFissi } from './Menu';
 import { ICONA_ESITO, motiviInBreve, SchedaRicetta, useCommensali, useInCasa } from './Ricette';
 import { useDatiSpesa } from './Spesa';
 
@@ -273,6 +273,7 @@ function PiattoDiOggi({
   const ricetta = d.ricetta ?? (origine?.ricetta_id ? indice.perId.get(origine.ricetta_id) : undefined);
   // Gli avvisi di chi mangia il piatto principale e ha esigenze che il piatto non rispetta (o da controllare).
   const avvisi = (d.valutazione?.perMembro ?? []).filter((m) => m.mangia === 'principale' && m.valutazione && m.valutazione.esito !== 'adatta');
+  const aParte = d.eccezioni.filter((e) => e.tipo === 'alternativa');
   const ospiti = dati.ospiti.find((o) => o.data === p.data && o.categoria === p.categoria && o.adulti + o.bambini > 0);
   const contenuto = (
     <>
@@ -282,6 +283,7 @@ function PiattoDiOggi({
         {d.nonPiace.length > 0 && <span title={d.nonPiace.map((g) => `a ${g.nome} non piace ${g.cosa.toLowerCase()}`).join('; ')}> 🙅</span>}
       </span>
       <span className="tenue piccolo">
+        {d.eccezioni.length > 0 && `${chiLoMangia(dati, d.eccezioni)} · `}
         {porzioniTesto(d.porzioni)}
         {p.avanzo_di && ' · avanzo'}
         {d.dopo > 0 && ` · cucina anche ${d.dopo.toLocaleString('it-IT')} per i giorni dopo`}
@@ -305,9 +307,9 @@ function PiattoDiOggi({
           {contenuto}
         </div>
       )}
-      {(d.eccezioni.length > 0 || avvisi.length > 0) && (
+      {(aParte.length > 0 || avvisi.length > 0) && (
         <ul className="elenco varianti" aria-label={`Piatti a parte e avvisi: ${d.titolo}`}>
-          {d.eccezioni.map((e) => (
+          {aParte.map((e) => (
             <Variante key={e.id} indice={indice} dati={dati} eccezione={e} pasto={pasto} apriRicetta={apriRicetta} />
           ))}
           {avvisi.map((m) => (
@@ -326,17 +328,11 @@ function PiattoDiOggi({
 
 const NOME_ESITO_PIATTO = { adatta: 'adatto', da_verificare: 'da verificare', non_adatta: 'non adatto a qualcuno' } as const;
 
-/** Chi mangia altro (un piatto per il bambino piccolo, una versione senza lattosio…) o non c'è. */
+/** Chi ha un piatto a parte segnato dentro questo piatto (com'era prima delle spunte). */
 function Variante({ indice, dati, eccezione: e, pasto, apriRicetta }: { indice: Indice; dati: DatiMenu; eccezione: Eccezione; pasto: string; apriRicetta: (a: Aperta) => void }) {
   const persona = dati.persone.find((x) => x.id === e.membro_id);
   if (!persona) return null;
   const icona = persona.porzione < 1 ? '🧒' : '🧑';
-  if (e.tipo === 'non_mangia')
-    return (
-      <li className="tenue">
-        <span aria-hidden>{icona}</span> {persona.nome} non c’è
-      </li>
-    );
   const ricetta = e.ricetta_id ? indice.perId.get(e.ricetta_id) : undefined;
   const titolo = ricetta?.titolo ?? e.testo ?? 'altro';
   return (

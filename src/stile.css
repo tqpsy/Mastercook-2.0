@@ -715,3 +715,10 @@ button.etichetta {
   padding: 4px 0;
   border-bottom: 0;
 }
+.spunte input[type='checkbox'] {
+  width: 24px;
+  height: 24px;
+  min-height: 0;
+  flex: none;
+  margin: 0;
+}

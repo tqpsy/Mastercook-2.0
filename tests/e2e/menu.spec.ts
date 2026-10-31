@@ -28,31 +28,42 @@ test('menu: un piatto per cena, Sara mangia altro, nessun movimento in casa', as
   await page.getByRole('button', { name: 'Apri Spaghetti alla carbonara' }).click();
   const scheda = page.getByRole('dialog', { name: 'Spaghetti alla carbonara' });
   await expect(scheda.getByText(/Non adatta a tutti/)).toBeVisible();
-  await scheda.getByRole('group', { name: 'Cosa mangia Sara' }).getByRole('button', { name: 'Altro' }).click();
-  await scheda.getByRole('searchbox', { name: 'Cosa mangia Sara' }).fill('aglio');
-  await scheda.getByRole('button', { name: /Spaghetti aglio, olio e peperoncino/ }).click();
+  // Sara non mangia la carbonara: si toglie la spunta e le si dà un altro piatto nello stesso pasto.
+  const chi = scheda.getByRole('group', { name: 'Chi mangia questo piatto' });
+  await expect(chi.getByRole('checkbox', { name: /Sara/ })).toBeChecked();
+  // La spunta segue la modifica salvata sul dispositivo: si clicca e si aspetta che cambi.
+  await chi.getByRole('checkbox', { name: /Sara/ }).click();
+  await expect(chi.getByRole('checkbox', { name: /Sara/ })).not.toBeChecked();
   await expect(scheda.getByText('Adatto a chi lo mangia')).toBeVisible();
-  await expect(scheda.getByText('Mangia: Spaghetti aglio, olio e peperoncino')).toBeVisible();
   await expect(scheda.getByRole('button', { name: 'Automatiche (1)' })).toHaveAttribute('aria-pressed', 'true');
-  await scheda.getByRole('button', { name: 'Chiudi' }).click();
+  await scheda.getByRole('button', { name: '+ Un altro piatto per Sara' }).click();
+  const altro = page.getByRole('dialog', { name: `Cena di ${dataLunga(oggi())}` });
+  const chiAltro = altro.getByRole('group', { name: 'Chi mangia questo piatto' });
+  await expect(chiAltro.getByRole('checkbox', { name: /Sara/ })).toBeChecked();
+  await expect(chiAltro.getByRole('checkbox', { name: /Luca/ })).not.toBeChecked();
+  await altro.getByLabel('Cosa si mangia').fill('aglio');
+  await altro.getByRole('button', { name: /Spaghetti aglio, olio e peperoncino/ }).click();
+  await expect(page.getByRole('button', { name: 'Apri Spaghetti aglio, olio e peperoncino' })).toContainText('per Sara');
+  await expect(page.getByRole('button', { name: 'Apri Spaghetti alla carbonara' })).toContainText('per Luca');
   await expect(page.getByRole('button', { name: /Stato del salvataggio: Tutto salvato/ })).toBeVisible();
 
   const famiglia = `(select famiglia_id from utente_famiglia where utente_id = $1)`;
   const [r] = await sql<{ portate: number; eccezioni: string; movimenti: number }>(
     `select (select count(*)::int from portata where famiglia_id = ${famiglia} and eliminato_il is null) as portate,
-            (select string_agg(tipo || ':' || ricetta_id, ',') from eccezione_membro where famiglia_id = ${famiglia} and eliminato_il is null) as eccezioni,
+            (select string_agg(tipo || ':' || coalesce(ricetta_id, '-'), ',') from eccezione_membro where famiglia_id = ${famiglia} and eliminato_il is null) as eccezioni,
             (select count(*)::int from movimento where famiglia_id = ${famiglia}) as movimenti`,
     [luca.id],
   );
-  expect(r).toEqual({ portate: 1, eccezioni: 'alternativa:sys:spaghetti_aglio_olio', movimenti: 0 });
+  expect(r).toEqual({ portate: 2, eccezioni: 'non_mangia:-,non_mangia:-', movimenti: 0 });
 
-  // Oggi: la cena con il piatto, il piatto a parte di Sara e le ricette che si aprono con un tocco.
+  // Oggi: la cena con i due piatti, ognuno per chi lo mangia, e le ricette che si aprono con un tocco.
   await page.getByRole('button', { name: 'Oggi', exact: true }).click();
   const cena = page.getByRole('region', { name: 'Oggi si mangia' }).getByRole('region', { name: 'Cena' });
   await expect(cena.getByText('Spaghetti alla carbonara')).toBeVisible();
   await expect(page.getByRole('region', { name: 'Colazione' })).toContainText('Niente in menu');
   await expect(page.getByRole('button', { name: 'Apri il menu della settimana' })).toHaveCount(0);
-  await cena.getByRole('button', { name: 'Ricetta per Sara: Spaghetti aglio, olio e peperoncino' }).click();
+  await expect(cena.getByRole('button', { name: 'Ricetta: Spaghetti alla carbonara' })).toContainText('per Luca');
+  await cena.getByRole('button', { name: 'Ricetta: Spaghetti aglio, olio e peperoncino' }).click();
   const alternativa = page.getByRole('dialog', { name: 'Spaghetti aglio, olio e peperoncino' });
   await expect(alternativa.getByText('Cena di oggi · per Sara')).toBeVisible();
   await expect(alternativa.getByRole('heading', { name: 'Preparazione' })).toBeVisible();
