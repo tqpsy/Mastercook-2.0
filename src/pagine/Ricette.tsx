@@ -121,7 +121,7 @@ export function useCommensali() {
     const vincoli = (vincolo_alimentare ?? []).filter((v) => !v.eliminato_il) as unknown as Vincolo[];
     const verifiche: Verifica[] = (ricetta_verificata ?? [])
       .filter((v) => !v.eliminato_il)
-      .map((v) => ({ membro_id: String(v.membro_id), ricetta_id: String(v.ricetta_id), versione_ricetta: Number(v.versione_ricetta) }));
+      .map((v) => ({ membro_id: String(v.membro_id), ricetta_id: String(v.ricetta_id), versione_ricetta: Number(v.versione_ricetta), va_bene: v.va_bene !== false }));
     return { membri, vincoli, verifiche };
   }, [membro, vincolo_alimentare, ricetta_verificata]);
 }
@@ -316,9 +316,10 @@ export function SchedaRicetta({
   const origine = r.derivata_da ? indice.perId.get(r.derivata_da) : undefined;
   const [cambiaIcona, setCambiaIcona] = useState(false);
 
-  async function segnaVaBene(membro_id: string, nome: string, va_bene: boolean, escluso: boolean) {
-    if (va_bene && escluso && !window.confirm(`Per ${nome} la ricetta non rispetta un’esigenza. L’avete controllata e va bene lo stesso?`)) return;
-    await esegui('verifica_ricetta', { id: crypto.randomUUID(), membro_id, ricetta_id: r.id, versione_ricetta: r.versione ?? 1, va_bene });
+  /** ✅ «va bene» o ❌ «non va bene» chiudono il dubbio per quella persona; «togli» lo riapre. */
+  async function segna(membro_id: string, nome: string, scelta: 'va_bene' | 'non_va_bene' | 'togli', escluso: boolean) {
+    if (scelta === 'va_bene' && escluso && !window.confirm(`Per ${nome} la ricetta non rispetta un’esigenza. L’avete controllata e va bene lo stesso?`)) return;
+    await esegui('verifica_ricetta', { id: crypto.randomUUID(), membro_id, ricetta_id: r.id, versione_ricetta: r.versione ?? 1, va_bene: scelta === 'va_bene', scelta });
   }
 
   async function archivia(archiviata: boolean) {
@@ -363,16 +364,28 @@ export function SchedaRicetta({
               <li key={m.membro_id}>
                 <strong>{m.nome}</strong>: {ICONA_ESITO[m.valutazione.esito]}{' '}
                 {m.valutazione.dettagli?.length ? null : m.valutazione.motivi.length ? m.valutazione.motivi.join('; ') : 'nessun problema noto'}
-                {m.valutazione.verificabile && (
-                  <button
-                    className="bottone piccolo"
-                    style={{ marginLeft: 8 }}
-                    aria-label={m.valutazione.verificata ? `Togli «va bene» per ${m.nome}` : `Va bene per ${m.nome}`}
-                    onClick={() => segnaVaBene(m.membro_id, m.nome, !m.valutazione.verificata, m.valutazione.esito === 'non_adatta')}
-                  >
-                    {m.valutazione.verificata ? 'Togli «va bene»' : '✅ Va bene'}
-                  </button>
-                )}
+                {m.valutazione.verificabile &&
+                  (m.valutazione.verificata || m.valutazione.scartata ? (
+                    <button
+                      className="bottone piccolo"
+                      style={{ marginLeft: 8 }}
+                      aria-label={m.valutazione.verificata ? `Togli «va bene» per ${m.nome}` : `Togli «non va bene» per ${m.nome}`}
+                      onClick={() => segna(m.membro_id, m.nome, 'togli', false)}
+                    >
+                      {m.valutazione.verificata ? 'Togli «va bene»' : 'Togli «non va bene»'}
+                    </button>
+                  ) : (
+                    <>
+                      <button className="bottone piccolo" style={{ marginLeft: 8 }} aria-label={`Va bene per ${m.nome}`} onClick={() => segna(m.membro_id, m.nome, 'va_bene', m.valutazione.esito === 'non_adatta')}>
+                        ✅ Va bene
+                      </button>
+                      {m.valutazione.esito === 'da_verificare' && (
+                        <button className="bottone piccolo" style={{ marginLeft: 8 }} aria-label={`Non va bene per ${m.nome}`} onClick={() => segna(m.membro_id, m.nome, 'non_va_bene', false)}>
+                          ❌ Non va bene
+                        </button>
+                      )}
+                    </>
+                  ))}
                 {!!m.valutazione.dettagli?.length && <Motivi dettagli={m.valutazione.dettagli} />}
               </li>
             ))}

@@ -233,4 +233,23 @@ describe('ricetta segnata «va bene» per un membro', () => {
     expect((await segna(true, 1, { ricetta_id: 'sys:non_esiste' })).esito).not.toBe('applicato');
     expect(await righe()).toEqual([]);
   });
+
+  it('«non va bene» si segna, passa a «va bene» e si toglie; una scelta sconosciuta è rifiutata', async () => {
+    const { u, famiglia } = await famigliaCon();
+    const [m] = await banco.sql<{ id: string }>(`select id from membro where famiglia_id = $1 limit 1`, [famiglia]);
+    const righe = () => banco.sql(`select va_bene, versione from ricetta_verificata where famiglia_id = $1 and eliminato_il is null`, [famiglia]);
+    const scegli = (scelta: string) =>
+      u.applica(comando('verifica_ricetta', famiglia, { id: randomUUID(), membro_id: m.id, ricetta_id: 'sys:carbonara', versione_ricetta: 1, va_bene: scelta === 'va_bene', scelta }));
+
+    expect((await scegli('non_va_bene')).esito).toBe('applicato');
+    await scegli('non_va_bene');
+    expect(await righe()).toEqual([{ va_bene: false, versione: 1 }]);
+    await scegli('va_bene');
+    expect(await righe()).toEqual([{ va_bene: true, versione: 2 }]);
+    await scegli('non_va_bene');
+    expect(await righe()).toEqual([{ va_bene: false, versione: 3 }]);
+    await scegli('togli');
+    expect(await righe()).toEqual([]);
+    expect((await scegli('forse')).esito).not.toBe('applicato');
+  });
 });

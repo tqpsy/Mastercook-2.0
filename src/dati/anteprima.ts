@@ -327,12 +327,14 @@ const EFFETTI: Record<string, Effetto> = {
   },
   verifica_ricetta: (righe, d, famiglia) => {
     const esistente = (righe.ricetta_verificata ?? []).find((r) => r.membro_id === d.membro_id && r.ricetta_id === d.ricetta_id && !r.eliminato_il);
+    const scelta = d.scelta ?? (d.va_bene ? 'va_bene' : 'togli');
+    const segna = scelta === 'va_bene' || scelta === 'non_va_bene';
     if (esistente) {
       righe.ricetta_verificata = (righe.ricetta_verificata ?? []).map((r) =>
-        r === esistente ? { ...r, ...(d.va_bene ? { versione_ricetta: d.versione_ricetta } : { eliminato_il: new Date().toISOString() }), in_attesa: true } : r,
+        r === esistente ? { ...r, ...(segna ? { versione_ricetta: d.versione_ricetta, va_bene: scelta === 'va_bene' } : { eliminato_il: new Date().toISOString() }), in_attesa: true } : r,
       );
-    } else if (d.va_bene) {
-      aggiungi('ricetta_verificata', (x) => ({ membro_id: x.membro_id, ricetta_id: x.ricetta_id, versione_ricetta: x.versione_ricetta, versione: 1 }))(righe, d, famiglia);
+    } else if (segna) {
+      aggiungi('ricetta_verificata', (x) => ({ membro_id: x.membro_id, ricetta_id: x.ricetta_id, versione_ricetta: x.versione_ricetta, va_bene: scelta === 'va_bene', versione: 1 }))(righe, d, famiglia);
     }
   },
   scegli_icona: (righe, d, famiglia) => {

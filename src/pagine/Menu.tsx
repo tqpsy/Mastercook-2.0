@@ -71,7 +71,7 @@ export function useDatiMenu(vista: Vista): DatiMenu {
         .filter((m) => !m.archiviato)
         .map((m) => ({ id: m.id, nome: String(m.nome), porzione: Number(m.porzione ?? 1) })),
       vincoli: attive('vincolo_alimentare') as unknown as Vincolo[],
-      verifiche: attive('ricetta_verificata').map((v) => ({ membro_id: String(v.membro_id), ricetta_id: String(v.ricetta_id), versione_ricetta: Number(v.versione_ricetta) })),
+      verifiche: attive('ricetta_verificata').map((v) => ({ membro_id: String(v.membro_id), ricetta_id: String(v.ricetta_id), versione_ricetta: Number(v.versione_ricetta), va_bene: v.va_bene !== false })),
       gusti: attive('gusto') as unknown as Gusto[],
       categorie: categorieDellaFamiglia(attive('categoria_pasto')),
       portate: attive('portata')

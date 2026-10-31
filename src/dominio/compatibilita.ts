@@ -35,18 +35,22 @@ export interface Valutazione {
   verificata?: boolean;
   /** Si può segnare «va bene»: niente allergie o intolleranze che la escludono. */
   verificabile?: boolean;
+  /** La famiglia ha controllato e segnato «non va bene» (per questa versione della ricetta). */
+  scartata?: boolean;
 }
 
-/** Una ricetta segnata «va bene» per un membro, valida finché la ricetta non cambia. */
+/** Una ricetta segnata «va bene» (✅) o «non va bene» (❌) per un membro, valida finché la ricetta non cambia. */
 export interface Verifica {
   membro_id: string;
   ricetta_id: string;
   versione_ricetta: number;
+  /** Falso quando la famiglia ha segnato «non va bene»; assente o vero per «va bene». */
+  va_bene?: boolean;
 }
 
-/** La versione verificata della ricetta per quel membro, se c'è. */
-export function verificataPer(verifiche: Verifica[] | undefined, membro_id: string, ricetta_id: string): number | undefined {
-  return verifiche?.find((v) => v.membro_id === membro_id && v.ricetta_id === ricetta_id)?.versione_ricetta;
+/** Il controllo della famiglia sulla ricetta per quel membro, se c'è. */
+export function verificataPer(verifiche: Verifica[] | undefined, membro_id: string, ricetta_id: string): Verifica | undefined {
+  return verifiche?.find((v) => v.membro_id === membro_id && v.ricetta_id === ricetta_id);
 }
 
 const CLASSI_ESCLUSE: Record<string, string[]> = {
@@ -73,14 +77,19 @@ function peggiore(a: Esito, b: Esito): Esito {
 }
 
 /**
- * La valutazione con il «va bene» della famiglia: vale per i dubbi e per le esigenze (crudi, vegetariano…),
- * mai contro un'allergia o un'intolleranza che esclude la ricetta, e decade se la ricetta cambia.
+ * La valutazione con il controllo della famiglia: «va bene» vale per i dubbi e per le esigenze (crudi,
+ * vegetariano…), mai contro un'allergia o un'intolleranza che esclude la ricetta; «non va bene» chiude il
+ * dubbio come ⛔. Tutti e due decadono se la ricetta cambia. Si può passare anche solo la versione (= «va bene»).
  */
-export function valutaPerVincoli(indice: Indice, r: Ricetta, vincoli: Vincolo[], versioneVerificata?: number): Valutazione {
+export function valutaPerVincoli(indice: Indice, r: Ricetta, vincoli: Vincolo[], verifica?: number | Pick<Verifica, 'versione_ricetta' | 'va_bene'>): Valutazione {
   const v = valuta(indice, r, vincoli);
   if (v.esito === 'adatta') return v;
   const verificabile = v.esito === 'da_verificare' || valuta(indice, r, vincoli.filter((x) => x.tipo !== 'esigenza')).esito !== 'non_adatta';
-  if (verificabile && versioneVerificata !== undefined && versioneVerificata === (r.versione ?? 1)) {
+  const controllo = typeof verifica === 'number' ? { versione_ricetta: verifica, va_bene: true } : verifica;
+  if (verificabile && controllo && controllo.versione_ricetta === (r.versione ?? 1)) {
+    if (controllo.va_bene === false) {
+      return { esito: 'non_adatta', motivi: ['segnata «non va bene» da voi'], dettagli: [], scartata: true, verificabile };
+    }
     return { esito: 'adatta', motivi: ['segnata «va bene» da voi'], dettagli: [], verificata: true, verificabile };
   }
   return { ...v, verificabile };

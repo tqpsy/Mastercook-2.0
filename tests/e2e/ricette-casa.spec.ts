@@ -231,6 +231,37 @@ test('crudi e testo libero: il guanciale cotto e «niente funghi» vanno bene su
     .toEqual([{ ricetta_id: 'sys:riso_basmati_spezie', emoji: '🍛' }]);
 });
 
+test('una ricetta da verificare si chiude anche con «❌ non va bene», e si può togliere', async ({ browser }, info) => {
+  const luca = await nuovoUtente('Luca');
+  const { page } = await apri(browser, luca, info.project.use);
+  await creaFamiglia(page, 'Casa Dubbi');
+  await aggiungiPersona(page, 'Anna');
+  await page.getByRole('button', { name: 'Modifica Anna' }).click();
+  await page.getByRole('button', { name: '+ Aggiungi' }).click();
+  await page.getByRole('button', { name: 'Esigenza' }).click();
+  await page.getByRole('button', { name: 'Niente formaggi a latte crudo' }).click();
+  await page.getByRole('button', { name: 'Aggiungi', exact: true }).click();
+  await page.getByRole('button', { name: 'Fatto' }).click();
+  await page.getByRole('button', { name: 'Chiudi' }).click();
+
+  await page.getByRole('button', { name: 'Ricette' }).click();
+  await page.getByLabel('Cerca').fill('insalata greca');
+  await page.getByRole('button', { name: 'Apri Insalata greca' }).click();
+  const greca = page.getByRole('dialog', { name: 'Insalata greca' });
+  await expect(greca.getByText(/Anna: ❔/)).toBeVisible();
+  await greca.getByRole('button', { name: 'Non va bene per Anna' }).click();
+  await expect(greca.getByText(/Anna: ⛔ segnata «non va bene» da voi/)).toBeVisible();
+  await expect(greca.getByRole('button', { name: 'Va bene per Anna' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /Stato del salvataggio: Tutto salvato/ })).toBeVisible();
+  const segnate = () =>
+    sql(`select ricetta_id, va_bene from ricetta_verificata where famiglia_id in (select famiglia_id from utente_famiglia where utente_id = $1) and eliminato_il is null`, [luca.id]);
+  await expect.poll(segnate).toEqual([{ ricetta_id: 'sys:insalata_greca', va_bene: false }]);
+
+  await greca.getByRole('button', { name: 'Togli «non va bene» per Anna' }).click();
+  await expect(greca.getByText(/Anna: ❔/)).toBeVisible();
+  await expect.poll(segnate).toEqual([]);
+});
+
 test('foto del frigo: prima l’avviso su Google, poi si controlla e in casa entra solo ciò che si conferma', async ({ browser }, info) => {
   const luca = await nuovoUtente('Luca');
   const { page } = await apri(browser, luca, info.project.use);
