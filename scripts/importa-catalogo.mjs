@@ -116,8 +116,8 @@ const ricette = RICETTE_SISTEMA.map((r) => ({
   }),
   passi: [...r.passaggi],
 }));
-// Ricette di sistema nate in Mastercook 2.0 (pizze bianche, peperoni e zucchine ripieni di carne, 31/10/2026): non
-// vengono dal vecchio repository. Nel database le caricano le migrazioni 20261115000000_pizze.sql e 20261115000100_verdure_ripiene_carne.sql.
+// Ricette di sistema nate in Mastercook 2.0 (pizze bianche, peperoni e zucchine ripieni di carne, besciamella, 31/10/2026): non
+// vengono dal vecchio repository. Nel database le caricano le migrazioni 20261115000000_pizze.sql 20261115000100_verdure_ripiene_carne.sql e 20261115000200_besciamella.sql.
 ricette.push(...JSON.parse(readFileSync(join(RADICE, 'src', 'catalogo', 'ricette-nuove.json'), 'utf8')).ricette);
 
 const catalogo = {
