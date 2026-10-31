@@ -14,6 +14,7 @@ import { SpiegazioneDrive, spiegaErroreDrive } from '../ui/Drive';
 import { Ripristino } from '../ui/Ripristino';
 import { TestoPrivacy } from './Privacy';
 import { leggiTema, scegliTema, type Tema } from '../ui/tema';
+import { COSTRUITA_IL, cercaAggiornamento, type EsitoAggiornamento } from '../ui/aggiornamento';
 
 export function Impostazioni({
   email,
@@ -57,7 +58,7 @@ export function Impostazioni({
         <p>
           Accesso come <strong>{email}</strong>
         </p>
-        <p className="tenue">Versione dell’app {VERSIONE_APP}</p>
+        <Aggiornamento />
         <button className="bottone pieno" onClick={esci}>
           Esci
         </button>
@@ -649,6 +650,54 @@ function SceltaTema() {
       <p className="tenue" style={{ marginBottom: 0 }}>
         {tema === 'automatico' ? 'Segue l’impostazione del telefono.' : 'Vale solo su questo dispositivo.'}
       </p>
+    </div>
+  );
+}
+
+function dataVersione(): string {
+  const d = COSTRUITA_IL ? new Date(COSTRUITA_IL) : null;
+  if (!d || Number.isNaN(d.getTime())) return '';
+  return d.toLocaleString('it-IT', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+}
+
+const ESITI: Record<Exclude<EsitoAggiornamento, 'aggiornata'>, string> = {
+  gia_ultima: 'Hai già l’ultima versione.',
+  senza_rete: 'Senza rete non posso controllare: riprova quando sei connesso.',
+};
+
+/** Scarica subito la versione nuova, senza dover chiudere e riaprire l'app. */
+function Aggiornamento() {
+  const [cerco, setCerco] = useState(false);
+  const [esito, setEsito] = useState<string | null>(null);
+  const data = dataVersione();
+
+  async function aggiorna() {
+    setCerco(true);
+    setEsito(null);
+    try {
+      const e = await cercaAggiornamento();
+      if (e !== 'aggiornata') setEsito(ESITI[e]);
+    } catch {
+      setEsito('Non sono riuscito a controllare: chiudi e riapri l’app.');
+    } finally {
+      setCerco(false);
+    }
+  }
+
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <p className="tenue" style={{ marginTop: 0, marginBottom: 6 }}>
+        Versione dell’app {VERSIONE_APP}
+        {data && ` · del ${data}`}
+      </p>
+      <button className="bottone pieno" onClick={aggiorna} disabled={cerco}>
+        {cerco ? 'Cerco la versione nuova…' : '🔄 Aggiorna l’app'}
+      </button>
+      {esito && (
+        <p className="tenue" role="status" style={{ marginBottom: 0 }}>
+          {esito}
+        </p>
+      )}
     </div>
   );
 }

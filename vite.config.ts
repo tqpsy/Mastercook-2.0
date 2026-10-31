@@ -7,6 +7,8 @@ export default defineConfig({
   // PGlite carica da sé i suoi file (wasm e dati): Vite non deve preimpacchettarlo.
   optimizeDeps: { exclude: ['@electric-sql/pglite'] },
   worker: { format: 'es' },
+  // Data della versione, mostrata in Impostazioni accanto a «Aggiorna l’app».
+  define: { __COSTRUITA_IL__: JSON.stringify(new Date().toISOString()) },
   plugins: [
     react(),
     VitePWA({
