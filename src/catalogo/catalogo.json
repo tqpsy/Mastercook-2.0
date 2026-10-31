@@ -27293,6 +27293,663 @@
     "Frulla yogurt, banana, latte e zucchero.",
     "Servi freddo con un pizzico di cannella."
    ]
+  },
+  {
+   "id": "sys:pizza_salsiccia_patate",
+   "titolo": "Pizza bianca salsiccia e patate",
+   "categoria": "piatto_unico",
+   "cucina": "italiana",
+   "provenienza": null,
+   "porzioni": 4,
+   "minuti_totali": 180,
+   "difficolta": 2,
+   "conservazione": "pizza_torte_salate",
+   "mesi": null,
+   "allergeni_dichiarati": [],
+   "ingredienti": [
+    {
+     "ingrediente_id": "ing:farina",
+     "quantita": 500,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Farina 00"
+    },
+    {
+     "ingrediente_id": "ing:acqua",
+     "quantita": 300,
+     "unita": "ml",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Acqua"
+    },
+    {
+     "ingrediente_id": "ing:lievito_birra",
+     "quantita": 10,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Lievito di birra"
+    },
+    {
+     "ingrediente_id": "ing:olio_evo",
+     "quantita": 40,
+     "unita": "ml",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Olio extravergine d'oliva"
+    },
+    {
+     "ingrediente_id": "ing:sale",
+     "quantita": 10,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Sale"
+    },
+    {
+     "ingrediente_id": "ing:mozzarella",
+     "quantita": 300,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Mozzarella"
+    },
+    {
+     "ingrediente_id": "ing:salsiccia",
+     "quantita": 250,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Salsiccia"
+    },
+    {
+     "ingrediente_id": "ing:patata",
+     "quantita": 300,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Patate"
+    },
+    {
+     "ingrediente_id": "ing:rosmarino",
+     "quantita": 2,
+     "unita": "g",
+     "qb": false,
+     "opzionale": true,
+     "testo": "Rosmarino"
+    }
+   ],
+   "passi": [
+    "Sciogli il lievito nell'acqua, impasta con la farina, metà dell'olio e il sale per 10 minuti.",
+    "Lascia lievitare l'impasto coperto per almeno due ore.",
+    "Dividilo in due e stendilo in due teglie unte con un filo d'olio.",
+    "Sbuccia le patate e tagliale a fettine sottilissime; spella la salsiccia e sbriciolala.",
+    "Distribuisci la mozzarella a pezzetti, poi patate e salsiccia; condisci con l'olio rimasto, un pizzico di sale e il rosmarino.",
+    "Cuoci in forno a 250 °C per 15–20 minuti, finché le patate sono dorate."
+   ]
+  },
+  {
+   "id": "sys:pizza_wurstel_patatine",
+   "titolo": "Pizza bianca würstel e patatine",
+   "categoria": "piatto_unico",
+   "cucina": "italiana",
+   "provenienza": null,
+   "porzioni": 4,
+   "minuti_totali": 180,
+   "difficolta": 2,
+   "conservazione": "pizza_torte_salate",
+   "mesi": null,
+   "allergeni_dichiarati": [],
+   "ingredienti": [
+    {
+     "ingrediente_id": "ing:farina",
+     "quantita": 500,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Farina 00"
+    },
+    {
+     "ingrediente_id": "ing:acqua",
+     "quantita": 300,
+     "unita": "ml",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Acqua"
+    },
+    {
+     "ingrediente_id": "ing:lievito_birra",
+     "quantita": 10,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Lievito di birra"
+    },
+    {
+     "ingrediente_id": "ing:olio_evo",
+     "quantita": 40,
+     "unita": "ml",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Olio extravergine d'oliva"
+    },
+    {
+     "ingrediente_id": "ing:sale",
+     "quantita": 10,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Sale"
+    },
+    {
+     "ingrediente_id": "ing:mozzarella",
+     "quantita": 300,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Mozzarella"
+    },
+    {
+     "ingrediente_id": "ing:wurstel",
+     "quantita": 200,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Würstel"
+    },
+    {
+     "ingrediente_id": "ing:patatine_fritte",
+     "quantita": 300,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Patatine fritte surgelate"
+    }
+   ],
+   "passi": [
+    "Sciogli il lievito nell'acqua, impasta con la farina, metà dell'olio e il sale per 10 minuti.",
+    "Lascia lievitare l'impasto coperto per almeno due ore.",
+    "Dividilo in due e stendilo in due teglie unte con un filo d'olio.",
+    "Cuoci le patatine in forno o in friggitrice ad aria come indicato sulla confezione, ma un paio di minuti in meno.",
+    "Distribuisci la mozzarella a pezzetti e i würstel a rondelle, con l'olio rimasto.",
+    "Cuoci in forno a 250 °C per 10 minuti, aggiungi le patatine e cuoci altri 5 minuti."
+   ]
+  },
+  {
+   "id": "sys:pizza_funghi_salsiccia",
+   "titolo": "Pizza bianca funghi e salsiccia",
+   "categoria": "piatto_unico",
+   "cucina": "italiana",
+   "provenienza": null,
+   "porzioni": 4,
+   "minuti_totali": 180,
+   "difficolta": 2,
+   "conservazione": "pizza_torte_salate",
+   "mesi": null,
+   "allergeni_dichiarati": [],
+   "ingredienti": [
+    {
+     "ingrediente_id": "ing:farina",
+     "quantita": 500,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Farina 00"
+    },
+    {
+     "ingrediente_id": "ing:acqua",
+     "quantita": 300,
+     "unita": "ml",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Acqua"
+    },
+    {
+     "ingrediente_id": "ing:lievito_birra",
+     "quantita": 10,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Lievito di birra"
+    },
+    {
+     "ingrediente_id": "ing:olio_evo",
+     "quantita": 40,
+     "unita": "ml",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Olio extravergine d'oliva"
+    },
+    {
+     "ingrediente_id": "ing:sale",
+     "quantita": 10,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Sale"
+    },
+    {
+     "ingrediente_id": "ing:mozzarella",
+     "quantita": 300,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Mozzarella"
+    },
+    {
+     "ingrediente_id": "ing:funghi",
+     "quantita": 250,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Funghi champignon"
+    },
+    {
+     "ingrediente_id": "ing:salsiccia",
+     "quantita": 250,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Salsiccia"
+    },
+    {
+     "ingrediente_id": "ing:prezzemolo",
+     "quantita": 5,
+     "unita": "g",
+     "qb": false,
+     "opzionale": true,
+     "testo": "Prezzemolo"
+    }
+   ],
+   "passi": [
+    "Sciogli il lievito nell'acqua, impasta con la farina, metà dell'olio e il sale per 10 minuti.",
+    "Lascia lievitare l'impasto coperto per almeno due ore.",
+    "Dividilo in due e stendilo in due teglie unte con un filo d'olio.",
+    "Pulisci i funghi e tagliali a fettine; spella la salsiccia e sbriciolala.",
+    "Distribuisci la mozzarella a pezzetti, poi funghi e salsiccia; condisci con l'olio rimasto e un pizzico di sale.",
+    "Cuoci in forno a 250 °C per 15 minuti e completa con il prezzemolo tritato."
+   ]
+  },
+  {
+   "id": "sys:pizza_zucchine",
+   "titolo": "Pizza bianca con le zucchine",
+   "categoria": "piatto_unico",
+   "cucina": "italiana",
+   "provenienza": null,
+   "porzioni": 4,
+   "minuti_totali": 180,
+   "difficolta": 2,
+   "conservazione": "pizza_torte_salate",
+   "mesi": [
+    5,
+    6,
+    7,
+    8,
+    9
+   ],
+   "allergeni_dichiarati": [],
+   "ingredienti": [
+    {
+     "ingrediente_id": "ing:farina",
+     "quantita": 500,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Farina 00"
+    },
+    {
+     "ingrediente_id": "ing:acqua",
+     "quantita": 300,
+     "unita": "ml",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Acqua"
+    },
+    {
+     "ingrediente_id": "ing:lievito_birra",
+     "quantita": 10,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Lievito di birra"
+    },
+    {
+     "ingrediente_id": "ing:olio_evo",
+     "quantita": 40,
+     "unita": "ml",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Olio extravergine d'oliva"
+    },
+    {
+     "ingrediente_id": "ing:sale",
+     "quantita": 10,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Sale"
+    },
+    {
+     "ingrediente_id": "ing:mozzarella",
+     "quantita": 300,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Mozzarella"
+    },
+    {
+     "ingrediente_id": "ing:zucchina",
+     "quantita": 400,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Zucchine"
+    },
+    {
+     "ingrediente_id": "ing:parmigiano",
+     "quantita": 30,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Parmigiano Reggiano"
+    }
+   ],
+   "passi": [
+    "Sciogli il lievito nell'acqua, impasta con la farina, metà dell'olio e il sale per 10 minuti.",
+    "Lascia lievitare l'impasto coperto per almeno due ore.",
+    "Dividilo in due e stendilo in due teglie unte con un filo d'olio.",
+    "Lava le zucchine e tagliale a rondelle sottili.",
+    "Distribuisci la mozzarella a pezzetti e le zucchine; condisci con l'olio rimasto, un pizzico di sale e il parmigiano grattugiato.",
+    "Cuoci in forno a 250 °C per 15 minuti."
+   ]
+  },
+  {
+   "id": "sys:pizza_zucchine_salsiccia",
+   "titolo": "Pizza bianca zucchine e salsiccia",
+   "categoria": "piatto_unico",
+   "cucina": "italiana",
+   "provenienza": null,
+   "porzioni": 4,
+   "minuti_totali": 180,
+   "difficolta": 2,
+   "conservazione": "pizza_torte_salate",
+   "mesi": [
+    5,
+    6,
+    7,
+    8,
+    9
+   ],
+   "allergeni_dichiarati": [],
+   "ingredienti": [
+    {
+     "ingrediente_id": "ing:farina",
+     "quantita": 500,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Farina 00"
+    },
+    {
+     "ingrediente_id": "ing:acqua",
+     "quantita": 300,
+     "unita": "ml",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Acqua"
+    },
+    {
+     "ingrediente_id": "ing:lievito_birra",
+     "quantita": 10,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Lievito di birra"
+    },
+    {
+     "ingrediente_id": "ing:olio_evo",
+     "quantita": 40,
+     "unita": "ml",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Olio extravergine d'oliva"
+    },
+    {
+     "ingrediente_id": "ing:sale",
+     "quantita": 10,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Sale"
+    },
+    {
+     "ingrediente_id": "ing:mozzarella",
+     "quantita": 300,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Mozzarella"
+    },
+    {
+     "ingrediente_id": "ing:zucchina",
+     "quantita": 300,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Zucchine"
+    },
+    {
+     "ingrediente_id": "ing:salsiccia",
+     "quantita": 250,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Salsiccia"
+    }
+   ],
+   "passi": [
+    "Sciogli il lievito nell'acqua, impasta con la farina, metà dell'olio e il sale per 10 minuti.",
+    "Lascia lievitare l'impasto coperto per almeno due ore.",
+    "Dividilo in due e stendilo in due teglie unte con un filo d'olio.",
+    "Lava le zucchine e tagliale a rondelle sottili; spella la salsiccia e sbriciolala.",
+    "Distribuisci la mozzarella a pezzetti, poi zucchine e salsiccia; condisci con l'olio rimasto e un pizzico di sale.",
+    "Cuoci in forno a 250 °C per 15 minuti."
+   ]
+  },
+  {
+   "id": "sys:pizza_zucchine_funghi",
+   "titolo": "Pizza bianca zucchine e funghi",
+   "categoria": "piatto_unico",
+   "cucina": "italiana",
+   "provenienza": null,
+   "porzioni": 4,
+   "minuti_totali": 180,
+   "difficolta": 2,
+   "conservazione": "pizza_torte_salate",
+   "mesi": [
+    5,
+    6,
+    7,
+    8,
+    9
+   ],
+   "allergeni_dichiarati": [],
+   "ingredienti": [
+    {
+     "ingrediente_id": "ing:farina",
+     "quantita": 500,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Farina 00"
+    },
+    {
+     "ingrediente_id": "ing:acqua",
+     "quantita": 300,
+     "unita": "ml",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Acqua"
+    },
+    {
+     "ingrediente_id": "ing:lievito_birra",
+     "quantita": 10,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Lievito di birra"
+    },
+    {
+     "ingrediente_id": "ing:olio_evo",
+     "quantita": 40,
+     "unita": "ml",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Olio extravergine d'oliva"
+    },
+    {
+     "ingrediente_id": "ing:sale",
+     "quantita": 10,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Sale"
+    },
+    {
+     "ingrediente_id": "ing:mozzarella",
+     "quantita": 300,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Mozzarella"
+    },
+    {
+     "ingrediente_id": "ing:zucchina",
+     "quantita": 300,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Zucchine"
+    },
+    {
+     "ingrediente_id": "ing:funghi",
+     "quantita": 200,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Funghi champignon"
+    }
+   ],
+   "passi": [
+    "Sciogli il lievito nell'acqua, impasta con la farina, metà dell'olio e il sale per 10 minuti.",
+    "Lascia lievitare l'impasto coperto per almeno due ore.",
+    "Dividilo in due e stendilo in due teglie unte con un filo d'olio.",
+    "Lava le zucchine e tagliale a rondelle sottili; pulisci i funghi e tagliali a fettine.",
+    "Distribuisci la mozzarella a pezzetti, poi zucchine e funghi; condisci con l'olio rimasto e un pizzico di sale.",
+    "Cuoci in forno a 250 °C per 15 minuti."
+   ]
+  },
+  {
+   "id": "sys:pizza_zucca_salsiccia",
+   "titolo": "Pizza bianca zucca e salsiccia",
+   "categoria": "piatto_unico",
+   "cucina": "italiana",
+   "provenienza": null,
+   "porzioni": 4,
+   "minuti_totali": 180,
+   "difficolta": 2,
+   "conservazione": "pizza_torte_salate",
+   "mesi": [
+    9,
+    10,
+    11,
+    12,
+    1
+   ],
+   "allergeni_dichiarati": [],
+   "ingredienti": [
+    {
+     "ingrediente_id": "ing:farina",
+     "quantita": 500,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Farina 00"
+    },
+    {
+     "ingrediente_id": "ing:acqua",
+     "quantita": 300,
+     "unita": "ml",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Acqua"
+    },
+    {
+     "ingrediente_id": "ing:lievito_birra",
+     "quantita": 10,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Lievito di birra"
+    },
+    {
+     "ingrediente_id": "ing:olio_evo",
+     "quantita": 40,
+     "unita": "ml",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Olio extravergine d'oliva"
+    },
+    {
+     "ingrediente_id": "ing:sale",
+     "quantita": 10,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Sale"
+    },
+    {
+     "ingrediente_id": "ing:mozzarella",
+     "quantita": 300,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Mozzarella"
+    },
+    {
+     "ingrediente_id": "ing:zucca",
+     "quantita": 400,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Zucca"
+    },
+    {
+     "ingrediente_id": "ing:salsiccia",
+     "quantita": 250,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Salsiccia"
+    },
+    {
+     "ingrediente_id": "ing:rosmarino",
+     "quantita": 2,
+     "unita": "g",
+     "qb": false,
+     "opzionale": true,
+     "testo": "Rosmarino"
+    }
+   ],
+   "passi": [
+    "Sciogli il lievito nell'acqua, impasta con la farina, metà dell'olio e il sale per 10 minuti.",
+    "Lascia lievitare l'impasto coperto per almeno due ore.",
+    "Dividilo in due e stendilo in due teglie unte con un filo d'olio.",
+    "Sbuccia la zucca, tagliala a fettine sottili; spella la salsiccia e sbriciolala.",
+    "Distribuisci la mozzarella a pezzetti, poi zucca e salsiccia; condisci con l'olio rimasto, un pizzico di sale e il rosmarino.",
+    "Cuoci in forno a 250 °C per 15–20 minuti, finché la zucca è morbida."
+   ]
   }
  ]
 }
