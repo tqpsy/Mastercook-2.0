@@ -8,6 +8,8 @@
  */
 import { valutaPerFamiglia, type Verifica, type Vincolo } from './compatibilita';
 import { gustiPerPiatto, type Gusto, type Persona } from './menu';
+import type { Categoria } from '../catalogo/tipi';
+import { haPrincipale, type Principale } from './principale';
 import { copertura, type Indice, principali, type Ricetta } from './ricette';
 
 /** Le categorie di ricetta adatte a ogni pasto. Gli altri pasti (spuntino…) non si propongono. */
@@ -50,9 +52,15 @@ export interface Candidata {
   tipo: string;
 }
 
+/** Filtri scelti a mano: una categoria di ricetta (al posto di quelle del pasto) e l'ingrediente principale. */
+export interface FiltroProposte {
+  categoria?: Categoria | null;
+  principale?: Principale | null;
+}
+
 /** Le ricette proponibili per un pasto, dalla migliore. Solo ricette adatte a tutti e senza «non mi piace». */
-export function candidate(indice: Indice, pasto: string, c: ContestoProposte): Candidata[] {
-  const categorie = RICETTE_PER_PASTO[pasto];
+export function candidate(indice: Indice, pasto: string, c: ContestoProposte, filtro: FiltroProposte = {}): Candidata[] {
+  const categorie = filtro.categoria ? [filtro.categoria] : RICETTE_PER_PASTO[pasto];
   if (!categorie) return [];
   const casa = new Set(c.inCasa);
   const urgenti = indice.estendi(c.urgenti.filter((id) => id !== 'ing:avanzo'));
@@ -61,6 +69,7 @@ export function candidate(indice: Indice, pasto: string, c: ContestoProposte): C
   const esito: Candidata[] = [];
   for (const r of indice.ricette) {
     if (r.archiviata || !categorie.includes(r.categoria)) continue;
+    if (!haPrincipale(indice, r, filtro.principale)) continue;
     if (valutaPerFamiglia(indice, r, c.persone, c.vincoli, c.verifiche).esito !== 'adatta') continue;
     const gusti = gustiPerPiatto(indice, r, c.persone, c.gusti);
     if (gusti.some((g) => g.valore === 'non_piace')) continue;
