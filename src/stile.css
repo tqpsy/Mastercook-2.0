@@ -736,4 +736,10 @@ button.etichetta {
 .avviso-uscita.visibile {
   opacity: 1;
   transform: translate(-50%, 0);
+.spunte input[type='checkbox'] {
+  width: 24px;
+  height: 24px;
+  min-height: 0;
+  flex: none;
+  margin: 0;
 }

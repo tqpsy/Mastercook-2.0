@@ -463,6 +463,13 @@ describe('esportazione e ripristino dei «va bene» (versione 8)', () => {
       await banco.sql(`select m.nome, v.ricetta_id, v.versione_ricetta from ricetta_verificata v join membro m on m.id = v.membro_id where v.famiglia_id = $1`, [nuova]),
     ).toEqual([{ nome: m.nome, ricetta_id: 'sys:carbonara', versione_ricetta: 1 }]);
 
+    // Il «non va bene» torna com'era.
+    await u.applica(comando('verifica_ricetta', famiglia, { id: randomUUID(), membro_id: m.id, ricetta_id: 'sys:carbonara', versione_ricetta: 1, va_bene: false, scelta: 'non_va_bene' }));
+    const conNo = await esporta(u, famiglia);
+    const altra = randomUUID();
+    expect((await u.applica(comando('ripristina_famiglia', altra, { file: JSON.parse(JSON.stringify(conNo)) }))).esito).toBe('applicato');
+    expect(await banco.sql(`select va_bene from ricetta_verificata where famiglia_id = $1 and eliminato_il is null`, [altra])).toEqual([{ va_bene: false }]);
+
     const v7 = JSON.parse(JSON.stringify(file));
     v7.versione_schema = 7;
     for (const t of ['ricetta_verificata', 'pasto_fisso']) {
