@@ -286,7 +286,7 @@ test('foto del frigo: prima l’avviso su Google, poi si controlla e in casa ent
   await expect(chiave).toContainText('Nessuna chiave');
   await page.getByLabel('Chiave Gemini della famiglia').fill('AIzaProva_chiave-della-famiglia-1234');
   await page.getByRole('button', { name: 'Salva la chiave' }).click();
-  await expect(chiave).toContainText('Attiva la chiave della famiglia (…1234)');
+  await expect(chiave).toContainText('Chiave della famiglia inserita e attiva (finisce con …1234)');
   await expect(page.getByLabel('Chiave Gemini della famiglia')).toHaveValue('');
 
   await page.getByRole('button', { name: 'Casa', exact: true }).click();

@@ -397,7 +397,7 @@ function ChiaveGemini({ amministratore }: { amministratore: boolean }) {
       : stato === null
         ? 'Senza rete non posso controllare.'
         : stato.propria
-          ? `Attiva la chiave della famiglia (…${stato.finale}).`
+          ? `✅ Chiave della famiglia inserita e attiva (finisce con …${stato.finale}).`
           : stato.condivisa
             ? 'Usa la chiave di chi gestisce l’app. Puoi mettere quella della famiglia.'
             : 'Nessuna chiave: la foto del frigo non funziona finché non ne inserisci una.';
@@ -415,8 +415,15 @@ function ChiaveGemini({ amministratore }: { amministratore: boolean }) {
               giorno si spendono pochi centesimi al mese.
             </p>
             <label className="campo">
-              <span>Chiave Gemini della famiglia</span>
-              <input className="dato" type="password" autoComplete="off" value={nuova} onChange={(e) => setNuova(e.target.value)} placeholder="Incolla qui la chiave" />
+              <span>{stato?.propria ? 'Chiave Gemini della famiglia (già inserita: per cambiarla incolla la nuova)' : 'Chiave Gemini della famiglia'}</span>
+              <input
+                className="dato"
+                type="password"
+                autoComplete="off"
+                value={nuova}
+                onChange={(e) => setNuova(e.target.value)}
+                placeholder={stato?.propria ? `✅ ${'*'.repeat(24)}${stato.finale ?? ''}` : 'Incolla qui la chiave'}
+              />
             </label>
             <div className="riga" style={{ flexWrap: 'wrap' }}>
               <button className="bottone primario" disabled={attendi || !nuova.trim()} onClick={() => void salva(nuova)}>
