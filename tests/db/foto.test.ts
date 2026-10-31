@@ -57,6 +57,10 @@ describe('chiave Gemini della famiglia', () => {
     const imposta = (u: typeof a, c: string | null) => u.sql(`select public.imposta_chiave_gemini($1, $2) as r`, [famiglia, c]).then((x) => x[0].r);
 
     expect(await imposta(a, 'non è una chiave')).toMatchObject({ esito: 'rifiutato', dettaglio: { motivo: 'chiave_non_valida' } });
+    // Le chiavi nuove di AI Studio hanno anche punti e sono più lunghe; spazi e a capo copiati dal telefono si tolgono.
+    const nuova = 'AQ.Ab8RN6Kprova_chiave-nuova.di-AI-Studio_lunga-piu-di-quaranta-caratteri-5432';
+    expect(await imposta(a, ` ${nuova.slice(0, 30)}\n${nuova.slice(30)} `)).toMatchObject({ esito: 'applicato', dettaglio: { propria: true, finale: '5432' } });
+    expect((await banco.sql(`select public.chiave_gemini_per_foto($1) as r`, [famiglia]))[0].r).toEqual({ chiave: nuova, condivisa: false });
     expect(await imposta(a, chiave)).toEqual({ esito: 'applicato', dettaglio: { propria: true, finale: '9876', condivisa: false } });
 
     // Dal telefono: niente lettura diretta, niente funzione del server.
