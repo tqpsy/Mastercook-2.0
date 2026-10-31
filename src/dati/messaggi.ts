@@ -28,6 +28,7 @@ const MOTIVI: Record<string, string> = {
   ricetta_non_trovata: 'La ricetta di partenza non esiste più.',
   ricetta_senza_ingredienti: 'Una ricetta ha bisogno di almeno un ingrediente.',
   ricetta_senza_passaggi: 'Una ricetta ha bisogno di almeno un passaggio.',
+  base_non_valida: 'Dentro una ricetta si può mettere solo una base (come la besciamella) che non ne contiene altre.',
   ingrediente_non_trovato: 'L’ingrediente non esiste più.',
   lotto_non_trovato: 'Questo prodotto non è più in casa.',
   lotto_chiuso: 'Questo prodotto è già finito.',

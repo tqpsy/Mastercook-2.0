@@ -36,6 +36,9 @@ export interface RigaRicetta {
   testo: string | null;
   ordine: number;
   versione?: number;
+  /** Riga che viene da una base collegata (la besciamella…): la ricetta della base e quante dosi. */
+  da_ricetta_id?: string | null;
+  dosi?: number | null;
 }
 
 export interface Passo {
@@ -145,6 +148,8 @@ export function ricetteDellaFamiglia(ricette: RigaDb[], righe: RigaDb[], passi: 
     testo: (r.testo as string | null) ?? null,
     ordine: Number(r.ordine ?? 0),
     versione: Number(r.versione ?? 1),
+    da_ricetta_id: (r.da_ricetta_id as string | null) ?? null,
+    dosi: numero(r.dosi),
   }));
   const pas = perRicetta(passi, (r) => ({ id: r.id, ordine: Number(r.ordine ?? 0), testo: String(r.testo), versione: Number(r.versione ?? 1) }));
   return ricette.map((r) => ({
