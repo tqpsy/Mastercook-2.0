@@ -130,3 +130,20 @@ describe('«va bene» della famiglia', () => {
     expect(valutaPerFamiglia(indice, r, [{ id: 'm', nome: 'Anna' }], uova, ver(r.id)).esito).toBe('non_adatta');
   });
 });
+
+describe('«non va bene» della famiglia', () => {
+  const no = (ricetta_id: string, versione_ricetta = 1) => [{ membro_id: 'm', ricetta_id, versione_ricetta, va_bene: false }];
+  it('chiude il dubbio come ⛔, per la versione segnata', () => {
+    const r = ricetta('sys:spaghetti_aglio_olio');
+    const nichel = [v('ing:nichel', { tipo: 'intolleranza' })];
+    expect(valutaPerVincoli(indice, r, nichel).esito).toBe('da_verificare');
+    const e = valutaPerFamiglia(indice, r, [{ id: 'm', nome: 'Anna' }], nichel, no(r.id));
+    expect(e.esito).toBe('non_adatta');
+    expect(e.perMembro[0].valutazione).toMatchObject({ scartata: true, motivi: ['segnata «non va bene» da voi'] });
+    expect(valutaPerFamiglia(indice, r, [{ id: 'm', nome: 'Anna' }], nichel, no(r.id, 2)).esito).toBe('da_verificare');
+  });
+  it('una ricetta senza dubbi resta adatta', () => {
+    const r = ricetta('sys:spaghetti_aglio_olio');
+    expect(valutaPerFamiglia(indice, r, [{ id: 'm', nome: 'Anna' }], [v('all:arachidi')], no(r.id)).esito).toBe('adatta');
+  });
+});
