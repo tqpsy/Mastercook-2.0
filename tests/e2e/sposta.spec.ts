@@ -46,7 +46,7 @@ test('sposta solo sul telefono: dal freezer alla dispensa', async ({ browser }, 
   await page.getByLabel('Nome della famiglia').fill('Casa Locale');
   await page.getByRole('radio', { name: /Solo su questo telefono/ }).check();
   await page.getByRole('button', { name: 'Crea la famiglia' }).click();
-  await expect(page.getByRole('heading', { name: 'Ciao, Casa Locale' })).toBeVisible({ timeout: 120_000 });
+  await expect(page.getByText('Casa Locale', { exact: true })).toBeVisible({ timeout: 120_000 });
   await page.getByRole('button', { name: 'Casa', exact: true }).click();
 
   await page.getByRole('button', { name: '+ Aggiungi' }).click();

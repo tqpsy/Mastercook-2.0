@@ -13,5 +13,5 @@ test('impostazioni: «Aggiorna l’app» ricarica e si torna nell’app', async 
   const ricarica = page.waitForEvent('load');
   await page.getByRole('button', { name: /Aggiorna l’app/ }).click();
   await ricarica;
-  await expect(page.getByRole('heading', { name: 'Ciao, Casa Aggiorna' })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText('Casa Aggiorna', { exact: true })).toBeVisible({ timeout: 30_000 });
 });

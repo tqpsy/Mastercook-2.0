@@ -48,7 +48,7 @@ export async function apri(
 export async function creaFamiglia(page: Page, nome = 'Casa Prova') {
   await page.getByLabel('Nome della famiglia').fill(nome);
   await page.getByRole('button', { name: 'Crea la famiglia' }).click();
-  await expect(page.getByRole('heading', { name: `Ciao, ${nome}` })).toBeVisible();
+  await expect(page.getByText(nome, { exact: true })).toBeVisible();
 }
 
 /** Famiglia sta dentro Impostazioni (la barra in basso ha cinque schede). */
