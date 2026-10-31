@@ -208,13 +208,13 @@ export function Menu() {
   return (
     <>
       <div className="riga spazio" style={{ marginBottom: 8 }}>
-        <button className="bottone piccolo" aria-label="Settimana prima" onClick={() => setLun(piuGiorni(lun, -7))}>
+        <button className="bottone piccolo" aria-label="Settimana prima" style={{ fontSize: '1.5rem' }} onClick={() => setLun(piuGiorni(lun, -7))}>
           ‹
         </button>
         <h2 style={{ margin: 0, textAlign: 'center' }} className="cresce" aria-live="polite">
           {nomeSettimana(lun)}
         </h2>
-        <button className="bottone piccolo" aria-label="Settimana dopo" onClick={() => setLun(piuGiorni(lun, 7))}>
+        <button className="bottone piccolo" aria-label="Settimana dopo" style={{ fontSize: '1.5rem' }} onClick={() => setLun(piuGiorni(lun, 7))}>
           ›
         </button>
       </div>

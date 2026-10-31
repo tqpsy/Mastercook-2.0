@@ -21,8 +21,8 @@ export default defineConfig({
         short_name: 'Mastercook',
         description: 'Pasti, spesa, casa e scadenze della famiglia',
         lang: 'it',
-        theme_color: '#2f6b4f',
-        background_color: '#fbf7f0',
+        theme_color: '#12656f',
+        background_color: '#12656f',
         display: 'standalone',
         start_url: '/Mastercook-2.0/',
         scope: '/Mastercook-2.0/',
@@ -37,6 +37,8 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         // Il database delle famiglie tenute sul telefono (PGlite, circa 17 MB): non si scarica in anticipo per tutti,
         // ma la prima volta che serve resta in cache, così poi funziona anche senza rete.
+        // I caratteri (Outfit e Figtree) stanno nell'app: niente richieste a Google, e funzionano anche senza rete.
+        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         globIgnores: ['**/pglite*', '**/initdb*', '**/motore.worker*'],
         runtimeCaching: [
           {
