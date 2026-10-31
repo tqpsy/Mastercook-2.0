@@ -21,8 +21,9 @@ export default defineConfig({
         short_name: 'Mastercook',
         description: 'Pasti, spesa, casa e scadenze della famiglia',
         lang: 'it',
-        theme_color: '#12656f',
-        background_color: '#12656f',
+        // Colore della barra di sistema in basso su Android (app installata): antracite come la barra delle schede.
+        theme_color: '#2b2c2e',
+        background_color: '#2b2c2e',
         display: 'standalone',
         start_url: '/Mastercook-2.0/',
         scope: '/Mastercook-2.0/',
