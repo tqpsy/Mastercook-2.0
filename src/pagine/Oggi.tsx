@@ -1,16 +1,20 @@
 import { useState } from 'react';
 import { righeAttive, useFamiglia, useVista } from '../dati/contesto';
 import { useIndice } from '../dati/indice';
-import { type ConfermaPasto as Conferma, daConfermare, NOME_ESITO, ricettePerUrgenti } from '../dominio/consumi';
-import type { PortataMenu } from '../dominio/menu';
-import type { Indice } from '../dominio/ricette';
-import { daUsarePresto, oggi, piuGiorni } from '../dominio/scadenze';
+import { valutaPerFamiglia } from '../dominio/compatibilita';
+import { type ConfermaPasto as Conferma, daConfermare, NOME_ESITO } from '../dominio/consumi';
+import type { CategoriaPasto, Eccezione, PortataMenu } from '../dominio/menu';
+import type { Indice, Ricetta } from '../dominio/ricette';
+import { oggi, piuGiorni } from '../dominio/scadenze';
+import { spesaDelGiorno, type BisognoDelGiorno } from '../dominio/spesa';
 import { formatta, formattaGiorno } from '../dominio/unita';
 import { Foglio } from '../ui/Foglio';
 import { Foto, riduciFoto } from '../ui/Foto';
-import { EtichettaData, useLotti } from './Casa';
+import { useLotti } from './Casa';
 import { ConfermaPasto, useConferme } from './ConfermaPasto';
-import { useOggiSiMangia, useProlungaFissi } from './Menu';
+import { type DatiMenu, descrivi, useDatiMenu, useProlungaFissi } from './Menu';
+import { ICONA_ESITO, motiviInBreve, SchedaRicetta, useCommensali, useInCasa } from './Ricette';
+import { useDatiSpesa } from './Spesa';
 
 const titoloDi = (indice: Indice, p: PortataMenu) => (p.ricetta_id ? indice.perId.get(p.ricetta_id)?.titolo : null) ?? p.testo ?? 'Piatto';
 
@@ -78,72 +82,78 @@ function StatoPasto({ titolo, conferma, apri, portata }: { titolo: string; confe
   );
 }
 
+/** La ricetta aperta da Oggi: quale piatto, per chi e per quante porzioni. */
+interface Aperta {
+  ricetta: Ricetta;
+  porzioni: number;
+  pasto: string;
+  /** Chi mangia questo piatto (id dei membri). */
+  chi: string[];
+}
+
+const SEMPRE = new Set(['colazione', 'pranzo', 'merenda', 'cena']);
+const mezze = (n: number) => Math.max(0.5, Math.round(n * 2) / 2);
+const porzioniTesto = (n: number) => (n === 1 ? '1 porzione' : `${n.toLocaleString('it-IT')} porzioni`);
+
 /**
- * Oggi: cosa si mangia (e confermarlo in un tocco), i pasti ancora da confermare, cosa usare presto.
+ * Oggi: il menu della giornata pasto per pasto (colazione, pranzo, merenda, cena…), con i piatti a parte
+ * di chi mangia altro (bambini piccoli, intolleranze) e gli avvisi per chi ha esigenze. Toccando un piatto
+ * si apre la ricetta; la spesa mostra solo ciò che manca per i piatti di oggi.
  */
-export function Oggi({ vai }: { vai: (scheda: 'menu' | 'spesa' | 'ricette' | 'casa') => void }) {
+export function Oggi({ vai }: { vai: (scheda: 'spesa') => void }) {
   const vista = useVista();
   const indice = useIndice(vista);
+  const dati = useDatiMenu(vista);
   const lotti = useLotti();
   const famiglia = righeAttive(vista, 'famiglia')[0];
-  const persone = righeAttive(vista, 'membro').filter((m) => !m.archiviato).length;
   const giorno = oggi();
-  const presto = daUsarePresto(lotti, giorno);
-  const { piatti, dati } = useOggiSiMangia();
   useProlungaFissi(piuGiorni(giorno, 13));
   const { attive } = useConferme(vista);
   const [aperto, setAperto] = useState<string | null>(null);
+  const [ricetta, setRicetta] = useState<Aperta | null>(null);
+  const [spesa, setSpesa] = useState(false);
+  const diOggi = dati.portate.filter((p) => p.data === giorno);
+  // Colazione, pranzo, merenda e cena ci sono sempre; gli altri pasti se accesi o se oggi hanno un piatto.
+  const pasti = dati.categorie.filter((c) => SEMPRE.has(c.valore) || c.attiva || diOggi.some((p) => p.categoria === c.valore));
   const arretrati = daConfermare(dati.portate, attive, giorno).filter((p) => p.data < giorno);
   const portataAperta = aperto ? dati.portate.find((p) => p.id === aperto) : undefined;
-  const { esegui } = useFamiglia();
-  const proposte = indice
-    ? ricettePerUrgenti(
-        indice,
-        presto.map((l) => l.ingrediente_id),
-        lotti.map((l) => l.ingrediente_id),
-        dati.persone,
-        dati.vincoli,
-        3,
-        dati.verifiche,
-      )
-    : [];
-  const cenaOggi = dati.portate.some((p) => p.data === giorno && p.categoria === 'cena');
-  const daComprare = righeAttive(vista, 'voce_spesa').filter((v) => v.stato === 'da_acquistare').length;
+  const daMangiare = diOggi.filter((p) => !attive.has(p.id));
+  const bisogni = indice ? spesaDelGiorno(indice, daMangiare, dati.persone, dati.eccezioni, dati.portate, dati.ospiti, lotti) : [];
+  const mancano = bisogni.filter((b) => b.manca > 0).length;
   const data = new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
+
   return (
     <>
-      <p className="tenue" style={{ textTransform: 'capitalize' }}>
+      <p className="tenue" style={{ textTransform: 'capitalize', marginBottom: 0 }}>
         {data}
       </p>
-      <h2>{famiglia ? `Ciao, ${String(famiglia.nome)}` : 'Ciao'}</h2>
+      <div className="riga spazio" style={{ flexWrap: 'wrap', marginBottom: 12 }}>
+        <h2 style={{ margin: 0 }}>{famiglia ? `Ciao, ${String(famiglia.nome)}` : 'Ciao'}</h2>
+        <button className="bottone piccolo" onClick={() => setSpesa(true)} disabled={!indice}>
+          🛒 Lista della spesa{mancano ? ` (${mancano})` : ''}
+        </button>
+      </div>
 
-      <section className="scheda" aria-label="Oggi si mangia">
-        <h3 style={{ marginTop: 0 }}>Oggi si mangia</h3>
-        {piatti.length === 0 ? (
-          <p className="tenue" style={{ margin: 0 }}>
-            Niente in menu per oggi.
-          </p>
+      <section aria-label="Oggi si mangia">
+        {!indice ? (
+          <p className="tenue">Sto caricando il menu…</p>
         ) : (
-          <ul className="elenco">
-            {piatti.map(({ categoria, portata, titolo }) => (
-              <li key={portata.id} className="riga" style={{ flexWrap: 'wrap' }}>
-                <span aria-hidden>{categoria.emoji}</span>
-                <span className="cresce">
-                  {titolo} <span className="tenue">· {categoria.nome.toLowerCase()}</span>
-                </span>
-                <StatoPasto titolo={titolo} portata={portata} conferma={attive.get(portata.id)} apri={() => setAperto(portata.id)} />
-              </li>
+          <>
+            {diOggi.length === 0 && <div className="avviso info">Niente in menu per oggi: lo prepari dalla scheda Menu qui sotto.</div>}
+            {pasti.map((c) => (
+              <Pasto
+                key={c.valore}
+                indice={indice}
+                dati={dati}
+                categoria={c}
+                portate={diOggi.filter((p) => p.categoria === c.valore)}
+                attive={attive}
+                apriConferma={setAperto}
+                apriRicetta={setRicetta}
+              />
             ))}
-          </ul>
+          </>
         )}
-        <div className="riga" style={{ marginTop: 12, flexWrap: 'wrap' }}>
-          <button className="bottone piccolo" onClick={() => vai('menu')}>
-            Apri il menu della settimana
-          </button>
-          <button className="bottone piccolo" onClick={() => vai('spesa')}>
-            Lista della spesa{daComprare ? ` (${daComprare})` : ''}
-          </button>
-        </div>
       </section>
 
       {indice && arretrati.length > 0 && (
@@ -173,69 +183,6 @@ export function Oggi({ vai }: { vai: (scheda: 'menu' | 'spesa' | 'ricette' | 'ca
         </section>
       )}
 
-      <section className="scheda" aria-label="Da usare presto">
-        <h3 style={{ marginTop: 0 }}>Da usare presto</h3>
-        {presto.length === 0 ? (
-          <p className="tenue" style={{ margin: 0 }}>
-            {lotti.length ? 'Niente in scadenza nei prossimi giorni.' : 'Aggiungi ciò che hai in frigo, freezer e dispensa per vedere qui cosa usare prima.'}
-          </p>
-        ) : (
-          <ul className="elenco">
-            {presto.slice(0, 5).map((l) => {
-              const ing = indice?.ingrediente(l.ingrediente_id);
-              return (
-                <li key={l.id} className="riga">
-                  <span aria-hidden>{ing?.emoji}</span>
-                  <span className="cresce">
-                    {l.nome ?? ing?.nome} <span className="tenue">· {formatta({ valore: l.quantita, unita: l.unita })}</span>
-                  </span>
-                  <EtichettaData lotto={l} giorno={giorno} />
-                </li>
-              );
-            })}
-          </ul>
-        )}
-        {proposte.length > 0 && (
-          <>
-            <h4 style={{ margin: '12px 0 4px' }}>Ricette che li usano</h4>
-            <ul className="elenco" aria-label="Ricette che li usano">
-              {proposte.map(({ ricetta, usa, presenti, totali }) => (
-                <li key={ricetta.id} className="riga" style={{ flexWrap: 'wrap' }}>
-                  <span className="cresce">
-                    {ricetta.titolo}
-                    <span className="tenue" style={{ display: 'block', fontSize: '0.85rem' }}>
-                      usa {usa.map((id) => indice?.nome(id).toLowerCase()).join(', ')} · {presenti} su {totali} ingredienti in casa
-                    </span>
-                  </span>
-                  {!cenaOggi && (
-                    <button
-                      className="bottone piccolo"
-                      aria-label={`Metti a cena stasera: ${ricetta.titolo}`}
-                      onClick={() => esegui('aggiungi_portata', { id: crypto.randomUUID(), data: giorno, categoria: 'cena', ricetta_id: ricetta.id, ordine: 0 })}
-                    >
-                      Stasera
-                    </button>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
-        <div className="riga" style={{ marginTop: 12, flexWrap: 'wrap' }}>
-          <button className="bottone piccolo" onClick={() => vai('casa')}>
-            Vedi cosa c’è
-          </button>
-          <button className="bottone piccolo" onClick={() => vai('ricette')}>
-            Cerca una ricetta
-          </button>
-        </div>
-      </section>
-
-      <div className="scheda">
-        <p style={{ margin: 0 }}>
-          {persone === 1 ? 'C’è 1 persona' : `Ci sono ${persone} persone`} in famiglia. Allergie ed esigenze di ognuno, nella scheda <strong>Famiglia</strong>, decidono quali ricette sono adatte.
-        </p>
-      </div>
       {indice && portataAperta && (
         <ConfermaPasto
           indice={indice}
@@ -246,6 +193,259 @@ export function Oggi({ vai }: { vai: (scheda: 'menu' | 'spesa' | 'ricette' | 'ca
           chiudi={() => setAperto(null)}
         />
       )}
+      {indice && ricetta && <RicettaDiOggi indice={indice} dati={dati} aperta={ricetta} chiudi={() => setRicetta(null)} />}
+      {indice && spesa && (
+        <SpesaDiOggi
+          indice={indice}
+          bisogni={bisogni}
+          aMano={daMangiare.filter((p) => !p.ricetta_id && !p.avanzo_di).length}
+          chiudi={() => setSpesa(false)}
+          tutta={() => {
+            setSpesa(false);
+            vai('spesa');
+          }}
+        />
+      )}
     </>
+  );
+}
+
+/** Un pasto di oggi: i suoi piatti, chi mangia altro, gli avvisi per le esigenze e la conferma. */
+function Pasto({
+  indice,
+  dati,
+  categoria: c,
+  portate,
+  attive,
+  apriConferma,
+  apriRicetta,
+}: {
+  indice: Indice;
+  dati: DatiMenu;
+  categoria: CategoriaPasto;
+  portate: PortataMenu[];
+  attive: Map<string, Conferma>;
+  apriConferma: (id: string) => void;
+  apriRicetta: (a: Aperta) => void;
+}) {
+  return (
+    <section className="scheda" aria-label={c.nome}>
+      <h3 style={{ margin: '0 0 8px' }}>
+        <span aria-hidden>{c.emoji}</span> {c.nome}
+      </h3>
+      {portate.length === 0 ? (
+        <p className="tenue" style={{ margin: 0 }}>
+          Niente in menu.
+        </p>
+      ) : (
+        <ul className="elenco">
+          {portate.map((p) => (
+            <PiattoDiOggi key={p.id} indice={indice} dati={dati} portata={p} pasto={c.nome} conferma={attive.get(p.id)} apriConferma={() => apriConferma(p.id)} apriRicetta={apriRicetta} />
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function PiattoDiOggi({
+  indice,
+  dati,
+  portata: p,
+  pasto,
+  conferma,
+  apriConferma,
+  apriRicetta,
+}: {
+  indice: Indice;
+  dati: DatiMenu;
+  portata: PortataMenu;
+  pasto: string;
+  conferma?: Conferma;
+  apriConferma: () => void;
+  apriRicetta: (a: Aperta) => void;
+}) {
+  const d = descrivi(indice, dati, p);
+  const esito = d.valutazione?.esito;
+  const chi = dati.persone.filter((x) => !d.eccezioni.some((e) => e.membro_id === x.id)).map((x) => x.id);
+  // Un avanzo si apre sulla ricetta del piatto da cui viene.
+  const origine = p.avanzo_di ? dati.portate.find((x) => x.id === p.avanzo_di) : undefined;
+  const ricetta = d.ricetta ?? (origine?.ricetta_id ? indice.perId.get(origine.ricetta_id) : undefined);
+  // Gli avvisi di chi mangia il piatto principale e ha esigenze che il piatto non rispetta (o da controllare).
+  const avvisi = (d.valutazione?.perMembro ?? []).filter((m) => m.mangia === 'principale' && m.valutazione && m.valutazione.esito !== 'adatta');
+  const ospiti = dati.ospiti.find((o) => o.data === p.data && o.categoria === p.categoria && o.adulti + o.bambini > 0);
+  const contenuto = (
+    <>
+      <span>
+        {esito && esito !== 'adatta' && <span aria-label={NOME_ESITO_PIATTO[esito]}>{ICONA_ESITO[esito]} </span>}
+        <strong>{d.titolo}</strong>
+        {d.nonPiace.length > 0 && <span title={d.nonPiace.map((g) => `a ${g.nome} non piace ${g.cosa.toLowerCase()}`).join('; ')}> 🙅</span>}
+      </span>
+      <span className="tenue piccolo">
+        {porzioniTesto(d.porzioni)}
+        {p.avanzo_di && ' · avanzo'}
+        {d.dopo > 0 && ` · cucina anche ${d.dopo.toLocaleString('it-IT')} per i giorni dopo`}
+        {ospiti && ` · 👥 ${ospiti.adulti + ospiti.bambini} ospiti`}
+        {!ricetta && ' · senza ricetta'}
+      </span>
+    </>
+  );
+  return (
+    <li style={{ display: 'block' }}>
+      {ricetta ? (
+        <button
+          className={`piatto${esito ? ` ${esito}` : ''}`}
+          aria-label={`Ricetta: ${d.titolo}`}
+          onClick={() => apriRicetta({ ricetta, porzioni: mezze(d.porzioni + d.dopo), pasto, chi })}
+        >
+          {contenuto}
+        </button>
+      ) : (
+        <div className={`piatto${esito ? ` ${esito}` : ''}`} style={{ cursor: 'default' }}>
+          {contenuto}
+        </div>
+      )}
+      {(d.eccezioni.length > 0 || avvisi.length > 0) && (
+        <ul className="elenco varianti" aria-label={`Piatti a parte e avvisi: ${d.titolo}`}>
+          {d.eccezioni.map((e) => (
+            <Variante key={e.id} indice={indice} dati={dati} eccezione={e} pasto={pasto} apriRicetta={apriRicetta} />
+          ))}
+          {avvisi.map((m) => (
+            <li key={m.membro_id} className="tenue">
+              {ICONA_ESITO[m.valutazione!.esito]} <strong>{m.nome}</strong>: {motiviInBreve(m.valutazione!) || 'da controllare'}
+            </li>
+          ))}
+        </ul>
+      )}
+      <div style={{ marginTop: 4 }}>
+        <StatoPasto titolo={d.titolo} portata={p} conferma={conferma} apri={apriConferma} />
+      </div>
+    </li>
+  );
+}
+
+const NOME_ESITO_PIATTO = { adatta: 'adatto', da_verificare: 'da verificare', non_adatta: 'non adatto a qualcuno' } as const;
+
+/** Chi mangia altro (un piatto per il bambino piccolo, una versione senza lattosio…) o non c'è. */
+function Variante({ indice, dati, eccezione: e, pasto, apriRicetta }: { indice: Indice; dati: DatiMenu; eccezione: Eccezione; pasto: string; apriRicetta: (a: Aperta) => void }) {
+  const persona = dati.persone.find((x) => x.id === e.membro_id);
+  if (!persona) return null;
+  const icona = persona.porzione < 1 ? '🧒' : '🧑';
+  if (e.tipo === 'non_mangia')
+    return (
+      <li className="tenue">
+        <span aria-hidden>{icona}</span> {persona.nome} non c’è
+      </li>
+    );
+  const ricetta = e.ricetta_id ? indice.perId.get(e.ricetta_id) : undefined;
+  const titolo = ricetta?.titolo ?? e.testo ?? 'altro';
+  return (
+    <li>
+      <span aria-hidden>{icona}</span> {persona.nome} mangia{' '}
+      {ricetta ? (
+        <button className="link" aria-label={`Ricetta per ${persona.nome}: ${titolo}`} onClick={() => apriRicetta({ ricetta, porzioni: mezze(e.porzioni ?? persona.porzione), pasto, chi: [persona.id] })}>
+          {titolo}
+        </button>
+      ) : (
+        <strong>{titolo}</strong>
+      )}
+    </li>
+  );
+}
+
+/** La ricetta di un piatto di oggi, per le porzioni del pasto e valutata per chi lo mangia. */
+function RicettaDiOggi({ indice, dati, aperta, chiudi }: { indice: Indice; dati: DatiMenu; aperta: Aperta; chiudi: () => void }) {
+  const inCasa = useInCasa();
+  const { membri, vincoli, verifiche } = useCommensali();
+  const loro = membri.filter((m) => aperta.chi.includes(m.id));
+  const conVincoli = vincoli.some((v) => aperta.chi.includes(v.membro_id));
+  const nomi = loro.map((m) => m.nome).join(', ');
+  return (
+    <SchedaRicetta
+      key={`${aperta.ricetta.id}|${aperta.porzioni}`}
+      indice={indice}
+      ricetta={aperta.ricetta}
+      inCasa={inCasa}
+      porzioniIniziali={aperta.porzioni}
+      valutazione={conVincoli ? valutaPerFamiglia(indice, aperta.ricetta, loro, vincoli, verifiche) : null}
+      chiudi={chiudi}
+      sopra={
+        <p className="tenue" style={{ marginTop: 0 }}>
+          {aperta.pasto} di oggi{nomi && dati.persone.length > 1 ? ` · per ${nomi}` : ''}
+        </p>
+      }
+    />
+  );
+}
+
+/** La spesa per i piatti di oggi ancora da mangiare: cosa manca, se è già in lista, e cosa c'è già in casa. */
+function SpesaDiOggi({ indice, bisogni, aMano, chiudi, tutta }: { indice: Indice; bisogni: BisognoDelGiorno[]; aMano: number; chiudi: () => void; tutta: () => void }) {
+  const vista = useVista();
+  const { esegui } = useFamiglia();
+  const { voci } = useDatiSpesa(vista);
+  const mancano = bisogni.filter((b) => b.manca > 0);
+  const ci = bisogni.filter((b) => b.manca <= 0);
+  const voceDi = (b: BisognoDelGiorno) => voci.find((v) => v.ingrediente_id === b.ingrediente_id && v.unita === b.unita && (v.stato === 'da_acquistare' || v.stato === 'nel_carrello'));
+  const daAggiungere = mancano.filter((b) => !voceDi(b));
+  const aggiungi = (b: BisognoDelGiorno) => esegui('aggiungi_voce', { id: crypto.randomUUID(), ingrediente_id: b.ingrediente_id, testo: null, quantita: b.manca, unita: b.unita });
+
+  return (
+    <Foglio titolo="Spesa per oggi" chiudi={chiudi}>
+      <p className="tenue" style={{ marginTop: 0 }}>
+        Solo per i piatti di oggi ancora da mangiare, tolto ciò che c’è già in casa.
+      </p>
+      {bisogni.length === 0 ? (
+        <div className="avviso info">Oggi non serve comprare niente per il menu.</div>
+      ) : mancano.length === 0 ? (
+        <div className="avviso info">Hai già tutto in casa per i piatti di oggi.</div>
+      ) : (
+        <section aria-label="Da comprare per oggi">
+          <h3 style={{ margin: '0 0 4px' }}>Da comprare</h3>
+          <ul className="elenco">
+            {mancano.map((b) => {
+              const voce = voceDi(b);
+              return (
+                <li key={`${b.ingrediente_id}|${b.unita}`} className="riga" style={{ flexWrap: 'wrap' }}>
+                  <span aria-hidden>{indice.ingrediente(b.ingrediente_id)?.emoji}</span>
+                  <span className="cresce">
+                    {indice.nome(b.ingrediente_id)} <span className="tenue">· {formatta({ valore: b.manca, unita: b.unita })}</span>
+                  </span>
+                  {voce ? (
+                    <span className="etichetta">{voce.stato === 'nel_carrello' ? 'nel carrello' : 'in lista'}</span>
+                  ) : (
+                    <button className="bottone piccolo" aria-label={`Metti in lista: ${indice.nome(b.ingrediente_id)}`} onClick={() => aggiungi(b)}>
+                      + Lista
+                    </button>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+          {daAggiungere.length > 1 && (
+            <button className="bottone pieno" style={{ marginTop: 8 }} onClick={() => daAggiungere.forEach((b) => void aggiungi(b))}>
+              Metti tutto in lista
+            </button>
+          )}
+        </section>
+      )}
+      {aMano > 0 && <p className="tenue">{aMano === 1 ? 'Un piatto è scritto a mano' : `${aMano} piatti sono scritti a mano`}: i suoi ingredienti li controlli tu.</p>}
+      {ci.length > 0 && (
+        <details style={{ marginTop: 12 }}>
+          <summary>Già in casa ({ci.length})</summary>
+          <ul className="elenco">
+            {ci.map((b) => (
+              <li key={`${b.ingrediente_id}|${b.unita}`} className="riga">
+                <span aria-hidden>{indice.ingrediente(b.ingrediente_id)?.emoji}</span>
+                <span className="cresce">{indice.nome(b.ingrediente_id)}</span>
+                <span className="tenue">{formatta({ valore: b.serve, unita: b.unita })}</span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+      <button className="bottone pieno" style={{ marginTop: 12 }} onClick={tutta}>
+        Apri tutta la lista della spesa
+      </button>
+    </Foglio>
   );
 }

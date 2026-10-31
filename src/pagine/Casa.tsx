@@ -3,6 +3,7 @@ import { LUOGHI, NOME_LUOGO } from '../catalogo/tipi';
 import type { RigaInVista } from '../dati/anteprima';
 import { useFamiglia, useVista } from '../dati/contesto';
 import { useIndice } from '../dati/indice';
+import { ricettePerUrgenti } from '../dominio/consumi';
 import type { Indice, Ingrediente } from '../dominio/ricette';
 import { daUsarePresto, descriviData, giorniTra, type Luogo, oggi, piuGiorni, REPARTI_SFUSI, spreco, statoData, stima, type TipoData } from '../dominio/scadenze';
 import { formatta, inBase, leggiNumero, UNITA, type Unita, UNITA_BASE, type UnitaBase, unitaPer } from '../dominio/unita';
@@ -10,6 +11,7 @@ import { CercaIngrediente } from '../ui/CercaIngrediente';
 import { type ProdottoScansionato, ScansionaProdotto } from '../ui/CodiceProdotto';
 import { Foglio } from '../ui/Foglio';
 import { FotoFrigo } from './FotoFrigo';
+import { useDatiMenu } from './Menu';
 
 export interface Lotto {
   id: string;
@@ -91,6 +93,7 @@ export function Casa() {
           <h3 style={{ marginTop: 0 }}>Da usare presto</h3>
           <ElencoLotti indice={indice} lotti={presto.slice(0, 8)} giorno={giorno} apri={setAperto} conLuogo />
           {presto.length > 8 && <p className="tenue">E altri {presto.length - 8}.</p>}
+          <RicettePerUrgenti indice={indice} presto={presto} lotti={lotti} giorno={giorno} />
         </section>
       )}
 
@@ -134,6 +137,49 @@ export function Casa() {
       {aperto === 'foto' && <FotoFrigo indice={indice} luogo={luogo} chiudi={() => setAperto(null)} />}
       {aperto === 'nuovo' && <NuovoLotto indice={indice} luogo={luogo} chiudi={() => setAperto(null)} />}
       {lotto && <SchedaLotto indice={indice} lotto={lotto} giorno={giorno} chiudi={() => setAperto(null)} />}
+    </>
+  );
+}
+
+/** Ricette che usano ciò che scade, da mettere a cena stasera in un tocco se la cena è ancora vuota. */
+function RicettePerUrgenti({ indice, presto, lotti, giorno }: { indice: Indice; presto: Lotto[]; lotti: Lotto[]; giorno: string }) {
+  const dati = useDatiMenu(useVista());
+  const { esegui } = useFamiglia();
+  const cenaOggi = dati.portate.some((p) => p.data === giorno && p.categoria === 'cena');
+  const proposte = ricettePerUrgenti(
+    indice,
+    presto.map((l) => l.ingrediente_id),
+    lotti.map((l) => l.ingrediente_id),
+    dati.persone,
+    dati.vincoli,
+    3,
+    dati.verifiche,
+  );
+  if (!proposte.length) return null;
+  return (
+    <>
+      <h4 style={{ margin: '12px 0 4px' }}>Ricette che li usano</h4>
+      <ul className="elenco" aria-label="Ricette che li usano">
+        {proposte.map(({ ricetta, usa, presenti, totali }) => (
+          <li key={ricetta.id} className="riga" style={{ flexWrap: 'wrap' }}>
+            <span className="cresce">
+              {ricetta.titolo}
+              <span className="tenue" style={{ display: 'block', fontSize: '0.85rem' }}>
+                usa {usa.map((id) => indice.nome(id).toLowerCase()).join(', ')} · {presenti} su {totali} ingredienti in casa
+              </span>
+            </span>
+            {!cenaOggi && (
+              <button
+                className="bottone piccolo"
+                aria-label={`Metti a cena stasera: ${ricetta.titolo}`}
+                onClick={() => esegui('aggiungi_portata', { id: crypto.randomUUID(), data: giorno, categoria: 'cena', ricetta_id: ricetta.id, ordine: 0 })}
+              >
+                Stasera
+              </button>
+            )}
+          </li>
+        ))}
+      </ul>
     </>
   );
 }

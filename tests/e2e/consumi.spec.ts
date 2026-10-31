@@ -93,7 +93,7 @@ test('pasti: «mangiato» in un tocco, correzione a differenza, avanzi e pasti a
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
-test('ciò che scade: ricette che lo usano, «stasera» in un tocco, avviso sulla scheda Casa', async ({ browser }, info) => {
+test('ciò che scade: in Casa le ricette che lo usano, «stasera» in un tocco, avviso sulla scheda Casa', async ({ browser }, info) => {
   const luca = await nuovoUtente('Luca');
   const { page } = await apri(browser, luca, info.project.use);
   await creaFamiglia(page, 'Casa Scadenze');
@@ -108,10 +108,12 @@ test('ciò che scade: ricette che lo usano, «stasera» in un tocco, avviso sull
   await nuovo.getByRole('button', { name: 'Aggiungi', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Casa', exact: true })).toHaveAccessibleDescription('1 prodotto scaduto o da usare oggi');
 
-  await page.getByRole('button', { name: 'Oggi', exact: true }).click();
-  const ricette = page.getByRole('list', { name: 'Ricette che li usano' });
+  // Ciò che scade e le ricette che lo usano stanno in Casa, non più in Oggi.
+  const ricette = page.getByRole('region', { name: 'Da usare presto' }).getByRole('list', { name: 'Ricette che li usano' });
   await expect(ricette.getByRole('listitem').first()).toContainText('usa guanciale');
   await ricette.getByRole('button', { name: /Metti a cena stasera/ }).first().click();
+  await page.getByRole('button', { name: 'Oggi', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Da usare presto' })).toHaveCount(0);
   await expect(page.getByRole('region', { name: 'Oggi si mangia' }).getByRole('button', { name: /Mangiato come previsto/ })).toBeVisible();
   await salvato(page);
   await expect

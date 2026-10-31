@@ -120,8 +120,6 @@ test('casa: aggiunge, mostra cosa usare presto, scala la quantità usata e stima
     { ingrediente_id: 'ing:yogurt', quantita: '300', tipo_data: 'scadenza', movimenti: 2 },
   ]);
 
-  await page.getByRole('button', { name: 'Oggi' }).click();
-  await expect(page.getByRole('region', { name: 'Da usare presto' }).getByText('Entro 1 giorno')).toBeVisible();
 });
 
 /** Una piccola immagine PNG vera (8×8, color pomodoro). */
