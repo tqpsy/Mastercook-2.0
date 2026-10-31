@@ -1,6 +1,6 @@
 import type { Session } from '@supabase/supabase-js';
 import Dexie from 'dexie';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { configurato } from './config';
 import { Archivio } from './dati/archivio';
 import { FamigliaAperta, nomeArchivio, type Sessione, useFamiglia, useVista } from './dati/contesto';
@@ -20,6 +20,7 @@ import { famiglieLocali } from './piattaforma/locale/motore';
 import { esci, type FamigliaMia, mieFamiglie, mioConsenso, supabase } from './piattaforma/supabase';
 import { oggi, piuGiorni, statoData } from './dominio/scadenze';
 import { CopiaAutomatica } from './ui/CopiaAutomatica';
+import { aggiungiPasso, togliPasso } from './ui/indietro';
 import { StatoSync } from './ui/StatoSync';
 
 const CHIAVE_INVITO = 'mc-invito';
@@ -218,6 +219,28 @@ function useAvvisi(): Partial<Record<Scheda, { n: number; testo: string }>> {
 
 function Guscio({ email, apriFamiglia }: { email: string; apriFamiglia: (famiglia: string) => void }) {
   const [scheda, setScheda] = useState<Scheda>('oggi');
+  // Ogni cambio di scheda è un passo: il tasto Indietro torna alla scheda di prima, nell'ordine visitato.
+  const passiSchede = useRef<number[]>([]);
+  const vai = useCallback(
+    (nuova: Scheda) => {
+      if (nuova === scheda) return;
+      const prima = scheda;
+      const id = aggiungiPasso(() => {
+        passiSchede.current = passiSchede.current.filter((p) => p !== id);
+        setScheda(prima);
+      });
+      passiSchede.current.push(id);
+      setScheda(nuova);
+    },
+    [scheda],
+  );
+  useEffect(
+    () => () => {
+      for (const p of passiSchede.current) togliPasso(p);
+      passiSchede.current = [];
+    },
+    [],
+  );
   const { sync, utenteId, archivio, dove } = useFamiglia();
   const avvisi = useAvvisi();
   const schede = useMemo(
@@ -262,14 +285,14 @@ function Guscio({ email, apriFamiglia }: { email: string; apriFamiglia: (famigli
         <h1>{scheda === 'impostazioni' ? 'Impostazioni' : schede.find((s) => s.id === scheda)?.nome}</h1>
         <div className="riga">
           <StatoSync />
-          <button className="bottone piccolo" aria-label="Impostazioni" aria-pressed={scheda === 'impostazioni'} onClick={() => setScheda('impostazioni')}>
+          <button className="bottone piccolo" aria-label="Impostazioni" aria-pressed={scheda === 'impostazioni'} onClick={() => vai('impostazioni')}>
             <span aria-hidden>⚙️</span>
           </button>
         </div>
       </header>
       <main className="pagina">
         <CopiaAutomatica apriFamiglia={apriFamiglia} />
-        {scheda === 'oggi' && <Oggi vai={setScheda} />}
+        {scheda === 'oggi' && <Oggi vai={vai} />}
         {scheda === 'menu' && <Menu />}
         {scheda === 'spesa' && <Spesa />}
         {scheda === 'ricette' && <Ricette />}
@@ -283,7 +306,7 @@ function Guscio({ email, apriFamiglia }: { email: string; apriFamiglia: (famigli
             key={s.id}
             aria-current={scheda === s.id ? 'page' : undefined}
             aria-describedby={avvisi[s.id] ? `avviso-${s.id}` : undefined}
-            onClick={() => setScheda(s.id)}
+            onClick={() => vai(s.id)}
           >
             <span className="icona" aria-hidden>
               {s.icona}
