@@ -71,7 +71,6 @@ export function Casa() {
   const sprecati = spreco(movimenti, perId, piuGiorni(giorno, -30));
 
   if (!vista.pronta || !indice) return <p className="tenue">Sto caricando la casa…</p>;
-  const qui = lotti.filter((l) => l.luogo === luogo).sort((a, b) => indice.nome(a.ingrediente_id).localeCompare(indice.nome(b.ingrediente_id), 'it'));
   const lotto = aperto && aperto !== 'nuovo' && aperto !== 'foto' ? lotti.find((l) => l.id === aperto) : undefined;
 
   return (
@@ -96,6 +95,11 @@ export function Casa() {
               <h3 style={{ display: 'inline', margin: 0 }}>
                 Da usare presto <span className="etichetta">{presto.length}</span>
               </h3>
+              {/* Anche chiusa, la tendina dice subito qual è il primo. */}
+              <span className="primo-presto">
+                Per primo: {indice.nome(presto[0].ingrediente_id)}
+                {presto.length > 1 && ` e altri ${presto.length - 1}`}
+              </span>
             </summary>
             <ElencoLotti indice={indice} lotti={presto.slice(0, 8)} giorno={giorno} apri={setAperto} conLuogo />
             {presto.length > 8 && <p className="tenue">E altri {presto.length - 8}.</p>}
@@ -104,21 +108,32 @@ export function Casa() {
         </section>
       )}
 
-      <div className="scelte" role="tablist" aria-label="Dove">
+      {/* Telefono: una scheda per luogo. Da 900 px: frigo, freezer e dispensa affiancati, e le schede spariscono. */}
+      <div className="scelte schede-luogo" role="tablist" aria-label="Dove">
         {LUOGHI.map((l) => (
           <button key={l} role="tab" aria-pressed={luogo === l} aria-selected={luogo === l} onClick={() => setLuogo(l)}>
             {NOME_LUOGO[l]} ({lotti.filter((x) => x.luogo === l).length})
           </button>
         ))}
       </div>
-      <div className="scheda">
-        {qui.length ? (
-          <ElencoLotti indice={indice} lotti={qui} giorno={giorno} apri={setAperto} />
-        ) : (
-          <p className="tenue" style={{ margin: 0 }}>
-            Niente in {NOME_LUOGO[luogo].toLowerCase()}. Aggiungi ciò che hai con «+ Aggiungi»: la quantità la scrivi tu, l’app non la indovina.
-          </p>
-        )}
+      <div className="colonne-luoghi">
+        {LUOGHI.map((l) => {
+          const qui = lotti.filter((x) => x.luogo === l).sort((a, b) => indice.nome(a.ingrediente_id).localeCompare(indice.nome(b.ingrediente_id), 'it'));
+          return (
+            <section key={l} className={`scheda luogo${l === luogo ? ' attivo' : ''}`} aria-label={NOME_LUOGO[l]}>
+              <h3 className="titolo-luogo">
+                {NOME_LUOGO[l]} <span className="etichetta">{qui.length}</span>
+              </h3>
+              {qui.length ? (
+                <ElencoLotti indice={indice} lotti={qui} giorno={giorno} apri={setAperto} />
+              ) : (
+                <p className="tenue" style={{ margin: 0 }}>
+                  Niente in {NOME_LUOGO[l].toLowerCase()}. Aggiungi ciò che hai con «+ Aggiungi»: la quantità la scrivi tu, l’app non la indovina.
+                </p>
+              )}
+            </section>
+          );
+        })}
       </div>
 
       {sprecati.length > 0 && (
