@@ -89,11 +89,18 @@ export function Casa() {
       </div>
 
       {presto.length > 0 && (
+        // Una tendina chiusa di base: si vede subito quanti prodotti stanno per scadere, l'elenco si apre al tocco.
         <section className="scheda" aria-label="Da usare presto">
-          <h3 style={{ marginTop: 0 }}>Da usare presto</h3>
-          <ElencoLotti indice={indice} lotti={presto.slice(0, 8)} giorno={giorno} apri={setAperto} conLuogo />
-          {presto.length > 8 && <p className="tenue">E altri {presto.length - 8}.</p>}
-          <RicettePerUrgenti indice={indice} presto={presto} lotti={lotti} giorno={giorno} />
+          <details>
+            <summary>
+              <h3 style={{ display: 'inline', margin: 0 }}>
+                Da usare presto <span className="etichetta">{presto.length}</span>
+              </h3>
+            </summary>
+            <ElencoLotti indice={indice} lotti={presto.slice(0, 8)} giorno={giorno} apri={setAperto} conLuogo />
+            {presto.length > 8 && <p className="tenue">E altri {presto.length - 8}.</p>}
+            <RicettePerUrgenti indice={indice} presto={presto} lotti={lotti} giorno={giorno} />
+          </details>
         </section>
       )}
 

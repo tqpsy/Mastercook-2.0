@@ -109,6 +109,7 @@ test('ciò che scade: in Casa le ricette che lo usano, «stasera» in un tocco, 
   await expect(page.getByRole('button', { name: 'Casa', exact: true })).toHaveAccessibleDescription('1 prodotto scaduto o da usare oggi');
 
   // Ciò che scade e le ricette che lo usano stanno in Casa, non più in Oggi.
+  await page.getByRole('region', { name: 'Da usare presto' }).locator('summary').click();
   const ricette = page.getByRole('region', { name: 'Da usare presto' }).getByRole('list', { name: 'Ricette che li usano' });
   await expect(ricette.getByRole('listitem').first()).toContainText('usa guanciale');
   await ricette.getByRole('button', { name: /Metti a cena stasera/ }).first().click();
