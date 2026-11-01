@@ -16,6 +16,7 @@ import { Icona } from '../ui/Icona';
 import { Sigla, type SiglaPersona, sigleDi } from '../ui/Sigla';
 import { useLotti } from './Casa';
 import { ConfermaPasto, SegnaMangiato, useConferme } from './ConfermaPasto';
+import { SegnaCucinato, usePronti } from './Cucinato';
 import { chiLoMangia, type DatiMenu, descrivi, useDatiMenu, useProlungaFissi } from './Menu';
 import { ICONA_ESITO, motiviInBreve, SchedaRicetta, useCommensali, useInCasa } from './Ricette';
 import { useDatiSpesa } from './Spesa';
@@ -23,7 +24,23 @@ import { useDatiSpesa } from './Spesa';
 const titoloDi = (indice: Indice, p: PortataMenu) => (p.ricetta_id ? indice.perId.get(p.ricetta_id)?.titolo : null) ?? p.testo ?? 'Piatto';
 
 /** «✓ Mangiato» (chiede se è avanzato qualcosa) oppure apre le domande; a conferma fatta, l'esito e «Correggi». */
-function StatoPasto({ titolo, conferma, apri, segna }: { titolo: string; conferma?: Conferma; apri: () => void; segna: () => void }) {
+function StatoPasto({
+  titolo,
+  conferma,
+  apri,
+  segna,
+  cucinato,
+  cucina,
+}: {
+  titolo: string;
+  conferma?: Conferma;
+  apri: () => void;
+  segna: () => void;
+  /** Già cucinato in anticipo: il piatto pronto in casa. */
+  cucinato?: { luogo: string; quantita: number };
+  /** Apre «Cucinato» (solo per i piatti che si cucinano, non per gli avanzi). */
+  cucina?: () => void;
+}) {
   const { esegui, archivio, famiglia } = useFamiglia();
   const [vedi, setVedi] = useState(false);
   if (conferma) {
@@ -71,7 +88,18 @@ function StatoPasto({ titolo, conferma, apri, segna }: { titolo: string; conferm
     );
   }
   return (
-    <span className="riga">
+    <span className="riga" style={{ flexWrap: 'wrap' }}>
+      {cucinato ? (
+        <span className="etichetta" aria-label={`Cucinato: ${titolo}`}>
+          🍳 Cucinato · in {cucinato.luogo}
+        </span>
+      ) : (
+        cucina && (
+          <button className="bottone piccolo" onClick={cucina} aria-label={`Cucinato: ${titolo}`}>
+            🍳 Cucinato
+          </button>
+        )
+      )}
       <button
         className="bottone primario piccolo"
         aria-label={`Mangiato come previsto: ${titolo}`}
@@ -137,6 +165,9 @@ export function Oggi({ vai }: { vai: (scheda: 'spesa' | 'casa' | 'menu') => void
   const [aperto, setAperto] = useState<string | null>(null);
   /** I piatti appena segnati «mangiato»: si chiede se è avanzato qualcosa. */
   const [segnati, setSegnati] = useState<string[] | null>(null);
+  /** Il piatto che si segna «cucinato» (preparato in anticipo). */
+  const [cucinando, setCucinando] = useState<string | null>(null);
+  const pronti = usePronti();
   const [ricetta, setRicetta] = useState<Aperta | null>(null);
   const [spesa, setSpesa] = useState(false);
   /** Il pasto di cui è aperto il dettaglio (conferme piatto per piatto, porzioni, avvisi, foto). */
@@ -245,6 +276,7 @@ export function Oggi({ vai }: { vai: (scheda: 'spesa' | 'casa' | 'menu') => void
               apriRicetta={setRicetta}
               apriDettaglio={() => setPastoAperto(c.valore)}
               segna={setSegnati}
+              pronti={pronti}
               aggiungi={() => vai('menu')}
             />
           ))
@@ -311,11 +343,22 @@ export function Oggi({ vai }: { vai: (scheda: 'spesa' | 'casa' | 'menu') => void
                   conferma={attive.get(p.id)}
                   apriConferma={() => setAperto(p.id)}
                   segna={() => setSegnati([p.id])}
+                  pronto={pronti.get(p.id)}
+                  cucina={() => setCucinando(p.id)}
                   apriRicetta={setRicetta}
                 />
               ))}
           </ul>
         </Foglio>
+      )}
+      {indice && cucinando && dati.portate.some((p) => p.id === cucinando) && (
+        <SegnaCucinato
+          indice={indice}
+          dati={dati}
+          portata={dati.portate.find((p) => p.id === cucinando)!}
+          titolo={titoloDi(indice, dati.portate.find((p) => p.id === cucinando)!)}
+          chiudi={() => setCucinando(null)}
+        />
       )}
       {indice && segnati && (
         <SegnaMangiato
@@ -380,6 +423,7 @@ function Riquadro({
   apriRicetta,
   apriDettaglio,
   segna,
+  pronti,
   aggiungi,
 }: {
   indice: Indice;
@@ -393,6 +437,7 @@ function Riquadro({
   apriRicetta: (a: Aperta) => void;
   apriDettaglio: () => void;
   segna: (portate: string[]) => void;
+  pronti: Map<string, unknown>;
   aggiungi: () => void;
 }) {
   const fatte = portate.filter((p) => attive.has(p.id));
@@ -412,7 +457,7 @@ function Riquadro({
       porzioni: mezze(d.porzioni + d.dopo),
       chi: dati.persone.filter((x) => !d.eccezioni.some((e) => e.membro_id === x.id)).map((x) => x.id),
       esito: d.valutazione?.esito,
-      nota: [p.avanzo_di && 'avanzo', ospiti && `+${ospiti.adulti + ospiti.bambini} ospiti`].filter(Boolean).join(' · ') || undefined,
+      nota: [p.avanzo_di && 'avanzo', pronti.has(p.id) && !attive.has(p.id) && '🍳 cucinato', ospiti && `+${ospiti.adulti + ospiti.bambini} ospiti`].filter(Boolean).join(' · ') || undefined,
     });
     for (const e of d.eccezioni.filter((x) => x.tipo === 'alternativa')) {
       const persona = dati.persone.find((x) => x.id === e.membro_id);
@@ -516,6 +561,8 @@ function PiattoDiOggi({
   conferma,
   apriConferma,
   segna,
+  pronto,
+  cucina,
   apriRicetta,
 }: {
   indice: Indice;
@@ -525,6 +572,8 @@ function PiattoDiOggi({
   conferma?: Conferma;
   apriConferma: () => void;
   segna: () => void;
+  pronto?: { luogo: string; quantita: number };
+  cucina: () => void;
   apriRicetta: (a: Aperta) => void;
 }) {
   const d = descrivi(indice, dati, p);
@@ -582,7 +631,7 @@ function PiattoDiOggi({
         </ul>
       )}
       <div style={{ marginTop: 4 }}>
-        <StatoPasto titolo={d.titolo} conferma={conferma} apri={apriConferma} segna={segna} />
+        <StatoPasto titolo={d.titolo} conferma={conferma} apri={apriConferma} segna={segna} cucinato={pronto} cucina={p.avanzo_di ? undefined : cucina} />
       </div>
     </li>
   );

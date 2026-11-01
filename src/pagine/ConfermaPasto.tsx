@@ -8,6 +8,7 @@ import { type Indice, normalizza, type Ricetta } from '../dominio/ricette';
 import { oggi, piuGiorni } from '../dominio/scadenze';
 import { formatta, formattaGiorno, leggiNumero } from '../dominio/unita';
 import { Foglio } from '../ui/Foglio';
+import { usePronti } from './Cucinato';
 import type { DatiMenu } from './Menu';
 
 const numero = (x: unknown) => (x === null || x === undefined ? null : Number(x));
@@ -33,7 +34,7 @@ export function useConferme(vista: Vista) {
 }
 
 /** L'avanzo da mettere in casa: in frigo con la data stimata dalla regola dei cotti, se c'è; altrimenti da scrivere. */
-function lottoAvanzo(nome: string, quantita: number, luogo: 'frigo' | 'freezer', giorni: number | null) {
+export function lottoAvanzo(nome: string, quantita: number, luogo: 'frigo' | 'freezer', giorni: number | null) {
   const stimata = luogo === 'frigo' && giorni !== null;
   return {
     lotto_id: crypto.randomUUID(),
@@ -46,12 +47,12 @@ function lottoAvanzo(nome: string, quantita: number, luogo: 'frigo' | 'freezer',
   };
 }
 
-const testoNumero = (n: number) => String(n).replace('.', ',');
+export const testoNumero = (n: number) => String(n).replace('.', ',');
 
 /** Quante porzioni sono avanzate: − e + di una porzione, oppure si scrive (anche mezze, «1,5»). */
-function PorzioniAvanzate({ valore, cambia, piatto }: { valore: string; cambia: (v: string) => void; piatto?: string }) {
+export function PorzioniAvanzate({ valore, cambia, piatto, nome = 'Porzioni avanzate' }: { valore: string; cambia: (v: string) => void; piatto?: string; nome?: string }) {
   const di = piatto ? `: ${piatto}` : '';
-  const etichetta = `Porzioni avanzate${di}`;
+  const etichetta = `${nome}${di}`;
   const n = leggiNumero(valore) ?? 0;
   const passo = (d: number) => cambia(testoNumero(Math.max(0, Math.round((n + d) * 2) / 2)));
   return (
@@ -67,7 +68,7 @@ function PorzioniAvanzate({ valore, cambia, piatto }: { valore: string; cambia: 
   );
 }
 
-function SceltaLuogo({ luogo, cambia }: { luogo: 'frigo' | 'freezer'; cambia: (l: 'frigo' | 'freezer') => void }) {
+export function SceltaLuogo({ luogo, cambia }: { luogo: 'frigo' | 'freezer'; cambia: (l: 'frigo' | 'freezer') => void }) {
   return (
     <div className="scelte segmenti" role="radiogroup" aria-label="Dove va l’avanzo" style={{ display: 'inline-flex' }}>
       {(['frigo', 'freezer'] as const).map((l) => (
@@ -103,15 +104,20 @@ export function SegnaMangiato({
   chiudi: () => void;
 }) {
   const { esegui } = useFamiglia();
+  const pronti = usePronti();
   const piatti = useMemo(
     () =>
       portate.map((p) => {
-        const perDopo = avanziDi(p, dati.portate).reduce((t, a) => t + porzioniPortata(a, dati.persone, dati.eccezioni, dati.ospiti), 0);
+        const pronto = pronti.get(p.id);
+        // Cucinato in anticipo: avanza quel che resta del piatto pronto dopo questo pasto.
+        const perDopo = pronto
+          ? Math.max(0, pronto.quantita - porzioniPortata(p, dati.persone, dati.eccezioni, dati.ospiti))
+          : avanziDi(p, dati.portate).reduce((t, a) => t + porzioniPortata(a, dati.persone, dati.eccezioni, dati.ospiti), 0);
         const origine = p.avanzo_di ? dati.portate.find((x) => x.id === p.avanzo_di) : undefined;
         const ricettaId = p.ricetta_id ?? origine?.ricetta_id;
-        return { p, titolo: titolo(p), perDopo, giorni: giorniAvanzo(ricettaId ? indice.perId.get(ricettaId) : null, indice.catalogo.regole_cotti) };
+        return { p, titolo: titolo(p), perDopo, pronto, giorni: giorniAvanzo(ricettaId ? indice.perId.get(ricettaId) : null, indice.catalogo.regole_cotti) };
       }),
-    [portate, dati, indice, titolo],
+    [portate, dati, indice, titolo, pronti],
   );
   const [quante, setQuante] = useState<Record<string, string>>(() => Object.fromEntries(piatti.map((x) => [x.p.id, testoNumero(Math.round(x.perDopo * 2) / 2)])));
   const [luogo, setLuogo] = useState<'frigo' | 'freezer'>('frigo');
@@ -145,10 +151,16 @@ export function SegnaMangiato({
           <li key={x.p.id} className="riga spazio" style={{ flexWrap: 'wrap' }}>
             <span className="cresce">
               <strong>{x.titolo}</strong>
-              {x.perDopo > 0 && (
+              {x.pronto ? (
                 <span className="tenue piccolo" style={{ display: 'block' }}>
-                  Nel menu dei giorni dopo ne avete messe {testoNumero(x.perDopo)}
+                  🍳 Cucinato: in {x.pronto.luogo} ce ne sono {testoNumero(x.pronto.quantita)}
                 </span>
+              ) : (
+                x.perDopo > 0 && (
+                  <span className="tenue piccolo" style={{ display: 'block' }}>
+                    Nel menu dei giorni dopo ne avete messe {testoNumero(x.perDopo)}
+                  </span>
+                )
               )}
             </span>
             <PorzioniAvanzate piatto={x.titolo} valore={quante[x.p.id] ?? ''} cambia={(v) => setQuante({ ...quante, [x.p.id]: v })} />
@@ -223,7 +235,10 @@ export function ConfermaPasto({
   }, [attiva, conferme, portata.id, vista.righe.lotto, vista.righe.movimento]);
   const previsto = useMemo(() => previstoPortata(indice, portata, dati.persone, dati.eccezioni, dati.portate, dati.ospiti), [indice, portata, dati]);
   // Porzioni messe nel menu dei giorni dopo (piatto che dura più giorni): sono l'avanzo atteso.
-  const perDopo = avanziDi(portata, dati.portate).reduce((t, a) => t + porzioniPortata(a, dati.persone, dati.eccezioni, dati.ospiti), 0);
+  const pronto = usePronti().get(portata.id);
+  const perDopo = pronto
+    ? Math.max(0, pronto.quantita - porzioniPortata(portata, dati.persone, dati.eccezioni, dati.ospiti))
+    : avanziDi(portata, dati.portate).reduce((t, a) => t + porzioniPortata(a, dati.persone, dati.eccezioni, dati.ospiti), 0);
   const usatePrima = attiva ? consumi.filter((c) => c.conferma_id === attiva.id) : [];
   const [esito, setEsito] = useState<EsitoPasto>(attiva?.esito ?? 'come_previsto');
   const [quantita, setQuantita] = useState<Record<string, string>>(() =>
@@ -238,7 +253,7 @@ export function ConfermaPasto({
   const [ricetta, setRicetta] = useState<Ricetta | null>(attiva?.ricetta_id ? (indice.perId.get(attiva.ricetta_id) ?? null) : null);
   const [testo, setTesto] = useState(attiva?.testo ?? '');
   const [porzioni, setPorzioni] = useState(String(attiva?.porzioni ?? portata.porzioni ?? (previsto.length ? '' : 1)).replace('.', ','));
-  const [porzioniAvanzo, setPorzioniAvanzo] = useState(testoNumero(attiva ? avanzatePrima : Math.round(perDopo * 2) / 2));
+  const [porzioniAvanzo, setPorzioniAvanzo] = useState(testoNumero(attiva ? (pronto ? pronto.quantita : avanzatePrima) : Math.round(perDopo * 2) / 2));
   /** In una correzione gli avanzi cambiano solo se si toccano. */
   const [avanziToccati, setAvanziToccati] = useState(!attiva);
   const [luogoAvanzo, setLuogoAvanzo] = useState<'frigo' | 'freezer'>('frigo');
@@ -289,7 +304,7 @@ export function ConfermaPasto({
         {attiva && ` · ora: ${NOME_ESITO[attiva.esito].toLowerCase()}`}
       </p>
       <div className="scelte" role="radiogroup" aria-label="Com’è andata">
-        {ESITI.map((e) => (
+        {ESITI.filter((e) => !(pronto && e.id === 'quantita_diverse')).map((e) => (
           <button key={e.id} role="radio" aria-checked={esito === e.id} aria-pressed={esito === e.id} onClick={() => setEsito(e.id)}>
             {e.nome}
           </button>
@@ -297,7 +312,9 @@ export function ConfermaPasto({
       </div>
       <p className="tenue">{ESITI.find((e) => e.id === esito)?.spiega}</p>
 
-      {(esito === 'come_previsto' || esito === 'quantita_diverse') &&
+      {pronto && esito === 'come_previsto' ? (
+        <p className="tenue">🍳 Cucinato in anticipo: gli ingredienti sono già stati tolti dalla casa.</p>
+      ) : (esito === 'come_previsto' || esito === 'quantita_diverse') &&
         (previsto.length === 0 ? (
           <p className="tenue">Questo piatto non ha ingredienti da togliere dalla casa.</p>
         ) : (
@@ -383,10 +400,16 @@ export function ConfermaPasto({
               }}
             />
           </div>
-          {perDopo > 0 && (
+          {pronto ? (
             <p className="tenue" style={{ margin: '4px 0 0' }}>
-              Nel menu dei giorni dopo ne avete messe {testoNumero(perDopo)}.
+              🍳 Cucinato: in {pronto.luogo} ce ne sono {testoNumero(pronto.quantita)}.
             </p>
+          ) : (
+            perDopo > 0 && (
+              <p className="tenue" style={{ margin: '4px 0 0' }}>
+                Nel menu dei giorni dopo ne avete messe {testoNumero(perDopo)}.
+              </p>
+            )
           )}
           {avanziToccati && (leggiNumero(porzioniAvanzo) ?? 0) > 0 && (
             <div style={{ marginTop: 8 }}>
