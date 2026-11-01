@@ -13,7 +13,7 @@ import { haPrincipale, type Principale, usaIngrediente } from './principale';
 import { copertura, type Indice, mancanti, principali, type Ricetta } from './ricette';
 import { type Rimedio, rimedio, testoRimedio } from './senza';
 import { bastaLaCasa, MASSIMO_MANCANTI, type ModoSuggerimento, type Segni, testoMancanti } from './suggerimenti';
-import { type Gruppo, gruppiDi, type MemoriaAntonino, PESI_BASE, pesoMemoria, type RegoleAntonino, spintaEquilibrio } from './antonino';
+import { basiDi, composizione, pesoRipetizione, stagione, type Gruppo, gruppiDi, type MemoriaAntonino, PESI_BASE, pesoMemoria, type RegoleAntonino, spintaEquilibrio } from './antonino';
 
 /** Le categorie di ricetta adatte a ogni pasto. Gli altri pasti (spuntino…) non si propongono. */
 export const RICETTE_PER_PASTO: Record<string, Ricetta['categoria'][]> = {
@@ -159,6 +159,18 @@ export function candidate(indice: Indice, pasto: string, c: ContestoProposte, fi
       punti += m.punti;
       if (m.motivo) motivi.push(m.motivo);
     }
+    // Il dietista di Antonino: prima ciò che è di stagione e i cereali integrali.
+    if (c.regole && c.oggi) {
+      const s = stagione(indice, r, Number(c.oggi.slice(5, 7)));
+      punti += pesi.stagione * s;
+      if (s === 1) motivi.push('di stagione');
+      if (s === -1) motivi.push('fuori stagione');
+      if (r.cucina === 'italiana' || r.cucina === 'greca') punti += pesi.mediterranea;
+      if (composizione(indice, r).integrale) {
+        punti += pesi.integrali;
+        motivi.push('integrale');
+      }
+    }
     if (rimedia) motivi.push(`✂️ ${testoRimedio(indice, rimedia).replace(/^Si/, 'si')}`);
     esito.push({ ricetta: r, punti, motivi, tipo: tipoPiatto(indice, r), ...(rimedia ? { rimedio: rimedia } : {}) });
   }
@@ -205,11 +217,20 @@ export function proponi(
   };
   const conta = new Map<Gruppo, number>();
   const conVerdure = new Set<string>();
+  // Varietà: quante volte ogni cereale, legume, tipo di pesce e verdura è già nella settimana.
+  const basi = new Map<string, number>();
+  const basiDiRicetta = new Map<string, string[]>();
+  const basiDi1 = (r: Ricetta) => {
+    if (!basiDiRicetta.has(r.id)) basiDiRicetta.set(r.id, basiDi(indice, r));
+    return basiDiRicetta.get(r.id)!;
+  };
   const conta1 = (data: string, r: Ricetta) => {
     const g = gruppiDiRicetta(r);
     for (const x of g) conta.set(x, (conta.get(x) ?? 0) + 1);
     if (g.has('verdure')) conVerdure.add(data);
+    for (const b of basiDi1(r)) basi.set(b, (basi.get(b) ?? 0) + 1);
   };
+  const ripetizioni = (r: Ricetta) => basiDi1(r).reduce((s, b) => s + (basi.get(b) ?? 0) * pesoRipetizione(b), 0);
   if (regole) for (const p of settimana?.piatti ?? []) conta1(p.data, p.ricetta);
   posti.forEach((posto, k) => {
     if (!perPasto.has(posto.categoria)) perPasto.set(posto.categoria, candidate(indice, posto.categoria, c));
@@ -226,7 +247,8 @@ export function proponi(
       ordinate = libere
         .map((x) => {
           const s = spintaEquilibrio(gruppiDiRicetta(x.ricetta), conta, regole, restanti, senzaVerdure);
-          return { x, motivo: s.motivo, punti: x.punti + s.punti - (giorno.includes(x.tipo) ? 50 : 0) };
+          const varia = regole.pesi.varieta * ripetizioni(x.ricetta);
+          return { x, motivo: s.motivo, punti: x.punti + s.punti - varia - (giorno.includes(x.tipo) ? 50 : 0) };
         })
         .sort((a, b) => b.punti - a.punti);
     } else {

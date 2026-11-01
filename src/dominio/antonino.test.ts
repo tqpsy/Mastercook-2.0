@@ -1,7 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import catalogo from '../catalogo/catalogo.json';
 import type { Catalogo } from '../catalogo/tipi';
-import { equilibrio, gruppiDi, memoriaDa, pesoMemoria, PESI_BASE, REGOLE_BASE, regoleDa, regoleDaSalvare } from './antonino';
+import {
+  adattamentiBambini,
+  composizione,
+  equilibrio,
+  gruppiDi,
+  memoriaDa,
+  notaComposizione,
+  pesoMemoria,
+  PESI_BASE,
+  REGOLE_BASE,
+  regoleDa,
+  regoleDaSalvare,
+  stagione,
+  votoSettimana,
+} from './antonino';
 import { candidate, type ContestoProposte, proponi } from './proposte';
 import { Indice } from './ricette';
 
@@ -82,5 +96,43 @@ describe('Antonino: memoria', () => {
     expect(ids({ ...base, memoria })).not.toContain('sys:pasta_tonno');
     const prima = ids(base).indexOf('sys:carbonara');
     expect(ids({ ...base, memoria }).indexOf('sys:carbonara')).toBeGreaterThan(prima);
+  });
+});
+
+describe('Antonino: il dietista', () => {
+  it('riconosce il piatto unico e dice come completare gli altri', () => {
+    expect(notaComposizione(composizione(indice, r('sys:pasta_ceci')), 'piatto_unico')).toMatch(/piatto unico|contorno/);
+    expect(notaComposizione(composizione(indice, r('sys:salmone_forno')), 'secondo')).not.toMatch(/legumi, uova/);
+    expect(notaComposizione(composizione(indice, r('sys:pasta_pomodoro')), 'primo')).toMatch(/da completare/);
+    expect(composizione(indice, r('sys:zuppa_farro')).integrale).toBe(true);
+  });
+
+  it('alterna cereali e fonti di proteine nella settimana', () => {
+    const p = proponi(indice, posti, base, new Map(), new Map(), { piatti: [] });
+    const cereali = new Set(p.map((x) => composizione(indice, x.ricetta).cereale).filter(Boolean));
+    expect(cereali.size).toBeGreaterThanOrEqual(3);
+  });
+
+  it('stagione: la zucca a novembre sì, a luglio no', () => {
+    expect(stagione(indice, r('sys:risotto_zucca'), 11)).toBe(1);
+    expect(stagione(indice, r('sys:risotto_zucca'), 7)).toBe(-1);
+  });
+
+  it('bambini: frutta secca tritata, pomodorini tagliati, lische', () => {
+    const noci = adattamentiBambini(indice, r('sys:pasta_noci'));
+    expect(noci.some((a) => a.rischio && /tritat/.test(a.testo))).toBe(true);
+    expect(adattamentiBambini(indice, r('sys:salmone_forno')).some((a) => /lische/.test(a.testo))).toBe(true);
+  });
+
+  it('voto della settimana da 0 a 100, con le criticità', () => {
+    const p = proponi(indice, posti, base, new Map(), new Map(), { piatti: [] });
+    const v = votoSettimana(indice, p, REGOLE_BASE, settimana, { bambini: true, mese: 11 });
+    expect(v.totale).toBeGreaterThan(60);
+    expect(v.totale).toBeLessThanOrEqual(100);
+    expect(v.voci.reduce((s, x) => s + x.max, 0)).toBe(100);
+    const sempreCarbonara = settimana.map((data) => ({ data, ricetta: r('sys:carbonara') }));
+    const brutto = votoSettimana(indice, sempreCarbonara, REGOLE_BASE, settimana, { bambini: true, mese: 11 });
+    expect(brutto.totale).toBeLessThan(v.totale);
+    expect(brutto.criticita.some((c) => /ripetut/.test(c))).toBe(true);
   });
 });
