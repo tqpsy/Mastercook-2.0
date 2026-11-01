@@ -400,8 +400,8 @@ test('ricette ⭐ preferite e 💫 da ospiti, cerca per ingrediente e suggerite,
   // Con la casa vuota «con ciò che ho» non si può usare.
   await expect(page.getByRole('group', { name: 'Suggerisci' }).getByRole('button', { name: '🏠 Con ciò che ho' })).toBeDisabled();
 
-  // Cerca per ingrediente anche in Ricette.
-  await page.getByLabel('Cerca per ingrediente').fill('zucchin');
+  // Una sola casella: scrivendo un ingrediente lo propone come filtro preciso.
+  await page.getByLabel('Cerca', { exact: true }).fill('zucchin');
   await page.getByRole('group', { name: 'Ingredienti trovati' }).getByRole('button', { name: /Zucchine/ }).click();
   await expect(page.getByRole('button', { name: 'Apri Pasta con le zucchine' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Apri Spaghetti alla carbonara' })).toHaveCount(0);

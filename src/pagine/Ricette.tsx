@@ -15,7 +15,7 @@ import { ModalitaCucina } from '../ui/ModalitaCucina';
 import { EditorRicetta, type Bozza } from './EditorRicetta';
 import { useLotti } from './Casa';
 import { useDatiMenu } from './Menu';
-import { BottoniModo, BottoniSegno, FiltroIngrediente, type FiltroIngredienti, MODI, type Segno, SEGNI } from '../ui/FiltriRicetta';
+import { BottoniModo, BottoniSegno, CercaRicetta, type FiltroIngredienti, MODI, type Segno, SEGNI } from '../ui/FiltriRicetta';
 import { haPrincipale, usaIngrediente } from '../dominio/principale';
 import { daUsarePresto, oggi } from '../dominio/scadenze';
 import { type ModoSuggerimento, type Segni, segniDa, suggerisci, ultimeVolte } from '../dominio/suggerimenti';
@@ -235,10 +235,15 @@ export function Ricette() {
           + Ricetta
         </button>
       </div>
-      <label className="campo">
-        <span>Cerca</span>
-        <input type="search" value={testo} onChange={(e) => (setTesto(e.target.value), setQuante(PAGINA))} placeholder="Titolo o ingrediente: carbonara, zucchine…" />
-      </label>
+      <CercaRicetta
+        indice={indice}
+        etichetta="Cerca"
+        segnaposto="Ricetta o ingrediente: carbonara, zucchine…"
+        testo={testo}
+        cambiaTesto={(t) => (setTesto(t), setQuante(PAGINA))}
+        filtro={ingredienti}
+        cambia={(f) => (setIngredienti({ ...ingredienti, ...f }), setQuante(PAGINA))}
+      />
       <div className="scelte" role="group" aria-label="Categoria" style={{ marginBottom: 8 }}>
         {CATEGORIE.map((c) => (
           <button key={c.id} aria-pressed={categoria === c.id} onClick={() => setCategoria(categoria === c.id ? null : c.id)}>
@@ -246,7 +251,6 @@ export function Ricette() {
           </button>
         ))}
       </div>
-      <FiltroIngrediente indice={indice} filtro={ingredienti} cambia={(f) => (setIngredienti({ ...ingredienti, ...f }), setQuante(PAGINA))} />
       <div className="scelte compatte suggerisci" style={{ marginTop: 10, marginBottom: 8 }}>
         <BottoniModo modo={modo} cambia={(m) => (setModo(m), setQuante(PAGINA))} casaVuota={!inCasa.size} />
         <span className="separatore" aria-hidden />

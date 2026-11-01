@@ -1,8 +1,8 @@
 /**
  * Filtri delle ricette usati sia in Ricette sia in «Aggiungi piatto» del Menu, così si cercano allo stesso modo:
- * cerca per ingrediente (preciso o per tipo) e ricette segnate ⭐ / 💫.
+ * una sola casella per ricette e ingredienti, tipi rapidi e ricette segnate ⭐ / 💫.
  */
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { PRINCIPALI, type Principale } from '../dominio/principale';
 import type { Indice } from '../dominio/ricette';
 import type { ModoSuggerimento } from '../dominio/suggerimenti';
@@ -13,45 +13,66 @@ export interface FiltroIngredienti {
   ingrediente: string | null;
 }
 
-/** Cerca per ingrediente: un ingrediente preciso scritto a mano, oppure un tipo (pasta, pesce, legumi…) con un tocco. */
-export function FiltroIngrediente({ indice, filtro, cambia }: { indice: Indice; filtro: FiltroIngredienti; cambia: (f: Partial<FiltroIngredienti>) => void }) {
-  const [testo, setTesto] = useState('');
+/**
+ * Una sola casella per cercare: il testo trova le ricette per nome o per ingrediente, e intanto propone gli
+ * ingredienti che corrispondono; toccandone uno diventa un filtro preciso (chip con ✕). Sotto, i tipi rapidi.
+ */
+export function CercaRicetta({
+  indice,
+  etichetta,
+  segnaposto,
+  testo,
+  cambiaTesto,
+  filtro,
+  cambia,
+  autoFocus,
+}: {
+  indice: Indice;
+  etichetta: string;
+  segnaposto: string;
+  testo: string;
+  cambiaTesto: (t: string) => void;
+  filtro: FiltroIngredienti;
+  cambia: (f: Partial<FiltroIngredienti>) => void;
+  autoFocus?: boolean;
+}) {
   // Solo gli ingredienti che qualche ricetta usa (con i loro «genitori»: pasta, funghi…).
   const usati = useMemo(() => indice.estendi(indice.ricette.flatMap((r) => r.ingredienti.map((g) => g.ingrediente_id))), [indice]);
-  const proposti = testo.trim() ? indice.cercaIngredienti(testo, 30).filter((i) => usati.has(i.id) && !indice.ingrediente(i.id)?.base).slice(0, 6) : [];
   const scelto = filtro.ingrediente ? indice.ingrediente(filtro.ingrediente) : null;
+  const proposti = testo.trim().length >= 2 ? indice.cercaIngredienti(testo, 30).filter((i) => usati.has(i.id) && !indice.ingrediente(i.id)?.base && i.id !== filtro.ingrediente).slice(0, 6) : [];
   return (
-    <div className="campo filtro-ingrediente">
-      {scelto ? (
-        <div className="riga" style={{ gap: 6 }}>
-          <span className="etichetta-campo">Ingrediente</span>
+    <div className="campo cerca-ricetta">
+      <label>
+        <span>{etichetta}</span>
+        <input type="search" value={testo} onChange={(e) => cambiaTesto(e.target.value)} placeholder={segnaposto} autoFocus={autoFocus} />
+      </label>
+      {scelto && (
+        <div className="riga" style={{ gap: 6, marginTop: 6 }}>
+          <span className="etichetta-campo">Con</span>
           <button type="button" className="chip-scelto" onClick={() => cambia({ ingrediente: null })} aria-label={`Togli ${scelto.nome}`}>
             {scelto.emoji} {scelto.nome} ✕
           </button>
         </div>
-      ) : (
-        <label>
-          <span>Cerca per ingrediente</span>
-          <input type="search" value={testo} onChange={(e) => setTesto(e.target.value)} placeholder="Zucchine, ceci, salmone…" />
-        </label>
       )}
-      {!scelto && proposti.length > 0 && (
-        <div className="scelte compatte" role="group" aria-label="Ingredienti trovati" style={{ marginTop: 6 }}>
-          {proposti.map((i) => (
-            <button
-              key={i.id}
-              type="button"
-              onClick={() => {
-                cambia({ ingrediente: i.id });
-                setTesto('');
-              }}
-            >
-              {i.emoji} {i.nome}
-            </button>
-          ))}
+      {proposti.length > 0 && (
+        <div className="riga ingredienti-trovati" style={{ gap: 6, marginTop: 6, alignItems: 'center' }}>
+          <span className="etichetta-campo">Ricette con</span>
+          <div className="scelte compatte" role="group" aria-label="Ingredienti trovati" style={{ margin: 0, padding: 0, flex: 1 }}>
+            {proposti.map((i) => (
+              <button
+                key={i.id}
+                type="button"
+                onClick={() => {
+                  cambia({ ingrediente: i.id });
+                  cambiaTesto('');
+                }}
+              >
+                {i.emoji} {i.nome}
+              </button>
+            ))}
+          </div>
         </div>
       )}
-      {!scelto && testo.trim() && !proposti.length && <p className="tenue piccolo" style={{ margin: '4px 0 0' }}>Nessuna ricetta usa «{testo.trim()}».</p>}
       <div className="scelte compatte" role="group" aria-label="Ingrediente principale" style={{ marginTop: 6 }}>
         {PRINCIPALI.map((p) => (
           <button key={p.id} type="button" aria-pressed={filtro.principale === p.id} onClick={() => cambia({ principale: filtro.principale === p.id ? null : p.id })}>
