@@ -2886,10 +2886,6 @@ details > summary:has(.primo-presto) {
     gap: 18px;
     align-items: start;
   }
-  .settimana-antonino .riassunto {
-    position: sticky;
-    top: 0;
-  }
   .giorni-antonino {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
@@ -3244,4 +3240,71 @@ details > summary:has(.primo-presto) {
 }
 .consiglio-ripiano.compatto .frigo-mio {
   width: 60px;
+}
+
+/* Il dietista di Antonino: come completare il pasto, adattamenti per i bambini, voto della settimana. */
+.consigli-dietista {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 3px;
+  font-size: 0.78rem;
+}
+.consigli-dietista .nota-pasto {
+  color: var(--primario);
+}
+.consigli-dietista .per-bambini {
+  color: var(--testo-tenue);
+}
+.consigli-dietista .per-bambini.rischio {
+  color: var(--attenzione);
+  font-weight: 600;
+}
+.voto-antonino {
+  background: var(--superficie);
+  border: 1px solid var(--bordo);
+  border-radius: 12px;
+  padding: 4px 10px;
+  margin-bottom: 12px;
+}
+.voto-antonino > .voce {
+  min-height: 52px;
+  gap: 10px;
+}
+.numero-voto {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--senape);
+  color: var(--senape-testo);
+  font-family: var(--carattere-titoli);
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+.voci-voto,
+.criticita {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  font-size: 0.85rem;
+}
+.voci-voto li {
+  display: flex;
+  gap: 8px;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--bordo);
+}
+.criticita li {
+  padding: 3px 0 3px 18px;
+  position: relative;
+  color: var(--attenzione);
+}
+.criticita li::before {
+  content: '!';
+  position: absolute;
+  left: 4px;
+  font-weight: 700;
 }

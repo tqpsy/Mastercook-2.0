@@ -13,7 +13,8 @@ import { BottoniModo } from '../ui/FiltriRicetta';
 import type { ModoSuggerimento } from '../dominio/suggerimenti';
 import type { DatiMenu } from './Menu';
 import { Fumetto, FacciaAntonino, useAntonino, useImpara } from './Antonino';
-import { equilibrio, REGOLE_BASE } from '../dominio/antonino';
+import { adattamentiBambini, composizione, equilibrio, notaComposizione, REGOLE_BASE, type VotoSettimana, votoSettimana } from '../dominio/antonino';
+import type { Persona } from '../dominio/menu';
 import type { Rimedio } from '../dominio/senza';
 import { EtichettaRimedio } from './Senza';
 
@@ -77,12 +78,21 @@ export function ProponiSettimana({ indice, dati, giorni, chiudi }: { indice: Ind
   const [tolte, setTolte] = useState<Set<string>>(new Set());
   const scelta = (p: (typeof proposte)[number]): Ricetta => [p.ricetta, ...p.altre][indici[chiave(p)] ?? 0] ?? p.ricetta;
   const daMettere = proposte.filter((p) => !tolte.has(chiave(p)));
-  const voci = equilibrio(
-    indice,
-    [...gia, ...daMettere.filter((p) => p.categoria === 'pranzo' || p.categoria === 'cena').map((p) => ({ data: p.data, ricetta: scelta(p) }))],
-    contesto.regole ?? REGOLE_BASE,
-    da,
-  ).filter((v) => v.min !== undefined || v.stato !== 'ok' || v.gruppo === 'carne_rossa');
+  const principaliSettimana = [...gia, ...daMettere.filter((p) => p.categoria === 'pranzo' || p.categoria === 'cena').map((p) => ({ data: p.data, ricetta: scelta(p) }))];
+  const voci = equilibrio(indice, principaliSettimana, contesto.regole ?? REGOLE_BASE, da).filter(
+    (v) => v.min !== undefined || v.stato !== 'ok' || v.gruppo === 'carne_rossa',
+  );
+  const bambini = conBambini(dati.persone);
+  const urgenti = [...new Set(contesto.urgenti.filter((id) => id !== 'ing:avanzo'))];
+  const nellaSettimana = new Set(principaliSettimana.flatMap((p) => p.ricetta.ingredienti.map((g) => g.ingrediente_id)));
+  const usati = urgenti.filter((u) => [...indice.estendi([u])].some((id) => nellaSettimana.has(id)));
+  // Il voto guarda tutta la settimana, anche i giorni già passati: le frequenze sono settimanali.
+  const voto = votoSettimana(indice, principaliSettimana, contesto.regole ?? REGOLE_BASE, giorni, {
+    bambini,
+    mese: Number(oggi().slice(5, 7)),
+    urgenti: urgenti.length,
+    urgentiUsati: usati.length,
+  });
   const scadono = [...new Set(proposte.flatMap((p) => p.motivi.filter((m) => m.endsWith('che scade presto')).map((m) => m.replace(/^usa /, '').replace(/ che scade presto$/, ''))))];
 
   async function conferma() {
@@ -147,6 +157,7 @@ export function ProponiSettimana({ indice, dati, giorni, chiudi }: { indice: Ind
                 </ul>
               </>
             )}
+            <VotoAntonino voto={voto} />
             <div className="bottoni-antonino">
               <button className="bottone primario pieno" disabled={!daMettere.length} onClick={() => void conferma()}>
                 ✓ Metti nel menu ({daMettere.length})
@@ -194,6 +205,7 @@ export function ProponiSettimana({ indice, dati, giorni, chiudi }: { indice: Ind
                           <span className="pasto-antonino">{c.nome}</span>
                           <strong>{r.titolo}</strong>
                           {motivi.length > 0 && <span className="tenue motivi">{motivi.join(' · ')}</span>}
+                          <ConsigliDelDietista indice={indice} ricetta={r} bambini={bambini} />
                         </span>
                         <span className="azioni">
                           {p.altre.length > 0 && !via && (
@@ -328,6 +340,7 @@ export function IdeePerPasto({
                   .join(' · ')}
               </span>
               {idea.rimedio && <EtichettaRimedio indice={indice} rimedio={idea.rimedio} />}
+              <ConsigliDelDietista indice={indice} ricetta={idea.ricetta} bambini={conBambini(dati.persone)} />
             </span>
             <span className="tenue" aria-hidden>
               ＋
@@ -350,4 +363,69 @@ export function IdeePerPasto({
 function minuti(r: Ricetta) {
   const m = r.minuti_totali ?? ((r.minuti_preparazione ?? 0) + (r.minuti_cottura ?? 0) || null);
   return m ? `${m} min` : null;
+}
+
+/** A tavola ci sono bambini: chi ha una porzione da bambino (meno di quella di un adulto). */
+export function conBambini(persone: Persona[]): boolean {
+  return persone.some((p) => p.porzione < 1);
+}
+
+/** Sotto un piatto: come completare il pasto e, con i bambini, come adattarlo. */
+export function ConsigliDelDietista({ indice, ricetta, bambini }: { indice: Indice; ricetta: Ricetta; bambini: boolean }) {
+  const nota = notaComposizione(composizione(indice, ricetta), ricetta.categoria);
+  const adatta = bambini ? adattamentiBambini(indice, ricetta) : [];
+  if (!nota && !adatta.length) return null;
+  return (
+    <span className="consigli-dietista">
+      {nota && <span className="nota-pasto">🍽️ {nota}</span>}
+      {adatta.map((a) => (
+        <span key={a.testo} className={`per-bambini${a.rischio ? ' rischio' : ''}`}>
+          🧒 {a.testo}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+/** Il voto della settimana (stima) con le voci e ciò che lo abbassa. */
+function VotoAntonino({ voto }: { voto: VotoSettimana }) {
+  const [aperto, setAperto] = useState(false);
+  return (
+    <section className="voto-antonino" aria-label="Voto della settimana">
+      <button type="button" className="voce" aria-expanded={aperto} onClick={() => setAperto(!aperto)}>
+        <span className="numero-voto">{voto.totale}</span>
+        <span className="cresce">
+          <strong>Voto della settimana</strong>
+          <span className="tenue piccolo" style={{ display: 'block' }}>
+            stima su 100 · {voto.criticita.length ? `${voto.criticita.length} ${voto.criticita.length === 1 ? 'cosa' : 'cose'} da migliorare` : 'niente da segnalare'}
+          </span>
+        </span>
+        <span aria-hidden>{aperto ? '▴' : '▾'}</span>
+      </button>
+      {aperto && (
+        <>
+          <ul className="voci-voto">
+            {voto.voci.map((v) => (
+              <li key={v.nome}>
+                <span className="cresce">{v.nome}</span>
+                <strong>
+                  {v.punti} / {v.max}
+                </strong>
+              </li>
+            ))}
+          </ul>
+          {voto.criticita.length > 0 && (
+            <ul className="criticita" aria-label="Da migliorare">
+              {voto.criticita.map((c) => (
+                <li key={c}>{c}</li>
+              ))}
+            </ul>
+          )}
+          <p className="tenue piccolo" style={{ margin: '6px 0 0' }}>
+            Antonino guarda i gruppi di alimenti, non calorie e nutrienti: è un confronto tra settimane, non un parere medico.
+          </p>
+        </>
+      )}
+    </section>
+  );
 }

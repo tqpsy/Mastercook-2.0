@@ -22,6 +22,9 @@ export interface Ingrediente {
   base: boolean;
   emoji: string;
   di_sistema: boolean;
+  /** Solo per il catalogo di Mastercook: il gruppo («Pesce azzurro», «Legumi»…) e i mesi di stagione. */
+  sottocategoria?: string | null;
+  mesi?: number[] | null;
   versione?: number;
   in_attesa?: boolean;
 }
