@@ -164,6 +164,9 @@ describe('conferma del pasto', () => {
     expect((await u.applica(c)).esito).toBe('applicato');
     const [l] = await banco.sql('select ingrediente_id, nome, quantita::float as q, unita, origine, tipo_data, conferma_id from lotto where id = $1', [avanzo]);
     expect(l).toEqual({ ingrediente_id: 'ing:avanzo', nome: 'Spaghetti alla carbonara', q: 2, unita: 'pz', origine: 'avanzo', tipo_data: 'stimata', conferma_id: c.dati.id });
+    // Il tempo in frigo parte da quando l'avanzo si segna (oggi), non dal giorno del pasto (3/11).
+    const [messo] = await banco.sql("select data_acquisto = current_date as oggi from lotto where id = $1", [avanzo]);
+    expect(messo.oggi).toBe(true);
 
     const altra = await piatto(u, famiglia, 'sys:carbonara', 4, '2026-11-06');
     expect((await u.applica(conferma(famiglia, altra, 'quantita_diverse'))).dettaglio.motivo).toBe('dati_non_validi');

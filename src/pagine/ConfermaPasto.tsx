@@ -36,16 +36,20 @@ export function useConferme(vista: Vista) {
   }, [r]);
 }
 
-/** L'avanzo da mettere in casa: in frigo con la data stimata dalla regola dei cotti, se c'è; altrimenti da scrivere. */
-export function lottoAvanzo(nome: string, quantita: number, luogo: 'frigo' | 'freezer', giorni: number | null) {
+/**
+ * L'avanzo da mettere in casa: in frigo con la data stimata dalla regola dei cotti, se c'è; altrimenti da scrivere.
+ * Il tempo in frigo parte da quando l'avanzo si segna e si mette via (`messoIl`, oggi), non dal giorno del pasto.
+ */
+export function lottoAvanzo(nome: string, quantita: number, luogo: 'frigo' | 'freezer', giorni: number | null, messoIl = oggi()) {
   const stimata = luogo === 'frigo' && giorni !== null;
   return {
     lotto_id: crypto.randomUUID(),
     nome: nome.slice(0, 120) || 'Avanzo',
     quantita,
     luogo,
+    data_acquisto: messoIl,
     ...(stimata
-      ? { tipo_data: 'stimata', data_limite: piuGiorni(oggi(), giorni), fonte_data: 'app', calcolata_il: new Date().toISOString(), affidabilita: 'bassa' }
+      ? { tipo_data: 'stimata', data_limite: piuGiorni(messoIl, giorni), fonte_data: 'app', calcolata_il: new Date().toISOString(), affidabilita: 'bassa' }
       : { tipo_data: 'sconosciuta' }),
   };
 }
@@ -316,6 +320,16 @@ export function ConfermaPasto({
   const vista = useVista();
   const { righe: consumi, conferme } = useConferme(vista);
   // In una correzione: le porzioni avanzate segnate prima (anche quelle già mangiate da allora).
+  // In una correzione l'avanzo era già in frigo: il suo tempo parte da quando era stato messo via la prima volta.
+  const messoIlPrima = useMemo(() => {
+    if (!attiva) return undefined;
+    const diQuesta = new Set(conferme.filter((c) => c.portata_id === portata.id).map((c) => c.id));
+    const date = (vista.righe.lotto ?? [])
+      .filter((l) => l.origine === 'avanzo' && diQuesta.has(String(l.conferma_id)) && !l.eliminato_il && l.data_acquisto)
+      .map((l) => String(l.data_acquisto).slice(0, 10))
+      .sort();
+    return date[0];
+  }, [attiva, conferme, portata.id, vista.righe.lotto]);
   const avanzatePrima = useMemo(() => {
     if (!attiva) return 0;
     const diQuesta = new Set(conferme.filter((c) => c.portata_id === portata.id).map((c) => c.id));
@@ -385,7 +399,7 @@ export function ConfermaPasto({
     if (esito !== 'saltato' && avanziToccati) {
       if (q === null || q < 0) return setErrore('Scrivi quante porzioni sono avanzate (anche 0).');
       // Sempre detto: 0 vuol dire finito tutto (anche per un piatto che durava più giorni).
-      d.avanzi = q > 0 ? [lottoAvanzo(piatto, q, luogoAvanzo, giorni)] : [];
+      d.avanzi = q > 0 ? [lottoAvanzo(piatto, q, luogoAvanzo, giorni, messoIlPrima)] : [];
     }
     await esegui('conferma_pasto', d);
     chiudi();
