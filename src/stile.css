@@ -2668,6 +2668,7 @@ details > summary:has(.primo-presto) {
 }
 .settimana-griglia .testa-giorno:not(.scelto) {
   background: transparent;
+}
 /* Due gruppi di bottoni sulla stessa riga (⭐/💫 accanto alle categorie o ai modi di suggerire). */
 .gruppo-in-riga {
   display: flex;
