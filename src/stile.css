@@ -3293,6 +3293,7 @@ details > summary:has(.primo-presto) {
 .voce-avanzo strong,
 .voce-avanzo .tenue {
   display: block;
+}
 
 /* Scheda prodotto da Open Food Facts: valori, ingredienti, indicatori ufficiali. */
 .scheda-prodotto section {
