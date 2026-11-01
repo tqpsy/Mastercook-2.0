@@ -2950,6 +2950,7 @@ details > summary:has(.primo-presto) {
 }
 .comandi-menu.largo .riempi-vuoti.con-antonino {
   padding-left: 6px;
+}
 
 /* Il mio frigorifero: il disegno in alto (a sinistra su tablet), i comandi sotto. */
 .configura-frigo h3 {
