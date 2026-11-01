@@ -5,6 +5,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Catalogo } from '../catalogo/tipi';
 import { Indice, ingredienteDellaFamiglia, ricetteDellaFamiglia } from '../dominio/ricette';
+import { segniDa } from '../dominio/suggerimenti';
 import type { Vista } from './contesto';
 
 let caricato: Catalogo | null = null;
@@ -25,13 +26,14 @@ export function useCatalogo(): Catalogo | null {
 
 export function useIndice(vista: Vista): Indice | null {
   const catalogo = useCatalogo();
-  const { ingrediente, ricetta, ricetta_ingrediente, ricetta_passo } = vista.righe;
+  const { ingrediente, ricetta, ricetta_ingrediente, ricetta_passo, famiglia } = vista.righe;
+  const modificate = JSON.stringify((attiveDi(famiglia)[0]?.impostazioni as Record<string, unknown> | undefined)?.modificate ?? []);
   return useMemo(() => {
     if (!catalogo) return null;
     const ing = attiveDi(ingrediente).map(ingredienteDellaFamiglia);
     const ric = ricetteDellaFamiglia(attiveDi(ricetta), attiveDi(ricetta_ingrediente), attiveDi(ricetta_passo));
-    return new Indice(catalogo, ing, ric);
-  }, [catalogo, ingrediente, ricetta, ricetta_ingrediente, ricetta_passo]);
+    return new Indice(catalogo, ing, ric, segniDa({ modificate: JSON.parse(modificate) }).modificate);
+  }, [catalogo, ingrediente, ricetta, ricetta_ingrediente, ricetta_passo, modificate]);
 }
 
 function attiveDi<T extends { eliminato_il?: unknown }>(righe: T[] | undefined): T[] {

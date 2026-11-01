@@ -37,7 +37,7 @@ describe('suggerimenti «dal ricettario»', () => {
   it('tutto il ricettario, prima le ⭐ preferite; quelle appena fatte scendono', () => {
     const tutte = suggerisci(indice, ricette, { ...base, modo: 'ricettario' });
     expect(tutte.length).toBeGreaterThan(100);
-    const segni = { preferite: new Set([carbonara.id]), perOspiti: new Set<string>() };
+    const segni = { preferite: new Set([carbonara.id]), perOspiti: new Set<string>(), modificate: new Set<string>() };
     const [prima] = suggerisci(indice, ricette, { ...base, modo: 'ricettario', segni });
     expect(prima.ricetta.id).toBe(carbonara.id);
     expect(prima.motivi).toContain('⭐ preferita');
@@ -53,7 +53,7 @@ describe('suggerimenti «dal ricettario»', () => {
   });
 
   it('i segni si leggono dalle impostazioni ignorando valori strani', () => {
-    expect(segniDa({ preferite: ['sys:a', 3], per_ospiti: 'x' })).toEqual({ preferite: new Set(['sys:a']), perOspiti: new Set() });
+    expect(segniDa({ preferite: ['sys:a', 3], per_ospiti: 'x' })).toEqual({ preferite: new Set(['sys:a']), perOspiti: new Set(), modificate: new Set() });
     expect(segniDa(undefined)).toEqual(SENZA_SEGNI);
   });
 });
@@ -66,7 +66,7 @@ describe('idea per il pasto con i due modi e i segni', () => {
     expect(casa.length).toBeGreaterThan(0);
     expect(casa.length).toBeLessThan(tutte.length);
     expect(casa[0].motivi[0]).toBe('tutto in casa');
-    const segni = { preferite: new Set([carbonara.id]), perOspiti: new Set([carbonara.id]) };
+    const segni = { preferite: new Set([carbonara.id]), perOspiti: new Set([carbonara.id]), modificate: new Set<string>() };
     expect(candidate(indice, 'pranzo', { ...ctx, segni }, { segno: 'preferita' }).map((x) => x.ricetta.id)).toEqual([carbonara.id]);
     const [prima] = candidate(indice, 'pranzo', { ...ctx, segni, conOspiti: true }, { modo: 'ricettario' });
     expect(prima.ricetta.id).toBe(carbonara.id);

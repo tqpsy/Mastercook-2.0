@@ -30,7 +30,7 @@ test('ricette: cerca, scala le porzioni, segnala l’allergia e crea la propria 
   await expect(scheda.getByText('225 g')).toBeVisible();
   await expect(scheda.getByText('6 pz')).toBeVisible();
 
-  await scheda.getByRole('button', { name: 'Crea la mia versione' }).click();
+  await scheda.getByRole('button', { name: 'Duplica' }).click();
   const editor = page.getByRole('dialog', { name: 'Nuova ricetta' });
   await editor.getByLabel('Titolo').fill('Carbonara di casa');
   await editor.getByLabel('Quantità di Guanciale').fill('200');
@@ -45,6 +45,59 @@ test('ricette: cerca, scala le porzioni, segnala l’allergia e crea la propria 
     [luca.id],
   );
   expect(r).toEqual({ derivata_da: 'sys:carbonara', n: 6, guanciale: '200' });
+});
+
+test('ricetta di Mastercook modificata: prende il posto dell’originale, anche nel menu, e si torna indietro', async ({ browser }, info) => {
+  const luca = await nuovoUtente('Luca');
+  const { page } = await apri(browser, luca, info.project.use);
+  await creaFamiglia(page, 'Casa Modifiche');
+  const carbonara = 'Spaghetti alla carbonara';
+  await sql(
+    `insert into portata (id, famiglia_id, data, categoria, ricetta_id, porzioni) select gen_random_uuid(), famiglia_id, $2, 'cena', 'sys:carbonara', 2
+       from utente_famiglia where utente_id = $1`,
+    [luca.id, domani()],
+  );
+  await page.reload();
+  const nelMenu = () =>
+    sql<{ ricetta_id: string }>(`select ricetta_id from portata where famiglia_id in (select famiglia_id from utente_famiglia where utente_id = $1) and eliminato_il is null`, [luca.id]);
+
+  await page.getByRole('button', { name: 'Ricette' }).click();
+  await page.getByLabel('Cerca', { exact: true }).fill('carbonara');
+  await page.getByRole('button', { name: `Apri ${carbonara}` }).click();
+  let scheda = page.getByRole('dialog', { name: carbonara });
+  await scheda.getByRole('button', { name: '⭐ Preferita' }).click();
+  await scheda.getByRole('button', { name: 'Modifica', exact: true }).click();
+  const editor = page.getByRole('dialog', { name: 'Modifica ricetta' });
+  await expect(editor.getByText('valgono solo per la vostra famiglia')).toBeVisible();
+  await expect(editor.getByLabel('Titolo')).toHaveValue(carbonara);
+  await editor.getByLabel('Quantità di Guanciale').fill('200');
+  await editor.getByRole('button', { name: 'Salva ricetta' }).click();
+  scheda = page.getByRole('dialog', { name: carbonara });
+  await expect(scheda.getByText('200 g')).toBeVisible();
+  await expect(scheda.getByText(/È la vostra versione di/)).toBeVisible();
+  await expect(scheda.getByRole('button', { name: '⭐ Preferita' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
+  await scheda.getByRole('button', { name: 'Chiudi' }).click();
+
+  // Una sola carbonara nell'elenco: la vostra.
+  await expect(page.getByRole('button', { name: `Apri ${carbonara}` })).toHaveCount(1);
+  await expect(page.getByRole('button', { name: `Apri ${carbonara}` })).toContainText('modificata da voi');
+  const [mia] = await sql<{ id: string }>(
+    `select id from ricetta where derivata_da = 'sys:carbonara' and famiglia_id in (select famiglia_id from utente_famiglia where utente_id = $1)`,
+    [luca.id],
+  );
+  await expect.poll(nelMenu).toEqual([{ ricetta_id: mia.id }]);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+
+  await page.getByRole('button', { name: `Apri ${carbonara}` }).click();
+  page.once('dialog', (d) => void d.accept());
+  await page.getByRole('dialog', { name: carbonara }).getByRole('button', { name: 'Torna alla ricetta originale' }).click();
+  await expect(page.getByRole('dialog', { name: carbonara })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: `Apri ${carbonara}` })).toHaveCount(1);
+  await expect(page.getByRole('button', { name: `Apri ${carbonara}` })).not.toContainText('modificata da voi');
+  await page.getByRole('button', { name: `Apri ${carbonara}` }).click();
+  await expect(page.getByRole('dialog', { name: carbonara }).getByText('150 g')).toBeVisible();
+  await expect.poll(nelMenu).toEqual([{ ricetta_id: 'sys:carbonara' }]);
 });
 
 test('editor: una quantità senza numero non si salva, «q.b.» sì', async ({ browser }, info) => {

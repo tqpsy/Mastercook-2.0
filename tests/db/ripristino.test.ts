@@ -614,12 +614,24 @@ describe('esportazione e ripristino delle ricette segnate ⭐ e 💫', () => {
     await u.applica(comando('segna_ricetta', famiglia, { ricetta_id: 'sys:carbonara', segno: 'preferita', attivo: true }));
     await u.applica(comando('segna_ricetta', famiglia, { ricetta_id: mia, segno: 'preferita', attivo: true }));
     await u.applica(comando('segna_ricetta', famiglia, { ricetta_id: mia, segno: 'ospiti', attivo: true }));
+    const carbonara = randomUUID();
+    await u.applica(
+      comando('salva_ricetta', famiglia, {
+        id: carbonara,
+        nuova: true,
+        campi: { titolo: 'Carbonara', categoria: 'primo', porzioni: 4, derivata_da: 'sys:carbonara' },
+        ingredienti: { aggiungi: [{ id: randomUUID(), ingrediente_id: 'ing:spaghetti', quantita: 320, unita: 'g' }] },
+        passi: { aggiungi: [{ id: randomUUID(), ordine: 1, testo: 'Cuoci la pasta.' }] },
+      }),
+    );
+    await u.applica(comando('segna_ricetta', famiglia, { ricetta_id: carbonara, segno: 'modificata', attivo: true }));
     const file = await esporta(u, famiglia);
     const nuova = randomUUID();
     expect((await u.applica(comando('ripristina_famiglia', nuova, { file: JSON.parse(JSON.stringify(file)) }))).esito).toBe('applicato');
     const [{ id: copia }] = await banco.sql<{ id: string }>(`select id from ricetta where famiglia_id = $1 and titolo = 'Torta della zia'`, [nuova]);
     expect(copia).not.toBe(mia);
     const [{ i }] = await banco.sql<{ i: Record<string, unknown> }>(`select impostazioni as i from famiglia where id = $1`, [nuova]);
-    expect(i).toMatchObject({ preferite: ['sys:carbonara', copia], per_ospiti: [copia] });
+    const [{ id: copiaCarbonara }] = await banco.sql<{ id: string }>(`select id from ricetta where famiglia_id = $1 and titolo = 'Carbonara'`, [nuova]);
+    expect(i).toMatchObject({ preferite: ['sys:carbonara', copia], per_ospiti: [copia], modificate: [copiaCarbonara] });
   });
 });
