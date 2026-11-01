@@ -441,6 +441,40 @@ html.foglio-aperto body {
   border-radius: 20px 20px 0 0;
   padding: 20px 16px calc(20px + env(safe-area-inset-bottom));
 }
+/* In testa: il titolo e la ✕ tonda per chiudere; sul telefono sopra c'è la maniglia del foglio. */
+.testa-foglio {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.testa-foglio h2 {
+  margin: 0;
+  font-size: 1.3rem;
+  line-height: 1.2;
+}
+.bottone.tondo.chiudi-foglio {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  min-width: 44px;
+  border: none;
+  background: var(--superficie-2);
+  color: var(--testo-tenue);
+}
+@media (max-width: 699px) {
+  .foglio::before {
+    content: '';
+    display: block;
+    width: 40px;
+    height: 4px;
+    margin: -8px auto 12px;
+    border-radius: 2px;
+    background: var(--bordo);
+  }
+}
 /* Altezza fissa: cambiando scheda il bordo in alto resta dov'è. */
 .foglio.alto {
   height: 88dvh;
@@ -2145,15 +2179,17 @@ details > summary:has(.primo-presto) {
 .foglio:has(.nuovo-piatto) {
   padding-top: 12px;
 }
-.foglio:has(.nuovo-piatto) > .riga:first-child {
-  margin-bottom: 8px !important;
+.foglio:has(.nuovo-piatto) > .testa-foglio {
+  margin-bottom: 8px;
 }
 .foglio:has(.nuovo-piatto) h2 {
   font-size: 1.12rem;
 }
-.foglio:has(.nuovo-piatto) > .riga:first-child .bottone {
+.foglio:has(.nuovo-piatto) > .testa-foglio .bottone {
+  width: 38px;
+  height: 38px;
   min-height: 38px;
-  padding: 0 12px;
+  min-width: 38px;
 }
 .nuovo-piatto {
   display: flex;
@@ -2346,23 +2382,238 @@ details > summary:has(.primo-presto) {
   }
 }
 
-/* Porzioni avanzate: − numero + (mezze porzioni ammesse scrivendo). */
-.contatore {
+/* Porzioni: − numero + (mezze porzioni ammesse scrivendo). Tondi grandi da pollice; «grande» al centro del foglio. */
+.porzioni-contatore {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  flex: none;
 }
-.contatore .bottone {
-  min-width: 44px;
-  font-size: 1.2rem;
+.porzioni-contatore .bottone.tondo {
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  font-size: 1.5rem;
+  line-height: 1;
+  border: 2px solid var(--primario);
+  color: var(--primario);
 }
-.contatore .dato {
-  width: 64px;
+.porzioni-contatore .bottone.tondo.piu {
+  background: var(--primario);
+  color: var(--primario-testo);
+}
+.porzioni-contatore .bottone.tondo:disabled {
+  border-color: var(--bordo);
+  color: var(--testo-tenue);
+}
+.porzioni-contatore .dato {
+  width: 56px;
+  min-height: 48px;
   text-align: center;
+  font-family: var(--carattere-titoli);
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+.porzioni-contatore.grande {
+  gap: 18px;
+}
+.porzioni-contatore.grande .bottone.tondo {
+  width: 64px;
+  height: 64px;
+  min-width: 64px;
+  font-size: 2rem;
+}
+.porzioni-contatore.grande .dato {
+  width: 96px;
+  min-height: 64px;
+  font-size: 2.6rem;
+  border-color: transparent;
+  background: transparent;
+}
+.porzioni-blocco {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+/* Il piatto in testa al foglio: icona nel tondo salvia, nome, una riga sotto. */
+.testa-piatto {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.testa-piatto .tondo-piatto {
+  flex: none;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--salvia-tenue);
+  display: grid;
+  place-items: center;
+  font-size: 1.7rem;
+}
+.testa-piatto strong {
+  display: block;
+  font-family: var(--carattere-titoli);
+  font-size: 1.15rem;
+  line-height: 1.2;
+}
+.testa-piatto .tenue {
+  display: block;
+}
+.avanzi-mangiato {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  display: grid;
+  gap: 10px;
 }
 .avanzi-mangiato li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px;
+  background: var(--superficie);
+  border: 1px solid var(--bordo);
+  border-radius: 16px;
+}
+.avanzi-mangiato li .testa-piatto {
+  flex: 1;
+  min-width: 0;
+}
+.avanzi-mangiato.uno li {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 14px;
+  padding: 16px;
+}
+.riquadro-porzioni {
+  background: var(--superficie);
+  border: 1px solid var(--bordo);
+  border-radius: 16px;
+}
+.riquadro-porzioni {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 16px 0;
+  padding: 10px 12px 10px 16px;
+  font-weight: 600;
+}
+.avanzi-mangiato.uno .porzioni-blocco {
+  padding-bottom: 4px;
+}
+/* Frigo o freezer: due riquadri grandi, quello scelto con il bordo petrolio. */
+.scelta-luogo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 6px;
+}
+.scelta-luogo button {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-height: 84px;
+  padding: 12px 14px;
+  border: 2px solid var(--bordo);
+  border-radius: 14px;
+  background: var(--superficie);
+  color: var(--testo);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.scelta-luogo button[aria-checked='true'] {
+  border-color: var(--primario);
+  background: var(--primario-tenue);
+}
+.scelta-luogo .icona-luogo {
+  font-size: 1.4rem;
+  line-height: 1;
+}
+.scelta-luogo .nome-luogo {
+  font-weight: 700;
+}
+.scelta-luogo .dettaglio-luogo {
+  font-size: 0.85rem;
+  color: var(--testo-tenue);
+}
+.scelta-luogo .consigliato {
+  position: absolute;
+  top: -10px;
+  right: 10px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  background: var(--senape);
+  color: var(--senape-testo);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+/* Il ripiano consigliato: il frigo disegnato accanto al testo. */
+.consiglio-ripiano {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 12px 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--salvia-tenue);
+}
+.consiglio-ripiano > span > span,
+.consiglio-ripiano strong {
+  display: block;
+}
+.consiglio-ripiano strong {
+  font-size: 1.05rem;
+}
+.consiglio-ripiano .frigo {
+  flex: none;
+  width: 96px;
+  height: 128px;
+}
+.riga-data {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.riga-data .dato {
+  width: auto;
+  flex: 0 1 190px;
+}
+.bottone.grande {
+  min-height: 56px;
+  font-size: 1.05rem;
+}
+.nota-piede {
+  text-align: center;
+  margin: 10px 0 0;
+}
+/* «Non è andata così?»: le altre risposte, piccole e in fila sotto il tasto principale. */
+.non-previsto {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--bordo);
+  text-align: center;
+}
+.non-previsto .riga {
+  justify-content: center;
+  flex-wrap: wrap;
   gap: 8px;
-  padding: 8px 0;
+  margin-top: 8px;
+}
+.non-previsto .bottone {
+  flex: 1 1 0;
+  padding: 0 8px;
+  font-size: 0.88rem;
+  white-space: nowrap;
 }
 
 /* Menu (disegno A): nome del piatto e sigle sulla stessa riga; nel riquadro largo i piatti affiancati. */
@@ -2417,6 +2668,7 @@ details > summary:has(.primo-presto) {
 }
 .settimana-griglia .testa-giorno:not(.scelto) {
   background: transparent;
+}
 /* Due gruppi di bottoni sulla stessa riga (⭐/💫 accanto alle categorie o ai modi di suggerire). */
 .gruppo-in-riga {
   display: flex;
@@ -2698,4 +2950,79 @@ details > summary:has(.primo-presto) {
 }
 .comandi-menu.largo .riempi-vuoti.con-antonino {
   padding-left: 6px;
+}
+/* Più piatti nello stesso pasto: righe compatte, il nome ha più spazio. */
+.avanzi-mangiato:not(.uno) .tondo-piatto {
+  width: 42px;
+  height: 42px;
+  font-size: 1.35rem;
+}
+.avanzi-mangiato:not(.uno) .testa-piatto strong {
+  font-size: 1rem;
+}
+.avanzi-mangiato:not(.uno) .porzioni-contatore {
+  gap: 4px;
+}
+.avanzi-mangiato:not(.uno) .porzioni-contatore .bottone.tondo {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+}
+.avanzi-mangiato:not(.uno) .porzioni-contatore .dato {
+  width: 44px;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+}
+
+/* Ogni piatto con i suoi avanzi: porzioni, frigo o freezer e ripiano nella sua scheda. */
+.avanzi-mangiato li {
+  flex-direction: column;
+  align-items: stretch;
+}
+.avanzi-mangiato .riga-piatto {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.avanzi-mangiato .riga-piatto .testa-piatto {
+  flex: 1;
+  min-width: 0;
+}
+.dove-avanzo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--bordo);
+}
+.dove-avanzo .scelta-luogo {
+  margin-top: 0;
+}
+.dove-avanzo .consiglio-ripiano {
+  margin: 0;
+}
+.avanzi-mangiato:not(.uno) .scelta-luogo button {
+  min-height: 0;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 6px;
+  padding: 8px 10px;
+}
+.avanzi-mangiato:not(.uno) .scelta-luogo .icona-luogo {
+  font-size: 1.1rem;
+}
+.avanzi-mangiato:not(.uno) .scelta-luogo .dettaglio-luogo {
+  flex-basis: 100%;
+}
+.consiglio-ripiano.compatto {
+  padding: 8px 12px;
+  gap: 12px;
+}
+.consiglio-ripiano.compatto .frigo {
+  width: 60px;
+  height: 80px;
 }

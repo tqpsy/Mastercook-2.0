@@ -1,5 +1,6 @@
 import { type ReactNode, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { Icona } from './Icona';
 import { aggiungiPasso, togliPasso } from './indietro';
 
 /** Fogli aperti uno sopra l'altro: la pagina sotto resta ferma finché ce n'è almeno uno. */
@@ -35,10 +36,10 @@ export function Foglio({ titolo, chiudi, alto, children }: { titolo: string; chi
   return createPortal(
     <div className="foglio-sfondo" onClick={chiudi}>
       <div className={`foglio${alto ? ' alto' : ''}`} role="dialog" aria-modal="true" aria-label={titolo} onClick={(e) => e.stopPropagation()}>
-        <div className="riga spazio" style={{ marginBottom: 12 }}>
-          <h2 style={{ margin: 0 }}>{titolo}</h2>
-          <button className="bottone piccolo" onClick={chiudi} aria-label="Chiudi">
-            Chiudi
+        <div className="testa-foglio">
+          <h2>{titolo}</h2>
+          <button className="bottone tondo chiudi-foglio" onClick={chiudi} aria-label="Chiudi">
+            <Icona nome="chiudi" grandezza={22} />
           </button>
         </div>
         {children}
