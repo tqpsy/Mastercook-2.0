@@ -3246,6 +3246,54 @@ details > summary:has(.primo-presto) {
   width: 60px;
 }
 
+/* Aggiungi piatto: gli avanzi in casa, in cima, da mangiare in questo pasto. */
+.avanzi-in-casa {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border-radius: 14px;
+  background: var(--senape-tenue);
+}
+.titoletto-avanzi {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.avanzi-scelte {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+}
+.voce-avanzo {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  max-width: 280px;
+  padding: 6px 12px 6px 6px;
+  border: 1px solid var(--bordo);
+  border-radius: 12px;
+  background: var(--superficie);
+  color: var(--testo);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.voce-avanzo .tondo-piatto {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--salvia-tenue);
+  display: grid;
+  place-items: center;
+  font-size: 1.2rem;
+}
+.voce-avanzo strong,
+.voce-avanzo .tenue {
+  display: block;
+
 /* Scheda prodotto da Open Food Facts: valori, ingredienti, indicatori ufficiali. */
 .scheda-prodotto section {
   margin-bottom: 18px;
