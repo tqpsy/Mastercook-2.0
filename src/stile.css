@@ -31,7 +31,9 @@
   --raggio: 12px;
   --ombra: 0 1px 2px rgb(43 44 46 / 0.05);
   --carattere-titoli: 'Outfit Variable', 'Outfit', system-ui, sans-serif;
-  --carattere-testo: 'Figtree Variable', 'Figtree', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --carattere-testo:
+    'Figtree Variable', 'Figtree', system-ui, -apple-system, 'Segoe UI', Roboto,
+    sans-serif;
   color-scheme: light;
 }
 
@@ -77,8 +79,8 @@
     --primario: #6cc3cc;
     --primario-testo: #0f2427;
     --primario-tenue: #1d3b3f;
-  --petrolio: #15535a;
-  --senape-scuro: #f0c766;
+    --petrolio: #15535a;
+    --senape-scuro: #f0c766;
     --senape: #f0b840;
     --senape-testo: #2b2c2e;
     --senape-tenue: #3d3218;
@@ -145,7 +147,8 @@ p {
 .pagina {
   max-width: 720px;
   margin: 0 auto;
-  padding: calc(16px + env(safe-area-inset-top)) 16px calc(96px + env(safe-area-inset-bottom));
+  padding: calc(16px + env(safe-area-inset-top)) 16px
+    calc(96px + env(safe-area-inset-bottom));
 }
 
 .centrata {
@@ -841,7 +844,9 @@ button.etichetta {
   font-size: 0.95rem;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.15s, transform 0.15s;
+  transition:
+    opacity 0.15s,
+    transform 0.15s;
 }
 .avviso-uscita.visibile {
   opacity: 1;
@@ -854,7 +859,6 @@ button.etichetta {
   flex: none;
   margin: 0;
 }
-
 
 .icona-linea {
   flex: none;
@@ -874,7 +878,8 @@ button.etichetta {
  * Schermo largo almeno 900 px (tablet, o telefono girato): le schede diventano una barra laterale a sinistra,
  * e il contenuto usa la larghezza. Sotto i 900 px (anche con lo schermo diviso) resta lo schema del telefono.
  */
-@media (min-width: 900px), (orientation: landscape) and (min-width: 560px) and (max-height: 600px) {
+@media (min-width: 900px),
+  (orientation: landscape) and (min-width: 560px) and (max-height: 600px) {
   :root {
     --larghezza-barra: calc(200px + env(safe-area-inset-left));
   }
@@ -885,7 +890,9 @@ button.etichetta {
     flex-direction: column;
     justify-content: flex-start;
     gap: 6px;
-    padding: calc(16px + env(safe-area-inset-top)) 12px calc(16px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left));
+    padding: calc(16px + env(safe-area-inset-top)) 12px
+      calc(16px + env(safe-area-inset-bottom))
+      calc(12px + env(safe-area-inset-left));
   }
   .schede button {
     flex: none;
@@ -915,7 +922,9 @@ button.etichetta {
   .pagina {
     --margine: max(24px, calc((100vw - var(--larghezza-barra) - 1040px) / 2));
     max-width: none;
-    padding: calc(20px + env(safe-area-inset-top)) calc(var(--margine) + env(safe-area-inset-right)) calc(32px + env(safe-area-inset-bottom)) var(--margine);
+    padding: calc(20px + env(safe-area-inset-top))
+      calc(var(--margine) + env(safe-area-inset-right))
+      calc(32px + env(safe-area-inset-bottom)) var(--margine);
   }
   .griglia-menu {
     width: calc(100vw - var(--larghezza-barra) - 16px);
@@ -1050,7 +1059,9 @@ button.etichetta {
 .riquadro.prossimo {
   --fondo-r: var(--petrolio);
   --fondo-piatto: rgb(255 255 255 / 0.13);
-  background-image: linear-gradient(rgb(255 255 255 / 0.05) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / 0.05) 1px, transparent 1px);
+  background-image:
+    linear-gradient(rgb(255 255 255 / 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 0.05) 1px, transparent 1px);
   background-size: 22px 22px;
   border-color: var(--petrolio);
   box-shadow: 0 6px 18px rgb(18 101 111 / 0.28);
@@ -1324,7 +1335,8 @@ div.piatto-riquadro {
 }
 
 /* Tablet e telefono girato: saluto e «Da usare presto» affiancati, tutti i pasti in una riga, sotto la spesa. */
-@media (min-width: 900px), (orientation: landscape) and (min-width: 560px) and (max-height: 600px) {
+@media (min-width: 900px),
+  (orientation: landscape) and (min-width: 560px) and (max-height: 600px) {
   .pagina-oggi {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -1417,8 +1429,7 @@ div.piatto-riquadro {
   border-radius: 14px;
   min-height: 72px;
 }
-.riquadro.cella.vuoto,
-.riquadro.mini.vuoto {
+.riquadro.cella.vuoto {
   background: transparent;
   border: 1.5px dashed var(--bordo);
 }
@@ -1441,15 +1452,13 @@ div.piatto-riquadro {
   font-size: 0.8rem;
   border-radius: 9px;
 }
-.riquadro.cella .sigla,
-.riquadro.mini .sigla {
+.riquadro.cella .sigla {
   width: 18px;
   height: 18px;
   font-size: 0.55rem;
   box-shadow: 0 0 0 1.5px var(--superficie);
 }
-.riquadro.cella .sigle .sigla + .sigla,
-.riquadro.mini .sigle .sigla + .sigla {
+.riquadro.cella .sigle .sigla + .sigla {
   margin-left: -4px;
 }
 .settimana-griglia {
@@ -1488,96 +1497,6 @@ div.piatto-riquadro {
 }
 .testa-pasto-settimana span {
   font-size: 1.4rem;
-}
-.settimana-righe {
-  display: grid;
-  grid-template-columns: 42px repeat(var(--pasti, 3), minmax(0, 1fr));
-  grid-auto-rows: minmax(62px, auto);
-  gap: 6px;
-  margin-bottom: 8px;
-}
-.settimana-righe > .testa-pasto-mini {
-  min-height: 0;
-  text-align: center;
-  font-size: 1.2rem;
-  align-self: end;
-}
-.settimana-righe > span:first-child {
-  min-height: 0;
-}
-.giorno-mini {
-  all: unset;
-  box-sizing: border-box;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  border-radius: 12px;
-  line-height: 1.1;
-}
-.giorno-mini small {
-  font-size: 0.75rem;
-  color: var(--testo-tenue);
-}
-.giorno-mini strong {
-  font-family: var(--carattere-titoli);
-  font-size: 1.25rem;
-}
-.giorno-mini.oggi {
-  background: var(--primario-tenue);
-  color: var(--primario);
-}
-.giorno-mini.passato {
-  opacity: 0.6;
-}
-.giorno-mini:focus-visible,
-.piatto-mini:focus-visible,
-.mini-vuoto:focus-visible {
-  outline: 2px solid var(--primario);
-  outline-offset: 2px;
-}
-.riquadro.mini {
-  padding: 6px;
-  gap: 3px;
-  border-radius: 12px;
-  justify-content: space-between;
-}
-.piatto-mini {
-  all: unset;
-  box-sizing: border-box;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-  flex: 1;
-}
-.nome-mini {
-  font-size: 0.74rem;
-  font-weight: 600;
-  line-height: 1.15;
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow-wrap: anywhere;
-}
-.altri-mini {
-  font-size: 0.7rem;
-  font-weight: 700;
-  color: var(--testo-tenue);
-}
-.mini-vuoto {
-  all: unset;
-  box-sizing: border-box;
-  cursor: pointer;
-  display: grid;
-  place-items: center;
-  border: 1.5px dashed var(--bordo);
-  border-radius: 12px;
-  color: var(--testo-tenue);
-  font-size: 1.2rem;
 }
 .riempi-vuoti {
   margin: 14px 0;
@@ -1687,7 +1606,8 @@ div.piatto-riquadro {
 .pagina {
   padding-bottom: calc(160px + env(safe-area-inset-bottom));
 }
-@media (min-width: 900px), (orientation: landscape) and (min-width: 560px) and (max-height: 600px) {
+@media (min-width: 900px),
+  (orientation: landscape) and (min-width: 560px) and (max-height: 600px) {
   .bottone.fluttuante {
     bottom: calc(24px + env(safe-area-inset-bottom));
     right: calc(24px + env(safe-area-inset-right));
@@ -1695,6 +1615,173 @@ div.piatto-riquadro {
   .pagina {
     padding-bottom: calc(96px + env(safe-area-inset-bottom));
   }
+}
+
+/* Menu come nei disegni A e C: settimana in alto, striscia con un pallino per pasto, «+» tondi. */
+.testa-settimana {
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 8px;
+}
+.titolo-settimana {
+  text-align: center;
+  line-height: 1.15;
+}
+.titolo-settimana h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+.sopratitolo {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--testo-tenue);
+}
+.bottone.freccia,
+.bottone.tondo {
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 999px;
+  font-size: 1.3rem;
+  display: grid;
+  place-items: center;
+}
+.pallini-pasti {
+  display: flex;
+  gap: 3px;
+  margin-top: 4px;
+}
+.pallini-pasti i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--primario);
+}
+.pallini-pasti i.t-colazione {
+  background: var(--senape);
+}
+.pallini-pasti i.t-merenda,
+.pallini-pasti i.t-spuntino {
+  background: #8fb0af;
+}
+.pallini-pasti i.t-pranzo {
+  background: var(--petrolio);
+}
+.pallini-pasti i.t-cena {
+  background: var(--rovere, #a8825a);
+}
+.pallini-pasti i.vuoto {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.3px var(--testo-tenue);
+  opacity: 0.6;
+}
+.striscia-giorni button[aria-pressed='true'] .pallini-pasti i.pieno {
+  background: #fff;
+}
+.striscia-giorni button[aria-pressed='true'] .pallini-pasti i.vuoto {
+  box-shadow: inset 0 0 0 1.3px #fff;
+}
+.altro-riquadro.piu {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--superficie);
+  color: var(--primario);
+  font-size: 1.3rem;
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.12);
+  display: grid;
+  place-items: center;
+}
+.riquadro .aggiungi-riquadro {
+  border: 1.5px dashed var(--bordo);
+  border-radius: 12px;
+  min-height: 40px;
+}
+.giorno-riquadri .riquadro:not(.vuoto) > .aggiungi-riquadro {
+  margin-top: auto;
+}
+.etichetta.ospiti-giorno {
+  background: var(--senape-tenue);
+  color: var(--testo);
+}
+.due-settimane {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+.striscia-titolo {
+  margin: 0 0 6px;
+}
+.riquadri.riquadri-menu-largo .riquadro:last-child {
+  grid-column: 1 / -1;
+}
+.riquadri.riquadri-menu-largo {
+  grid-template-rows: none;
+}
+.comandi-menu.largo .riempi-vuoti {
+  margin: 0;
+  min-height: 44px;
+  background: var(--senape);
+  border-color: var(--senape);
+  color: #2b2418;
+}
+/* Settimana sul telefono: due giorni e mezzo alla volta, si scorre di lato e si ferma su un giorno. */
+.settimana-griglia.scorre {
+  grid-template-columns: 52px repeat(var(--giorni, 7), 128px);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-padding-left: 52px;
+  margin-right: -16px;
+  padding-right: 16px;
+  -webkit-mask-image: linear-gradient(to right, #000 85%, transparent);
+  mask-image: linear-gradient(to right, #000 85%, transparent);
+  scrollbar-width: none;
+}
+.settimana-griglia.scorre::-webkit-scrollbar {
+  display: none;
+}
+.settimana-griglia.scorre > .testa-giorno {
+  scroll-snap-align: start;
+}
+.settimana-griglia.scorre > .angolo,
+.settimana-griglia.scorre .testa-pasto-settimana {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--sfondo);
+}
+.settimana-griglia .testa-giorno {
+  border-radius: 999px;
+  background: var(--superficie-2);
+}
+.settimana-griglia .testa-giorno.scelto {
+  background: var(--primario);
+}
+.settimana-griglia .testa-giorno.scelto,
+.settimana-griglia .testa-giorno.scelto strong {
+  color: var(--primario-testo);
+}
+.pallini-pagina {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin: 4px 0 8px;
+}
+.pallini-pagina i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--bordo);
+}
+.pallini-pagina i.attivo {
+  width: 20px;
+  border-radius: 4px;
+  background: var(--primario);
 }
 
 /* Spesa: un solo selettore dei giorni e la barra «4 di 16 nel carrello». */
@@ -1748,7 +1835,8 @@ p > .link {
   margin: 4px 0 6px;
   font-size: 0.78rem;
 }
-@media (min-width: 900px), (orientation: landscape) and (min-width: 560px) and (max-height: 600px) {
+@media (min-width: 900px),
+  (orientation: landscape) and (min-width: 560px) and (max-height: 600px) {
   .due-settimane {
     grid-template-columns: 1fr 1fr;
     column-gap: 20px;
@@ -1763,7 +1851,10 @@ p > .link {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: calc(16px + env(safe-area-inset-top)) calc(20px + env(safe-area-inset-right)) calc(20px + env(safe-area-inset-bottom)) calc(20px + env(safe-area-inset-left));
+  padding: calc(16px + env(safe-area-inset-top))
+    calc(20px + env(safe-area-inset-right))
+    calc(20px + env(safe-area-inset-bottom))
+    calc(20px + env(safe-area-inset-left));
   background: #1a1b1d;
   color: #f3efe8;
   overflow-y: auto;
@@ -1925,7 +2016,8 @@ details > summary:has(.primo-presto) {
   font-size: 0.92rem;
   color: var(--attenzione);
 }
-@media (min-width: 900px), (orientation: landscape) and (min-width: 560px) and (max-height: 600px) {
+@media (min-width: 900px),
+  (orientation: landscape) and (min-width: 560px) and (max-height: 600px) {
   .schede-luogo {
     display: none;
   }
@@ -2001,7 +2093,8 @@ details > summary:has(.primo-presto) {
   padding-top: 8px;
   border-top: 1px solid var(--bordo);
 }
-@media (min-width: 900px), (orientation: landscape) and (min-width: 560px) and (max-height: 600px) {
+@media (min-width: 900px),
+  (orientation: landscape) and (min-width: 560px) and (max-height: 600px) {
   .schede .scheda-impostazioni {
     flex: none;
     margin-top: auto;
@@ -2217,7 +2310,8 @@ details > summary:has(.primo-presto) {
   border-color: var(--primario);
 }
 /* Tablet e telefono girato: foglio più largo; a sinistra filtri, nome, idea e chi mangia, a destra le ricette trovate. */
-@media (min-width: 900px), (orientation: landscape) and (min-width: 560px) and (max-height: 600px) {
+@media (min-width: 900px),
+  (orientation: landscape) and (min-width: 560px) and (max-height: 600px) {
   .foglio:has(.nuovo-piatto) {
     max-width: 960px;
   }
@@ -2269,4 +2363,58 @@ details > summary:has(.primo-presto) {
 .avanzi-mangiato li {
   gap: 8px;
   padding: 8px 0;
+}
+
+/* Menu (disegno A): nome del piatto e sigle sulla stessa riga; nel riquadro largo i piatti affiancati. */
+.titolo-settimana h2 {
+  white-space: nowrap;
+  font-size: 1.15rem;
+}
+.maiuscola {
+  display: inline-block;
+}
+.maiuscola::first-letter {
+  text-transform: uppercase;
+}
+.giorno-riquadri .riquadri:not(.riquadri-menu-largo) > .riquadro:not(:last-child:nth-child(odd)) .piatto-riquadro {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.giorno-riquadri .riquadri:not(.riquadri-menu-largo) > .riquadro:not(:last-child:nth-child(odd)) .piatto-riquadro .sigle {
+  flex-shrink: 0;
+}
+.riempi-vuoti.bottone.primario {
+  background: var(--senape);
+  border-color: var(--senape);
+  color: var(--senape-testo, #2b2418);
+}
+.riquadri.riquadri-menu-largo {
+  grid-auto-flow: row;
+  grid-auto-columns: auto;
+}
+.riquadri.riquadri-menu-largo > .riquadro:last-child {
+  grid-column: 1 / -1;
+}
+.riquadri.riquadri-menu-largo > .riquadro:last-child .piatti-riquadro {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+}
+@media (max-width: 899px) {
+  .comandi-menu:not(.largo) {
+    flex-wrap: nowrap;
+  }
+  .comandi-menu:not(.largo) .scelte.segmenti button {
+    min-height: 40px;
+    padding: 0 12px;
+  }
+  .comandi-menu:not(.largo) > .bottone {
+    min-height: 40px;
+    flex-shrink: 0;
+  }
+}
+.settimana-griglia .testa-giorno:not(.scelto) {
+  background: transparent;
 }
