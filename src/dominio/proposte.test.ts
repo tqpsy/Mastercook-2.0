@@ -35,6 +35,19 @@ describe('proposte del menu', () => {
     for (const x of p) expect(valutaPerFamiglia(indice, x.ricetta, persone, vincoli).esito).toBe('adatta');
   });
 
+  it('Antonino per un pasto: una ricetta ⛔ solo per un ingrediente che si toglie arriva dopo, con cosa togliere', () => {
+    const vincoli = [{ membro_id: 'sara', tipo: 'intolleranza', oggetto: 'ing:lattosio' }];
+    const casa = { ...base, vincoli, inCasa: ['ing:pasta', 'ing:zucchina', 'ing:cipolla', 'ing:parmigiano', 'ing:basilico'] };
+    expect(candidate(indice, 'cena', casa, { modo: 'casa' }).some((x) => x.ricetta.id === 'sys:pasta_zucchine')).toBe(false);
+    const con = candidate(indice, 'cena', casa, { modo: 'casa', conRimedi: true });
+    const pasta = con.find((x) => x.ricetta.id === 'sys:pasta_zucchine')!;
+    expect(pasta.rimedio?.togli).toEqual(['ing:parmigiano']);
+    expect(pasta.motivi).toContain('✂️ si fa senza parmigiano reggiano per Sara');
+    // L'ingrediente principale non si toglie: niente gnocchi al gorgonzola per chi non lo può mangiare.
+    const gorgonzola = [{ membro_id: 'sara', tipo: 'intolleranza', oggetto: 'ing:gorgonzola' }];
+    expect(candidate(indice, 'pranzo', { ...base, vincoli: gorgonzola }, { conRimedi: true }).some((x) => x.ricetta.id === 'sys:gnocchi_gorgonzola')).toBe(false);
+  });
+
   it('con un dubbio scritto a mano non si propone niente, finché la famiglia non segna «va bene»', () => {
     const vincoli = [{ membro_id: 'sara', tipo: 'intolleranza', oggetto: 'txt:qualcosa', testo: 'niente di strano' }];
     expect(candidate(indice, 'cena', { ...base, vincoli })).toEqual([]);

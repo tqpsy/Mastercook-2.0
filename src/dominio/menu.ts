@@ -6,6 +6,7 @@
 import { type Esito, type Valutazione, valutaPerVincoli, type Verifica, verificataPer, type Vincolo } from './compatibilita';
 import type { Indice, Ricetta } from './ricette';
 import { piuGiorni } from './scadenze';
+import { ricettaSenza, type Senza, senzaPer } from './senza';
 
 export const CATEGORIE_STANDARD = [
   { chiave: 'colazione', nome: 'Colazione', emoji: '☕', attiva: true },
@@ -145,7 +146,14 @@ export function alPasto(persone: Persona[], vincoli: Vincolo[], ospiti?: OspitiP
 
 export interface ValutazionePortata {
   esito: Esito;
-  perMembro: { membro_id: string; nome: string; mangia: 'principale' | 'alternativa' | 'niente'; valutazione: Valutazione | null }[];
+  perMembro: {
+    membro_id: string;
+    nome: string;
+    mangia: 'principale' | 'alternativa' | 'niente';
+    valutazione: Valutazione | null;
+    /** Gli ingredienti tolti dal suo piatto (per tutti o solo per lei). */
+    senza?: string[];
+  }[];
 }
 
 const PEGGIORE: Record<Esito, number> = { adatta: 0, da_verificare: 1, non_adatta: 2 };
@@ -153,7 +161,7 @@ const PEGGIORE: Record<Esito, number> = { adatta: 0, da_verificare: 1, non_adatt
 /**
  * La portata va bene per chi la mangia? Chi non mangia non conta; chi mangia un'alternativa
  * si valuta sull'alternativa (se è testo libero l'app non può dirlo: da verificare se ha vincoli).
- * `ricetta` è null per una portata a testo libero.
+ * `ricetta` è null per una portata a testo libero. `senza`: gli ingredienti tolti dal piatto (per tutti o per qualcuno).
  */
 export function valutaPortata(
   indice: Indice,
@@ -162,6 +170,7 @@ export function valutaPortata(
   vincoli: Vincolo[],
   eccezioni: Eccezione[],
   verifiche?: Verifica[],
+  senza: Senza[] = [],
 ): ValutazionePortata {
   const perMembro = persone.map((p) => {
     const e = eccezioni.find((x) => x.membro_id === p.id);
@@ -169,7 +178,15 @@ export function valutaPortata(
     if (e?.tipo === 'non_mangia') return { membro_id: p.id, nome: p.nome, mangia: 'niente' as const, valutazione: null };
     const piatto = e?.tipo === 'alternativa' ? (e.ricetta_id ? (indice.perId.get(e.ricetta_id) ?? null) : null) : ricetta;
     const mangia = e?.tipo === 'alternativa' ? ('alternativa' as const) : ('principale' as const);
-    if (piatto) return { membro_id: p.id, nome: p.nome, mangia, valutazione: valutaPerVincoli(indice, piatto, suoi, verificataPer(verifiche, p.id, piatto.id)) };
+    const via = mangia === 'principale' ? senzaPer(senza, p.id) : [];
+    if (piatto)
+      return {
+        membro_id: p.id,
+        nome: p.nome,
+        mangia,
+        valutazione: valutaPerVincoli(indice, ricettaSenza(piatto, via), suoi, verificataPer(verifiche, p.id, piatto.id)),
+        ...(via.length ? { senza: via } : {}),
+      };
     const valutazione: Valutazione = suoi.length ? { esito: 'da_verificare', motivi: ['piatto scritto a mano: controlla tu gli ingredienti'] } : { esito: 'adatta', motivi: [] };
     return { membro_id: p.id, nome: p.nome, mangia, valutazione };
   });
@@ -209,6 +226,8 @@ export interface PortataMenu {
   origine: string;
   /** La regola del piatto fisso da cui viene, se c'è. */
   fisso_id?: string | null;
+  /** Ingredienti tolti dal piatto, per tutti o solo per qualcuno (vedi senza.ts). */
+  senza?: Senza[];
   /** La portata da cui viene l'avanzo (un piatto che dura più giorni), se c'è. */
   avanzo_di?: string | null;
   bloccata: boolean;

@@ -2337,3 +2337,87 @@ details > summary:has(.primo-presto) {
 .obiettivi-antonino li > .cresce {
   flex: 1 1 100%;
 }
+
+/* ───────── Piatto senza un ingrediente (✂️) ───────── */
+.etichetta-taglio {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: var(--senape-tenue);
+  color: var(--senape-scuro);
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.togli-ingredienti li {
+  padding: 8px 12px;
+  border: 1.5px solid var(--bordo);
+  border-radius: var(--raggio);
+  background: var(--superficie);
+  margin-bottom: 6px;
+  gap: 8px;
+}
+.scelte-senza {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.scelta-senza {
+  display: grid;
+  gap: 4px;
+  text-align: left;
+  padding: 11px 12px 11px 40px;
+  border: 2px solid var(--bordo);
+  border-radius: 14px;
+  background: var(--superficie);
+  color: var(--testo);
+  font: inherit;
+  cursor: pointer;
+  position: relative;
+}
+.scelta-senza::before {
+  content: '';
+  position: absolute;
+  left: 12px;
+  top: 13px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--bordo);
+  box-sizing: border-box;
+}
+.scelta-senza[aria-checked='true'] {
+  border-color: var(--primario);
+  background: var(--primario-tenue);
+}
+.scelta-senza[aria-checked='true']::before {
+  border: 6px solid var(--primario);
+}
+.scelta-senza strong .sigla {
+  vertical-align: middle;
+}
+.non-si-toglie {
+  padding: 8px 12px 12px;
+}
+.voce-rimedio {
+  display: block;
+}
+.senza-nel-piatto {
+  gap: 10px;
+  padding: 10px 12px;
+  margin: 0 0 14px;
+  border: 1.5px solid var(--bordo);
+  border-radius: 14px;
+  background: var(--superficie);
+  flex-wrap: wrap;
+}
+.ingrediente-tolto {
+  text-decoration: line-through;
+  color: var(--testo-tenue);
+}
+.senza-nel-piatto > .cresce {
+  flex: 1 1 60%;
+}

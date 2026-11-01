@@ -3,10 +3,11 @@ import { IconaCibo } from '../ui/IconaCibo';
 import { iconaIngrediente } from '../dominio/iconeCibo';
 import { righeAttive, useFamiglia, useVista } from '../dati/contesto';
 import { useIndice } from '../dati/indice';
-import { valutaPerFamiglia } from '../dominio/compatibilita';
 import { type ConfermaPasto as Conferma, daConfermare, NOME_ESITO } from '../dominio/consumi';
 import type { CategoriaPasto, Eccezione, PortataMenu } from '../dominio/menu';
 import type { Indice, Ricetta } from '../dominio/ricette';
+import { type Senza, valutaFamigliaSenza } from '../dominio/senza';
+import { toltiDellaPortata } from './Senza';
 import { daUsarePresto, giorniTra, oggi, piuGiorni, statoData } from '../dominio/scadenze';
 import { spesaDelGiorno, type BisognoDelGiorno } from '../dominio/spesa';
 import { formatta, formattaGiorno } from '../dominio/unita';
@@ -121,6 +122,8 @@ interface Aperta {
   pasto: string;
   /** Chi mangia questo piatto (id dei membri). */
   chi: string[];
+  /** Ingredienti tolti dal piatto, per tutti o per qualcuno. */
+  senza?: Senza[];
 }
 
 /** Sempre in Oggi; merenda, spuntino e i pasti della famiglia solo se accesi nel Menu o se oggi hanno un piatto. */
@@ -600,6 +603,7 @@ function PiattoDiOggi({
         {d.dopo > 0 && ` · cucina anche ${d.dopo.toLocaleString('it-IT')} per i giorni dopo`}
         {ospiti && ` · 👥 ${ospiti.adulti + ospiti.bambini} ospiti`}
         {!ricetta && ' · senza ricetta'}
+        {d.senza && ` · ✂️ ${d.senza}`}
       </span>
     </>
   );
@@ -609,7 +613,7 @@ function PiattoDiOggi({
         <button
           className={`piatto${esito ? ` ${esito}` : ''}`}
           aria-label={`Ricetta: ${d.titolo}`}
-          onClick={() => apriRicetta({ ricetta, porzioni: mezze(d.porzioni + d.dopo), pasto, chi })}
+          onClick={() => apriRicetta({ ricetta, porzioni: mezze(d.porzioni + d.dopo), pasto, chi, senza: p.avanzo_di ? origine?.senza : p.senza })}
         >
           {contenuto}
         </button>
@@ -674,7 +678,8 @@ function RicettaDiOggi({ indice, dati, aperta, chiudi }: { indice: Indice; dati:
       ricetta={aperta.ricetta}
       inCasa={inCasa}
       porzioniIniziali={aperta.porzioni}
-      valutazione={conVincoli ? valutaPerFamiglia(indice, aperta.ricetta, loro, vincoli, verifiche) : null}
+      valutazione={conVincoli ? valutaFamigliaSenza(indice, aperta.ricetta, loro, vincoli, verifiche, aperta.senza) : null}
+      tolti={aperta.senza?.length ? toltiDellaPortata(aperta.senza, dati.persone, new Set(dati.persone.filter((x) => !aperta.chi.includes(x.id)).map((x) => x.id)), aperta.porzioni) : undefined}
       chiudi={chiudi}
       sopra={
         <p className="tenue" style={{ marginTop: 0 }}>

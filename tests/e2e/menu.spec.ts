@@ -24,6 +24,9 @@ test('menu: un piatto per cena, Sara mangia altro, nessun movimento in casa', as
   await nuovo.getByLabel('Cosa si mangia').fill('carbonara');
   await expect(nuovo.getByText('Non adatta a tutti')).toBeVisible();
   await nuovo.getByRole('button', { name: /Spaghetti alla carbonara/ }).click();
+  // Le uova sono l'ingrediente principale: non si tolgono, lo si dice e si può aggiungere lo stesso.
+  await expect(nuovo.getByText(/ingrediente principale/)).toBeVisible();
+  await nuovo.getByRole('button', { name: 'Aggiungi lo stesso ⛔' }).click();
 
   await page.getByRole('button', { name: 'Apri Spaghetti alla carbonara' }).click();
   const scheda = page.getByRole('dialog', { name: 'Spaghetti alla carbonara' });

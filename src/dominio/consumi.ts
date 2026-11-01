@@ -9,6 +9,7 @@ import { alPasto, porzioniAutomatiche, type Eccezione, type OspitiPasto, ospitiD
 import { copertura, type Indice, principali, type Ricetta } from './ricette';
 
 import { piuGiorni } from './scadenze';
+import { quotaSenza } from './senza';
 import type { UnitaBase } from './unita';
 
 export type EsitoPasto = 'come_previsto' | 'quantita_diverse' | 'altro_piatto' | 'saltato';
@@ -78,17 +79,25 @@ export function previstoPortata(
     const n = porzioniPortata(portata, persone, eccezioni, ospiti);
     return n > 0 ? [{ ingrediente_id: AVANZO, unita: 'pz', quantita: n }] : [];
   }
-  const piatti: [Ricetta | undefined, number][] = [];
+  const piatti: [Ricetta | undefined, number, ((c: Consumo) => number) | null][] = [];
   const dopo = avanziDi(portata, portate).reduce((t, a) => t + porzioniPortata(a, persone, eccezioni, ospiti), 0);
-  if (portata.ricetta_id) piatti.push([indice.perId.get(portata.ricetta_id), porzioniPortata(portata, persone, eccezioni, ospiti) + dopo]);
+  if (portata.ricetta_id) {
+    // Un ingrediente tolto a qualcuno: si compra e si scala solo per chi lo mangia (per tutti tolto: niente).
+    const porzioni = porzioniPortata(portata, persone, eccezioni, ospiti);
+    const fuori = new Set(sue.map((e) => e.membro_id));
+    const quota = portata.senza?.length ? (c: Consumo) => quotaSenza(portata.senza, c.ingrediente_id, persone, fuori, porzioni) : null;
+    piatti.push([indice.perId.get(portata.ricetta_id), porzioni + dopo, quota]);
+  }
   for (const e of sue) {
     const p = persone.find((x) => x.id === e.membro_id);
-    if (e.tipo === 'alternativa' && e.ricetta_id && p) piatti.push([indice.perId.get(e.ricetta_id), e.porzioni ?? p.porzione]);
+    if (e.tipo === 'alternativa' && e.ricetta_id && p) piatti.push([indice.perId.get(e.ricetta_id), e.porzioni ?? p.porzione, null]);
   }
   const somme = new Map<string, Consumo>();
-  for (const [r, porzioni] of piatti) {
+  for (const [r, porzioni, quota] of piatti) {
     if (!r) continue;
-    for (const c of ingredientiPiatto(indice, r, porzioni)) {
+    for (const tutto of ingredientiPiatto(indice, r, porzioni)) {
+      const c = quota ? { ...tutto, quantita: Math.round(tutto.quantita * quota(tutto) * 10) / 10 } : tutto;
+      if (c.quantita <= 0) continue;
       const prima = somme.get(chiave(c));
       somme.set(chiave(c), prima ? { ...prima, quantita: Math.round((prima.quantita + c.quantita) * 10) / 10 } : c);
     }
