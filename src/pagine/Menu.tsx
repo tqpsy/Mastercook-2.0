@@ -11,6 +11,7 @@ import {
   giorniDellaSettimana,
   type Gusto,
   gustiPerPiatto,
+  ID_OSPITI,
   lunedi,
   nomeGiorno,
   nomeSettimana,
@@ -27,7 +28,7 @@ import { CATEGORIE, type Categoria } from '../catalogo/tipi';
 import { haPrincipale, type Principale, usaIngrediente } from '../dominio/principale';
 import { BottoniSegno, CercaRicetta, type Segno } from '../ui/FiltriRicetta';
 import { RICETTE_PER_PASTO } from '../dominio/proposte';
-import { filtra, iconaRicetta, type Indice } from '../dominio/ricette';
+import { filtra, iconaRicetta, type Indice, type Ricetta } from '../dominio/ricette';
 import { ALLERGENI_UE, ESIGENZE, INTOLLERANZE, type VoceVincolo } from '../dominio/vincoli';
 import { IdeePerPasto, ProponiSettimana } from './Proposte';
 import { FacciaAntonino } from './Antonino';
@@ -37,6 +38,8 @@ import { oggi, piuGiorni } from '../dominio/scadenze';
 import { Foglio } from '../ui/Foglio';
 import { ICONA_ESITO, MarchiSegni, motiviInBreve, useIcone, useSegni } from './Ricette';
 import { IconaCibo } from '../ui/IconaCibo';
+import { elencoNomi, leggiSenza, type Rimedio, rimedio, type Senza } from '../dominio/senza';
+import { AvvisoNonSiToglie, EtichettaRimedio, FoglioSenza, testoSenza } from './Senza';
 import { Sigla, type SiglaPersona, sigleDi } from '../ui/Sigla';
 
 type Modo = 'giorni' | 'settimana' | 'panoramica';
@@ -115,6 +118,7 @@ export function useDatiMenu(vista: Vista): DatiMenu {
           bloccata: !!p.bloccata,
           ricetta_id: (p.ricetta_id as string | null) ?? null,
           testo: (p.testo as string | null) ?? null,
+          senza: leggiSenza(p.senza),
         }))
         .sort((a, b) => a.ordine - b.ordine || String(a.id).localeCompare(String(b.id))),
       eccezioni: attive('eccezione_membro').map((e) => ({
@@ -144,12 +148,14 @@ export function descrivi(indice: Indice, dati: DatiMenu, p: PortataMenu) {
   const ricetta = p.ricetta_id ? (indice.perId.get(p.ricetta_id) ?? null) : null;
   const eccezioni = dati.eccezioni.filter((e) => e.portata_id === p.id);
   const alTavolo = alPasto(dati.persone, dati.vincoli, ospitiDel(dati.ospiti, p.data, p.categoria));
-  const valutazione = alTavolo.vincoli.length ? valutaPortata(indice, ricetta, alTavolo.persone, alTavolo.vincoli, eccezioni, dati.verifiche) : null;
+  const valutazione = alTavolo.vincoli.length ? valutaPortata(indice, ricetta, alTavolo.persone, alTavolo.vincoli, eccezioni, dati.verifiche, p.senza) : null;
   const mangiano = dati.persone.filter((x) => !eccezioni.some((e) => e.membro_id === x.id));
   const gusti = ricetta ? gustiPerPiatto(indice, ricetta, mangiano, dati.gusti) : [];
   return {
     ricetta,
     titolo: ricetta?.titolo ?? p.testo ?? 'Piatto',
+    /** «senza panna per Sara»: cosa è tolto dal piatto. */
+    senza: ricetta ? testoSenza(indice, p.senza, dati.persone) : '',
     eccezioni,
     valutazione,
     gusti,
@@ -808,6 +814,7 @@ function RisultatiPiatto({
   filtro = SENZA_FILTRI,
   icone,
   vuoto,
+  rimedi,
 }: {
   indice: Indice;
   dati: DatiMenu;
@@ -818,8 +825,14 @@ function RisultatiPiatto({
   icone?: Map<string, string>;
   /** Cosa dire quando non c'è ancora niente da cercare. */
   vuoto?: string;
+  /**
+   * Aggiungendo un piatto: una ricetta ⛔ che va bene togliendo un ingrediente apre «per chi toglierlo»;
+   * se togliere non basta, lo dice e propone di far mangiare altro a chi non può.
+   */
+  rimedi?: { senza: (r: Ricetta, x: Rimedio) => void; mangiaAltro: (ricetta_id: string, chi: string[]) => void };
 }) {
   const [quante, setQuante] = useState(PER_PAGINA);
+  const [aperta, setAperta] = useState<string | null>(null);
   const chi = persone ?? dati.persone;
   const segni = useSegni();
   const filtrato = !!(filtro.categoria || filtro.principale || filtro.ingrediente || filtro.segno);
@@ -857,9 +870,15 @@ function RisultatiPiatto({
         {trovate.map((r) => {
           const v = dati.vincoli.length ? valutaPortata(indice, r, chi, dati.vincoli, [], dati.verifiche) : null;
           const no = gustiPerPiatto(indice, r, chi, dati.gusti).filter((g) => g.valore === 'non_piace');
+          const x = rimedi && v?.esito === 'non_adatta' ? rimedio(indice, r, chi, dati.vincoli, dati.verifiche) : null;
+          const tocca = () => {
+            if (x?.possibile) rimedi!.senza(r, x);
+            else if (x) setAperta(aperta === r.id ? null : r.id);
+            else scegli({ ricetta_id: r.id, testo: null });
+          };
           return (
             <li key={r.id}>
-              <button type="button" className="voce" onClick={() => scegli({ ricetta_id: r.id, testo: null })}>
+              <button type="button" className="voce" onClick={tocca} aria-expanded={x && !x.possibile ? aperta === r.id : undefined}>
                 <span className="icona-voce" aria-hidden>
                   <IconaCibo valore={iconaRicetta(indice, r, icone?.get(r.id))} />
                 </span>
@@ -871,9 +890,18 @@ function RisultatiPiatto({
                       {[v && NOME_ESITO[v.esito], no.length > 0 && `non piace a ${no.map((g) => g.nome).join(', ')}`].filter(Boolean).join(' · ')}
                     </span>
                   )}
+                  {x?.possibile && <EtichettaRimedio indice={indice} rimedio={x} />}
                 </span>
                 {v && <span aria-hidden>{ICONA_ESITO[v.esito]}</span>}
               </button>
+              {x && !x.possibile && aperta === r.id && (
+                <AvvisoNonSiToglie
+                  rimedio={x}
+                  famiglia={new Set(dati.persone.filter((m) => m.id !== ID_OSPITI).map((m) => m.id))}
+                  mangiaAltro={(loro) => rimedi!.mangiaAltro(r.id, loro)}
+                  aggiungiLoStesso={() => scegli({ ricetta_id: r.id, testo: null })}
+                />
+              )}
             </li>
           );
         })}
@@ -951,26 +979,33 @@ function NuovoPiatto({
     persone: dati.persone.filter((x) => chi.has(x.id) || !tutti.persone.some((m) => m.id === x.id)),
   };
 
-  /** Il piatto nuovo e, per chi non è spuntato, «non mangia questo piatto». */
-  async function aggiungi(campi: Record<string, unknown>) {
+  /** Una ricetta ⛔ che va bene togliendo un ingrediente: si sceglie per chi toglierlo prima di aggiungerla. */
+  const [daTogliere, setDaTogliere] = useState<{ ricetta: Ricetta; rimedio: Rimedio; origine: 'manuale' | 'automatica' } | null>(null);
+  const famiglia = new Set(tutti.persone.map((x) => x.id));
+
+  /** Il piatto nuovo e, per chi non è spuntato (o `fuori`), «non mangia questo piatto». */
+  async function aggiungi(campi: Record<string, unknown>, fuori: string[] = []) {
     const id = crypto.randomUUID();
-    await esegui('aggiungi_portata', {
-      id,
-      data,
-      categoria,
-      ...campi,
-      ordine: quanti,
-    });
+    await esegui('aggiungi_portata', { id, data, categoria, ...campi, ordine: quanti });
     for (const x of tutti.persone)
-      if (!chi.has(x.id))
-        await esegui('imposta_eccezione', {
-          id: crypto.randomUUID(),
-          portata_id: id,
-          membro_id: x.id,
-          tipo: 'non_mangia',
-        });
+      if (!chi.has(x.id) || fuori.includes(x.id)) await esegui('imposta_eccezione', { id: crypto.randomUUID(), portata_id: id, membro_id: x.id, tipo: 'non_mangia' });
     chiudi();
   }
+
+  if (daTogliere)
+    return (
+      <FoglioSenza
+        indice={indice}
+        ricetta={daTogliere.ricetta}
+        rimedio={daTogliere.rimedio}
+        persone={perLoro.persone}
+        famiglia={famiglia}
+        porzioni={perLoro.persone.reduce((t, x) => t + x.porzione, 0)}
+        bottone={`Aggiungi a ${nomeCategoria(dati, categoria).toLowerCase()}`}
+        conferma={(senza: Senza[]) => aggiungi({ ricetta_id: daTogliere.ricetta.id, origine: daTogliere.origine, senza })}
+        chiudi={() => setDaTogliere(null)}
+      />
+    );
 
   return (
     <Foglio titolo={`${nomeCategoria(dati, categoria)} di ${dataLunga(data)}`} chiudi={chiudi} alto>
@@ -989,7 +1024,11 @@ function NuovoPiatto({
           <p className="tenue">Spunta almeno una persona qui sotto.</p>
         ) : (
           <>
-            <IdeePerPasto indice={indice} dati={perLoro} data={data} categoria={categoria} filtro={filtro} conOspiti={!!ospitiDel(tutti.ospiti, data, categoria)} icone={icone} scegli={(ricetta_id) => aggiungi({ ricetta_id, origine: 'automatica' })} />
+            <IdeePerPasto indice={indice} dati={perLoro} data={data} categoria={categoria} filtro={filtro} conOspiti={!!ospitiDel(tutti.ospiti, data, categoria)} icone={icone} scegli={(ricetta_id, x) => {
+                const r = indice.perId.get(ricetta_id);
+                if (x && r) setDaTogliere({ ricetta: r, rimedio: x, origine: 'automatica' });
+                else aggiungi({ ricetta_id, origine: 'automatica' });
+              }} />
             <RisultatiPiatto
               indice={indice}
               dati={perLoro}
@@ -998,6 +1037,10 @@ function NuovoPiatto({
               icone={icone}
               vuoto="Scegli una categoria o un ingrediente, o scrivi un nome: qui compaiono le ricette."
               scegli={(s) => aggiungi(s)}
+              rimedi={{
+                senza: (ricetta, x) => setDaTogliere({ ricetta, rimedio: x, origine: 'manuale' }),
+                mangiaAltro: (ricetta_id, loro) => aggiungi({ ricetta_id }, loro),
+              }}
             />
           </>
         )}
@@ -1076,10 +1119,11 @@ function SchedaPiatto({
             .filter((m) => m.valutazione)
             .map(
               (m) =>
-                `${m.nome}${m.mangia === 'alternativa' ? ' (piatto a parte)' : ''}: ${m.valutazione!.esito === 'adatta' || !m.valutazione!.dettagli?.length ? `${ICONA_ESITO[m.valutazione!.esito]} ` : ''}${motiviInBreve(m.valutazione!) || 'nessun problema noto'}`,
+                `${m.nome}${m.mangia === 'alternativa' ? ' (piatto a parte)' : ''}: ${m.valutazione!.esito === 'adatta' || !m.valutazione!.dettagli?.length ? `${ICONA_ESITO[m.valutazione!.esito]} ` : ''}${motiviInBreve(m.valutazione!) || (m.senza?.length ? `senza ${elencoNomi(indice, m.senza)} ✂️` : 'nessun problema noto')}`,
             )}
         />
       )}
+      {d.ricetta && !!p.senza?.length && <SenzaNelPiatto indice={indice} dati={dati} portata={p} ricetta={d.ricetta} testo={d.senza} modifica={modifica} />}
       {d.gusti.length > 0 && (
         <ul className="tenue" style={{ paddingLeft: 18 }}>
           {d.gusti.map((g) => (
@@ -1354,6 +1398,75 @@ function DuraPiuGiorni({ dati, portata: p, cucinate }: { dati: DatiMenu; portata
           🍰 Avanza anche qui
         </button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Cosa è tolto dal piatto («✂️ Senza panna per Sara»): si cambia per chi (solo per lei o per tutti) o si rimette.
+ * Il foglio usa la ricetta com'è, per chi mangia il piatto quel giorno.
+ */
+function SenzaNelPiatto({
+  indice,
+  dati,
+  portata: p,
+  ricetta,
+  testo,
+  modifica,
+}: {
+  indice: Indice;
+  dati: DatiMenu;
+  portata: PortataMenu;
+  ricetta: Ricetta;
+  testo: string;
+  modifica: (campi: Record<string, unknown>) => Promise<unknown>;
+}) {
+  const [cambia, setCambia] = useState(false);
+  const alTavolo = alPasto(dati.persone, dati.vincoli, ospitiDel(dati.ospiti, p.data, p.categoria));
+  const fuori = new Set(dati.eccezioni.filter((e) => e.portata_id === p.id).map((e) => e.membro_id));
+  const mangiano = alTavolo.persone.filter((x) => !fuori.has(x.id));
+  const x = rimedio(indice, ricetta, mangiano, alTavolo.vincoli, dati.verifiche);
+  const perTutti = (p.senza ?? []).every((s) => s.membro_id === null);
+  return (
+    <div className="senza-nel-piatto riga">
+      <span aria-hidden style={{ fontSize: '1.3rem' }}>
+        ✂️
+      </span>
+      <span className="cresce">
+        <strong>{testo.charAt(0).toUpperCase() + testo.slice(1)}</strong>
+        <span className="tenue piccolo" style={{ display: 'block' }}>
+          {perTutti ? 'Nessuno lo mette: non va nella spesa' : 'La sua porzione si mette da parte prima di aggiungerlo'}
+        </span>
+      </span>
+      {x?.possibile && (
+        <button type="button" className="bottone piccolo" onClick={() => setCambia(true)}>
+          Cambia
+        </button>
+      )}
+      <button
+        type="button"
+        className="bottone piccolo"
+        onClick={() => window.confirm('Rimettere gli ingredienti tolti? Il piatto tornerà ⛔ per chi non può mangiarli.') && modifica({ senza: [] })}
+      >
+        Rimetti
+      </button>
+      {cambia && x?.possibile && (
+        <FoglioSenza
+          indice={indice}
+          ricetta={ricetta}
+          rimedio={x}
+          persone={mangiano}
+          famiglia={new Set(dati.persone.map((m) => m.id))}
+          porzioni={porzioniPortata(p, dati.persone, dati.eccezioni, dati.ospiti)}
+          iniziale={perTutti ? 'tutti' : 'loro'}
+          bottone="Salva"
+          conferma={async (senza) => {
+            await modifica({ senza });
+            setCambia(false);
+          }}
+          chiudi={() => setCambia(false)}
+        />
+      )}
     </div>
   );
 }

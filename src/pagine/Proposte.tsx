@@ -14,6 +14,8 @@ import type { ModoSuggerimento } from '../dominio/suggerimenti';
 import type { DatiMenu } from './Menu';
 import { Fumetto, FacciaAntonino, useAntonino, useImpara } from './Antonino';
 import { equilibrio, REGOLE_BASE } from '../dominio/antonino';
+import type { Rimedio } from '../dominio/senza';
+import { EtichettaRimedio } from './Senza';
 
 /** Cosa serve per proporre: chi mangia, vincoli, gusti, casa, e i piatti già in menu vicino a quei giorni. */
 export function useContestoProposte(dati: DatiMenu, dal: string, al: string): ContestoProposte {
@@ -253,14 +255,16 @@ export function IdeePerPasto({
   /** Al pasto ci sono ospiti: prima le ricette 💫. */
   conOspiti?: boolean;
   icone?: Map<string, string>;
-  scegli: (ricetta_id: string) => void;
+  /** `rimedio`: la ricetta va bene togliendo un ingrediente; chi la sceglie decide per chi toglierlo. */
+  scegli: (ricetta_id: string, rimedio?: Rimedio) => void;
 }) {
   const base = useContestoProposte(dati, data, data);
   const contesto = useMemo(() => ({ ...base, conOspiti }), [base, conOspiti]);
   // Con la casa vuota si parte dal ricettario; altrimenti da ciò che c'è.
   const casaVuota = base.inCasa.length === 0;
   const [modo, setModo] = useState<ModoSuggerimento>(casaVuota ? 'ricettario' : 'casa');
-  const filtro = useMemo(() => ({ ...filtroScelto, modo: casaVuota ? 'ricettario' : modo }), [filtroScelto, modo, casaVuota]);
+  // Antonino propone anche le ricette ⛔ che vanno bene togliendo un ingrediente, dopo le altre.
+  const filtro = useMemo(() => ({ ...filtroScelto, modo: casaVuota ? 'ricettario' : modo, conRimedi: true }), [filtroScelto, modo, casaVuota]);
   const idee = useMemo(() => {
     const gia = new Set(dati.portate.filter((p) => p.data === data && p.ricetta_id).map((p) => p.ricetta_id!));
     const tipi = [...gia].map((id) => indice.perId.get(id)).filter((r): r is Ricetta => !!r).map((r) => tipoPiatto(indice, r));
@@ -278,10 +282,10 @@ export function IdeePerPasto({
   const idea = idee[quale];
   const impara = useImpara();
   // Antonino impara: l'idea scelta è «scelta», quelle saltate con «Un'altra» prima di sceglierla sono «scartate».
-  function prendi(id: string) {
+  function prendi(id: string, rimedio?: Rimedio) {
     for (const x of idee.slice(Math.max(0, quale - 3), quale)) impara('scartata', x.ricetta.id);
     impara('scelta', id);
-    scegli(id);
+    scegli(id, rimedio);
   }
   return (
     <section className="idea-pasto" aria-label="Antonino consiglia">
@@ -312,15 +316,18 @@ export function IdeePerPasto({
         </p>
       ) : (
         <>
-          <button type="button" className="voce idea" onClick={() => prendi(idea.ricetta.id)} aria-label={`Metti nel menu ${idea.ricetta.titolo}`}>
+          <button type="button" className="voce idea" onClick={() => prendi(idea.ricetta.id, idea.rimedio)} aria-label={`Metti nel menu ${idea.ricetta.titolo}`}>
             <span className="icona-voce grande" aria-hidden>
               <IconaCibo valore={iconaRicetta(indice, idea.ricetta, icone?.get(idea.ricetta.id))} />
             </span>
             <span className="cresce">
               <strong>{idea.ricetta.titolo}</strong>
               <span className="tenue" style={{ display: 'block' }}>
-                {[CATEGORIE.find((c) => c.id === idea.ricetta.categoria)?.nome, minuti(idea.ricetta), ...idea.motivi].filter(Boolean).join(' · ')}
+                {[CATEGORIE.find((c) => c.id === idea.ricetta.categoria)?.nome, minuti(idea.ricetta), ...idea.motivi.filter((m) => !m.startsWith('✂️'))]
+                  .filter(Boolean)
+                  .join(' · ')}
               </span>
+              {idea.rimedio && <EtichettaRimedio indice={indice} rimedio={idea.rimedio} />}
             </span>
             <span className="tenue" aria-hidden>
               ＋

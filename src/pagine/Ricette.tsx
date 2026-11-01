@@ -394,6 +394,7 @@ export function SchedaRicetta({
   modifica,
   porzioniIniziali,
   sopra,
+  tolti,
 }: {
   indice: Indice;
   ricetta: Ricetta;
@@ -405,6 +406,8 @@ export function SchedaRicetta({
   porzioniIniziali?: number;
   /** Cosa mostrare in cima, per esempio il pasto e chi mangia il piatto. */
   sopra?: ReactNode;
+  /** Ingredienti tolti dal piatto di oggi (✂️): l'etichetta («non per Sara») e quanta parte se ne usa. */
+  tolti?: Map<string, { etichetta: string; quota: number; nomi: string[] }>;
 }) {
   const { esegui } = useFamiglia();
   const vista = useVista();
@@ -427,18 +430,27 @@ export function SchedaRicetta({
   // Le basi collegate (la besciamella…): ingredienti raggruppati e la loro preparazione prima dei passaggi.
   const collegate = righeEBasi(r);
   const passiBasi = collegate.basi.flatMap((b) => (indice.perId.get(b.ricetta_id)?.passi ?? []).map((p) => `${titoloBase(indice, b.ricetta_id)}: ${p.testo}`));
+  /** La quantità per le porzioni scelte; un ingrediente tolto a qualcuno solo per gli altri. */
+  const quantitaDi = (g: RigaRicetta) => {
+    if (g.qb) return 'q.b.';
+    const t = tolti?.get(g.ingrediente_id);
+    if (t?.quota === 0) return '—';
+    return formatta(g.quantita === null ? null : scala({ valore: g.quantita * (t?.quota ?? 1), unita: g.unita }, r.porzioni, porzioni));
+  };
   const rigaIngrediente = (g: RigaRicetta) => {
     const ing = indice.ingrediente(g.ingrediente_id);
     const presente = !!ing?.base || casa.has(g.ingrediente_id);
+    const t = tolti?.get(g.ingrediente_id);
     return (
       <li key={g.id} className="riga">
         <span aria-hidden>{ing?.emoji}</span>
         <span className="cresce">
-          {g.testo || indice.nome(g.ingrediente_id)}
+          <span className={t?.quota === 0 ? 'ingrediente-tolto' : undefined}>{g.testo || indice.nome(g.ingrediente_id)}</span>
+          {t && <span className="etichetta-taglio" style={{ marginLeft: 6 }}>✂️ {t.etichetta}</span>}
           {g.opzionale && <span className="tenue"> (facoltativo)</span>}
-          {inCasa.size > 0 && presente && <span className="tenue"> · in casa</span>}
+          {inCasa.size > 0 && presente && !t && <span className="tenue"> · in casa</span>}
         </span>
-        <span>{g.qb ? 'q.b.' : formatta(g.quantita === null ? null : scala({ valore: g.quantita, unita: g.unita }, r.porzioni, porzioni))}</span>
+        <span>{quantitaDi(g)}</span>
       </li>
     );
   };
@@ -590,7 +602,12 @@ export function SchedaRicetta({
             return {
               nome: indice.nome(g.ingrediente_id),
               parole: [indice.nome(g.ingrediente_id), ...(ing?.sinonimi ?? [])],
-              quantita: g.qb ? 'q.b.' : formatta(g.quantita === null ? null : scala({ valore: g.quantita, unita: g.unita }, r.porzioni, porzioni)),
+              quantita:
+                tolti?.get(g.ingrediente_id)?.quota === 0
+                  ? 'non metterlo'
+                  : tolti?.get(g.ingrediente_id)
+                    ? `${quantitaDi(g)} (prima metti da parte la porzione di ${tolti.get(g.ingrediente_id)!.nomi.join(' e ')})`
+                    : quantitaDi(g),
             };
           })}
           chiudi={chiudiCucina}

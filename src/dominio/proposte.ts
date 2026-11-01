@@ -11,6 +11,7 @@ import { gustiPerPiatto, type Gusto, type Persona } from './menu';
 import type { Categoria } from '../catalogo/tipi';
 import { haPrincipale, type Principale, usaIngrediente } from './principale';
 import { copertura, type Indice, mancanti, principali, type Ricetta } from './ricette';
+import { type Rimedio, rimedio, testoRimedio } from './senza';
 import { bastaLaCasa, MASSIMO_MANCANTI, type ModoSuggerimento, type Segni, testoMancanti } from './suggerimenti';
 import { type Gruppo, gruppiDi, type MemoriaAntonino, PESI_BASE, pesoMemoria, type RegoleAntonino, spintaEquilibrio } from './antonino';
 
@@ -62,6 +63,8 @@ export interface Candidata {
   punti: number;
   motivi: string[];
   tipo: string;
+  /** La ricetta è ⛔ per qualcuno ma va bene togliendo un ingrediente: cosa togliere e per chi. */
+  rimedio?: Rimedio;
 }
 
 /** Filtri scelti a mano: una categoria di ricetta (al posto di quelle del pasto) e l'ingrediente principale. */
@@ -77,7 +80,18 @@ export interface FiltroProposte {
    * «ricettario» tutto il ricettario (la casa conta poco). Senza: l'equilibrio di «Proponi la settimana».
    */
   modo?: ModoSuggerimento | null;
+  /**
+   * Anche le ricette ⛔ che vanno bene togliendo un ingrediente (la panna a chi non tollera il lattosio), dopo le
+   * altre. Solo per «Antonino consiglia» di un pasto: lì si sceglie per chi toglierlo.
+   */
+  conRimedi?: boolean;
 }
+
+/**
+ * Quanto pesa dover togliere un ingrediente: una ricetta così viene dopo quelle che vanno bene come sono e con
+ * le stesse cose in casa, ma prima di una a cui manca un ingrediente in più («con ciò che ho» vale 10 a ingrediente).
+ */
+const PENALITA_RIMEDIO = 5;
 
 /** Le ricette proponibili per un pasto, dalla migliore. Solo ricette adatte a tutti e senza «non mi piace». */
 export function candidate(indice: Indice, pasto: string, c: ContestoProposte, filtro: FiltroProposte = {}): Candidata[] {
@@ -97,11 +111,17 @@ export function candidate(indice: Indice, pasto: string, c: ContestoProposte, fi
     const daOspiti = !!c.segni?.perOspiti.has(r.id);
     if ((filtro.segno === 'preferita' && !preferita) || (filtro.segno === 'ospiti' && !daOspiti)) continue;
     if (filtro.modo === 'casa' && !bastaLaCasa(principali(indice, r).length, mancanti(indice, r, casa).length)) continue;
-    if (valutaPerFamiglia(indice, r, c.persone, c.vincoli, c.verifiche).esito !== 'adatta') continue;
+    let rimedia: Rimedio | undefined;
+    if (valutaPerFamiglia(indice, r, c.persone, c.vincoli, c.verifiche).esito !== 'adatta') {
+      const x = filtro.conRimedi ? rimedio(indice, r, c.persone, c.vincoli, c.verifiche) : null;
+      if (!x?.adattaDopo) continue;
+      rimedia = x;
+    }
     const gusti = gustiPerPiatto(indice, r, c.persone, c.gusti);
     if (gusti.some((g) => g.valore === 'non_piace')) continue;
     const motivi: string[] = [];
-    let punti = 0;
+    // Prima le ricette che vanno bene così come sono.
+    let punti = rimedia ? -PENALITA_RIMEDIO : 0;
     const usa = principali(indice, r).filter((g) => urgenti.has(g.ingrediente_id));
     if (usa.length) {
       punti += pesi.scade * usa.length;
@@ -139,7 +159,8 @@ export function candidate(indice: Indice, pasto: string, c: ContestoProposte, fi
       punti += m.punti;
       if (m.motivo) motivi.push(m.motivo);
     }
-    esito.push({ ricetta: r, punti, motivi, tipo: tipoPiatto(indice, r) });
+    if (rimedia) motivi.push(`✂️ ${testoRimedio(indice, rimedia).replace(/^Si/, 'si')}`);
+    esito.push({ ricetta: r, punti, motivi, tipo: tipoPiatto(indice, r), ...(rimedia ? { rimedio: rimedia } : {}) });
   }
   return esito.sort((a, b) => b.punti - a.punti || a.ricetta.titolo.localeCompare(b.ricetta.titolo, 'it'));
 }

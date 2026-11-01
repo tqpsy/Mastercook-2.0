@@ -25,6 +25,11 @@ export interface Vincolo {
 export interface Motivo {
   esito: Exclude<Esito, 'adatta'>;
   testo: string;
+  /**
+   * Per un ⛔: gli ingredienti (righe della ricetta) che lo causano e che si potrebbero togliere dal piatto.
+   * Assente quando togliere un ingrediente non basta (allergene dichiarato dalla ricetta, uova crude…).
+   */
+  ingredienti?: string[];
 }
 
 export interface Valutazione {
@@ -98,9 +103,9 @@ export function valutaPerVincoli(indice: Indice, r: Ricetta, vincoli: Vincolo[],
 function valuta(indice: Indice, r: Ricetta, vincoli: Vincolo[]): Valutazione {
   let esito: Esito = 'adatta';
   const dettagli: Motivo[] = [];
-  const segna = (e: Exclude<Esito, 'adatta'>, testo: string) => {
+  const segna = (e: Exclude<Esito, 'adatta'>, testo: string, colpevoli?: { g: { ingrediente_id: string } }[]) => {
     esito = peggiore(esito, e);
-    if (!dettagli.some((d) => d.testo === testo)) dettagli.push({ esito: e, testo });
+    if (!dettagli.some((d) => d.testo === testo)) dettagli.push({ esito: e, testo, ...(colpevoli ? { ingredienti: [...new Set(colpevoli.map((x) => x.g.ingrediente_id))] } : {}) });
   };
 
   const righe = r.ingredienti.map((g) => {
@@ -127,7 +132,7 @@ function valuta(indice: Indice, r: Ricetta, vincoli: Vincolo[]): Valutazione {
         (x.ing && !x.ing.di_sistema && nomi.some((n) => ` ${normalizza(x.ing!.nome)} `.includes(` ${n} `))),
     );
     const obbligatori = violano.filter((x) => !x.g.opzionale);
-    if (obbligatori.length) segna('non_adatta', `contiene ${nome.toLowerCase()} (${elenca(obbligatori)})`);
+    if (obbligatori.length) segna('non_adatta', `contiene ${nome.toLowerCase()} (${elenca(obbligatori)})`, obbligatori);
     else if (violano.length) segna('da_verificare', `${elenca(violano)} è facoltativo: non metterlo (${nome.toLowerCase()})`);
   };
 
@@ -138,7 +143,9 @@ function valuta(indice: Indice, r: Ricetta, vincoli: Vincolo[]): Valutazione {
       const contengono = righe.filter((x) => x.ing?.allergeni.includes(codice));
       const obbligatori = contengono.filter((x) => !x.g.opzionale);
       if (r.allergeni_dichiarati.includes(codice) || obbligatori.length) {
-        segna('non_adatta', `contiene ${nome.toLowerCase()}${obbligatori.length ? ` (${elenca(obbligatori)})` : ''}`);
+        // Dichiarato dalla ricetta: c'è anche dove non si vede, togliere un ingrediente non basta.
+        const dichiarato = r.allergeni_dichiarati.includes(codice);
+        segna('non_adatta', `contiene ${nome.toLowerCase()}${obbligatori.length ? ` (${elenca(obbligatori)})` : ''}`, dichiarato ? undefined : obbligatori);
       } else if (contengono.length) {
         segna('da_verificare', `${nome.toLowerCase()} solo nei facoltativi: non mettere ${elenca(contengono)}`);
       } else if (senzaAllergeni.length) {
@@ -180,7 +187,7 @@ function valuta(indice: Indice, r: Ricetta, vincoli: Vincolo[]): Valutazione {
       const violano = righe.filter((x) => x.tipo.classi.some((c) => classi.includes(c)));
       const obbligatori = violano.filter((x) => !x.g.opzionale);
       const cosa = codice.startsWith('no_') ? `contiene ${nome.toLowerCase()}` : `non ${nome.toLowerCase()}`;
-      if (obbligatori.length) segna('non_adatta', `${cosa}: ${elenca(obbligatori)}`);
+      if (obbligatori.length) segna('non_adatta', `${cosa}: ${elenca(obbligatori)}`, obbligatori);
       else if (violano.length) segna('da_verificare', `${elenca(violano)} è facoltativo: non metterlo (${nome.toLowerCase()})`);
       nonSoCosE();
       return;
@@ -190,7 +197,7 @@ function valuta(indice: Indice, r: Ricetta, vincoli: Vincolo[]): Valutazione {
       const nota = INTOLLERANZE_NOTE[codice];
       if (nota) {
         const violano = righe.filter((x) => x.tipo.classi.includes(nota.classe as never) && !x.g.opzionale);
-        if (violano.length) segna('non_adatta', `${nome.toLowerCase()}: contiene ${elenca(violano)}`);
+        if (violano.length) segna('non_adatta', `${nome.toLowerCase()}: contiene ${elenca(violano)}`, violano);
         else nonSoCosE();
         return;
       }

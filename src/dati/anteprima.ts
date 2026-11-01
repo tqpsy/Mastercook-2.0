@@ -211,6 +211,7 @@ const EFFETTI: Record<string, Effetto> = {
     bloccata: false,
     ordine: d.ordine ?? 0,
     note: d.note ?? null,
+    senza: Array.isArray(d.senza) ? d.senza : [],
     versione: 1,
   })),
   aggiungi_avanzo: (righe, d, famiglia) => {
@@ -230,7 +231,13 @@ const EFFETTI: Record<string, Effetto> = {
       versione: 1,
     }))(righe, d, famiglia);
   },
-  modifica_portata: modifica('portata'),
+  modifica_portata: (righe, d, famiglia) => {
+    // Cambiando ricetta, ciò che era tolto dalla vecchia non vale più (come nel database).
+    const campi = (d.campi ?? {}) as Record<string, unknown>;
+    const prima = (righe.portata ?? []).find((r) => r.id === d.id);
+    const nuova = 'ricetta_id' in campi && !('senza' in campi) && prima && campi.ricetta_id !== prima.ricetta_id;
+    modifica('portata')(righe, nuova ? { ...d, campi: { ...campi, senza: [] } } : d, famiglia);
+  },
   rimuovi_portata: (righe, d, famiglia) => {
     elimina('portata')(righe, d, famiglia);
     // Con il piatto se ne vanno anche i suoi avanzi dei giorni dopo non ancora confermati.

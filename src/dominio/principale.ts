@@ -4,7 +4,7 @@
  * Si guardano solo gli ingredienti che contano: niente facoltativi, dispensa di base, «q.b.», aromi e
  * soffritto (aglio, cipolla, carota…), né formaggi grattugiati sopra.
  */
-import { type Indice, principali, type Ricetta } from './ricette';
+import { type Indice, principali, type Ricetta, type RigaRicetta } from './ricette';
 
 export type Principale = 'pasta' | 'riso' | 'carne' | 'pesce' | 'uova' | 'legumi' | 'formaggi' | 'verdure';
 
@@ -82,26 +82,35 @@ const NON_VERDURE = [
 export function tipiPrincipali(indice: Indice, r: Ricetta): Set<Principale> {
   const tipi = new Set<Principale>();
   for (const g of principali(indice, r)) {
-    if (g.qb) continue;
-    const i = indice.ingrediente(g.ingrediente_id);
-    if (!i) continue;
-    const radici = indice.antenati(i.id);
-    const ha = (ids: string[]) => radici.some((x) => ids.includes(x));
-    if (i.classi.includes('pesce')) tipi.add('pesce');
-    else if (i.classi.includes('carne')) tipi.add('carne');
-    else if (ha(PASTA)) tipi.add('pasta');
-    else if (ha(['ing:riso'])) tipi.add('riso');
-    else if (i.classi.includes('uova') || ha(['ing:uova'])) {
-      // Un uovo per legare le polpette o impanare non fa un piatto di uova: servono almeno 3 uova ogni 4 porzioni.
-      if (uovaPerPorzione(g.quantita, g.unita, r.porzioni) >= 0.75) tipi.add('uova');
-    } else if (ha(LEGUMI)) tipi.add('legumi');
-    else if (i.classi.includes('latticini')) {
-      if (ha(NON_FORMAGGI)) continue;
-      if (ha(GRATTUGIATI) && (g.quantita ?? 0) < 100) continue;
-      tipi.add('formaggi');
-    } else if (i.reparto === 'frutta_verdura' && !ha(NON_VERDURE)) tipi.add('verdure');
+    const t = tipoDellaRiga(indice, r, g);
+    if (t) tipi.add(t);
   }
   return tipi;
+}
+
+/** Che tipo di ingrediente principale è una riga della ricetta (pasta, carne…), o null se non lo è. */
+export function tipoDellaRiga(indice: Indice, r: Ricetta, g: RigaRicetta): Principale | null {
+  if (g.qb || g.opzionale) return null;
+  const i = indice.ingrediente(g.ingrediente_id);
+  if (!i || i.base) return null;
+  const radici = indice.antenati(i.id);
+  const ha = (ids: string[]) => radici.some((x) => ids.includes(x));
+  if (i.classi.includes('pesce')) return 'pesce';
+  if (i.classi.includes('carne')) return 'carne';
+  if (ha(PASTA)) return 'pasta';
+  if (ha(['ing:riso'])) return 'riso';
+  if (i.classi.includes('uova') || ha(['ing:uova'])) {
+    // Un uovo per legare le polpette o impanare non fa un piatto di uova: servono almeno 3 uova ogni 4 porzioni.
+    return uovaPerPorzione(g.quantita, g.unita, r.porzioni) >= 0.75 ? 'uova' : null;
+  }
+  if (ha(LEGUMI)) return 'legumi';
+  if (i.classi.includes('latticini')) {
+    if (ha(NON_FORMAGGI)) return null;
+    if (ha(GRATTUGIATI) && (g.quantita ?? 0) < 100) return null;
+    return 'formaggi';
+  }
+  if (i.reparto === 'frutta_verdura' && !ha(NON_VERDURE)) return 'verdure';
+  return null;
 }
 
 function uovaPerPorzione(quantita: number | null, unita: string, porzioni: number): number {
