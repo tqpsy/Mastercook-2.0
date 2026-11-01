@@ -223,7 +223,7 @@ export function useConsiglioPosto(ing: Ingrediente | null, luogo: Luogo): Consig
   const catalogo = useCatalogo();
   if (!frigo || !ing || luogo === 'dispensa') return null;
   const sottocategoria = catalogo?.ingredienti.find((x) => x.id === ing.id)?.sottocategoria ?? null;
-  return postoIngrediente(frigo, { reparto: ing.reparto, sottocategoria }, luogo);
+  return postoIngrediente(frigo, { id: ing.id, reparto: ing.reparto, sottocategoria }, luogo);
 }
 
 function ElencoLotti({ indice, lotti, giorno, apri, conLuogo }: { indice: Indice; lotti: Lotto[]; giorno: string; apri: (id: string) => void; conLuogo?: boolean }) {
@@ -408,6 +408,7 @@ function NuovoLotto({ indice, luogo: luogoIniziale, chiudi }: { indice: Indice; 
                   {consiglio.inFondo ? ', in fondo' : ''}
                 </strong>
                 <span className="tenue">{consiglio.perche}</span>
+                {consiglio.confezione && <span className="tenue piccolo">📦 {consiglio.confezione}</span>}
               </div>
             </div>
           )}
@@ -575,6 +576,7 @@ function SchedaLotto({ indice, lotto: l, giorno, chiudi }: { indice: Indice; lot
               </select>
             </label>
             {!postoOra && consiglio && <span className="tenue">{consiglio.perche}</span>}
+            {consiglio?.confezione && <span className="tenue piccolo">📦 {consiglio.confezione}</span>}
           </div>
         </div>
       )}
