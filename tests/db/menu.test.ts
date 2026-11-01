@@ -272,4 +272,62 @@ describe('pasti fissi', () => {
     await u.applica(comando('ferma_pasto_fisso', famiglia, { id: vecchia, dal: oggi }));
     expect((await fissi(famiglia)).filter((r) => !r.eliminata && r.testo === 'Caffè').map((r) => r.data)).toEqual([oggi]);
   });
+
+  it('chi mangia: i giorni dopo nascono con le stesse persone; cambiarlo vale da quel giorno in poi', async () => {
+    const { u, famiglia, membro } = await famigliaCon();
+    const [b, c, d] = [randomUUID(), randomUUID(), randomUUID()];
+    for (const [id, nome] of [[b, 'B'], [c, 'C'], [d, 'D']]) await u.applica(comando('aggiungi_membro', famiglia, { id, nome }));
+    const oggi = await giorno(0);
+    const prima = randomUUID();
+    await u.applica(comando('aggiungi_portata', famiglia, { id: prima, data: oggi, categoria: 'colazione', testo: 'Yogurt' }));
+    // Solo due su quattro: «membro» e B mangiano, C e D no.
+    for (const m of [c, d]) await u.applica(comando('imposta_eccezione', famiglia, { id: randomUUID(), portata_id: prima, membro_id: m, tipo: 'non_mangia' }));
+    const regola = randomUUID();
+    await u.applica(comando('fissa_pasto', famiglia, { id: regola, categoria: 'colazione', testo: 'Yogurt', dal: oggi, da_portata: prima, fino_a: await giorno(4) }));
+    const chiNon = () =>
+      banco.sql<{ data: string; chi: string[] | null }>(
+        `select p.data::text, (select array_agg(e.membro_id::text order by e.membro_id) from eccezione_membro e where e.portata_id = p.id and e.eliminato_il is null) as chi
+           from portata p where p.fisso_id = $1 and p.eliminato_il is null order by p.data`,
+        [regola],
+      );
+    const cd = [c, d].sort();
+    let righe = await chiNon();
+    expect(righe).toHaveLength(5);
+    expect(righe.every((r) => JSON.stringify(r.chi) === JSON.stringify(cd))).toBe(true);
+    // Anche i giorni creati dopo, prolungando.
+    await u.applica(comando('prolunga_pasti_fissi', famiglia, { fino_a: await giorno(6) }));
+    expect((await chiNon()).every((r) => JSON.stringify(r.chi) === JSON.stringify(cd))).toBe(true);
+
+    // Dal terzo giorno mangia anche D, e B no: vale da lì in poi, i giorni prima restano.
+    const terzo = (await banco.sql<{ id: string }>(`select id from portata where fisso_id = $1 and data = current_date + 2`, [regola]))[0].id;
+    const eccD = (await banco.sql<{ id: string }>(`select id from eccezione_membro where portata_id = $1 and membro_id = $2 and eliminato_il is null`, [terzo, d]))[0].id;
+    await u.applica(comando('rimuovi_eccezione', famiglia, { id: eccD }));
+    await u.applica(comando('imposta_eccezione', famiglia, { id: randomUUID(), portata_id: terzo, membro_id: b, tipo: 'non_mangia' }));
+    expect((await u.applica(comando('allinea_chi_mangia_fisso', famiglia, { portata_id: terzo }))).esito).toBe('applicato');
+    const bc = [b, c].sort();
+    righe = await chiNon();
+    expect(righe.map((r) => JSON.stringify(r.chi))).toEqual([...Array(2).fill(JSON.stringify(cd)), ...Array(5).fill(JSON.stringify(bc))]);
+    await u.applica(comando('prolunga_pasti_fissi', famiglia, { fino_a: await giorno(8) }));
+    expect((await chiNon()).slice(2).every((r) => JSON.stringify(r.chi) === JSON.stringify(bc))).toBe(true);
+    expect(membro).toBeTruthy();
+  });
+
+  it('togliere «ogni giorno» dal giorno dopo lascia il pasto di oggi; riaccenderlo riparte da oggi senza doppioni', async () => {
+    const { u, famiglia } = await famigliaCon();
+    const oggi = await giorno(0);
+    const prima = randomUUID();
+    await u.applica(comando('aggiungi_portata', famiglia, { id: prima, data: oggi, categoria: 'colazione', testo: 'Tè' }));
+    const regola = randomUUID();
+    await u.applica(comando('fissa_pasto', famiglia, { id: regola, categoria: 'colazione', testo: 'Tè', dal: oggi, da_portata: prima, fino_a: await giorno(3) }));
+    await u.applica(comando('ferma_pasto_fisso', famiglia, { id: regola, dal: await giorno(1) }));
+    expect((await fissi(famiglia)).filter((r) => !r.eliminata).map((r) => r.data)).toEqual([oggi]);
+    expect((await banco.sql(`select al::text from pasto_fisso where id = $1`, [regola]))[0]).toEqual({ al: oggi });
+
+    const nuova = randomUUID();
+    await u.applica(comando('fissa_pasto', famiglia, { id: nuova, categoria: 'colazione', testo: 'Tè', dal: oggi, da_portata: prima, fino_a: await giorno(3) }));
+    await u.applica(comando('prolunga_pasti_fissi', famiglia, { fino_a: await giorno(3) }));
+    const vive = (await fissi(famiglia)).filter((r) => !r.eliminata);
+    expect(vive.map((r) => r.data)).toEqual([oggi, await giorno(1), await giorno(2), await giorno(3)]);
+    expect((await banco.sql(`select fisso_id::text as f from portata where id = $1`, [prima]))[0]).toEqual({ f: nuova });
+  });
 });

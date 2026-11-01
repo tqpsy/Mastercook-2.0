@@ -1089,7 +1089,11 @@ function SchedaPiatto({
   const [cambia, setCambia] = useState(false);
   const [cucina, setCucina] = useState(false);
   const pronto = usePronti().get(p.id);
-  const confermato = useConferme(useVista()).attive.has(p.id);
+  const vista = useVista();
+  const confermato = useConferme(vista).attive.has(p.id);
+  // «Ogni giorno da qui» è acceso se la regola del piatto continua anche nei giorni dopo questo.
+  const regola = p.fisso_id ? (vista.righe.pasto_fisso ?? []).find((f) => f.id === p.fisso_id && !f.eliminato_il) : undefined;
+  const ogniGiorno = !!regola && (!regola.al || String(regola.al) > p.data);
   const [data, setData] = useState(p.data);
   const [categoria, setCategoria] = useState(p.categoria);
   const [note, setNote] = useState(p.note ?? '');
@@ -1107,7 +1111,7 @@ function SchedaPiatto({
         {nomeCategoria(dati, p.categoria)} · {dataLunga(p.data)}
         {p.origine === 'ripetuta' && ' · ripetuto dalla settimana prima'}
         {p.origine === 'automatica' && ' · ✨ proposto dall’app'}
-        {p.fisso_id && ' · 🔁 ogni giorno'}
+        {ogniGiorno && ' · 🔁 ogni giorno'}
         {!d.ricetta && ' · senza ricetta'}
       </p>
       {p.avanzo_di && <AvanzoDi dati={dati} portata={p} />}
@@ -1142,7 +1146,7 @@ function SchedaPiatto({
           scegli={async (s) => {
             await modifica(s);
             // Un piatto fisso si può cambiare solo per oggi o da questo giorno in poi.
-            if (p.fisso_id && window.confirm('Cambiarlo anche nei giorni dopo? (Annulla = solo questo giorno)')) {
+            if (ogniGiorno && p.fisso_id && window.confirm('Cambiarlo anche nei giorni dopo? (Annulla = solo questo giorno)')) {
               await esegui('ferma_pasto_fisso', {
                 id: p.fisso_id,
                 dal: p.data,
@@ -1166,25 +1170,17 @@ function SchedaPiatto({
           <button className="bottone piccolo" onClick={() => setCambia(true)}>
             Cambia piatto
           </button>
-          {p.fisso_id ? (
-            <button
-              className="bottone piccolo"
-              onClick={async () => {
-                if (!window.confirm('Togliere questo piatto da oggi in poi? I giorni già confermati restano.')) return;
-                await esegui('ferma_pasto_fisso', {
-                  id: p.fisso_id,
-                  dal: p.data,
-                });
-                chiudi();
-              }}
-            >
-              Non più da questo giorno
-            </button>
-          ) : (
-            <button
-              className="bottone piccolo"
-              onClick={() =>
-                esegui('fissa_pasto', {
+        </div>
+      )}
+      {!cambia && (
+        <label className="riga" style={{ margin: '12px 0', minHeight: 44 }}>
+          <input
+            type="checkbox"
+            checked={ogniGiorno}
+            onChange={async (e) => {
+              if (e.target.checked) {
+                // Da questo giorno compreso: questa portata diventa il primo giorno, con le stesse persone a tavola.
+                await esegui('fissa_pasto', {
                   id: crypto.randomUUID(),
                   categoria: p.categoria,
                   ...(p.ricetta_id ? { ricetta_id: p.ricetta_id } : { testo: p.testo }),
@@ -1192,13 +1188,16 @@ function SchedaPiatto({
                   ordine: p.ordine,
                   dal: p.data,
                   da_portata: p.id,
-                })
+                });
+              } else if (p.fisso_id) {
+                if (!window.confirm('Non ripeterlo più nei giorni dopo? Questo pasto resta nel menu.')) return;
+                // Si ferma dal giorno dopo: il pasto di questo giorno non si tocca.
+                await esegui('ferma_pasto_fisso', { id: p.fisso_id, dal: piuGiorni(p.data, 1) });
               }
-            >
-              🔁 Ogni giorno da qui
-            </button>
-          )}
-        </div>
+            }}
+          />
+          <span>🔁 Ogni giorno, da questo giorno in poi</span>
+        </label>
       )}
 
       <div className="campo" style={{ marginTop: 16 }}>
@@ -1247,19 +1246,26 @@ function SchedaPiatto({
                 const e = d.eccezioni.find((x) => x.membro_id === id && x.tipo === 'alternativa');
                 return e ? `piatto a parte: ${e.ricetta_id ? (indice.perId.get(e.ricetta_id)?.titolo ?? 'ricetta') : e.testo}` : null;
               }}
-              cambia={(id, si) => {
+              cambia={async (id, si) => {
                 const e = d.eccezioni.find((x) => x.membro_id === id);
-                if (si && e) void esegui('rimuovi_eccezione', { id: e.id });
+                if (si && e) await esegui('rimuovi_eccezione', { id: e.id });
                 if (!si)
-                  void esegui('imposta_eccezione', {
+                  await esegui('imposta_eccezione', {
                     id: crypto.randomUUID(),
                     portata_id: p.id,
                     membro_id: id,
                     tipo: 'non_mangia',
                     versione_attesa: e?.versione,
                   });
+                // Piatto di ogni giorno: chi mangia vale anche per i giorni dopo.
+                if (ogniGiorno) await esegui('allinea_chi_mangia_fisso', { portata_id: p.id });
               }}
             />
+            {ogniGiorno && (
+              <p className="tenue" style={{ margin: '0 0 8px' }}>
+                🔁 Chi mangia vale anche per i giorni dopo.
+              </p>
+            )}
             {senzaPiatto.length > 0 && (
               <button className="bottone piccolo" onClick={() => apriNuovo(senzaPiatto.map((x) => x.id))}>
                 + Un altro piatto per {senzaPiatto.map((x) => x.nome).join(', ')}
