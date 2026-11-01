@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AntoninoImpostazioni } from './Antonino';
+import { VoceMioFrigo } from './MioFrigo';
 import { idDispositivo, righeAttive, useFamiglia, useVista } from '../dati/contesto';
 import { esporta } from '../dati/esportazione';
 import { spiegaMotivo } from '../dati/messaggi';
@@ -65,6 +66,7 @@ export function Impostazioni({
         </p>
       </div>
 
+      <VoceMioFrigo />
       {amministratore && dove === 'server' && <Inviti />}
       <Accessi amministratore={amministratore} io={utenteId} />
       <AntoninoImpostazioni />

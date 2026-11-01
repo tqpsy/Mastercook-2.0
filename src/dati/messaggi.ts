@@ -108,6 +108,7 @@ const AZIONI: Record<string, string> = {
   segna_ricetta: 'Segnare una ricetta ⭐ preferita, 💫 per gli ospiti o modificata',
   antonino_impara: 'Insegnare ad Antonino cosa vi piace',
   antonino_regole: 'Cambiare le regole di Antonino',
+  imposta_frigo: 'Configurare il frigorifero',
   verifica_ricetta: 'Segnare «va bene» o «non va bene» una ricetta',
   fissa_pasto: 'Ripetere un piatto ogni giorno',
   prolunga_pasti_fissi: 'Preparare i giorni dei piatti fissi',

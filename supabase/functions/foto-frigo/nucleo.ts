@@ -28,6 +28,8 @@ export interface Riconosciuto {
   nome: string;
   quantita: number | null;
   unita: 'g' | 'ml' | 'pz' | null;
+  /** In quale parte del frigo l'ha visto (r1, s2, c1, f3…), solo se la famiglia ha configurato il frigo. */
+  posto?: string | null;
 }
 
 export type Esito = { alimenti: Riconosciuto[]; modello: string } | { errore: 'quota' | 'chiave' | 'gemini'; dettaglio?: string };
@@ -46,6 +48,7 @@ const SCHEMA = {
       nome: { type: 'STRING' },
       quantita: { type: 'NUMBER', nullable: true },
       unita: { type: 'STRING', enum: ['g', 'ml', 'pz'], nullable: true },
+      posto: { type: 'STRING', nullable: true },
     },
     required: ['nome'],
   },
@@ -82,16 +85,25 @@ export function leggiAlimenti(testo: string): Riconosciuto[] {
     visti.add(nome);
     const unita = r.unita === 'g' || r.unita === 'ml' || r.unita === 'pz' ? r.unita : null;
     const q = typeof r.quantita === 'number' && Number.isFinite(r.quantita) && r.quantita > 0 && r.quantita < 100_000 ? r.quantita : null;
-    esito.push({ nome, quantita: q !== null && unita ? q : null, unita: q !== null ? unita : null });
+    const posto = typeof r.posto === 'string' && /^[rcsf][1-9]$/.test(r.posto) ? r.posto : null;
+    esito.push({ nome, quantita: q !== null && unita ? q : null, unita: q !== null ? unita : null, ...(posto ? { posto } : {}) });
     if (esito.length >= 40) break;
   }
   return esito;
 }
 
-/** Chiede a Gemini, passando al modello dopo quando la quota gratuita di uno è finita. */
-export async function riconosci(immagine: string, chiave: string, chiama: typeof fetch = fetch, modelli = MODELLI): Promise<Esito> {
+/** La descrizione del frigo della famiglia (src/dominio/frigo.ts, descriviPerFoto): solo testo, breve. */
+export function testoFrigo(frigo: unknown): string | null {
+  return typeof frigo === 'string' && frigo.trim() ? frigo.slice(0, 1500) : null;
+}
+
+/**
+ * Chiede a Gemini, passando al modello dopo quando la quota gratuita di uno è finita. Con il frigo descritto,
+ * Gemini dice anche in quale parte vede ogni alimento.
+ */
+export async function riconosci(immagine: string, chiave: string, chiama: typeof fetch = fetch, modelli = MODELLI, frigo: string | null = null): Promise<Esito> {
   const corpo = JSON.stringify({
-    contents: [{ parts: [{ inline_data: { mime_type: 'image/jpeg', data: immagine } }, { text: ISTRUZIONI }] }],
+    contents: [{ parts: [{ inline_data: { mime_type: 'image/jpeg', data: immagine } }, { text: frigo ? `${ISTRUZIONI}\n\n${frigo}` : ISTRUZIONI }] }],
     generationConfig: { responseMimeType: 'application/json', responseSchema: SCHEMA, temperature: 0.1 },
   });
   let quota = false;

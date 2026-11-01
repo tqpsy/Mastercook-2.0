@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { leggiAlimenti, messaggioGoogle, MODELLI, riconosci } from './nucleo';
+import { leggiAlimenti, messaggioGoogle, MODELLI, riconosci, testoFrigo } from './nucleo';
 
 const risposta = (stato: number, corpo: unknown) => new Response(typeof corpo === 'string' ? corpo : JSON.stringify(corpo), { status: stato });
 const gemini = (testo: string) => risposta(200, { candidates: [{ content: { parts: [{ text: testo }] } }] });
@@ -61,5 +61,22 @@ describe('foto del frigo con Gemini', () => {
   it('i modelli nuovi vengono prima dei 2.5', () => {
     expect(MODELLI[0]).toBe('gemini-3.8-flash');
     expect(MODELLI.indexOf('gemini-2.5-flash')).toBeGreaterThan(MODELLI.indexOf('gemini-3.5-flash-lite'));
+  });
+
+  it('con il frigo descritto: il testo va a Gemini e il posto si tiene solo se ha la forma giusta', async () => {
+    let corpo = '';
+    const chiama = (async (_u: string, init: RequestInit) => {
+      corpo = String(init.body);
+      const testo = JSON.stringify([
+        { nome: 'latte', quantita: 1000, unita: 'ml', posto: 's2' },
+        { nome: 'uova', quantita: null, unita: null, posto: 'sul tavolo' },
+      ]);
+      return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text: testo }] } }] }), { status: 200 });
+    }) as typeof fetch;
+    const esito = await riconosci('AAAA', 'k', chiama, ['a'], testoFrigo('- s2: Sportello, balconcino 2'));
+    expect(corpo).toContain('s2: Sportello, balconcino 2');
+    expect(esito).toEqual({ alimenti: [{ nome: 'latte', quantita: 1000, unita: 'ml', posto: 's2' }, { nome: 'uova', quantita: null, unita: null }], modello: 'a' });
+    expect(testoFrigo(42)).toBeNull();
+    expect(testoFrigo('x'.repeat(5000))).toHaveLength(1500);
   });
 });

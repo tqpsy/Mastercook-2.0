@@ -1,4 +1,6 @@
 import type { Ripiano } from '../dominio/cucinato';
+import { postoPiatto } from '../dominio/frigo';
+import { DisegnoFrigoMio, useFrigo } from './FrigoMio';
 
 /** Il fondo del ripiano (la «base» su cui si appoggia il contenitore), davanti e dietro, nel frigo visto aperto. */
 const BASE = { alto: { davanti: 58, dietro: 60 }, centrale: { davanti: 100, dietro: 94 } } as const;
@@ -74,6 +76,24 @@ export function DisegnoFrigo({ ripiano }: { ripiano: Ripiano }) {
 
 /** Il riquadro «Ripiano consigliato»: il frigo disegnato e il posto, in parole. */
 export function ConsiglioRipiano({ ripiano, compatto }: { ripiano: Ripiano; compatto?: boolean }) {
+  const frigo = useFrigo();
+  // Con il frigo configurato (Impostazioni › Il mio frigorifero) il posto è quello preciso del frigo di casa.
+  if (frigo) {
+    const c = postoPiatto(frigo, ripiano.posto === 'centrale');
+    return (
+      <div className={`consiglio-ripiano${compatto ? ' compatto' : ''}`}>
+        <DisegnoFrigoMio frigo={frigo} evidenzia={c.posto.id} inFondo={c.inFondo} />
+        <span>
+          <span className="tenue piccolo">Ripiano consigliato</span>
+          <strong>
+            {c.posto.nome}
+            {c.inFondo ? ', in fondo' : ''}
+          </strong>
+          <span className="tenue">{c.perche}</span>
+        </span>
+      </div>
+    );
+  }
   return (
     <div className={`consiglio-ripiano${compatto ? ' compatto' : ''}`}>
       <DisegnoFrigo ripiano={ripiano} />
