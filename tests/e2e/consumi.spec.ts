@@ -44,8 +44,9 @@ test('pasti: «mangiato» in un tocco, correzione a differenza, avanzi e pasti a
   await expect(page.getByRole('region', { name: 'Oggi si mangia' })).toContainText('Mangiato come previsto');
   await expect.poll(spaghetti).toBe(420);
 
-  // Correzione: in realtà 100 g. Si toglie solo la differenza.
-  await page.getByRole('button', { name: `Correggi: ${CARBONARA}` }).click();
+  // Correzione: in realtà 100 g. Si toglie solo la differenza. Correggi sta nel dettaglio del pasto («⋯»).
+  await page.getByRole('region', { name: 'Cena' }).getByRole('button', { name: /^Dettagli di cena/ }).click();
+  await page.getByRole('dialog', { name: 'Cena di oggi' }).getByRole('button', { name: `Correggi: ${CARBONARA}` }).click();
   const foglio = page.getByRole('dialog', { name: 'Correggi il pasto' });
   await foglio.getByRole('radio', { name: 'Quantità diverse' }).click();
   await foglio.getByLabel('Quanto Spaghetti hai usato').fill('100');
@@ -81,7 +82,8 @@ test('pasti: «mangiato» in un tocco, correzione a differenza, avanzi e pasti a
   await expect(page.getByRole('button', { name: 'Oggi', exact: true })).toHaveAccessibleDescription('');
   await salvato(page);
 
-  // Dopo la conferma, la foto del piatto è facoltativa: si carica e la conferma la cita.
+  // Dopo la conferma, la foto del piatto è facoltativa: si carica dal dettaglio del pasto e la conferma la cita.
+  await page.getByRole('region', { name: 'Cena' }).getByRole('button', { name: /^Dettagli di cena/ }).click();
   await page
     .locator(`label[aria-label="Aggiungi una foto del piatto: ${CARBONARA}"] input`)
     .setInputFiles({ name: 'piatto.png', mimeType: 'image/png', buffer: Buffer.from(PNG, 'base64') });
@@ -114,6 +116,9 @@ test('ciò che scade: in Casa le ricette che lo usano, «stasera» in un tocco, 
   await expect(ricette.getByRole('listitem').first()).toContainText('usa guanciale');
   await ricette.getByRole('button', { name: /Metti a cena stasera/ }).first().click();
   await page.getByRole('button', { name: 'Oggi', exact: true }).click();
+  // In Oggi «Da usare presto» è una tendina chiusa che dice quanti sono e i primi nomi.
+  await expect(page.getByRole('region', { name: 'Da usare presto' }).locator('summary')).toContainText('Da usare presto 1guanciale');
+  await page.getByRole('region', { name: 'Da usare presto' }).locator('summary').click();
   await expect(page.getByRole('region', { name: 'Da usare presto' }).getByRole('button', { name: /Guanciale/ })).toContainText('oggi');
   await expect(page.getByRole('region', { name: 'Oggi si mangia' }).getByRole('button', { name: /Mangiato come previsto/ })).toBeVisible();
   await salvato(page);

@@ -9,6 +9,7 @@ import type { Indice, Ingrediente } from '../dominio/ricette';
 import { ALLERGENI_UE, ESIGENZE, INTOLLERANZE, NOME_TIPO, nomeOggetto, oggettoDaTesto, type TipoVincolo } from '../dominio/vincoli';
 import { CercaIngrediente } from '../ui/CercaIngrediente';
 import { Foglio } from '../ui/Foglio';
+import { Sigla, sigleDi } from '../ui/Sigla';
 
 const EMOJI = ['🧑', '👩', '👨', '👧', '👦', '🧒', '👶', '👵', '👴', '🧔', '👱', '🙂'];
 const PORZIONI = [
@@ -27,6 +28,8 @@ export function Famiglia() {
   const [aperto, setAperto] = useState<string | 'nuovo' | null>(null);
   const membri = righeAttive(vista, 'membro').filter((m) => !m.archiviato);
   const vincoli = righeAttive(vista, 'vincolo_alimentare');
+  // Le stesse sigle colorate dei riquadri di Oggi: qui accanto al nome, come legenda.
+  const sigle = sigleDi(membri.map((m) => ({ id: m.id, nome: String(m.nome), porzione: Number(m.porzione ?? 1) })));
 
   if (!vista.pronta) return null;
   return (
@@ -48,6 +51,7 @@ export function Famiglia() {
                 aria-label={`Modifica ${String(m.nome)}`}
               >
                 <span className="emoji">{String(m.emoji ?? '🙂')}</span>
+                <Sigla s={sigle.get(m.id)} grande />
                 <span className="cresce">
                   <strong>{String(m.nome)}</strong>
                   {m.in_attesa && <span className="etichetta attesa" style={{ marginLeft: 8 }}>in invio</span>}
@@ -61,6 +65,7 @@ export function Famiglia() {
           ))}
         </ul>
       </div>
+      {membri.length > 1 && <p className="tenue">Il cerchietto con l’iniziale è quello che indica chi mangia cosa nei riquadri di Oggi.</p>}
       <p className="tenue">
         Allergie e intolleranze sono vincoli: le ricette che non le rispettano, o di cui mancano le informazioni, non verranno mai proposte come adatte.
       </p>
