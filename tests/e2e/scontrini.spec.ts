@@ -84,7 +84,25 @@ test('codice a barre: la prima volta si sceglie (con Open Food Facts), poi si ri
   let richieste = 0;
   await page.route('https://world.openfoodfacts.org/**', (r) => {
     richieste++;
-    return r.fulfill({ json: { status: 1, product: { product_name_it: 'Latte intero', brands: 'Stalla', product_quantity: 1000, product_quantity_unit: 'ml' } } });
+    // Risposta dell'API v3: oltre a nome e formato, valori nutrizionali, ingredienti e indicatori ufficiali.
+    expect(r.request().url()).toContain('/api/v3/product/8001234567890');
+    return r.fulfill({
+      json: {
+        code: '8001234567890',
+        status: 'success',
+        product: {
+          product_name_it: 'Latte intero',
+          brands: 'Stalla',
+          product_quantity: 1000,
+          product_quantity_unit: 'ml',
+          nutriments: { 'energy-kcal_100g': 64, fat_100g: 3.6, 'saturated-fat_100g': 2.4, sugars_100g: 4.9, proteins_100g: 3.3, salt_100g: 0.1, calcium_100g: 0.12 },
+          ingredients_text_it: '_Latte_ intero',
+          allergens_tags: ['en:milk'],
+          nova_group: 1,
+          nutriscore_grade: 'b',
+        },
+      },
+    });
   });
   await creaFamiglia(page, 'Casa Codici');
   await page.getByRole('button', { name: 'Casa', exact: true }).click();
@@ -93,8 +111,20 @@ test('codice a barre: la prima volta si sceglie (con Open Food Facts), poi si ri
   await page.getByLabel('Oppure scrivi le cifre sotto il codice').fill('8001234567890');
   await page.getByRole('button', { name: 'Usa questo codice' }).click();
   await expect(page.getByRole('dialog', { name: 'Codice nuovo' })).toContainText('Latte intero Stalla');
+  await page.getByRole('button', { name: 'Valori e ingredienti' }).click();
+  const scheda = page.getByRole('dialog', { name: 'Latte intero Stalla' });
+  await expect(scheda.getByRole('row', { name: /di cui saturi/ })).toContainText('2,4 g');
+  await expect(scheda.getByRole('row', { name: /Calcio/ })).toContainText('120 mg');
+  await expect(scheda).toContainText('Latte intero');
+  await expect(scheda).toContainText('Nutri-Score');
+  await expect(scheda).toContainText('NOVA · alimento non lavorato');
+  if (info.project.name === 'telefono') await scheda.screenshot({ path: 'test-results/scheda-prodotto-telefono.png' });
+  await scheda.getByRole('button', { name: 'Chiudi' }).click();
   await page.getByRole('button', { name: 'È Latte' }).click();
   await expect(page.getByLabel('Quantità', { exact: true })).toHaveValue('1000');
+  await page.getByRole('button', { name: 'Valori e ingredienti' }).click();
+  await expect(page.getByRole('dialog', { name: 'Latte intero Stalla' })).toContainText('Proteine');
+  await page.getByRole('dialog', { name: 'Latte intero Stalla' }).getByRole('button', { name: 'Chiudi' }).click();
   await expect(page.getByLabel('Nome sulla confezione (facoltativo)')).toHaveValue('Latte intero Stalla');
   await page.getByRole('button', { name: 'Senza data' }).click();
   await page.getByRole('button', { name: 'Aggiungi', exact: true }).click();
@@ -113,6 +143,11 @@ test('codice a barre: la prima volta si sceglie (con Open Food Facts), poi si ri
   await page.getByRole('button', { name: 'Usa questo codice' }).click();
   await expect(page.getByRole('region', { name: 'Nel carrello' }).getByRole('button', { name: 'Apri Latte' })).toBeVisible();
   await expect(page.getByRole('region', { name: 'Nel carrello' })).toContainText('1 l');
+  // Valori e ingredienti si guardano anche al supermercato, senza una nuova richiesta.
+  await page.getByRole('status').getByRole('button', { name: 'Valori e ingredienti' }).click();
+  await expect(page.getByRole('dialog', { name: 'Latte intero Stalla' })).toContainText('64 kcal');
+  if (info.project.name === 'tablet') await page.screenshot({ path: 'test-results/scheda-prodotto-tablet.png' });
+  await page.getByRole('dialog', { name: 'Latte intero Stalla' }).getByRole('button', { name: 'Chiudi' }).click();
   await salvato(page);
   expect(richieste).toBe(chieste);
 });

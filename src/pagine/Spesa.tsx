@@ -22,6 +22,7 @@ import { formatta, formattaEuro, formattaGiorno, leggiNumero, type PerNegozio, q
 import { CercaIngrediente } from '../ui/CercaIngrediente';
 import { Foglio } from '../ui/Foglio';
 import { ScansionaProdotto } from '../ui/CodiceProdotto';
+import { FoglioSchedaProdotto } from '../ui/SchedaProdotto';
 import { quantitaDa } from './Casa';
 import { Scontrino } from './Scontrino';
 
@@ -78,6 +79,9 @@ export function Spesa() {
   const [acquistoAperto, setAcquistoAperto] = useState<string | null>(null);
   const [scontrino, setScontrino] = useState(false);
   const [scansiona, setScansiona] = useState(false);
+  // L'ultimo prodotto scansionato: se ne guardano valori e ingredienti senza fermare la spesa.
+  const [ultimo, setUltimo] = useState<{ codice: string; nome: string } | null>(null);
+  const [dettagli, setDettagli] = useState(false);
   const dal = oggi();
   const finestra = useMemo(() => Array.from({ length: GIORNI_SPESA }, (_, i) => piuGiorni(dal, i)), [dal]);
   const famiglia = righeAttive(vista, 'famiglia')[0];
@@ -115,6 +119,21 @@ export function Spesa() {
           </button>
         </div>
       </div>
+      {ultimo && (
+        <div className="avviso info riga spazio" role="status" style={{ flexWrap: 'wrap', gap: 8 }}>
+          <span>
+            <span aria-hidden>🛒</span> Nel carrello: <strong>{ultimo.nome}</strong>
+          </span>
+          <span className="riga">
+            <button className="bottone piccolo" onClick={() => setDettagli(true)}>
+              <span aria-hidden>📋</span> Valori e ingredienti
+            </button>
+            <button className="bottone piccolo" onClick={() => setUltimo(null)} aria-label="Chiudi l’avviso">
+              ✕
+            </button>
+          </span>
+        </div>
+      )}
       <GiorniSpesa finestra={finestra} scelti={scelti} piatti={piattiPerGiorno(vista)} cambia={(g) => void ricalcola(g)} />
       <p className="tenue" style={{ marginTop: 4 }}>
         {descriviGiorni(finestra, scelti)}, tolto ciò che c’è già in casa.{' '}
@@ -186,7 +205,8 @@ export function Spesa() {
       {vocePerta && <SchedaVoce indice={indice} voce={vocePerta} prezzi={prezzi} chiudi={() => setAperta(null)} />}
       {conferma && <ConfermaSpesa indice={indice} carrello={carrello} chiudi={() => setConferma(false)} />}
       {scontrino && <Scontrino indice={indice} chiudi={() => setScontrino(false)} />}
-      {scansiona && <NelCarrello indice={indice} voci={voci} chiudi={() => setScansiona(false)} />}
+      {scansiona && <NelCarrello indice={indice} voci={voci} chiudi={() => setScansiona(false)} messo={setUltimo} />}
+      {ultimo && dettagli && <FoglioSchedaProdotto codice={ultimo.codice} nome={ultimo.nome} chiudi={() => setDettagli(false)} />}
       {acquisto && <SchedaAcquisto indice={indice} acquisto={acquisto} righe={righe.filter((r) => r.acquisto_id === acquisto.id)} chiudi={() => setAcquistoAperto(null)} />}
     </>
   );
@@ -266,7 +286,17 @@ function GiorniSpesa({ finestra, scelti, piatti, cambia }: { finestra: string[];
  * Un prodotto scansionato al supermercato va nel carrello: la voce della lista se c'è, altrimenti una
  * voce nuova. Un codice nuovo si ricorda per la famiglia, con la confezione se la si conosce già.
  */
-function NelCarrello({ indice, voci, chiudi }: { indice: Indice; voci: VoceSpesa[]; chiudi: () => void }) {
+function NelCarrello({
+  indice,
+  voci,
+  chiudi,
+  messo,
+}: {
+  indice: Indice;
+  voci: VoceSpesa[];
+  chiudi: () => void;
+  messo: (p: { codice: string; nome: string }) => void;
+}) {
   const { esegui } = useFamiglia();
   return (
     <ScansionaProdotto
@@ -274,6 +304,7 @@ function NelCarrello({ indice, voci, chiudi }: { indice: Indice; voci: VoceSpesa
       chiudi={chiudi}
       trovato={async ({ codice, ingrediente, prodotto, esterno }) => {
         chiudi();
+        messo({ codice, nome: prodotto?.nome ?? esterno?.nome ?? ingrediente.nome });
         if (!prodotto) {
           const f = esterno?.formato?.unita === UNITA_BASE[ingrediente.dimensione] ? esterno.formato : undefined;
           prodotto = { id: crypto.randomUUID(), codice, ingrediente_id: ingrediente.id, nome: esterno?.nome ?? null, quantita: f?.quantita ?? null, unita: f?.unita ?? null };

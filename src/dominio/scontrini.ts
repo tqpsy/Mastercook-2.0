@@ -245,11 +245,11 @@ export interface ProdottoEsterno {
   formato?: { quantita: number; unita: UnitaBase };
 }
 
-/** Legge la risposta di Open Food Facts (api/v2/product); undefined se il prodotto non c'è. */
+/** Legge la risposta di Open Food Facts (api/v3/product, accetta anche la v2); undefined se il prodotto non c'è. */
 export function daOpenFoodFacts(risposta: unknown): ProdottoEsterno | undefined {
-  const r = risposta as { status?: number; product?: Record<string, unknown> } | null;
+  const r = risposta as { status?: unknown; product?: Record<string, unknown> } | null;
   const p = r?.product;
-  if (!p || r?.status === 0) return undefined;
+  if (!p || r?.status === 0 || r?.status === 'failure') return undefined;
   const nome = [p.product_name_it, p.product_name, p.generic_name_it].find((x): x is string => typeof x === 'string' && x.trim() !== '')?.trim();
   if (!nome) return undefined;
   const marca = typeof p.brands === 'string' ? p.brands.split(',')[0].trim() : '';
