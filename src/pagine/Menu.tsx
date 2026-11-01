@@ -35,24 +35,40 @@ import { oggi, piuGiorni } from '../dominio/scadenze';
 import { Foglio } from '../ui/Foglio';
 import { ICONA_ESITO, motiviInBreve, useIcone } from './Ricette';
 import { IconaCibo } from '../ui/IconaCibo';
+import { Sigla, type SiglaPersona, sigleDi } from '../ui/Sigla';
 
-type Modo = 'giorni' | 'griglia' | 'panoramica';
+type Modo = 'giorni' | 'settimana' | 'panoramica';
 const MODI: { id: Modo; nome: string }[] = [
   { id: 'giorni', nome: 'Giorni' },
-  { id: 'griglia', nome: 'Griglia' },
+  { id: 'settimana', nome: 'Settimana' },
   { id: 'panoramica', nome: 'Panoramica' },
 ];
 const CHIAVE_MODO = 'mc-menu-modo';
 
-/** La scelta della vista è di questo dispositivo: sul telefono di base i giorni, sul tablet la griglia. */
+/** Tablet e telefono girato: la stessa soglia dei fogli di stile. */
+const LARGO = '(min-width: 900px), (orientation: landscape) and (min-width: 560px) and (max-height: 600px)';
+
+function useLargo() {
+  const [largo, setLargo] = useState(() => window.matchMedia(LARGO).matches);
+  useEffect(() => {
+    const m = window.matchMedia(LARGO);
+    const cambia = () => setLargo(m.matches);
+    m.addEventListener('change', cambia);
+    return () => m.removeEventListener('change', cambia);
+  }, []);
+  return largo;
+}
+
+/** La scelta della vista è di questo dispositivo: sul telefono di base i giorni, sul tablet la settimana. */
 function modoIniziale(): Modo {
   try {
     const v = localStorage.getItem(CHIAVE_MODO);
-    if (v === 'giorni' || v === 'griglia' || v === 'panoramica') return v;
+    if (v === 'griglia') return 'settimana';
+    if (v === 'giorni' || v === 'settimana' || v === 'panoramica') return v;
   } catch {
     // Archivio del browser non disponibile.
   }
-  return window.innerWidth >= 900 ? 'griglia' : 'giorni';
+  return window.innerWidth >= 900 ? 'settimana' : 'giorni';
 }
 
 export interface DatiMenu {
@@ -177,6 +193,7 @@ export function Menu() {
   const [pasti, setPasti] = useState(false);
   const [proponi, setProponi] = useState(false);
   const [ospiti, setOspiti] = useState<{ data: string; categoria: string } | null>(null);
+  const largo = useLargo();
   const fineSettimana = piuGiorni(lun, 6);
   const dueSettimane = piuGiorni(giorno, 13);
   useProlungaFissi(fineSettimana > dueSettimane ? fineSettimana : dueSettimane);
@@ -208,16 +225,25 @@ export function Menu() {
     await esegui('ripeti_portate', dati2);
   }
 
-  const cella = (data: string, c: CategoriaPasto) => (
-    <>
-      <EtichettaOspiti ospiti={ospitiDel(dati.ospiti, data, c.valore)} apri={() => setOspiti({ data, categoria: c.valore })} />
-      {piatti(data, c.valore).map((p) => (
-        <Piatto key={p.id} indice={indice} dati={dati} portata={p} apri={() => setAperta(p.id)} />
-      ))}
-      <button className="aggiungi-piatto" aria-label={`Aggiungi a ${c.nome.toLowerCase()} di ${dataLunga(data)}`} onClick={() => setNuova({ data, categoria: c.valore })}>
-        +
-      </button>
-    </>
+  const sigle = sigleDi(dati.persone);
+  const aggiungi = (data: string, categoria: string) => setNuova({ data, categoria });
+  const apriOspiti = (data: string, categoria: string) => setOspiti({ data, categoria });
+  // I pasti ancora vuoti da oggi in poi: quelli che «Riempi i vuoti» può proporre.
+  const vuoti = giorni.filter((g) => g >= giorno).reduce((n, g) => n + categorie.filter((c) => !piatti(g, c.valore).length).length, 0);
+  const riquadro = (data: string, c: CategoriaPasto, cella = false) => (
+    <RiquadroMenu
+      key={`${data}|${c.valore}`}
+      indice={indice}
+      dati={dati}
+      sigle={sigle}
+      data={data}
+      categoria={c}
+      portate={piatti(data, c.valore)}
+      cella={cella}
+      apri={setAperta}
+      aggiungi={() => aggiungi(data, c.valore)}
+      apriOspiti={() => apriOspiti(data, c.valore)}
+    />
   );
 
   return (
@@ -315,60 +341,88 @@ export function Menu() {
       )}
       {dati.vincoli.length > 0 && <p className="tenue">✅ adatto · ❔ da verificare · ⛔ non adatto a chi lo mangia · 🙅 a qualcuno non piace</p>}
 
-      {modo === 'griglia' && (
-        <div className="griglia-menu" role="region" aria-label="Griglia della settimana" tabIndex={0}>
-          <table>
-            <thead>
-              <tr>
-                <th />
-                {giorni.map((g) => (
-                  <th key={g} scope="col" className={g === giorno ? 'oggi' : undefined}>
-                    {nomeGiorno(g, true)} {Number(g.slice(8))}
-                  </th>
+      {modo === 'settimana' &&
+        (largo ? (
+          // Tablet: i giorni in colonna e i pasti in riga, ogni casella un riquadro con i suoi piatti.
+          <div className="settimana-griglia" role="region" aria-label="Settimana" style={{ ['--giorni' as string]: giorni.length }}>
+            <span />
+            {giorni.map((g) => (
+              <span key={g} className={`testa-giorno${g === giorno ? ' oggi' : ''}`}>
+                {nomeGiorno(g, true)} <strong>{Number(g.slice(8))}</strong>
+              </span>
+            ))}
+            {categorie.map((c) => (
+              <div key={c.valore} className="riga-pasto" style={{ display: 'contents' }}>
+                <span className="testa-pasto-settimana">
+                  <span aria-hidden>{c.emoji}</span>
+                  {c.nome}
+                </span>
+                {giorni.map((g) => riquadro(g, c, true))}
+              </div>
+            ))}
+          </div>
+        ) : (
+          // Telefono: un giorno per riga, un mini-riquadro per pasto; il giorno si apre toccandone il nome.
+          <div className="settimana-righe" role="region" aria-label="Settimana" style={{ ['--pasti' as string]: categorie.length }}>
+            <span />
+            {categorie.map((c) => (
+              <span key={c.valore} className="testa-pasto-mini" title={c.nome} aria-hidden>
+                {c.emoji}
+              </span>
+            ))}
+            {giorni.map((g) => (
+              <div key={g} style={{ display: 'contents' }}>
+                <button
+                  className={`giorno-mini${g === giorno ? ' oggi' : ''}${g < giorno ? ' passato' : ''}`}
+                  aria-label={`Apri il giorno ${dataLunga(g)}`}
+                  onClick={() => {
+                    setScelto(g);
+                    cambiaModo('giorni');
+                  }}
+                >
+                  <small>{nomeGiorno(g, true)}</small>
+                  <strong>{Number(g.slice(8))}</strong>
+                </button>
+                {categorie.map((c) => (
+                  <MiniRiquadro
+                    key={c.valore}
+                    indice={indice}
+                    dati={dati}
+                    sigle={sigle}
+                    data={g}
+                    categoria={c}
+                    portate={piatti(g, c.valore)}
+                    apri={setAperta}
+                    aggiungi={() => aggiungi(g, c.valore)}
+                  />
                 ))}
-              </tr>
-            </thead>
-            <tbody>
-              {categorie.map((c) => (
-                <tr key={c.valore}>
-                  <th scope="row">
-                    <span aria-hidden>{c.emoji}</span> {c.nome}
-                  </th>
-                  {giorni.map((g) => (
-                    <td key={g} className={g === giorno ? 'oggi' : undefined}>
-                      {cella(g, c)}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              </div>
+            ))}
+          </div>
+        ))}
 
       {modo === 'giorni' &&
         giorni
           .filter((g) => g === scelto)
-          .map((g) => (
-          <section key={g} className={`scheda giorno${g === giorno ? ' oggi' : ''}`} aria-label={dataLunga(g)}>
-            <h3 style={{ marginTop: 0, textTransform: 'capitalize' }}>
-              {dataLunga(g)}
-              {g === giorno && <span className="etichetta" style={{ marginLeft: 8 }}>oggi</span>}
-            </h3>
-            {categorie.map((c) => (
-              <div key={c.valore} className="pasto">
-                <span className="tenue nome-pasto">
-                  <span aria-hidden>{c.emoji}</span> {c.nome}
-                </span>
-                <div className="piatti">{cella(g, c)}</div>
-              </div>
-            ))}
-          </section>
-        ))}
+          .map((g) => {
+            const daRiempire = categorie.filter((c) => !piatti(g, c.valore).length).length;
+            return (
+              <section key={g} className={`giorno-riquadri${g === giorno ? ' oggi' : ''}`} aria-label={dataLunga(g)}>
+                <h3 className="titolo-giorno">
+                  <span style={{ textTransform: 'capitalize' }}>{dataLunga(g)}</span>
+                  {g === giorno && <span className="etichetta">oggi</span>}
+                  {daRiempire > 0 && g >= giorno && (
+                    <span className="etichetta da-riempire">{daRiempire === 1 ? '1 pasto da riempire' : `${daRiempire} pasti da riempire`}</span>
+                  )}
+                </h3>
+                <div className={`riquadri${categorie.length >= 5 ? ' fitto' : ''}`}>{categorie.map((c) => riquadro(g, c))}</div>
+              </section>
+            );
+          })}
 
-      {fine >= giorno && (
-        <button className="bottone primario fluttuante" onClick={() => setProponi(true)}>
-          ✨ Riempi i vuoti
+      {fine >= giorno && modo !== 'panoramica' && (
+        <button className="bottone primario pieno riempi-vuoti" onClick={() => setProponi(true)}>
+          ✨ Riempi i vuoti{vuoti > 0 ? ` · ${vuoti === 1 ? '1 pasto' : `${vuoti} pasti`}` : ''}
         </button>
       )}
 
@@ -409,27 +463,172 @@ export function Menu() {
   );
 }
 
-function Piatto({ indice, dati, portata: p, apri }: { indice: Indice; dati: DatiMenu; portata: PortataMenu; apri: () => void }) {
-  const d = descrivi(indice, dati, p);
+/** Le icone accanto al nome di un piatto del menu: esito per le esigenze, gusti, bloccato, già confermato. */
+function SegniPiatto({ d, portata: p, confermato }: { d: ReturnType<typeof descrivi>; portata: PortataMenu; confermato: boolean }) {
   const esito = d.valutazione?.esito;
-  const confermato = useVista().righe.conferma_pasto?.some((c) => c.portata_id === p.id && c.attiva && !c.eliminato_il);
   return (
-    <button className={`piatto${esito ? ` ${esito}` : ''}`} onClick={apri} aria-label={`Apri ${d.titolo}`}>
-      <span className="cresce">
-        {esito && <span aria-label={NOME_ESITO[esito]}>{ICONA_ESITO[esito]} </span>}
-        {d.titolo}
-        {d.nonPiace.length > 0 && <span title={d.nonPiace.map((g) => `a ${g.nome} non piace ${g.cosa.toLowerCase()}`).join('; ')}> 🙅</span>}
-        {p.bloccata && <span aria-label="bloccato"> 🔒</span>}
-        {confermato && <span aria-label="pasto confermato"> ✔️</span>}
-      </span>
-      <span className="tenue piccolo">
-        {formattaPorzioni(d.porzioni)}
-        {p.avanzo_di && ' · avanzo'}
-        {d.dopo > 0 && ` · +${d.dopo.toLocaleString('it-IT')} per i giorni dopo`}
-        {d.eccezioni.length > 0 && ` · ${chiLoMangia(dati, d.eccezioni)}`}
-        {p.in_attesa && ' · in invio'}
-      </span>
-    </button>
+    <>
+      {esito && esito !== 'adatta' && <span aria-label={NOME_ESITO[esito]}>{ICONA_ESITO[esito]} </span>}
+      {d.nonPiace.length > 0 && <span title={d.nonPiace.map((g) => `a ${g.nome} non piace ${g.cosa.toLowerCase()}`).join('; ')}>🙅 </span>}
+      {p.bloccata && <span aria-label="bloccato">🔒 </span>}
+      {confermato && <span aria-label="pasto confermato">✔️ </span>}
+    </>
+  );
+}
+
+const chiMangia = (dati: DatiMenu, eccezioni: Eccezione[]) => dati.persone.filter((x) => !eccezioni.some((e) => e.membro_id === x.id)).map((x) => x.id);
+
+function SigleDi({ sigle, chi }: { sigle: Map<string, SiglaPersona>; chi: string[] }) {
+  return (
+    <span className="sigle">
+      {[...chi]
+        .sort((a, b) => (sigle.get(a)?.ordine ?? 0) - (sigle.get(b)?.ordine ?? 0))
+        .map((id) => (
+          <Sigla key={id} s={sigle.get(id)} />
+        ))}
+    </span>
+  );
+}
+
+/**
+ * Un pasto di un giorno come riquadro, uguale a quelli di Oggi: i piatti con le sigle di chi li mangia
+ * (tocco = scheda del piatto), gli ospiti, «+» per aggiungere. `cella`: la versione compatta della settimana.
+ */
+function RiquadroMenu({
+  indice,
+  dati,
+  sigle,
+  data,
+  categoria: c,
+  portate,
+  cella,
+  apri,
+  aggiungi,
+  apriOspiti,
+}: {
+  indice: Indice;
+  dati: DatiMenu;
+  sigle: Map<string, SiglaPersona>;
+  data: string;
+  categoria: CategoriaPasto;
+  portate: PortataMenu[];
+  cella?: boolean;
+  apri: (id: string) => void;
+  aggiungi: () => void;
+  apriOspiti: () => void;
+}) {
+  const conferme = useVista().righe.conferma_pasto;
+  const confermato = (id: string) => !!conferme?.some((x) => x.portata_id === id && x.attiva && !x.eliminato_il);
+  const etichetta = `Aggiungi a ${c.nome.toLowerCase()} di ${dataLunga(data)}`;
+  const vuoto = portate.length === 0;
+  return (
+    <div className={`riquadro t-${c.valore}${vuoto ? ' vuoto' : ''}${cella ? ' cella' : ''}`}>
+      {!cella && (
+        <div className="testa-riquadro">
+          <h4>
+            <span className="emoji-pasto" aria-hidden>
+              {c.emoji}
+            </span>
+            {c.nome}
+          </h4>
+        </div>
+      )}
+      <EtichettaOspiti ospiti={ospitiDel(dati.ospiti, data, c.valore)} apri={apriOspiti} />
+      {!vuoto && (
+        <button className="altro-riquadro" aria-label={etichetta} onClick={aggiungi}>
+          +
+        </button>
+      )}
+      {vuoto ? (
+        <button className="aggiungi-riquadro" aria-label={etichetta} onClick={aggiungi}>
+          + Aggiungi
+        </button>
+      ) : (
+        <ul className="piatti-riquadro">
+          {portate.map((p) => {
+            const d = descrivi(indice, dati, p);
+            const nota = [p.avanzo_di && 'avanzo', d.dopo > 0 && `+${d.dopo.toLocaleString('it-IT')} per i giorni dopo`, p.in_attesa && 'in invio'].filter(Boolean).join(' · ');
+            return (
+              <li key={p.id}>
+                <button className={`piatto-riquadro${d.valutazione ? ` ${d.valutazione.esito}` : ''}`} onClick={() => apri(p.id)} aria-label={`Apri ${d.titolo}`}>
+                  <span className="nome-piatto">
+                    <SegniPiatto d={d} portata={p} confermato={confermato(p.id)} />
+                    {d.titolo}
+                    {nota && <span className="nota-piatto"> · {nota}</span>}
+                  </span>
+                  {dati.persone.length > 1 && <SigleDi sigle={sigle} chi={chiMangia(dati, d.eccezioni)} />}
+                  <span className="solo-lettura">
+                    {' '}
+                    {formattaPorzioni(d.porzioni)}
+                    {d.eccezioni.length > 0 && ` · ${chiLoMangia(dati, d.eccezioni)}`}
+                  </span>
+                </button>
+                {/* I piatti a parte (Sara mangia altro) con la sua sigla: si aprono sulla scheda del piatto. */}
+                {d.eccezioni
+                  .filter((e) => e.tipo === 'alternativa')
+                  .map((e) => {
+                    const persona = dati.persone.find((x) => x.id === e.membro_id);
+                    if (!persona) return null;
+                    const titolo = (e.ricetta_id ? indice.perId.get(e.ricetta_id)?.titolo : null) ?? e.testo ?? 'altro';
+                    return (
+                      <button key={e.id} className="piatto-riquadro a-parte" onClick={() => apri(p.id)} aria-label={`Apri ${titolo} (per ${persona.nome})`}>
+                        <span className="nome-piatto">{titolo}</span>
+                        {dati.persone.length > 1 && <SigleDi sigle={sigle} chi={[persona.id]} />}
+                      </button>
+                    );
+                  })}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/** Settimana sul telefono: il primo piatto del pasto (tocco = scheda) con le sigle, «+N» se ce ne sono altri. */
+function MiniRiquadro({
+  indice,
+  dati,
+  sigle,
+  data,
+  categoria: c,
+  portate,
+  apri,
+  aggiungi,
+}: {
+  indice: Indice;
+  dati: DatiMenu;
+  sigle: Map<string, SiglaPersona>;
+  data: string;
+  categoria: CategoriaPasto;
+  portate: PortataMenu[];
+  apri: (id: string) => void;
+  aggiungi: () => void;
+}) {
+  const ospiti = ospitiDel(dati.ospiti, data, c.valore);
+  if (!portate.length)
+    return (
+      <button className="mini-vuoto" aria-label={`Aggiungi a ${c.nome.toLowerCase()} di ${dataLunga(data)}`} onClick={aggiungi}>
+        +
+      </button>
+    );
+  const [primo, ...altri] = portate;
+  const d = descrivi(indice, dati, primo);
+  return (
+    <div className={`riquadro mini t-${c.valore}`}>
+      <button className="piatto-mini" onClick={() => apri(primo.id)} aria-label={`Apri ${d.titolo}`}>
+        <span className="nome-mini">{d.titolo}</span>
+        {dati.persone.length > 1 && <SigleDi sigle={sigle} chi={chiMangia(dati, d.eccezioni)} />}
+        <span className="solo-lettura"> {d.eccezioni.length > 0 && chiLoMangia(dati, d.eccezioni)}</span>
+      </button>
+      {(altri.length > 0 || ospiti) && (
+        <span className="altri-mini">
+          {altri.length > 0 && `+${altri.length}`}
+          {ospiti && ` 👥${ospiti.adulti + ospiti.bambini}`}
+        </span>
+      )}
+    </div>
   );
 }
 

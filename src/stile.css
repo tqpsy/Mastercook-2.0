@@ -1063,7 +1063,7 @@ button.etichetta {
   gap: 4px;
   min-height: 40px;
 }
-.testa-riquadro h3 {
+.testa-riquadro :is(h3, h4) {
   margin: 0;
   display: flex;
   align-items: center;
@@ -1072,7 +1072,7 @@ button.etichetta {
   min-width: 0;
   padding-right: 24px;
 }
-.riquadri.fitto .testa-riquadro h3 {
+.riquadri.fitto .testa-riquadro :is(h3, h4) {
   gap: 4px;
   font-size: 0.95rem;
 }
@@ -1353,8 +1353,8 @@ div.piatto-riquadro {
   .riquadri > .riquadro:last-child:nth-child(odd) .piatti-riquadro {
     display: flex;
   }
-  .testa-riquadro h3,
-  .riquadri.fitto .testa-riquadro h3 {
+  .testa-riquadro :is(h3, h4),
+  .riquadri.fitto .testa-riquadro :is(h3, h4) {
     font-size: 0.95rem;
     gap: 4px;
   }
@@ -1376,6 +1376,212 @@ div.piatto-riquadro {
   .oggi-lato .spesa-oggi {
     grid-column: 1;
   }
+}
+
+/* Menu a riquadri: il giorno scelto come in Oggi, la settimana a righe (telefono) o a griglia (tablet). */
+.giorno-riquadri {
+  margin-bottom: 8px;
+}
+.titolo-giorno {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0 10px;
+  font-size: 1.2rem;
+}
+.etichetta.da-riempire {
+  background: var(--superficie);
+  border: 1px solid var(--bordo);
+  color: var(--testo);
+}
+.piatto-riquadro.a-parte {
+  margin-top: 6px;
+}
+.giorno-riquadri .piatto-riquadro,
+.riquadro.cella .piatto-riquadro {
+  height: auto;
+}
+.riquadro.cella .altro-riquadro {
+  order: 9;
+}
+.riquadro > .etichetta {
+  align-self: flex-start;
+}
+.riquadro.vuoto .aggiungi-riquadro {
+  flex: 1;
+}
+.riquadro.cella {
+  padding: 6px;
+  gap: 4px;
+  border-radius: 14px;
+  min-height: 72px;
+}
+.riquadro.cella.vuoto,
+.riquadro.mini.vuoto {
+  background: transparent;
+  border: 1.5px dashed var(--bordo);
+}
+.riquadro.cella.vuoto .aggiungi-riquadro {
+  border: 0;
+  font-size: 0.85rem;
+}
+.riquadro.cella .altro-riquadro {
+  position: static;
+  width: 100%;
+  height: 32px;
+  border-radius: 10px;
+  font-size: 1.1rem;
+  opacity: 0.6;
+}
+.riquadro.cella .piatto-riquadro {
+  min-height: 40px;
+  padding: 6px 7px;
+  gap: 3px;
+  font-size: 0.8rem;
+  border-radius: 9px;
+}
+.riquadro.cella .sigla,
+.riquadro.mini .sigla {
+  width: 18px;
+  height: 18px;
+  font-size: 0.55rem;
+  box-shadow: 0 0 0 1.5px var(--superficie);
+}
+.riquadro.cella .sigle .sigla + .sigla,
+.riquadro.mini .sigle .sigla + .sigla {
+  margin-left: -4px;
+}
+.settimana-griglia {
+  display: grid;
+  grid-template-columns: 76px repeat(var(--giorni, 7), minmax(0, 1fr));
+  gap: 8px;
+  align-items: stretch;
+  margin-bottom: 8px;
+}
+.testa-giorno {
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--testo-tenue);
+  padding: 4px 0;
+}
+.testa-giorno strong {
+  font-family: var(--carattere-titoli);
+  font-size: 1.05rem;
+  color: var(--testo);
+}
+.testa-giorno.oggi,
+.testa-giorno.oggi strong {
+  color: var(--primario);
+  font-weight: 700;
+}
+.testa-pasto-settimana {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--testo-tenue);
+  text-align: center;
+}
+.testa-pasto-settimana span {
+  font-size: 1.4rem;
+}
+.settimana-righe {
+  display: grid;
+  grid-template-columns: 42px repeat(var(--pasti, 3), minmax(0, 1fr));
+  grid-auto-rows: minmax(62px, auto);
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.settimana-righe > .testa-pasto-mini {
+  min-height: 0;
+  text-align: center;
+  font-size: 1.2rem;
+  align-self: end;
+}
+.settimana-righe > span:first-child {
+  min-height: 0;
+}
+.giorno-mini {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  line-height: 1.1;
+}
+.giorno-mini small {
+  font-size: 0.75rem;
+  color: var(--testo-tenue);
+}
+.giorno-mini strong {
+  font-family: var(--carattere-titoli);
+  font-size: 1.25rem;
+}
+.giorno-mini.oggi {
+  background: var(--primario-tenue);
+  color: var(--primario);
+}
+.giorno-mini.passato {
+  opacity: 0.6;
+}
+.giorno-mini:focus-visible,
+.piatto-mini:focus-visible,
+.mini-vuoto:focus-visible {
+  outline: 2px solid var(--primario);
+  outline-offset: 2px;
+}
+.riquadro.mini {
+  padding: 6px;
+  gap: 3px;
+  border-radius: 12px;
+  justify-content: space-between;
+}
+.piatto-mini {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+.nome-mini {
+  font-size: 0.74rem;
+  font-weight: 600;
+  line-height: 1.15;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow-wrap: anywhere;
+}
+.altri-mini {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--testo-tenue);
+}
+.mini-vuoto {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  border: 1.5px dashed var(--bordo);
+  border-radius: 12px;
+  color: var(--testo-tenue);
+  font-size: 1.2rem;
+}
+.riempi-vuoti {
+  margin: 14px 0;
+  min-height: 52px;
 }
 
 /* Menu: vista, «Oggi» e «⋯» su una riga; i giorni come striscia; «Riempi i vuoti» sempre a portata di pollice. */

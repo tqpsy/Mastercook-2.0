@@ -91,7 +91,7 @@ test('menu: ripeti la settimana prima, accendi la merenda, la vista scelta resta
   const { page } = await apri(browser, luca, info.project.use);
   await creaFamiglia(page, 'Casa Settimane');
   await page.getByRole('button', { name: 'Menu', exact: true }).click();
-  await page.getByRole('group', { name: 'Vista' }).getByRole('button', { name: 'Griglia' }).click();
+  await page.getByRole('group', { name: 'Vista' }).getByRole('button', { name: 'Settimana' }).click();
   const lun = lunedi(oggi());
   await page.getByRole('button', { name: `Aggiungi a pranzo di ${dataLunga(lun)}` }).click();
   await page.getByRole('dialog').getByLabel('Cosa si mangia').fill('Pizza da asporto');
@@ -105,7 +105,7 @@ test('menu: ripeti la settimana prima, accendi la merenda, la vista scelta resta
   await expect(page.getByRole('button', { name: 'Apri Pizza da asporto' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Altre azioni' }).click();
-  await page.getByRole('button', { name: 'Pasti' }).click();
+  await page.getByRole('button', { name: 'Pasti', exact: true }).click();
   const merenda = page.getByRole('dialog', { name: 'Pasti della famiglia' }).getByLabel('Merenda');
   await merenda.click();
   await expect(merenda).toBeChecked();
