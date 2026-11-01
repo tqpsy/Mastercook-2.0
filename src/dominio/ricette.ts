@@ -183,15 +183,27 @@ export class Indice {
   readonly ingredienti: Map<string, Ingrediente>;
   readonly ricette: Ricetta[];
   readonly perId: Map<string, Ricetta>;
+  /** Ricetta di partenza → la versione modificata dalla famiglia che ne prende il posto. */
+  readonly sostituite: Map<string, Ricetta>;
 
+  /**
+   * `modificate`: le ricette della famiglia che sostituiscono quella da cui sono tratte. L'originale
+   * esce dall'elenco (proposte, ricerche, Antonino) ma resta in `perId` per i menu passati.
+   * Una versione archiviata o eliminata non sostituisce più niente: l'originale torna.
+   */
   constructor(
     readonly catalogo: Catalogo,
     ingredientiFamiglia: Ingrediente[] = [],
     ricetteFamiglia: Ricetta[] = [],
+    modificate: ReadonlySet<string> = new Set(),
   ) {
     this.ingredienti = new Map([...catalogo.ingredienti.map(ingredienteDiSistema), ...ingredientiFamiglia].map((i) => [i.id, i]));
-    this.ricette = [...ricetteFamiglia, ...catalogo.ricette.map(ricettaDiSistema)];
-    this.perId = new Map(this.ricette.map((r) => [r.id, r]));
+    const tutte = [...ricetteFamiglia, ...catalogo.ricette.map(ricettaDiSistema)];
+    this.perId = new Map(tutte.map((r) => [r.id, r]));
+    this.sostituite = new Map(
+      ricetteFamiglia.filter((r) => modificate.has(r.id) && !r.archiviata && r.derivata_da && this.perId.has(r.derivata_da)).map((r) => [r.derivata_da as string, r]),
+    );
+    this.ricette = tutte.filter((r) => !this.sostituite.has(r.id));
   }
 
   ingrediente(id: string): Ingrediente | undefined {

@@ -2,15 +2,42 @@ import { type FormEvent, useState } from 'react';
 import { IconaCibo } from '../ui/IconaCibo';
 import { iconaIngrediente } from '../dominio/iconeCibo';
 import { CATEGORIE, type Categoria } from '../catalogo/tipi';
-import { useFamiglia } from '../dati/contesto';
+import { righeAttive, useFamiglia, useVista, type Vista } from '../dati/contesto';
 import { basiDisponibili, DOSI, righeEBasi, testoDosi, titoloBase } from '../dominio/basi';
 import type { Indice, Ingrediente, Ricetta, RigaRicetta } from '../dominio/ricette';
 import { inBase, leggiNumero, UNITA, type Unita, UNITA_BASE, unitaPer } from '../dominio/unita';
 import { CercaIngrediente } from '../ui/CercaIngrediente';
 import { Foglio } from '../ui/Foglio';
 import { Foto, riduciFoto } from '../ui/Foto';
+import { portateDaSpostare } from '../dominio/modificate';
+import { oggi } from '../dominio/scadenze';
+import { segniDa } from '../dominio/suggerimenti';
 
-export type Bozza = { tipo: 'nuova' } | { tipo: 'copia'; da: Ricetta } | { tipo: 'modifica'; ricetta: Ricetta };
+/** `sostituisce`: «Modifica» su una ricetta di Mastercook, la copia ne prende il posto per la famiglia. */
+export type Bozza = { tipo: 'nuova' } | { tipo: 'copia'; da: Ricetta; sostituisce?: boolean } | { tipo: 'modifica'; ricetta: Ricetta };
+
+type Esegui = (tipo: string, dati: Record<string, unknown>) => Promise<string>;
+
+/** I piatti da oggi in poi (non confermati, non cucinati) passano dalla ricetta `da` alla ricetta `a`. */
+export async function spostaPiatti(esegui: Esegui, vista: Vista, da: string, a: string) {
+  for (const p of portateDaSpostare(righeAttive(vista, 'portata'), righeAttive(vista, 'conferma_pasto'), righeAttive(vista, 'lotto'), da, oggi()))
+    await esegui('modifica_portata', { id: p.id, versione_attesa: p.versione, campi: { ricetta_id: a } });
+}
+
+/**
+ * La versione modificata prende il posto dell'originale: stessi segni ⭐ 💫, stessa icona, e i piatti
+ * in programma da oggi usano la versione nuova.
+ */
+async function sostituisci(esegui: Esegui, vista: Vista, da: string, a: string) {
+  await esegui('segna_ricetta', { ricetta_id: a, segno: 'modificata', attivo: true });
+  const famiglia = righeAttive(vista, 'famiglia')[0];
+  const segni = segniDa(famiglia?.impostazioni);
+  if (segni.preferite.has(da)) await esegui('segna_ricetta', { ricetta_id: a, segno: 'preferita', attivo: true });
+  if (segni.perOspiti.has(da)) await esegui('segna_ricetta', { ricetta_id: a, segno: 'ospiti', attivo: true });
+  const icona = righeAttive(vista, 'icona_ricetta').find((r) => r.ricetta_id === da);
+  if (icona) await esegui('scegli_icona', { id: crypto.randomUUID(), ricetta_id: a, emoji: icona.emoji });
+  await spostaPiatti(esegui, vista, da, a);
+}
 
 interface RigaBozza {
   chiave: string;
@@ -53,9 +80,11 @@ function righeDa(r: Ricetta | undefined, copia: boolean): RigaBozza[] {
  */
 export function EditorRicetta({ indice, bozza, chiudi }: { indice: Indice; bozza: Bozza; chiudi: (id?: string) => void }) {
   const { esegui, archivio, famiglia } = useFamiglia();
+  const vista = useVista();
+  const sostituisce = bozza.tipo === 'copia' && !!bozza.sostituisce;
   const base = bozza.tipo === 'nuova' ? undefined : bozza.tipo === 'copia' ? bozza.da : bozza.ricetta;
   const copia = bozza.tipo !== 'modifica';
-  const [titolo, setTitolo] = useState(bozza.tipo === 'copia' ? `${bozza.da.titolo} (mia versione)` : (base?.titolo ?? ''));
+  const [titolo, setTitolo] = useState(bozza.tipo === 'copia' && !sostituisce ? `${bozza.da.titolo} (mia versione)` : (base?.titolo ?? ''));
   const [descrizione, setDescrizione] = useState(base?.descrizione ?? '');
   const [categoria, setCategoria] = useState<Categoria | null>(base?.categoria ?? null);
   const [cucina, setCucina] = useState(base?.cucina ?? 'italiana');
@@ -181,12 +210,18 @@ export function EditorRicetta({ indice, bozza, chiudi }: { indice: Indice; bozza
       rimuovi: copia ? [] : (base?.passi ?? []).filter((p) => !passiTenuti.has(p.id)).map((p) => p.id),
     };
     await esegui('salva_ricetta', dati);
+    if (bozza.tipo === 'copia' && sostituisce) await sostituisci(esegui, vista, bozza.da.id, id);
     chiudi(id);
   }
 
   return (
-    <Foglio titolo={bozza.tipo === 'modifica' ? 'Modifica ricetta' : 'Nuova ricetta'} chiudi={() => chiudi()}>
+    <Foglio titolo={bozza.tipo === 'modifica' || sostituisce ? 'Modifica ricetta' : 'Nuova ricetta'} chiudi={() => chiudi()}>
       <form onSubmit={salva} noValidate>
+        {sostituisce && (
+          <p className="avviso info">
+            Le modifiche valgono solo per la vostra famiglia: la ricetta di Mastercook resta com’è e potete tornarci quando volete.
+          </p>
+        )}
         <label className="campo">
           <span>Titolo</span>
           <input value={titolo} onChange={(e) => setTitolo(e.target.value)} maxLength={120} required />

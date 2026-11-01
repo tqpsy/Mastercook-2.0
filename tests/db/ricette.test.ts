@@ -241,6 +241,26 @@ describe('ricette segnate ⭐ preferite e 💫 per ospiti', () => {
   });
 });
 
+describe('ricette di Mastercook modificate dalla famiglia', () => {
+  it('solo una ricetta della famiglia tratta da un’altra si segna «modificata»; si toglie', async () => {
+    const { u, famiglia } = await famigliaCon();
+    const impostazioni = async () => (await banco.sql<{ i: Record<string, unknown> }>(`select impostazioni as i from famiglia where id = $1`, [famiglia]))[0].i;
+    const segna = (ricetta_id: string, attivo = true) => u.applica(comando('segna_ricetta', famiglia, { ricetta_id, segno: 'modificata', attivo }));
+    const tratta = nuovaRicetta(famiglia, { titolo: 'Carbonara', derivata_da: 'sys:carbonara' });
+    const libera = nuovaRicetta(famiglia);
+    await u.applica(tratta.c);
+    await u.applica(libera.c);
+
+    expect((await segna(tratta.id)).esito).toBe('applicato');
+    expect((await segna(tratta.id)).esito).toBe('applicato');
+    expect(await impostazioni()).toMatchObject({ modificate: [tratta.id] });
+    expect((await segna(libera.id)).esito).not.toBe('applicato');
+    expect((await segna('sys:carbonara')).esito).not.toBe('applicato');
+    await segna(tratta.id, false);
+    expect(await impostazioni()).toMatchObject({ modificate: [] });
+  });
+});
+
 describe('ricetta segnata «va bene» per un membro', () => {
   it('si segna, si aggiorna alla nuova versione, ripetuta non scrive, si toglie; solo membri e ricette della famiglia', async () => {
     const { u, famiglia } = await famigliaCon();

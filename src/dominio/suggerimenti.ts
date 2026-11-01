@@ -24,14 +24,16 @@ export function bastaLaCasa(totali: number, mancano: number): boolean {
 export interface Segni {
   preferite: Set<string>;
   perOspiti: Set<string>;
+  /** Ricette della famiglia che prendono il posto della ricetta di Mastercook da cui sono tratte. */
+  modificate: Set<string>;
 }
-export const SENZA_SEGNI: Segni = { preferite: new Set(), perOspiti: new Set() };
+export const SENZA_SEGNI: Segni = { preferite: new Set(), perOspiti: new Set(), modificate: new Set() };
 
 /** Gli elenchi ⭐ e 💫 dalle impostazioni della famiglia (id sconosciuti o righe strane si ignorano). */
 export function segniDa(impostazioni: unknown): Segni {
   const i = (impostazioni ?? {}) as Record<string, unknown>;
   const elenco = (x: unknown) => new Set(Array.isArray(x) ? x.filter((v): v is string => typeof v === 'string') : []);
-  return { preferite: elenco(i.preferite), perOspiti: elenco(i.per_ospiti) };
+  return { preferite: elenco(i.preferite), perOspiti: elenco(i.per_ospiti), modificate: elenco(i.modificate) };
 }
 
 /** «manca la panna», «mancano panna e guanciale», «tutto in casa». */

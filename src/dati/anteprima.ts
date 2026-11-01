@@ -70,7 +70,7 @@ const EFFETTI: Record<string, Effetto> = {
 
   // ⭐ e 💫 si vedono subito: un id in più o in meno nell'elenco delle impostazioni della famiglia.
   segna_ricetta: (righe, d, famiglia) => {
-    const chiave = d.segno === 'preferita' ? 'preferite' : d.segno === 'ospiti' ? 'per_ospiti' : null;
+    const chiave = d.segno === 'preferita' ? 'preferite' : d.segno === 'ospiti' ? 'per_ospiti' : d.segno === 'modificata' ? 'modificate' : null;
     if (!chiave) return;
     righe.famiglia = (righe.famiglia ?? []).map((r) => {
       if (r.id !== famiglia) return r;
