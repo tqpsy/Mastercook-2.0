@@ -8,11 +8,15 @@ import { daUsarePresto, oggi, piuGiorni } from '../dominio/scadenze';
 import { Foglio } from '../ui/Foglio';
 import { IconaCibo } from '../ui/IconaCibo';
 import { useLotti } from './Casa';
+import { useSegni } from './Ricette';
+import { BottoniModo } from '../ui/FiltriRicetta';
+import type { ModoSuggerimento } from '../dominio/suggerimenti';
 import type { DatiMenu } from './Menu';
 
 /** Cosa serve per proporre: chi mangia, vincoli, gusti, casa, e i piatti già in menu vicino a quei giorni. */
 export function useContestoProposte(dati: DatiMenu, dal: string, al: string): ContestoProposte {
   const lotti = useLotti();
+  const segni = useSegni();
   return useMemo(() => {
     const giorno = oggi();
     return {
@@ -23,8 +27,9 @@ export function useContestoProposte(dati: DatiMenu, dal: string, al: string): Co
       inCasa: lotti.map((l) => l.ingrediente_id),
       urgenti: daUsarePresto(lotti, giorno).map((l) => l.ingrediente_id),
       recenti: dati.portate.filter((p) => p.ricetta_id && p.data >= piuGiorni(dal, -14) && p.data <= piuGiorni(al, 7)).map((p) => p.ricetta_id!),
+      segni,
     };
-  }, [dati, lotti, dal, al]);
+  }, [dati, lotti, dal, al, segni]);
 }
 
 const SENZA_PROPOSTE_CON_DUBBI =
@@ -140,7 +145,8 @@ export function IdeePerPasto({
   dati,
   data,
   categoria,
-  filtro,
+  filtro: filtroScelto,
+  conOspiti,
   icone,
   scegli,
 }: {
@@ -149,10 +155,17 @@ export function IdeePerPasto({
   data: string;
   categoria: string;
   filtro: FiltroProposte;
+  /** Al pasto ci sono ospiti: prima le ricette 💫. */
+  conOspiti?: boolean;
   icone?: Map<string, string>;
   scegli: (ricetta_id: string) => void;
 }) {
-  const contesto = useContestoProposte(dati, data, data);
+  const base = useContestoProposte(dati, data, data);
+  const contesto = useMemo(() => ({ ...base, conOspiti }), [base, conOspiti]);
+  // Con la casa vuota si parte dal ricettario; altrimenti da ciò che c'è.
+  const casaVuota = base.inCasa.length === 0;
+  const [modo, setModo] = useState<ModoSuggerimento>(casaVuota ? 'ricettario' : 'casa');
+  const filtro = useMemo(() => ({ ...filtroScelto, modo: casaVuota ? 'ricettario' : modo }), [filtroScelto, modo, casaVuota]);
   const idee = useMemo(() => {
     const gia = new Set(dati.portate.filter((p) => p.data === data && p.ricetta_id).map((p) => p.ricetta_id!));
     const tipi = [...gia].map((id) => indice.perId.get(id)).filter((r): r is Ricetta => !!r).map((r) => tipoPiatto(indice, r));
@@ -161,7 +174,7 @@ export function IdeePerPasto({
   }, [indice, dati, data, categoria, contesto, filtro]);
   const [quale, setQuale] = useState(0);
   // Cambiando i filtri si riparte dalla migliore.
-  const chiave = `${filtro.categoria ?? ''}|${filtro.principale ?? ''}|${filtro.ingrediente ?? ''}`;
+  const chiave = `${filtro.categoria ?? ''}|${filtro.principale ?? ''}|${filtro.ingrediente ?? ''}|${filtro.segno ?? ''}|${filtro.modo}`;
   const [ultima, setUltima] = useState(chiave);
   if (ultima !== chiave) {
     setUltima(chiave);
@@ -171,16 +184,28 @@ export function IdeePerPasto({
   return (
     <section className="idea-pasto" aria-label="Idea per questo pasto">
       <div className="riga spazio">
-        <span className="titoletto">✨ Idea per questo pasto</span>
-        {idee.length > 0 && (
-          <span className="tenue piccolo">
-            {quale + 1} di {idee.length}
-          </span>
-        )}
+        <span className="titoletto">
+          ✨ Idea per questo pasto
+          {idee.length > 0 && (
+            <>
+              {' · '}
+              <span className="tenue piccolo" style={{ fontWeight: 400 }}>
+                {quale + 1} di {idee.length}
+              </span>
+            </>
+          )}
+        </span>
+      </div>
+      <div className="scelte compatte modo-idea">
+        <BottoniModo modo={filtro.modo} cambia={(m) => m && setModo(m)} obbligatorio casaVuota={casaVuota} />
       </div>
       {!idea ? (
         <p className="tenue" style={{ margin: '4px 0 0' }}>
-          {filtro.categoria || filtro.principale || filtro.ingrediente ? 'Nessuna idea adatta con questi filtri: prova a toglierne uno.' : 'Nessuna idea per questo pasto: cerca qui sotto.'}
+          {filtro.modo === 'casa'
+            ? 'Con ciò che c’è in casa non si fa niente di adatto (manca troppo): prova «📖 Dal ricettario».'
+            : filtro.categoria || filtro.principale || filtro.ingrediente || filtro.segno
+              ? 'Nessuna idea adatta con questi filtri: prova a toglierne uno.'
+              : 'Nessuna idea per questo pasto: cerca qui sotto.'}
         </p>
       ) : (
         <>

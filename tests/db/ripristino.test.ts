@@ -597,3 +597,29 @@ describe('eliminare una famiglia (ritorno indietro)', () => {
     expect(Number(await conta(altra))).toBe(prima);
   });
 });
+
+describe('esportazione e ripristino delle ricette segnate ⭐ e 💫', () => {
+  it('le ricette di Mastercook restano segnate, quelle della famiglia prendono l’id nuovo', async () => {
+    const { u, famiglia } = await famigliaCompleta();
+    const mia = randomUUID();
+    await u.applica(
+      comando('salva_ricetta', famiglia, {
+        id: mia,
+        nuova: true,
+        campi: { titolo: 'Torta della zia', categoria: 'dolce', porzioni: 8 },
+        ingredienti: { aggiungi: [{ id: randomUUID(), ingrediente_id: 'ing:farina', quantita: 300, unita: 'g' }] },
+        passi: { aggiungi: [{ id: randomUUID(), ordine: 1, testo: 'Impasta e cuoci.' }] },
+      }),
+    );
+    await u.applica(comando('segna_ricetta', famiglia, { ricetta_id: 'sys:carbonara', segno: 'preferita', attivo: true }));
+    await u.applica(comando('segna_ricetta', famiglia, { ricetta_id: mia, segno: 'preferita', attivo: true }));
+    await u.applica(comando('segna_ricetta', famiglia, { ricetta_id: mia, segno: 'ospiti', attivo: true }));
+    const file = await esporta(u, famiglia);
+    const nuova = randomUUID();
+    expect((await u.applica(comando('ripristina_famiglia', nuova, { file: JSON.parse(JSON.stringify(file)) }))).esito).toBe('applicato');
+    const [{ id: copia }] = await banco.sql<{ id: string }>(`select id from ricetta where famiglia_id = $1 and titolo = 'Torta della zia'`, [nuova]);
+    expect(copia).not.toBe(mia);
+    const [{ i }] = await banco.sql<{ i: Record<string, unknown> }>(`select impostazioni as i from famiglia where id = $1`, [nuova]);
+    expect(i).toMatchObject({ preferite: ['sys:carbonara', copia], per_ospiti: [copia] });
+  });
+});

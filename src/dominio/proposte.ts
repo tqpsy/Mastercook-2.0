@@ -10,7 +10,8 @@ import { valutaPerFamiglia, type Verifica, type Vincolo } from './compatibilita'
 import { gustiPerPiatto, type Gusto, type Persona } from './menu';
 import type { Categoria } from '../catalogo/tipi';
 import { haPrincipale, type Principale, usaIngrediente } from './principale';
-import { copertura, type Indice, principali, type Ricetta } from './ricette';
+import { copertura, type Indice, mancanti, principali, type Ricetta } from './ricette';
+import { bastaLaCasa, MASSIMO_MANCANTI, type ModoSuggerimento, type Segni, testoMancanti } from './suggerimenti';
 
 /** Le categorie di ricetta adatte a ogni pasto. Gli altri pasti (spuntino…) non si propongono. */
 export const RICETTE_PER_PASTO: Record<string, Ricetta['categoria'][]> = {
@@ -43,6 +44,10 @@ export interface ContestoProposte {
   urgenti: string[];
   /** Ricette già in menu nei giorni vicini (prima e dopo), per non ripeterle. */
   recenti: string[];
+  /** Le ricette ⭐ preferite e 💫 da ospiti della famiglia. */
+  segni?: Segni;
+  /** Al pasto ci sono ospiti: le ricette 💫 valgono di più. */
+  conOspiti?: boolean;
 }
 
 export interface Candidata {
@@ -58,6 +63,13 @@ export interface FiltroProposte {
   principale?: Principale | null;
   /** Un ingrediente preciso che la ricetta deve usare (zucchine, ceci…). */
   ingrediente?: string | null;
+  /** Solo le ⭐ preferite o solo le 💫 da ospiti. */
+  segno?: 'preferita' | 'ospiti' | null;
+  /**
+   * Come suggerire: «casa» solo ricette a cui manca al massimo qualche ingrediente (prima le complete),
+   * «ricettario» tutto il ricettario (la casa conta poco). Senza: l'equilibrio di «Proponi la settimana».
+   */
+  modo?: ModoSuggerimento | null;
 }
 
 /** Le ricette proponibili per un pasto, dalla migliore. Solo ricette adatte a tutti e senza «non mi piace». */
@@ -72,6 +84,10 @@ export function candidate(indice: Indice, pasto: string, c: ContestoProposte, fi
   for (const r of indice.ricette) {
     if (r.archiviata || !categorie.includes(r.categoria)) continue;
     if (!haPrincipale(indice, r, filtro.principale) || !usaIngrediente(indice, r, filtro.ingrediente)) continue;
+    const preferita = !!c.segni?.preferite.has(r.id);
+    const daOspiti = !!c.segni?.perOspiti.has(r.id);
+    if ((filtro.segno === 'preferita' && !preferita) || (filtro.segno === 'ospiti' && !daOspiti)) continue;
+    if (filtro.modo === 'casa' && !bastaLaCasa(principali(indice, r).length, mancanti(indice, r, casa).length)) continue;
     if (valutaPerFamiglia(indice, r, c.persone, c.vincoli, c.verifiche).esito !== 'adatta') continue;
     const gusti = gustiPerPiatto(indice, r, c.persone, c.gusti);
     if (gusti.some((g) => g.valore === 'non_piace')) continue;
@@ -83,10 +99,23 @@ export function candidate(indice: Indice, pasto: string, c: ContestoProposte, fi
       motivi.push(`usa ${[...new Set(usa.map((g) => indice.nome(g.ingrediente_id).toLowerCase()))].join(', ')} che scade presto`);
     }
     const { presenti, totali } = copertura(indice, r, casa);
-    if (totali) {
+    if (totali && filtro.modo === 'casa') {
+      punti += 10 * (MASSIMO_MANCANTI - (totali - presenti)) + (2 * presenti) / totali;
+      motivi.unshift(testoMancanti(indice, r, casa)!);
+    } else if (totali && filtro.modo === 'ricettario') {
+      punti += presenti / totali;
+    } else if (totali) {
       punti += (3 * presenti) / totali;
       if (presenti === totali) motivi.push('tutto in casa');
       else if (presenti) motivi.push(`${presenti} su ${totali} ingredienti in casa`);
+    }
+    if (preferita) {
+      punti += filtro.modo === 'ricettario' ? 3 : 2;
+      motivi.push('⭐ preferita');
+    }
+    if (daOspiti && c.conOspiti) {
+      punti += 3;
+      motivi.push('💫 da ospiti');
     }
     const piace = gusti.filter((g) => g.valore === 'piace');
     if (piace.length) {

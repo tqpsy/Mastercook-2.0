@@ -13,6 +13,12 @@ import { Foglio } from '../ui/Foglio';
 import { Foto } from '../ui/Foto';
 import { ModalitaCucina } from '../ui/ModalitaCucina';
 import { EditorRicetta, type Bozza } from './EditorRicetta';
+import { useLotti } from './Casa';
+import { useDatiMenu } from './Menu';
+import { BottoniModo, BottoniSegno, FiltroIngrediente, type FiltroIngredienti, MODI, type Segno, SEGNI } from '../ui/FiltriRicetta';
+import { haPrincipale, usaIngrediente } from '../dominio/principale';
+import { daUsarePresto, oggi } from '../dominio/scadenze';
+import { type ModoSuggerimento, type Segni, segniDa, suggerisci, ultimeVolte } from '../dominio/suggerimenti';
 
 const PAGINA = 40;
 const TEMPI = [
@@ -53,6 +59,28 @@ export function useInCasa(): Set<string> {
 export function useIcone(): Map<string, string> {
   const righe = useVista().righe.icona_ricetta;
   return useMemo(() => new Map((righe ?? []).filter((r) => !r.eliminato_il).map((r) => [String(r.ricetta_id), String(r.emoji)])), [righe]);
+}
+
+/** Le ricette ⭐ preferite e 💫 da ospiti della famiglia (nelle impostazioni della famiglia). */
+export function useSegni(): Segni {
+  const righe = useVista().righe.famiglia;
+  const impostazioni = righe?.find((r) => !r.eliminato_il)?.impostazioni;
+  const chiave = JSON.stringify([(impostazioni as Record<string, unknown> | undefined)?.preferite, (impostazioni as Record<string, unknown> | undefined)?.per_ospiti]);
+  return useMemo(() => segniDa(impostazioni), [chiave]); // eslint-disable-line react-hooks/exhaustive-deps
+}
+
+/** ⭐ e 💫 accanto al titolo di una ricetta. */
+export function MarchiSegni({ id, segni }: { id: string; segni: Segni }) {
+  const preferita = segni.preferite.has(id);
+  const ospiti = segni.perOspiti.has(id);
+  if (!preferita && !ospiti) return null;
+  const nomi = [preferita && 'preferita', ospiti && 'da ospiti'].filter(Boolean).join(' e ');
+  return (
+    <span className="segni-ricetta" role="img" aria-label={nomi} title={nomi}>
+      {preferita && '⭐'}
+      {ospiti && '💫'}
+    </span>
+  );
 }
 
 /** Icone di piatti da proporre, oltre a quelle degli ingredienti della ricetta. */
@@ -154,22 +182,50 @@ export function Ricette() {
   const [categoria, setCategoria] = useState<Categoria | null>(null);
   const [cucina, setCucina] = useState<string | null>(null);
   const [minuti, setMinuti] = useState<number | null>(null);
-  const [soloCasa, setSoloCasa] = useState(false);
+  const [ingredienti, setIngredienti] = useState<FiltroIngredienti>({ principale: null, ingrediente: null });
+  const [segno, setSegno] = useState<Segno | null>(null);
+  const [modo, setModo] = useState<ModoSuggerimento | null>(null);
+  const segni = useSegni();
+  const lotti = useLotti();
+  const menu = useDatiMenu(vista);
   const [origine, setOrigine] = useState<'tutte' | 'famiglia'>('tutte');
   const [archiviate, setArchiviate] = useState(false);
   const [quante, setQuante] = useState(PAGINA);
   const [aperta, setAperta] = useState<string | null>(null);
   const [bozza, setBozza] = useState<Bozza | null>(null);
 
-  const trovate = useMemo(
-    () => (indice ? filtra(indice, { testo, categoria, cucina, minuti, inCasa: soloCasa ? inCasa : null, origine, archiviate }) : []),
-    [indice, testo, categoria, cucina, minuti, soloCasa, inCasa, origine, archiviate],
-  );
   const conVincoli = vincoli.length > 0;
+  const filtrate = useMemo(
+    () =>
+      indice
+        ? filtra(indice, { testo, categoria, cucina, minuti, inCasa: null, origine, archiviate })
+            .filter((r) => haPrincipale(indice, r, ingredienti.principale) && usaIngrediente(indice, r, ingredienti.ingrediente))
+            .filter((r) => (segno === 'preferita' ? segni.preferite.has(r.id) : segno === 'ospiti' ? segni.perOspiti.has(r.id) : true))
+        : [],
+    [indice, testo, categoria, cucina, minuti, origine, archiviate, ingredienti, segno, segni],
+  );
+  // Suggerite: in ordine di suggerimento, con il perché; fuori quelle non adatte a qualcuno della famiglia.
+  const suggerite = useMemo(() => {
+    if (!indice || !modo) return null;
+    const giorno = oggi();
+    const adatte = conVincoli ? filtrate.filter((r) => valutaPerFamiglia(indice, r, membri, vincoli, verifiche).esito !== 'non_adatta') : filtrate;
+    return suggerisci(indice, adatte, {
+      modo,
+      inCasa,
+      urgenti: daUsarePresto(lotti, giorno).map((l) => l.ingrediente_id),
+      segni,
+      persone: menu.persone,
+      gusti: menu.gusti,
+      ultimaVolta: ultimeVolte(menu.portate, giorno),
+      oggi: giorno,
+    });
+  }, [indice, modo, filtrate, conVincoli, membri, vincoli, verifiche, inCasa, lotti, segni, menu]);
+  const trovate = suggerite ? suggerite.map((x) => x.ricetta) : filtrate;
+  const perche = useMemo(() => new Map((suggerite ?? []).map((x) => [x.ricetta.id, x.motivi.join(' · ')])), [suggerite]);
 
   if (!vista.pronta || !indice) return <p className="tenue">Sto caricando le ricette…</p>;
   const ricetta = aperta ? indice.perId.get(aperta) : undefined;
-  const filtriAttivi = !!(categoria || cucina || minuti || soloCasa || origine !== 'tutte' || archiviate);
+  const filtriAttivi = !!(cucina || minuti || origine !== 'tutte' || archiviate);
 
   return (
     <>
@@ -190,12 +246,15 @@ export function Ricette() {
           </button>
         ))}
       </div>
+      <FiltroIngrediente indice={indice} filtro={ingredienti} cambia={(f) => (setIngredienti({ ...ingredienti, ...f }), setQuante(PAGINA))} />
+      <div className="scelte compatte suggerisci" style={{ marginTop: 10, marginBottom: 8 }}>
+        <BottoniModo modo={modo} cambia={(m) => (setModo(m), setQuante(PAGINA))} casaVuota={!inCasa.size} />
+        <span className="separatore" aria-hidden />
+        <BottoniSegno segno={segno} cambia={(x) => (setSegno(x), setQuante(PAGINA))} />
+      </div>
       <details style={{ marginBottom: 12 }} open={filtriAttivi}>
         <summary>Altri filtri</summary>
         <div className="scelte" role="group" aria-label="Filtri" style={{ marginTop: 8 }}>
-          <button aria-pressed={soloCasa} onClick={() => setSoloCasa(!soloCasa)} disabled={!inCasa.size}>
-            🏠 Con ciò che ho
-          </button>
           <button aria-pressed={origine === 'famiglia'} onClick={() => setOrigine(origine === 'famiglia' ? 'tutte' : 'famiglia')}>
             👪 Della famiglia
           </button>
@@ -215,14 +274,19 @@ export function Ricette() {
         </div>
       </details>
       <p className="tenue" aria-live="polite">
+        {modo && `✨ ${MODI.find((m) => m.id === modo)!.nome}: ${MODI.find((m) => m.id === modo)!.spiega}. `}
         {trovate.length === 1 ? '1 ricetta' : `${trovate.length} ricette`}
         {conVincoli && ' · ✅ adatta a tutti · ❔ da verificare · ⛔ non adatta a qualcuno'}
       </p>
-      {trovate.length === 0 && <div className="avviso info">Nessuna ricetta con questi filtri.</div>}
+      {trovate.length === 0 && (
+        <div className="avviso info">
+          {modo === 'casa' ? 'Con ciò che c’è in casa manca troppo per queste ricette: prova «📖 Dal ricettario» o togli un filtro.' : 'Nessuna ricetta con questi filtri.'}
+        </div>
+      )}
       <div className="scheda" style={{ padding: trovate.length ? undefined : 0 }}>
         <ul className="elenco">
           {trovate.slice(0, quante).map((r) => (
-            <VoceRicetta key={r.id} indice={indice} ricetta={r} icona={iconaRicetta(indice, r, icone.get(r.id))} inCasa={inCasa} esito={conVincoli ? valutaPerFamiglia(indice, r, membri, vincoli, verifiche).esito : null} apri={() => setAperta(r.id)} />
+            <VoceRicetta key={r.id} indice={indice} ricetta={r} icona={iconaRicetta(indice, r, icone.get(r.id))} segni={segni} perche={perche.get(r.id)} inCasa={inCasa} esito={conVincoli ? valutaPerFamiglia(indice, r, membri, vincoli, verifiche).esito : null} apri={() => setAperta(r.id)} />
           ))}
         </ul>
       </div>
@@ -260,6 +324,8 @@ function VoceRicetta({
   indice,
   ricetta: r,
   icona,
+  segni,
+  perche,
   inCasa,
   esito,
   apri,
@@ -267,6 +333,9 @@ function VoceRicetta({
   indice: Indice;
   ricetta: Ricetta;
   icona: string;
+  segni: Segni;
+  /** Perché è suggerita (quando le ricette sono in ordine di suggerimento). */
+  perche?: string;
   inCasa: Set<string>;
   esito: Esito | null;
   apri: () => void;
@@ -282,12 +351,18 @@ function VoceRicetta({
         </span>
         <span className="cresce">
           <strong>{r.titolo}</strong>
+          <MarchiSegni id={r.id} segni={segni} />
           {r.in_attesa && <span className="etichetta attesa" style={{ marginLeft: 8 }}>in invio</span>}
           <span className="tenue" style={{ display: 'block' }}>
             {[cat?.nome, cucina && `${cucina.bandiera} ${cucina.nome}`, minutiDi(r) && `${minutiDi(r)} min`, !r.di_sistema && 'della famiglia', r.archiviata && 'archiviata', cop && cop.totali > 0 && `${cop.presenti}/${cop.totali} in casa`]
               .filter(Boolean)
               .join(' · ')}
           </span>
+          {perche && (
+            <span className="perche" style={{ display: 'block' }}>
+              ✨ {perche}
+            </span>
+          )}
         </span>
         {esito && (
           <span title={NOME_ESITO[esito]} aria-label={NOME_ESITO[esito]}>
@@ -334,6 +409,8 @@ export function SchedaRicetta({
   const origine = r.derivata_da ? indice.perId.get(r.derivata_da) : undefined;
   const [cambiaIcona, setCambiaIcona] = useState(false);
   const [cucina, setCucina] = useState(false);
+  const segni = useSegni();
+  const segnata = (s: Segno) => (s === 'preferita' ? segni.preferite : segni.perOspiti).has(r.id);
   const chiudiCucina = useCallback(() => setCucina(false), [setCucina]);
 
   /** ✅ «va bene» o ❌ «non va bene» chiudono il dubbio per quella persona; «togli» lo riapre. */
@@ -385,6 +462,20 @@ export function SchedaRicetta({
             <IconaCibo valore={iconaRicetta(indice, r, iconaScelta)} /> Cambia icona
           </button>
         )}
+        {modifica &&
+          r.categoria !== 'base' &&
+          SEGNI.map((x) => (
+            <button
+              key={x.id}
+              className="bottone piccolo segno-ricetta"
+              aria-pressed={segnata(x.id)}
+              title={segnata(x.id) ? `Togli «${x.nome.toLowerCase()}»` : `Segna come ${x.nome.toLowerCase()} per tutta la famiglia`}
+              onClick={() => esegui('segna_ricetta', { ricetta_id: r.id, segno: x.id, attivo: !segnata(x.id) })}
+              style={{ marginRight: 8 }}
+            >
+              {x.emoji} {x.nome}
+            </button>
+          ))}
 
         {[CATEGORIE.find((c) => c.id === r.categoria)?.nome, minutiDi(r) && `${minutiDi(r)} min`, r.difficolta && ['facile', 'media', 'impegnativa'][r.difficolta - 1], r.di_sistema ? 'ricetta di Mastercook' : 'ricetta della famiglia']
           .filter(Boolean)
