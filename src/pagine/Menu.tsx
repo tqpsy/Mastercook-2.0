@@ -25,7 +25,7 @@ import {
 import { avanziDi, porzioniPortata } from '../dominio/consumi';
 import { CATEGORIE, type Categoria } from '../catalogo/tipi';
 import { haPrincipale, type Principale, usaIngrediente } from '../dominio/principale';
-import { BottoniSegno, FiltroIngrediente, type Segno } from '../ui/FiltriRicetta';
+import { BottoniSegno, CercaRicetta, type Segno } from '../ui/FiltriRicetta';
 import { RICETTE_PER_PASTO } from '../dominio/proposte';
 import { filtra, iconaRicetta, type Indice } from '../dominio/ricette';
 import { ALLERGENI_UE, ESIGENZE, INTOLLERANZE, type VoceVincolo } from '../dominio/vincoli';
@@ -689,11 +689,15 @@ function NuovoPiatto({
     <Foglio titolo={`${nomeCategoria(dati, categoria)} di ${dataLunga(data)}`} chiudi={chiudi} alto>
       <div className="nuovo-piatto">
         <FiltroCategoria pasto={categoria} filtro={filtro} cambia={setFiltro} />
-        <FiltroIngrediente indice={indice} filtro={filtro} cambia={(f) => setFiltro({ ...filtro, ...f })} />
-        <label className="campo cerca-nome">
-          <span>Cosa si mangia</span>
-          <input type="search" value={testo} onChange={(e) => setTesto(e.target.value)} placeholder="Nome della ricetta: carbonara, minestrone…" />
-        </label>
+        <CercaRicetta
+          indice={indice}
+          etichetta="Cosa si mangia"
+          segnaposto="Ricetta o ingrediente: carbonara, zucchine…"
+          testo={testo}
+          cambiaTesto={setTesto}
+          filtro={filtro}
+          cambia={(f) => setFiltro({ ...filtro, ...f })}
+        />
         {chi.size === 0 ? (
           <p className="tenue">Spunta almeno una persona qui sotto.</p>
         ) : (

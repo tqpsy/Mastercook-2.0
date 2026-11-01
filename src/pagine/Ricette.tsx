@@ -15,7 +15,7 @@ import { ModalitaCucina } from '../ui/ModalitaCucina';
 import { EditorRicetta, type Bozza } from './EditorRicetta';
 import { useLotti } from './Casa';
 import { useDatiMenu } from './Menu';
-import { BottoniModo, BottoniSegno, FiltroIngrediente, type FiltroIngredienti, MODI, type Segno, SEGNI } from '../ui/FiltriRicetta';
+import { BottoniModo, BottoniSegno, CercaRicetta, type FiltroIngredienti, MODI, type Segno, SEGNI } from '../ui/FiltriRicetta';
 import { haPrincipale, usaIngrediente } from '../dominio/principale';
 import { daUsarePresto, oggi } from '../dominio/scadenze';
 import { type ModoSuggerimento, type Segni, segniDa, suggerisci, ultimeVolte } from '../dominio/suggerimenti';
@@ -235,10 +235,15 @@ export function Ricette() {
           + Ricetta
         </button>
       </div>
-      <label className="campo">
-        <span>Cerca</span>
-        <input type="search" value={testo} onChange={(e) => (setTesto(e.target.value), setQuante(PAGINA))} placeholder="Titolo o ingrediente: carbonara, zucchine…" />
-      </label>
+      <CercaRicetta
+        indice={indice}
+        etichetta="Cerca"
+        segnaposto="Ricetta o ingrediente: carbonara, zucchine…"
+        testo={testo}
+        cambiaTesto={(t) => (setTesto(t), setQuante(PAGINA))}
+        filtro={ingredienti}
+        cambia={(f) => (setIngredienti({ ...ingredienti, ...f }), setQuante(PAGINA))}
+      />
       <div className="scelte" role="group" aria-label="Categoria" style={{ marginBottom: 8 }}>
         {CATEGORIE.map((c) => (
           <button key={c.id} aria-pressed={categoria === c.id} onClick={() => setCategoria(categoria === c.id ? null : c.id)}>
@@ -246,7 +251,6 @@ export function Ricette() {
           </button>
         ))}
       </div>
-      <FiltroIngrediente indice={indice} filtro={ingredienti} cambia={(f) => (setIngredienti({ ...ingredienti, ...f }), setQuante(PAGINA))} />
       <div className="scelte compatte suggerisci" style={{ marginTop: 10, marginBottom: 8 }}>
         <BottoniModo modo={modo} cambia={(m) => (setModo(m), setQuante(PAGINA))} casaVuota={!inCasa.size} />
         <span className="separatore" aria-hidden />
@@ -462,26 +466,40 @@ export function SchedaRicetta({
             <IconaCibo valore={iconaRicetta(indice, r, iconaScelta)} /> Cambia icona
           </button>
         )}
-        {modifica &&
-          r.categoria !== 'base' &&
-          SEGNI.map((x) => (
-            <button
-              key={x.id}
-              className="bottone piccolo segno-ricetta"
-              aria-pressed={segnata(x.id)}
-              title={segnata(x.id) ? `Togli «${x.nome.toLowerCase()}»` : `Segna come ${x.nome.toLowerCase()} per tutta la famiglia`}
-              onClick={() => esegui('segna_ricetta', { ricetta_id: r.id, segno: x.id, attivo: !segnata(x.id) })}
-              style={{ marginRight: 8 }}
-            >
-              {x.emoji} {x.nome}
-            </button>
-          ))}
 
         {[CATEGORIE.find((c) => c.id === r.categoria)?.nome, minutiDi(r) && `${minutiDi(r)} min`, r.difficolta && ['facile', 'media', 'impegnativa'][r.difficolta - 1], r.di_sistema ? 'ricetta di Mastercook' : 'ricetta della famiglia']
           .filter(Boolean)
           .join(' · ')}
         {origine && ` · tratta da «${origine.titolo}»`}
       </p>
+      {modifica && r.categoria !== 'base' && (
+        <div className="segni-scheda" role="group" aria-label="Segna la ricetta">
+          {SEGNI.map((x) => {
+            const si = segnata(x.id);
+            return (
+              <button
+                key={x.id}
+                type="button"
+                className="segno-ricetta"
+                aria-pressed={si}
+                aria-label={x.nome}
+                title={si ? `Tocca per togliere «${x.acceso}»` : `Tocca per segnarla per tutta la famiglia`}
+                onClick={() => esegui('segna_ricetta', { ricetta_id: r.id, segno: x.id, attivo: !si })}
+              >
+                <span className="segno-emoji" aria-hidden>
+                  {x.emoji}
+                </span>
+                <span>{si ? x.acceso : x.spento}</span>
+                {si && (
+                  <span className="segno-spunta" aria-hidden>
+                    ✓
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
       {r.descrizione && <p>{r.descrizione}</p>}
 
       {valutazione && (

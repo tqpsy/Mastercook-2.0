@@ -337,9 +337,9 @@ test('scelta del piatto: filtri per categoria e ingrediente, un’idea alla volt
   await idea.getByRole('button', { name: '🔄 Un’altra' }).click();
   await expect(idea.getByRole('button', { name: /^Metti nel menu/ })).not.toHaveAttribute('aria-label', prima!);
   await expect(idea.getByText(/^2 di \d+$/)).toBeVisible();
-  // Cerca per ingrediente: le zucchine al posto del pesce, sempre tra i primi.
+  // Una sola casella: scrivendo un ingrediente lo propone come filtro preciso.
   await foglio.getByRole('group', { name: 'Ingrediente principale' }).getByRole('button', { name: /Pesce/ }).click();
-  await foglio.getByLabel('Cerca per ingrediente').fill('zucchin');
+  await foglio.getByLabel('Cosa si mangia').fill('zucchin');
   await foglio.getByRole('group', { name: 'Ingredienti trovati' }).getByRole('button', { name: /Zucchine/ }).click();
   await expect(foglio.getByRole('button', { name: /Togli Zucchine/ })).toBeVisible();
   await expect(risultati.getByRole('button', { name: /Pasta con le zucchine/ })).toBeVisible();
