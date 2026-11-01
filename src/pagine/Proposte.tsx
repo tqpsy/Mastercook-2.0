@@ -12,11 +12,14 @@ import { useSegni } from './Ricette';
 import { BottoniModo } from '../ui/FiltriRicetta';
 import type { ModoSuggerimento } from '../dominio/suggerimenti';
 import type { DatiMenu } from './Menu';
+import { Fumetto, FacciaAntonino, useAntonino, useImpara } from './Antonino';
+import { equilibrio, REGOLE_BASE } from '../dominio/antonino';
 
 /** Cosa serve per proporre: chi mangia, vincoli, gusti, casa, e i piatti già in menu vicino a quei giorni. */
 export function useContestoProposte(dati: DatiMenu, dal: string, al: string): ContestoProposte {
   const lotti = useLotti();
   const segni = useSegni();
+  const { regole, memoria } = useAntonino();
   return useMemo(() => {
     const giorno = oggi();
     return {
@@ -28,114 +31,206 @@ export function useContestoProposte(dati: DatiMenu, dal: string, al: string): Co
       urgenti: daUsarePresto(lotti, giorno).map((l) => l.ingrediente_id),
       recenti: dati.portate.filter((p) => p.ricetta_id && p.data >= piuGiorni(dal, -14) && p.data <= piuGiorni(al, 7)).map((p) => p.ricetta_id!),
       segni,
+      regole,
+      memoria,
+      oggi: giorno,
     };
-  }, [dati, lotti, dal, al, segni]);
+  }, [dati, lotti, dal, al, segni, regole, memoria]);
 }
 
 const SENZA_PROPOSTE_CON_DUBBI =
   'Nessuna ricetta è adatta a tutti senza dubbi. Apri le ricette con ❔ e segna «✅ Va bene» quelle che avete controllato: poi l’app potrà proporle.';
 
+/** Le ricette di pranzi e cene già nel menu, per contare l'equilibrio della settimana. */
+function giaNelMenu(indice: Indice, dati: DatiMenu, giorni: string[]) {
+  return dati.portate
+    .filter((p) => p.ricetta_id && giorni.includes(p.data) && (p.categoria === 'pranzo' || p.categoria === 'cena'))
+    .map((p) => ({ data: p.data, categoria: p.categoria, ricetta: indice.perId.get(p.ricetta_id!), bloccata: !!p.bloccata }))
+    .filter((p): p is { data: string; categoria: string; ricetta: Ricetta; bloccata: boolean } => !!p.ricetta);
+}
+
+function nomiInsieme(nomi: string[]): string {
+  return nomi.length < 2 ? nomi.join('') : `${nomi.slice(0, -1).join(', ')} e ${nomi[nomi.length - 1]}`;
+}
+
 /**
- * Proponi la settimana: un piatto per ogni pasto vuoto da oggi in poi. Si guarda, si cambia con un tocco,
- * si tolgono quelle che non vanno; entra nel menu solo ciò che si conferma.
+ * Antonino propone la settimana: un piatto per ogni pasto vuoto da oggi in poi, guardando anche l'equilibrio
+ * (pesce, legumi, carne rossa, verdure ogni giorno). Si cambia con 🔄, si toglie con ✕; entra nel menu solo
+ * ciò che si conferma. Confermando, Antonino ricorda cosa avete scelto e cosa avete scartato.
  */
 export function ProponiSettimana({ indice, dati, giorni, chiudi }: { indice: Indice; dati: DatiMenu; giorni: string[]; chiudi: () => void }) {
   const { esegui } = useFamiglia();
+  const impara = useImpara();
   const da = giorni.filter((g) => g >= oggi());
   const contesto = useContestoProposte(dati, giorni[0], giorni[giorni.length - 1]);
   const pasti = dati.categorie.filter((c) => c.attiva && RICETTE_PER_PASTO[c.valore]);
+  const gia = useMemo(() => giaNelMenu(indice, dati, giorni), [indice, dati, giorni]);
+  const [scarta, setScarta] = useState<Map<string, string[]>>(new Map());
   const proposte = useMemo(() => {
     const posti = da.flatMap((data) => pasti.filter((c) => !dati.portate.some((p) => p.data === data && p.categoria === c.valore)).map((c) => ({ data, categoria: c.valore })));
-    return proponi(indice, posti, contesto);
-  }, [indice, dati, contesto]); // eslint-disable-line react-hooks/exhaustive-deps
+    return proponi(indice, posti, contesto, new Map(), scarta, { piatti: gia });
+  }, [indice, dati, contesto, scarta, gia]); // eslint-disable-line react-hooks/exhaustive-deps
   const chiave = (p: { data: string; categoria: string }) => `${p.data}|${p.categoria}`;
   const [indici, setIndici] = useState<Record<string, number>>({});
   const [tolte, setTolte] = useState<Set<string>>(new Set());
   const scelta = (p: (typeof proposte)[number]): Ricetta => [p.ricetta, ...p.altre][indici[chiave(p)] ?? 0] ?? p.ricetta;
   const daMettere = proposte.filter((p) => !tolte.has(chiave(p)));
+  const voci = equilibrio(
+    indice,
+    [...gia, ...daMettere.filter((p) => p.categoria === 'pranzo' || p.categoria === 'cena').map((p) => ({ data: p.data, ricetta: scelta(p) }))],
+    contesto.regole ?? REGOLE_BASE,
+    da,
+  ).filter((v) => v.min !== undefined || v.stato !== 'ok' || v.gruppo === 'carne_rossa');
+  const scadono = [...new Set(proposte.flatMap((p) => p.motivi.filter((m) => m.endsWith('che scade presto')).map((m) => m.replace(/^usa /, '').replace(/ che scade presto$/, ''))))];
 
   async function conferma() {
     for (const p of daMettere) {
       const ordine = dati.portate.filter((x) => x.data === p.data && x.categoria === p.categoria).length;
       await esegui('aggiungi_portata', { id: crypto.randomUUID(), data: p.data, categoria: p.categoria, ricetta_id: scelta(p).id, ordine, origine: 'automatica' });
     }
+    // Antonino impara: la prima proposta cambiata o tolta è «scartata», ciò che entra nel menu è «scelto».
+    for (const p of proposte) {
+      if (tolte.has(chiave(p)) || scelta(p) !== p.ricetta) impara('scartata', p.ricetta.id);
+      if (!tolte.has(chiave(p))) impara('scelta', scelta(p).id);
+    }
     chiudi();
   }
 
+  function rifai() {
+    setScarta((s) => {
+      const n = new Map(s);
+      for (const p of proposte) n.set(chiave(p), [...(n.get(chiave(p)) ?? []), scelta(p).id]);
+      return n;
+    });
+    setIndici({});
+    setTolte(new Set());
+  }
+
+  const giorniConPiatti = da.filter((d) => proposte.some((p) => p.data === d) || gia.some((p) => p.data === d));
   return (
-    <Foglio titolo="Proposte per la settimana" chiudi={chiudi}>
+    <Foglio titolo="Antonino ti propone la settimana" chiudi={chiudi}>
       {proposte.length === 0 ? (
-        <p className="tenue" style={{ marginTop: 0 }}>
+        <Fumetto>
           {!da.length
             ? 'Questa settimana è già passata.'
             : dati.vincoli.length && !candidate(indice, 'cena', contesto).length
               ? SENZA_PROPOSTE_CON_DUBBI
               : 'I pasti di questa settimana sono già tutti nel menu.'}
-        </p>
+        </Fumetto>
       ) : (
-        <>
-          <p className="tenue" style={{ marginTop: 0 }}>
-            Solo ricette adatte a tutti, senza ciò che a qualcuno non piace. Prima quelle che usano ciò che scade e ciò che avete in casa. Nulla entra nel menu finché non
-            confermi.
-          </p>
-          <ul className="elenco" aria-label="Proposte">
-            {proposte.map((p) => {
-              const r = scelta(p);
-              const k = chiave(p);
-              const via = tolte.has(k);
-              const nome = dati.categorie.find((c) => c.valore === p.categoria)?.nome ?? p.categoria;
-              const motivi = (indici[k] ?? 0) === 0 ? p.motivi : [];
-              return (
-                <li key={k} className="riga" style={{ flexWrap: 'wrap', opacity: via ? 0.5 : 1 }}>
-                  <label className="riga cresce" style={{ alignItems: 'flex-start' }}>
-                    <input
-                      type="checkbox"
-                      checked={!via}
-                      aria-label={`Metti ${r.titolo} a ${nome.toLowerCase()} di ${dataLunga(p.data)}`}
-                      onChange={() =>
-                        setTolte((t) => {
-                          const n = new Set(t);
-                          if (n.has(k)) n.delete(k);
-                          else n.add(k);
-                          return n;
-                        })
-                      }
-                    />
-                    <span>
-                      <span className="tenue" style={{ display: 'block', fontSize: '0.85rem', textTransform: 'capitalize' }}>
-                        {dataLunga(p.data)} · {nome}
-                      </span>
-                      {r.titolo}
-                      {motivi.length > 0 && (
-                        <span className="tenue" style={{ display: 'block', fontSize: '0.85rem' }}>
-                          {motivi.join(' · ')}
+        <div className="settimana-antonino">
+          <div className="riassunto">
+            <Fumetto>
+              Ho riempito{' '}
+              <strong>
+                {proposte.length} {proposte.length === 1 ? 'pasto vuoto' : 'pasti vuoti'}
+              </strong>
+              {gia.some((p) => p.bloccata) ? ' e lasciato com’erano i piatti 🔒 bloccati' : ''}. Solo piatti adatti a chi mangia
+              {scadono.length ? `; prima ${nomiInsieme(scadono.slice(0, 3))}, che scadono presto` : ''}. Nel menu entra solo ciò che confermi.
+            </Fumetto>
+            {voci.length > 0 && (
+              <>
+                <div className="tenue piccolo" style={{ margin: '0 2px 6px', fontWeight: 600 }}>
+                  Equilibrio della settimana
+                </div>
+                <ul className="equilibrio" aria-label="Equilibrio della settimana">
+                  {voci.map((v) => (
+                    <li key={v.gruppo} className={v.stato}>
+                      <span aria-hidden>{v.emoji}</span> {v.nome}
+                      <strong>
+                        {v.gruppo === 'verdure_giorni' ? `${v.conta}/${v.min}` : v.conta} {v.stato === 'ok' ? '✓' : v.stato === 'troppo' ? '↑' : ''}
+                      </strong>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+            <div className="bottoni-antonino">
+              <button className="bottone primario pieno" disabled={!daMettere.length} onClick={() => void conferma()}>
+                ✓ Metti nel menu ({daMettere.length})
+              </button>
+              <button className="bottone pieno" onClick={rifai}>
+                🔄 Rifai tutta la settimana
+              </button>
+            </div>
+          </div>
+          <div className="giorni-antonino" aria-label="Proposte">
+            {giorniConPiatti.map((d) => (
+              <section key={d} aria-label={dataLunga(d)}>
+                <h3 className="giorno-antonino">{dataLunga(d)}</h3>
+                <ul className="elenco">
+                  {pasti.map((c) => {
+                    const p = proposte.find((x) => x.data === d && x.categoria === c.valore);
+                    if (!p) {
+                      const fatti = gia.filter((x) => x.data === d && x.categoria === c.valore);
+                      return fatti.map((x) => (
+                        <li key={`${c.valore}-${x.ricetta.id}`} className="piatto-antonino gia">
+                          <span className="icona-voce" aria-hidden>
+                            <IconaCibo valore={iconaRicetta(indice, x.ricetta)} />
+                          </span>
+                          <span className="cresce">
+                            <span className="pasto-antonino">
+                              {c.nome}
+                              {x.bloccata ? ' · 🔒 bloccato' : ' · già nel menu'}
+                            </span>
+                            <strong>{x.ricetta.titolo}</strong>
+                          </span>
+                        </li>
+                      ));
+                    }
+                    const r = scelta(p);
+                    const k = chiave(p);
+                    const via = tolte.has(k);
+                    const nome = c.nome.toLowerCase();
+                    const motivi = (indici[k] ?? 0) === 0 ? p.motivi : [];
+                    return (
+                      <li key={k} className={`piatto-antonino${via ? ' tolta' : ''}`}>
+                        <span className="icona-voce" aria-hidden>
+                          <IconaCibo valore={iconaRicetta(indice, r)} />
                         </span>
-                      )}
-                    </span>
-                  </label>
-                  {p.altre.length > 0 && (
-                    <button
-                      className="bottone piccolo"
-                      aria-label={`Un’altra per ${nome.toLowerCase()} di ${dataLunga(p.data)}`}
-                      onClick={() => setIndici((x) => ({ ...x, [k]: ((x[k] ?? 0) + 1) % (p.altre.length + 1) }))}
-                    >
-                      ↻ Un’altra
-                    </button>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-          <button className="bottone primario pieno" style={{ marginTop: 12 }} disabled={!daMettere.length} onClick={() => void conferma()}>
-            Metti nel menu ({daMettere.length})
-          </button>
-        </>
+                        <span className="cresce">
+                          <span className="pasto-antonino">{c.nome}</span>
+                          <strong>{r.titolo}</strong>
+                          {motivi.length > 0 && <span className="tenue motivi">{motivi.join(' · ')}</span>}
+                        </span>
+                        <span className="azioni">
+                          {p.altre.length > 0 && !via && (
+                            <button
+                              className="bottone piccolo"
+                              aria-label={`Un’altra per ${nome} di ${dataLunga(p.data)}`}
+                              onClick={() => setIndici((x) => ({ ...x, [k]: ((x[k] ?? 0) + 1) % (p.altre.length + 1) }))}
+                            >
+                              🔄
+                            </button>
+                          )}
+                          <button
+                            className="bottone piccolo"
+                            aria-label={via ? `Rimetti ${r.titolo} a ${nome} di ${dataLunga(p.data)}` : `Togli ${r.titolo} da ${nome} di ${dataLunga(p.data)}`}
+                            onClick={() =>
+                              setTolte((t) => {
+                                const n = new Set(t);
+                                if (n.has(k)) n.delete(k);
+                                else n.add(k);
+                                return n;
+                              })
+                            }
+                          >
+                            {via ? '↩︎' : '✕'}
+                          </button>
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            ))}
+          </div>
+        </div>
       )}
     </Foglio>
   );
 }
 
-/** Tre idee per un pasto, quando si aggiunge un piatto: le stesse regole della settimana proposta. */
 /**
  * Un'idea alla volta per il pasto, con i filtri scelti (categoria, ingrediente principale).
  * «Un'altra» passa alla successiva finché ce ne sono; prima quelle di tipo diverso da ciò che c'è già nel giorno.
@@ -181,11 +276,19 @@ export function IdeePerPasto({
     setQuale(0);
   }
   const idea = idee[quale];
+  const impara = useImpara();
+  // Antonino impara: l'idea scelta è «scelta», quelle saltate con «Un'altra» prima di sceglierla sono «scartate».
+  function prendi(id: string) {
+    for (const x of idee.slice(Math.max(0, quale - 3), quale)) impara('scartata', x.ricetta.id);
+    impara('scelta', id);
+    scegli(id);
+  }
   return (
-    <section className="idea-pasto" aria-label="Idea per questo pasto">
-      <div className="riga spazio">
-        <span className="titoletto">
-          ✨ Idea per questo pasto
+    <section className="idea-pasto" aria-label="Antonino consiglia">
+      <div className="riga" style={{ gap: 8 }}>
+        <FacciaAntonino piccola />
+        <span className="titoletto cresce">
+          Antonino consiglia
           {idee.length > 0 && (
             <>
               {' · '}
@@ -209,7 +312,7 @@ export function IdeePerPasto({
         </p>
       ) : (
         <>
-          <button type="button" className="voce idea" onClick={() => scegli(idea.ricetta.id)} aria-label={`Metti nel menu ${idea.ricetta.titolo}`}>
+          <button type="button" className="voce idea" onClick={() => prendi(idea.ricetta.id)} aria-label={`Metti nel menu ${idea.ricetta.titolo}`}>
             <span className="icona-voce grande" aria-hidden>
               <IconaCibo valore={iconaRicetta(indice, idea.ricetta, icone?.get(idea.ricetta.id))} />
             </span>
@@ -223,9 +326,14 @@ export function IdeePerPasto({
               ＋
             </span>
           </button>
-          <button type="button" className="bottone piccolo pieno" onClick={() => setQuale(quale + 1)} disabled={quale + 1 >= idee.length}>
-            {quale + 1 >= idee.length ? 'Nessun’altra idea con questi filtri' : '🔄 Un’altra'}
-          </button>
+          <div className="riga" style={{ gap: 8 }}>
+            <button type="button" className="bottone piccolo cresce" onClick={() => setQuale(quale + 1)} disabled={quale + 1 >= idee.length}>
+              {quale + 1 >= idee.length ? 'Nessun’altra idea con questi filtri' : '🔄 Un’altra'}
+            </button>
+            <button type="button" className="bottone piccolo" aria-label={`Non proporre più ${idea.ricetta.titolo}`} title="Non proporla più" onClick={() => impara('mai_piu', idea.ricetta.id)}>
+              🚫 Mai più
+            </button>
+          </div>
         </>
       )}
     </section>

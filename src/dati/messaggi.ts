@@ -106,6 +106,8 @@ const AZIONI: Record<string, string> = {
   salva_prodotto: 'Ricordare un codice a barre',
   scegli_icona: 'Cambiare l’icona di una ricetta',
   segna_ricetta: 'Segnare una ricetta ⭐ preferita o 💫 per gli ospiti',
+  antonino_impara: 'Insegnare ad Antonino cosa vi piace',
+  antonino_regole: 'Cambiare le regole di Antonino',
   verifica_ricetta: 'Segnare «va bene» o «non va bene» una ricetta',
   fissa_pasto: 'Ripetere un piatto ogni giorno',
   prolunga_pasti_fissi: 'Preparare i giorni dei piatti fissi',

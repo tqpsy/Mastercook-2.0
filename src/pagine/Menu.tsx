@@ -30,6 +30,7 @@ import { RICETTE_PER_PASTO } from '../dominio/proposte';
 import { filtra, iconaRicetta, type Indice } from '../dominio/ricette';
 import { ALLERGENI_UE, ESIGENZE, INTOLLERANZE, type VoceVincolo } from '../dominio/vincoli';
 import { IdeePerPasto, ProponiSettimana } from './Proposte';
+import { FacciaAntonino } from './Antonino';
 import { useConferme } from './ConfermaPasto';
 import { SegnaCucinato, usePronti } from './Cucinato';
 import { oggi, piuGiorni } from '../dominio/scadenze';
@@ -368,8 +369,8 @@ export function Menu() {
         ))}
 
       {fine >= giorno && (
-        <button className="bottone primario fluttuante" onClick={() => setProponi(true)}>
-          ✨ Riempi i vuoti
+        <button className="bottone primario fluttuante con-antonino" onClick={() => setProponi(true)} aria-label="Antonino, riempi la settimana">
+          <FacciaAntonino piccola /> Riempi la settimana
         </button>
       )}
 

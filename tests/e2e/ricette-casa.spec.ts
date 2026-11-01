@@ -413,5 +413,5 @@ test('ricette ⭐ preferite e 💫 da ospiti, cerca per ingrediente e suggerite,
   const risultati = foglio.getByRole('list', { name: 'Risultati' });
   await expect(risultati.getByRole('button')).toHaveCount(1);
   await expect(risultati.getByRole('button', { name: /Spaghetti alla carbonara/ })).toBeVisible();
-  await expect(foglio.getByRole('region', { name: 'Idea per questo pasto' }).getByRole('button', { name: 'Metti nel menu Spaghetti alla carbonara' })).toBeVisible();
+  await expect(foglio.getByRole('region', { name: 'Antonino consiglia' }).getByRole('button', { name: 'Metti nel menu Spaghetti alla carbonara' })).toBeVisible();
 });

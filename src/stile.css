@@ -2063,6 +2063,7 @@ details > summary:has(.primo-presto) {
 .avanzi-mangiato li {
   gap: 8px;
   padding: 8px 0;
+}
 /* Due gruppi di bottoni sulla stessa riga (⭐/💫 accanto alle categorie o ai modi di suggerire). */
 .gruppo-in-riga {
   display: flex;
@@ -2115,4 +2116,196 @@ details > summary:has(.primo-presto) {
   font-size: 0.82rem;
   color: var(--petrolio, var(--testo-tenue));
   margin-top: 2px;
+}
+
+/* Antonino, il consigliere del menu: la sua faccia, il fumetto e la settimana che propone. */
+.antonino-faccia {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: block;
+}
+.antonino-faccia.piccola {
+  width: 34px;
+  height: 34px;
+}
+.antonino-dice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.antonino-dice .fumetto {
+  flex: 1;
+  background: var(--superficie);
+  border: 1px solid var(--bordo);
+  border-radius: 4px 14px 14px 14px;
+  padding: 9px 12px;
+  font-size: 0.92rem;
+}
+.bottone.fluttuante.con-antonino {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 8px;
+}
+.idea-pasto:has(.antonino-faccia) {
+  border: 2px solid var(--primario);
+}
+.equilibrio {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.equilibrio li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--superficie);
+  border: 1px solid var(--bordo);
+  border-radius: 10px;
+  padding: 6px 9px;
+  font-size: 0.85rem;
+}
+.equilibrio li strong {
+  margin-left: auto;
+  white-space: nowrap;
+}
+.equilibrio li.ok strong {
+  color: #2c7a4b;
+}
+:root[data-tema='scuro'] .equilibrio li.ok strong {
+  color: #7fd3a0;
+}
+.equilibrio li.poco strong,
+.equilibrio li.troppo strong {
+  color: var(--attenzione);
+}
+.bottoni-antonino {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.giorno-antonino {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--testo-tenue);
+  margin: 12px 2px 6px;
+}
+.piatto-antonino {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--superficie);
+  border: 1px solid var(--bordo);
+  border-radius: 12px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+}
+.piatto-antonino .cresce {
+  min-width: 0;
+}
+.piatto-antonino strong {
+  display: block;
+}
+.piatto-antonino .pasto-antonino {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--primario);
+}
+.piatto-antonino .motivi {
+  display: block;
+  font-size: 0.8rem;
+}
+.piatto-antonino .azioni {
+  display: flex;
+  gap: 4px;
+}
+.piatto-antonino .azioni .bottone {
+  min-height: 38px;
+  min-width: 38px;
+  padding: 0 8px;
+}
+.piatto-antonino.gia {
+  background: var(--superficie-2);
+}
+.piatto-antonino.tolta strong {
+  text-decoration: line-through;
+  opacity: 0.55;
+}
+/* Tablet e telefono girato: il riassunto a sinistra, i giorni su colonne a destra. */
+@media (min-width: 900px), (orientation: landscape) and (min-width: 560px) and (max-height: 600px) {
+  .foglio:has(.settimana-antonino) {
+    max-width: min(1100px, 94vw);
+  }
+  .settimana-antonino {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 18px;
+    align-items: start;
+  }
+  .settimana-antonino .riassunto {
+    position: sticky;
+    top: 0;
+  }
+  .giorni-antonino {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 0 10px;
+    align-items: start;
+  }
+  .giorni-antonino .giorno-antonino {
+    margin-top: 0;
+  }
+  .giorni-antonino .piatto-antonino {
+    flex-wrap: wrap;
+  }
+  .giorni-antonino .piatto-antonino .cresce {
+    flex-basis: calc(100% - 50px);
+  }
+  .giorni-antonino .piatto-antonino .azioni {
+    margin-left: 44px;
+  }
+}
+.obiettivi-antonino li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--bordo);
+}
+.passi-antonino {
+  position: static;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.passi-antonino .bottone {
+  min-height: 34px;
+  min-width: 34px;
+  padding: 0;
+}
+.passi-antonino .valore {
+  min-width: 1.4em;
+  text-align: center;
+  font-weight: 700;
+}
+.obiettivi-antonino .limiti {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+.obiettivi-antonino li > .cresce {
+  flex: 1 1 100%;
 }

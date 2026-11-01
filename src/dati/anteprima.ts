@@ -81,6 +81,44 @@ const EFFETTI: Record<string, Effetto> = {
     });
   },
 
+  // Antonino impara subito: la memoria e le regole sono nelle impostazioni della famiglia (le scrive il server).
+  antonino_impara: (righe, d, famiglia) => {
+    righe.famiglia = (righe.famiglia ?? []).map((r) => {
+      if (r.id !== famiglia) return r;
+      const impostazioni = { ...((r.impostazioni as Record<string, unknown> | undefined) ?? {}) };
+      const a = { ...((impostazioni.antonino as Record<string, unknown> | undefined) ?? {}) };
+      const id = String(d.ricetta_id);
+      if (d.evento === 'dimentica') {
+        delete a.scartate;
+        delete a.scelte;
+        delete a.mai_piu;
+      } else if (d.evento === 'scartata' || d.evento === 'scelta') {
+        const chiave = d.evento === 'scartata' ? 'scartate' : 'scelte';
+        const tutte = { ...((a[chiave] as Record<string, { n: number; ultima: string }> | undefined) ?? {}) };
+        const prima = tutte[id];
+        const data = String(d.data ?? '');
+        tutte[id] = { n: Math.min(9, (prima?.n ?? 0) + 1), ultima: prima && prima.ultima > data ? prima.ultima : data };
+        a[chiave] = tutte;
+      } else if (d.evento === 'mai_piu' || d.evento === 'riproponi') {
+        const prima = Array.isArray(a.mai_piu) ? (a.mai_piu as string[]) : [];
+        a.mai_piu = [...prima.filter((x) => x !== id), ...(d.evento === 'mai_piu' ? [id] : [])];
+      }
+      impostazioni.antonino = a;
+      return { ...r, impostazioni, in_attesa: true };
+    });
+  },
+  antonino_regole: (righe, d, famiglia) => {
+    righe.famiglia = (righe.famiglia ?? []).map((r) => {
+      if (r.id !== famiglia) return r;
+      const impostazioni = { ...((r.impostazioni as Record<string, unknown> | undefined) ?? {}) };
+      const a = { ...((impostazioni.antonino as Record<string, unknown> | undefined) ?? {}) };
+      if (d.regole && typeof d.regole === 'object' && Object.keys(d.regole).length) a.regole = d.regole;
+      else delete a.regole;
+      impostazioni.antonino = a;
+      return { ...r, impostazioni, in_attesa: true };
+    });
+  },
+
   crea_ingrediente: aggiungi('ingrediente', (d) => ({
     nome: d.nome,
     reparto: d.reparto ?? 'altro',

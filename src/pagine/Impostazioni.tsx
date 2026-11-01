@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { AntoninoImpostazioni } from './Antonino';
 import { idDispositivo, righeAttive, useFamiglia, useVista } from '../dati/contesto';
 import { esporta } from '../dati/esportazione';
 import { spiegaMotivo } from '../dati/messaggi';
@@ -66,6 +67,7 @@ export function Impostazioni({
 
       {amministratore && dove === 'server' && <Inviti />}
       <Accessi amministratore={amministratore} io={utenteId} />
+      <AntoninoImpostazioni />
       <ChiaveGemini amministratore={amministratore} />
       {dove === 'locale' && <CopiaSulDrive nome={String(famiglia?.nome ?? 'Famiglia')} />}
       <IMieiDati nomeFamiglia={String(famiglia?.nome ?? 'famiglia')} apriFamiglia={apriFamiglia} />
