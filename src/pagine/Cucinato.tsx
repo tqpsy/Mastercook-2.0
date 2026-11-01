@@ -7,6 +7,7 @@ import { iconaRicetta, type Indice } from '../dominio/ricette';
 import { giorniTra, oggi } from '../dominio/scadenze';
 import { formattaGiorno, leggiNumero } from '../dominio/unita';
 import { Foglio } from '../ui/Foglio';
+import { ConsiglioRipiano } from '../ui/Frigo';
 import { type Lotto, useLotti } from './Casa';
 import { PorzioniAvanzate, SceltaLuogo, TestaPiatto, testoNumero } from './ConfermaPasto';
 import { useIcone } from './Ricette';
@@ -115,14 +116,7 @@ export function SegnaCucinato({
               ❄️ Lo mangiate {quando}: in frigo regge al massimo {regge}. Meglio il freezer.
             </div>
           ) : (
-            <div className="consiglio-ripiano">
-              <Frigo ripiani={c.ripiani} />
-              <span>
-                <span className="tenue piccolo">Ripiano consigliato</span>
-                <strong>{c.ripiani.length === 1 ? 'Centrale, in fondo' : 'Alto o centrale'}</strong>
-                <span className="tenue">In un contenitore chiuso, mai nella porta.</span>
-              </span>
-            </div>
+            <ConsiglioRipiano ripiano={c.ripiano} />
           )
         ) : (
           <p className="tenue piccolo">In freezer: il giorno prima spostalo in frigo a scongelare (sul ripiano basso, in un piatto).</p>
@@ -180,19 +174,3 @@ export function SegnaCucinato({
   );
 }
 
-/** Un frigo disegnato con il ripiano consigliato in senape (mai la porta). */
-function Frigo({ ripiani }: { ripiani: ('alto' | 'centrale')[] }) {
-  const y = { alto: 10, centrale: 26 } as const;
-  return (
-    <svg className="frigo" viewBox="0 0 44 64" aria-hidden>
-      <rect x="2" y="2" width="40" height="60" rx="5" fill="var(--superficie)" stroke="var(--testo-tenue)" strokeWidth="2" />
-      <line x1="32" y1="4" x2="32" y2="60" stroke="var(--bordo)" strokeWidth="1.5" />
-      {(['alto', 'centrale'] as const).map((r) => (
-        <rect key={r} x="5" y={y[r]} width="24" height="13" rx="2" fill={ripiani.includes(r) ? 'var(--senape)' : 'var(--superficie-2)'} />
-      ))}
-      <rect x="5" y="42" width="24" height="16" rx="2" fill="var(--superficie-2)" />
-      <line x1="5" y1="24.5" x2="29" y2="24.5" stroke="var(--testo-tenue)" strokeWidth="1" />
-      <line x1="5" y1="40.5" x2="29" y2="40.5" stroke="var(--testo-tenue)" strokeWidth="1" />
-    </svg>
-  );
-}

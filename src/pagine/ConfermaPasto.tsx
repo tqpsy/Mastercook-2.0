@@ -8,6 +8,8 @@ import { iconaRicetta, type Indice, normalizza, type Ricetta } from '../dominio/
 import { oggi, piuGiorni } from '../dominio/scadenze';
 import { formatta, formattaGiorno, leggiNumero } from '../dominio/unita';
 import { Foglio } from '../ui/Foglio';
+import { ConsiglioRipiano } from '../ui/Frigo';
+import { ripianoPer } from '../dominio/cucinato';
 import { usePronti } from './Cucinato';
 import type { DatiMenu } from './Menu';
 import { useIcone } from './Ricette';
@@ -132,6 +134,12 @@ export function TestaPiatto({ icona, titolo, sotto }: { icona?: string; titolo: 
   );
 }
 
+/** La regola di conservazione dei cotti di una ricetta, se ce l'ha. */
+const regolaDi = (indice: Indice, ricettaId: string | null | undefined) => {
+  const c = ricettaId ? indice.perId.get(ricettaId)?.conservazione : undefined;
+  return c ? indice.catalogo.regole_cotti.find((r) => r.id === c) : undefined;
+};
+
 const STIMA = (giorni: number) => `da mangiare entro ${giorni === 1 ? 'domani' : `${giorni} giorni`} (stima, controlla sempre)`;
 
 /** L'icona di un piatto del menu: la ricetta (con l'icona scelta dalla famiglia) o l'avanzo del piatto di prima. */
@@ -183,6 +191,7 @@ export function SegnaMangiato({
           perDopo,
           pronto,
           giorni: giorniAvanzo(ricettaId ? indice.perId.get(ricettaId) : null, indice.catalogo.regole_cotti),
+          ripiano: ripianoPer(regolaDi(indice, ricettaId)),
         };
       }),
     [portate, dati, indice, titolo, pronti, icone],
@@ -210,6 +219,9 @@ export function SegnaMangiato({
   }
 
   const unaStima = valori.find((x) => x.q && x.q > 0 && x.giorni !== null);
+  // Un posto solo nel frigo: se fra gli avanzi c'è un piatto delicato, vale il suo (il più prudente).
+  const conAvanzi = valori.filter((x) => x.q && x.q > 0);
+  const ripiano = (conAvanzi.find((x) => x.ripiano.posto === 'centrale') ?? conAvanzi[0])?.ripiano;
   const nota = (x: (typeof valori)[number]) =>
     x.pronto
       ? `🍳 Cucinato: in ${x.pronto.luogo} ce ne sono ${testoNumero(x.pronto.quantita)}`
@@ -241,6 +253,7 @@ export function SegnaMangiato({
             {luogo === 'frigo' && unaStima ? `In frigo: ${STIMA(unaStima.giorni!)}.` : 'La data per consumarlo la puoi scrivere in Casa.'} Le trovi in Casa, tra le cose
             da usare presto.
           </p>
+          {luogo === 'frigo' && ripiano && <ConsiglioRipiano ripiano={ripiano} />}
         </div>
       )}
       {errore && (
@@ -495,6 +508,7 @@ export function ConfermaPasto({
               <p className="tenue" style={{ margin: '4px 0 0' }}>
                 {luogoAvanzo === 'frigo' && giorni !== null ? `In frigo: ${STIMA(giorni)}.` : 'La data per consumarlo la puoi scrivere in Casa.'}
               </p>
+              {luogoAvanzo === 'frigo' && <ConsiglioRipiano ripiano={ripianoPer(regolaDi(indice, ricettaAvanzo?.id))} />}
             </div>
           )}
         </div>

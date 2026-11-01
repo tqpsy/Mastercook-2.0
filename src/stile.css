@@ -2574,8 +2574,8 @@ details > summary:has(.primo-presto) {
 }
 .consiglio-ripiano .frigo {
   flex: none;
-  width: 40px;
-  height: 58px;
+  width: 96px;
+  height: 128px;
 }
 .riga-data {
   display: flex;

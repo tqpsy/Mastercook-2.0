@@ -26,9 +26,25 @@ export interface ConsiglioCucinato {
   entroFrigo: string;
   entroFreezer: string;
   /** Su quale ripiano del frigo metterlo. */
-  ripiano: string;
-  /** Il ripiano da segnare nel disegno del frigo: «centrale» per i delicati, altrimenti «alto» o centrale. */
-  ripiani: ('alto' | 'centrale')[];
+  ripiano: Ripiano;
+}
+
+/** Un posto preciso nel frigo: il ripiano e quanto in fondo. */
+export interface Ripiano {
+  posto: 'alto' | 'centrale';
+  /** Il nome breve: «Ripiano in alto», «Ripiano centrale, in fondo». */
+  nome: string;
+  perche: string;
+}
+
+/**
+ * Dove va un piatto cotto nel frigo, un posto solo: i delicati (pesce, uova, crema, riso) sul ripiano centrale
+ * in fondo, il punto più freddo e stabile; gli altri sul ripiano in alto, sopra carne e pesce crudi.
+ */
+export function ripianoPer(regola: Pick<RegolaCotti, 'id'> | undefined | null): Ripiano {
+  return regola && DELICATI.has(regola.id)
+    ? { posto: 'centrale', nome: 'Ripiano centrale, in fondo', perche: 'È il punto più freddo e stabile. In un contenitore chiuso, mai nella porta.' }
+    : { posto: 'alto', nome: 'Ripiano in alto', perche: 'I cibi cotti stanno sopra carne e pesce crudi. In un contenitore chiuso, mai nella porta.' };
 }
 
 export function consiglioCucinato(regola: Pick<RegolaCotti, 'id' | 'consigliati'> | undefined, cucinatoIl: string, ultimoPasto: string): ConsiglioCucinato {
@@ -41,10 +57,6 @@ export function consiglioCucinato(regola: Pick<RegolaCotti, 'id' | 'consigliati'
     congela: giorniAlPasto > limiteFrigo,
     entroFrigo: piuGiorni(cucinatoIl, giorniFrigo),
     entroFreezer: piuGiorni(cucinatoIl, GIORNI_FREEZER),
-    ripiano:
-      regola && DELICATI.has(regola.id)
-        ? 'Ripiano centrale, in fondo (il punto più freddo e stabile), in un contenitore chiuso. Mai nella porta.'
-        : 'Ripiano alto o centrale, in un contenitore chiuso: i cibi cotti stanno sopra carne e pesce crudi. Mai nella porta.',
-    ripiani: regola && DELICATI.has(regola.id) ? ['centrale'] : ['alto', 'centrale'],
+    ripiano: ripianoPer(regola),
   };
 }
