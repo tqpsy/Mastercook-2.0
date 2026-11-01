@@ -2974,3 +2974,54 @@ details > summary:has(.primo-presto) {
   border-color: transparent;
   background: transparent;
 }
+
+/* Ogni piatto con i suoi avanzi: porzioni, frigo o freezer e ripiano nella sua scheda. */
+.avanzi-mangiato li {
+  flex-direction: column;
+  align-items: stretch;
+}
+.avanzi-mangiato .riga-piatto {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.avanzi-mangiato .riga-piatto .testa-piatto {
+  flex: 1;
+  min-width: 0;
+}
+.dove-avanzo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--bordo);
+}
+.dove-avanzo .scelta-luogo {
+  margin-top: 0;
+}
+.dove-avanzo .consiglio-ripiano {
+  margin: 0;
+}
+.avanzi-mangiato:not(.uno) .scelta-luogo button {
+  min-height: 0;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 6px;
+  padding: 8px 10px;
+}
+.avanzi-mangiato:not(.uno) .scelta-luogo .icona-luogo {
+  font-size: 1.1rem;
+}
+.avanzi-mangiato:not(.uno) .scelta-luogo .dettaglio-luogo {
+  flex-basis: 100%;
+}
+.consiglio-ripiano.compatto {
+  padding: 8px 12px;
+  gap: 12px;
+}
+.consiglio-ripiano.compatto .frigo {
+  width: 60px;
+  height: 80px;
+}

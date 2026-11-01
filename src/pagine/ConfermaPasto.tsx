@@ -197,9 +197,10 @@ export function SegnaMangiato({
     [portate, dati, indice, titolo, pronti, icone],
   );
   const [quante, setQuante] = useState<Record<string, string>>(() => Object.fromEntries(piatti.map((x) => [x.p.id, testoNumero(Math.round(x.perDopo * 2) / 2)])));
-  const [luogo, setLuogo] = useState<'frigo' | 'freezer'>('frigo');
+  // Ogni piatto il suo posto: la lasagna in frigo, il dolce in freezer.
+  const [luoghi, setLuoghi] = useState<Record<string, 'frigo' | 'freezer'>>({});
   const [errore, setErrore] = useState<string | null>(null);
-  const valori = piatti.map((x) => ({ ...x, q: leggiNumero(quante[x.p.id] ?? '') }));
+  const valori = piatti.map((x) => ({ ...x, q: leggiNumero(quante[x.p.id] ?? ''), luogo: luoghi[x.p.id] ?? ('frigo' as const) }));
   const totale = valori.reduce((t, x) => t + (x.q && x.q > 0 ? x.q : 0), 0);
   const uno = valori.length === 1;
 
@@ -212,16 +213,12 @@ export function SegnaMangiato({
         portata_id: x.p.id,
         esito: 'come_previsto',
         // Sempre detto: 0 vuol dire finito tutto, anche per un piatto che durava più giorni.
-        avanzi: x.q! > 0 ? [lottoAvanzo(x.titolo, x.q!, luogo, x.giorni)] : [],
+        avanzi: x.q! > 0 ? [lottoAvanzo(x.titolo, x.q!, x.luogo, x.giorni)] : [],
       });
     }
     chiudi();
   }
 
-  const unaStima = valori.find((x) => x.q && x.q > 0 && x.giorni !== null);
-  // Un posto solo nel frigo: se fra gli avanzi c'è un piatto delicato, vale il suo (il più prudente).
-  const conAvanzi = valori.filter((x) => x.q && x.q > 0);
-  const ripiano = (conAvanzi.find((x) => x.ripiano.posto === 'centrale') ?? conAvanzi[0])?.ripiano;
   const nota = (x: (typeof valori)[number]) =>
     x.pronto
       ? `🍳 Cucinato: in ${x.pronto.luogo} ce ne sono ${testoNumero(x.pronto.quantita)}`
@@ -233,29 +230,35 @@ export function SegnaMangiato({
       <ul className={`avanzi-mangiato${uno ? ' uno' : ''}`} aria-label="Porzioni avanzate">
         {valori.map((x) => (
           <li key={x.p.id}>
-            <TestaPiatto icona={x.icona} titolo={x.titolo} sotto={nota(x)} />
-            <div className="porzioni-blocco">
-              <PorzioniAvanzate grande={uno} piatto={x.titolo} valore={quante[x.p.id] ?? ''} cambia={(v) => setQuante({ ...quante, [x.p.id]: v })} />
-              {uno && <span className="tenue piccolo">{x.q ? (x.q === 1 ? 'porzione avanzata' : 'porzioni avanzate') : 'finito tutto'}</span>}
+            <div className="riga-piatto">
+              <TestaPiatto icona={x.icona} titolo={x.titolo} sotto={nota(x)} />
+              {!uno && <PorzioniAvanzate piatto={x.titolo} valore={quante[x.p.id] ?? ''} cambia={(v) => setQuante({ ...quante, [x.p.id]: v })} />}
             </div>
+            {uno && (
+              <div className="porzioni-blocco">
+                <PorzioniAvanzate grande piatto={x.titolo} valore={quante[x.p.id] ?? ''} cambia={(v) => setQuante({ ...quante, [x.p.id]: v })} />
+                <span className="tenue piccolo">{x.q ? (x.q === 1 ? 'porzione avanzata' : 'porzioni avanzate') : 'finito tutto'}</span>
+              </div>
+            )}
+            {!!x.q && x.q > 0 && (
+              <div className="dove-avanzo">
+                <span className="tenue piccolo">{uno ? 'Dove le metti?' : `Dove metti ${x.titolo}?`}</span>
+                <SceltaLuogo
+                  etichetta={`Dove va l’avanzo: ${x.titolo}`}
+                  luogo={x.luogo}
+                  cambia={(l) => setLuoghi({ ...luoghi, [x.p.id]: l })}
+                  frigo={x.giorni !== null ? `entro ${formattaGiorno(piuGiorni(oggi(), x.giorni))}` : 'data da scrivere'}
+                />
+                <p className="tenue piccolo" style={{ margin: 0 }}>
+                  {x.luogo === 'frigo' && x.giorni !== null ? `In frigo: ${STIMA(x.giorni)}.` : 'La data per consumarlo la puoi scrivere in Casa.'}
+                </p>
+                {x.luogo === 'frigo' && <ConsiglioRipiano ripiano={x.ripiano} compatto={!uno} />}
+              </div>
+            )}
           </li>
         ))}
       </ul>
-      {totale > 0 && (
-        <div className="campo">
-          <span>Dove le metti?</span>
-          <SceltaLuogo
-            luogo={luogo}
-            cambia={setLuogo}
-            frigo={unaStima ? `entro ${formattaGiorno(piuGiorni(oggi(), unaStima.giorni!))}` : 'data da scrivere'}
-          />
-          <p className="tenue piccolo" style={{ margin: '8px 0 0' }}>
-            {luogo === 'frigo' && unaStima ? `In frigo: ${STIMA(unaStima.giorni!)}.` : 'La data per consumarlo la puoi scrivere in Casa.'} Le trovi in Casa, tra le cose
-            da usare presto.
-          </p>
-          {luogo === 'frigo' && ripiano && <ConsiglioRipiano ripiano={ripiano} />}
-        </div>
-      )}
+      {totale > 0 && <p className="tenue piccolo">Gli avanzi li trovi in Casa, tra le cose da usare presto.</p>}
       {errore && (
         <div className="avviso errore" role="alert">
           {errore}

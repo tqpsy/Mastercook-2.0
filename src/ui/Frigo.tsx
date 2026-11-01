@@ -73,9 +73,9 @@ export function DisegnoFrigo({ ripiano }: { ripiano: Ripiano }) {
 }
 
 /** Il riquadro «Ripiano consigliato»: il frigo disegnato e il posto, in parole. */
-export function ConsiglioRipiano({ ripiano }: { ripiano: Ripiano }) {
+export function ConsiglioRipiano({ ripiano, compatto }: { ripiano: Ripiano; compatto?: boolean }) {
   return (
-    <div className="consiglio-ripiano">
+    <div className={`consiglio-ripiano${compatto ? ' compatto' : ''}`}>
       <DisegnoFrigo ripiano={ripiano} />
       <span>
         <span className="tenue piccolo">Ripiano consigliato</span>
