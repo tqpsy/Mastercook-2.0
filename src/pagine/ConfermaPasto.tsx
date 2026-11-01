@@ -32,6 +32,154 @@ export function useConferme(vista: Vista) {
   }, [r]);
 }
 
+/** L'avanzo da mettere in casa: in frigo con la data stimata dalla regola dei cotti, se c'è; altrimenti da scrivere. */
+function lottoAvanzo(nome: string, quantita: number, luogo: 'frigo' | 'freezer', giorni: number | null) {
+  const stimata = luogo === 'frigo' && giorni !== null;
+  return {
+    lotto_id: crypto.randomUUID(),
+    nome: nome.slice(0, 120) || 'Avanzo',
+    quantita,
+    luogo,
+    ...(stimata
+      ? { tipo_data: 'stimata', data_limite: piuGiorni(oggi(), giorni), fonte_data: 'app', calcolata_il: new Date().toISOString(), affidabilita: 'bassa' }
+      : { tipo_data: 'sconosciuta' }),
+  };
+}
+
+const testoNumero = (n: number) => String(n).replace('.', ',');
+
+/** Quante porzioni sono avanzate: − e + di una porzione, oppure si scrive (anche mezze, «1,5»). */
+function PorzioniAvanzate({ valore, cambia, piatto }: { valore: string; cambia: (v: string) => void; piatto?: string }) {
+  const di = piatto ? `: ${piatto}` : '';
+  const etichetta = `Porzioni avanzate${di}`;
+  const n = leggiNumero(valore) ?? 0;
+  const passo = (d: number) => cambia(testoNumero(Math.max(0, Math.round((n + d) * 2) / 2)));
+  return (
+    <span className="contatore">
+      <button type="button" className="bottone piccolo" aria-label={`Una porzione in meno${di}`} disabled={n <= 0} onClick={() => passo(-1)}>
+        −
+      </button>
+      <input className="dato" inputMode="decimal" aria-label={etichetta} value={valore} onChange={(e) => cambia(e.target.value)} onFocus={(e) => e.target.select()} />
+      <button type="button" className="bottone piccolo" aria-label={`Una porzione in più${di}`} onClick={() => passo(1)}>
+        +
+      </button>
+    </span>
+  );
+}
+
+function SceltaLuogo({ luogo, cambia }: { luogo: 'frigo' | 'freezer'; cambia: (l: 'frigo' | 'freezer') => void }) {
+  return (
+    <div className="scelte segmenti" role="radiogroup" aria-label="Dove va l’avanzo" style={{ display: 'inline-flex' }}>
+      {(['frigo', 'freezer'] as const).map((l) => (
+        <button key={l} type="button" role="radio" aria-checked={luogo === l} aria-pressed={luogo === l} onClick={() => cambia(l)}>
+          {l === 'frigo' ? 'In frigo' : 'In freezer'}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+const STIMA = (giorni: number) => `da mangiare entro ${giorni === 1 ? 'domani' : `${giorni} giorni`} (stima, controlla sempre)`;
+
+/**
+ * «✓ Mangiato»: prima di confermare chiede se è avanzato qualcosa e quante porzioni, piatto per piatto.
+ * Gli avanzi vanno in Casa (e in «Da usare presto»). Se il piatto durava più giorni, propone le porzioni messe
+ * nel menu dei giorni dopo; con 0 non resta niente in casa. Si conferma tutto «come previsto».
+ */
+export function SegnaMangiato({
+  indice,
+  dati,
+  portate,
+  titolo,
+  altro,
+  chiudi,
+}: {
+  indice: Indice;
+  dati: DatiMenu;
+  portate: PortataMenu[];
+  titolo: (p: PortataMenu) => string;
+  /** Per un piatto solo: apre le altre domande (quantità diverse, altro piatto, saltato). */
+  altro?: () => void;
+  chiudi: () => void;
+}) {
+  const { esegui } = useFamiglia();
+  const piatti = useMemo(
+    () =>
+      portate.map((p) => {
+        const perDopo = avanziDi(p, dati.portate).reduce((t, a) => t + porzioniPortata(a, dati.persone, dati.eccezioni, dati.ospiti), 0);
+        const origine = p.avanzo_di ? dati.portate.find((x) => x.id === p.avanzo_di) : undefined;
+        const ricettaId = p.ricetta_id ?? origine?.ricetta_id;
+        return { p, titolo: titolo(p), perDopo, giorni: giorniAvanzo(ricettaId ? indice.perId.get(ricettaId) : null, indice.catalogo.regole_cotti) };
+      }),
+    [portate, dati, indice, titolo],
+  );
+  const [quante, setQuante] = useState<Record<string, string>>(() => Object.fromEntries(piatti.map((x) => [x.p.id, testoNumero(Math.round(x.perDopo * 2) / 2)])));
+  const [luogo, setLuogo] = useState<'frigo' | 'freezer'>('frigo');
+  const [errore, setErrore] = useState<string | null>(null);
+  const valori = piatti.map((x) => ({ ...x, q: leggiNumero(quante[x.p.id] ?? '') }));
+  const totale = valori.reduce((t, x) => t + (x.q && x.q > 0 ? x.q : 0), 0);
+
+  async function conferma() {
+    const sbagliato = valori.find((x) => x.q === null || x.q < 0);
+    if (sbagliato) return setErrore(`Scrivi quante porzioni di ${sbagliato.titolo} sono avanzate (anche 0).`);
+    for (const x of valori) {
+      await esegui('conferma_pasto', {
+        id: crypto.randomUUID(),
+        portata_id: x.p.id,
+        esito: 'come_previsto',
+        // Sempre detto: 0 vuol dire finito tutto, anche per un piatto che durava più giorni.
+        avanzi: x.q! > 0 ? [lottoAvanzo(x.titolo, x.q!, luogo, x.giorni)] : [],
+      });
+    }
+    chiudi();
+  }
+
+  const unaStima = valori.find((x) => x.q && x.q > 0 && x.giorni !== null);
+  return (
+    <Foglio titolo="È avanzato qualcosa?" chiudi={chiudi}>
+      <p className="tenue" style={{ marginTop: 0 }}>
+        Se sono avanzate delle porzioni le metto in Casa, tra le cose da usare presto. Se avete finito tutto, lascia 0.
+      </p>
+      <ul className="elenco avanzi-mangiato" aria-label="Porzioni avanzate">
+        {valori.map((x) => (
+          <li key={x.p.id} className="riga spazio" style={{ flexWrap: 'wrap' }}>
+            <span className="cresce">
+              <strong>{x.titolo}</strong>
+              {x.perDopo > 0 && (
+                <span className="tenue piccolo" style={{ display: 'block' }}>
+                  Nel menu dei giorni dopo ne avete messe {testoNumero(x.perDopo)}
+                </span>
+              )}
+            </span>
+            <PorzioniAvanzate piatto={x.titolo} valore={quante[x.p.id] ?? ''} cambia={(v) => setQuante({ ...quante, [x.p.id]: v })} />
+          </li>
+        ))}
+      </ul>
+      {totale > 0 && (
+        <div className="campo">
+          <SceltaLuogo luogo={luogo} cambia={setLuogo} />
+          <p className="tenue" style={{ margin: '6px 0 0' }}>
+            {luogo === 'frigo' && unaStima ? `In frigo: ${STIMA(unaStima.giorni!)}.` : 'La data per consumarlo la puoi scrivere in Casa.'}
+          </p>
+        </div>
+      )}
+      {errore && (
+        <div className="avviso errore" role="alert">
+          {errore}
+        </div>
+      )}
+      <button className="bottone primario pieno" onClick={conferma}>
+        {totale > 0 ? `✓ Mangiato · ${testoNumero(totale)} ${totale === 1 ? 'porzione avanzata' : 'porzioni avanzate'}` : '✓ Mangiato, niente avanzi'}
+      </button>
+      {altro && (
+        <button className="link" style={{ marginTop: 10 }} onClick={altro}>
+          Non è andata come previsto? Quantità diverse, altro piatto o saltato
+        </button>
+      )}
+    </Foglio>
+  );
+}
+
 const ESITI: { id: EsitoPasto; nome: string; spiega: string }[] = [
   { id: 'come_previsto', nome: 'Come previsto', spiega: 'Tolgo dalla casa quello che prevedeva il menu.' },
   { id: 'quantita_diverse', nome: 'Quantità diverse', spiega: 'Scrivi quanto hai usato di ogni ingrediente.' },
@@ -60,7 +208,19 @@ export function ConfermaPasto({
 }) {
   const { esegui } = useFamiglia();
   const vista = useVista();
-  const { righe: consumi } = useConferme(vista);
+  const { righe: consumi, conferme } = useConferme(vista);
+  // In una correzione: le porzioni avanzate segnate prima (anche quelle già mangiate da allora).
+  const avanzatePrima = useMemo(() => {
+    if (!attiva) return 0;
+    const diQuesta = new Set(conferme.filter((c) => c.portata_id === portata.id).map((c) => c.id));
+    const lotti = (vista.righe.lotto ?? []).filter((l) => l.origine === 'avanzo' && diQuesta.has(String(l.conferma_id)) && !l.eliminato_il);
+    const ids = new Set(lotti.map((l) => l.id));
+    const restano = lotti.filter((l) => !l.chiuso_il).reduce((t, l) => t + Number(l.quantita), 0);
+    const mangiate = (vista.righe.movimento ?? [])
+      .filter((m) => ids.has(m.lotto_id as string) && m.causale !== 'carico' && m.causale !== 'annullo')
+      .reduce((t, m) => t - Number(m.variazione), 0);
+    return Math.max(0, Math.round((restano + mangiate) * 2) / 2);
+  }, [attiva, conferme, portata.id, vista.righe.lotto, vista.righe.movimento]);
   const previsto = useMemo(() => previstoPortata(indice, portata, dati.persone, dati.eccezioni, dati.portate, dati.ospiti), [indice, portata, dati]);
   // Porzioni messe nel menu dei giorni dopo (piatto che dura più giorni): sono l'avanzo atteso.
   const perDopo = avanziDi(portata, dati.portate).reduce((t, a) => t + porzioniPortata(a, dati.persone, dati.eccezioni, dati.ospiti), 0);
@@ -78,8 +238,9 @@ export function ConfermaPasto({
   const [ricetta, setRicetta] = useState<Ricetta | null>(attiva?.ricetta_id ? (indice.perId.get(attiva.ricetta_id) ?? null) : null);
   const [testo, setTesto] = useState(attiva?.testo ?? '');
   const [porzioni, setPorzioni] = useState(String(attiva?.porzioni ?? portata.porzioni ?? (previsto.length ? '' : 1)).replace('.', ','));
-  const [avanzi, setAvanzi] = useState(!attiva && perDopo > 0);
-  const [porzioniAvanzo, setPorzioniAvanzo] = useState(String(perDopo || 1).replace('.', ','));
+  const [porzioniAvanzo, setPorzioniAvanzo] = useState(testoNumero(attiva ? avanzatePrima : Math.round(perDopo * 2) / 2));
+  /** In una correzione gli avanzi cambiano solo se si toccano. */
+  const [avanziToccati, setAvanziToccati] = useState(!attiva);
   const [luogoAvanzo, setLuogoAvanzo] = useState<'frigo' | 'freezer'>('frigo');
   const [nota, setNota] = useState(attiva?.nota ?? '');
   const [errore, setErrore] = useState<string | null>(null);
@@ -111,22 +272,12 @@ export function ConfermaPasto({
         Object.assign(d, { ricetta_id: ricetta.id, porzioni: p });
       } else d.testo = testo.trim();
     }
-    if (avanzi && esito !== 'saltato') {
-      const q = leggiNumero(porzioniAvanzo);
-      if (q === null || q <= 0) return setErrore('Scrivi quante porzioni sono avanzate.');
-      const stimata = luogoAvanzo === 'frigo' && giorni !== null;
-      d.avanzi = [
-        {
-          lotto_id: crypto.randomUUID(),
-          nome: piatto.slice(0, 120) || 'Avanzo',
-          quantita: q,
-          luogo: luogoAvanzo,
-          ...(stimata
-            ? { tipo_data: 'stimata', data_limite: piuGiorni(oggi(), giorni), fonte_data: 'app', calcolata_il: new Date().toISOString(), affidabilita: 'bassa' }
-            : { tipo_data: 'sconosciuta' }),
-        },
-      ];
-    } else if (perDopo > 0 && !attiva) d.avanzi = []; // finito tutto: niente avanzo per i giorni dopo
+    const q = leggiNumero(porzioniAvanzo);
+    if (esito !== 'saltato' && avanziToccati) {
+      if (q === null || q < 0) return setErrore('Scrivi quante porzioni sono avanzate (anche 0).');
+      // Sempre detto: 0 vuol dire finito tutto (anche per un piatto che durava più giorni).
+      d.avanzi = q > 0 ? [lottoAvanzo(piatto, q, luogoAvanzo, giorni)] : [];
+    }
     await esegui('conferma_pasto', d);
     chiudi();
   }
@@ -222,26 +373,26 @@ export function ConfermaPasto({
 
       {esito !== 'saltato' && (
         <div className="campo">
-          <label className="riga">
-            <input type="checkbox" checked={avanzi} onChange={(e) => setAvanzi(e.target.checked)} /> Sono avanzate delle porzioni
-          </label>
-          {avanzi && (
-            <div className="riga" style={{ flexWrap: 'wrap', marginTop: 6 }}>
-              <input className="dato" inputMode="decimal" aria-label="Porzioni avanzate" value={porzioniAvanzo} onChange={(e) => setPorzioniAvanzo(e.target.value)} style={{ width: 70 }} />
-              <span>porzioni in</span>
-              <select className="dato" aria-label="Dove va l’avanzo" value={luogoAvanzo} onChange={(e) => setLuogoAvanzo(e.target.value as 'frigo' | 'freezer')} style={{ width: 'auto' }}>
-                <option value="frigo">Frigo</option>
-                <option value="freezer">Freezer</option>
-              </select>
-              {perDopo > 0 && (
-                <p className="tenue" style={{ width: '100%', margin: '4px 0 0' }}>
-                  Nel menu dei giorni dopo ne avete messe {String(perDopo).replace('.', ',')}.
-                </p>
-              )}
-              <p className="tenue" style={{ width: '100%', margin: '4px 0 0' }}>
-                {luogoAvanzo === 'frigo' && giorni !== null
-                  ? `Stima indicativa: da consumare entro ${giorni === 1 ? 'domani' : `${giorni} giorni`} (regola dei cotti). Controlla sempre.`
-                  : 'Senza una regola per questo piatto la data resta da scrivere.'}
+          <div className="riga spazio" style={{ flexWrap: 'wrap' }}>
+            <span>Porzioni avanzate</span>
+            <PorzioniAvanzate
+              valore={porzioniAvanzo}
+              cambia={(v) => {
+                setPorzioniAvanzo(v);
+                setAvanziToccati(true);
+              }}
+            />
+          </div>
+          {perDopo > 0 && (
+            <p className="tenue" style={{ margin: '4px 0 0' }}>
+              Nel menu dei giorni dopo ne avete messe {testoNumero(perDopo)}.
+            </p>
+          )}
+          {avanziToccati && (leggiNumero(porzioniAvanzo) ?? 0) > 0 && (
+            <div style={{ marginTop: 8 }}>
+              <SceltaLuogo luogo={luogoAvanzo} cambia={setLuogoAvanzo} />
+              <p className="tenue" style={{ margin: '4px 0 0' }}>
+                {luogoAvanzo === 'frigo' && giorni !== null ? `In frigo: ${STIMA(giorni)}.` : 'La data per consumarlo la puoi scrivere in Casa.'}
               </p>
             </div>
           )}

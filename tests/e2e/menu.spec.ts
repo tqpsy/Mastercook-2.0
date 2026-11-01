@@ -197,6 +197,10 @@ test('torta che dura più giorni: avanzo domani, la conferma la mette in casa', 
 
   await page.getByRole('button', { name: 'Oggi', exact: true }).click();
   await page.getByRole('button', { name: 'Mangiato come previsto: Torta di mele' }).click();
+  // Le porzioni messe nel menu di domani sono già proposte come avanzo.
+  const avanzi = page.getByRole('dialog', { name: 'È avanzato qualcosa?' });
+  await expect(avanzi).toContainText('Nel menu dei giorni dopo ne avete messe 1');
+  await avanzi.getByRole('button', { name: '✓ Mangiato · 1 porzione avanzata' }).click();
   await expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
   await expect
     .poll(async () =>

@@ -15,15 +15,15 @@ import { Foto, riduciFoto } from '../ui/Foto';
 import { Icona } from '../ui/Icona';
 import { Sigla, type SiglaPersona, sigleDi } from '../ui/Sigla';
 import { useLotti } from './Casa';
-import { ConfermaPasto, useConferme } from './ConfermaPasto';
+import { ConfermaPasto, SegnaMangiato, useConferme } from './ConfermaPasto';
 import { chiLoMangia, type DatiMenu, descrivi, useDatiMenu, useProlungaFissi } from './Menu';
 import { ICONA_ESITO, motiviInBreve, SchedaRicetta, useCommensali, useInCasa } from './Ricette';
 import { useDatiSpesa } from './Spesa';
 
 const titoloDi = (indice: Indice, p: PortataMenu) => (p.ricetta_id ? indice.perId.get(p.ricetta_id)?.titolo : null) ?? p.testo ?? 'Piatto';
 
-/** Conferma in un tocco «come previsto», oppure apre le domande; a conferma fatta, l'esito e «Correggi». */
-function StatoPasto({ titolo, conferma, apri, portata }: { titolo: string; conferma?: Conferma; apri: () => void; portata: PortataMenu }) {
+/** «✓ Mangiato» (chiede se è avanzato qualcosa) oppure apre le domande; a conferma fatta, l'esito e «Correggi». */
+function StatoPasto({ titolo, conferma, apri, segna }: { titolo: string; conferma?: Conferma; apri: () => void; segna: () => void }) {
   const { esegui, archivio, famiglia } = useFamiglia();
   const [vedi, setVedi] = useState(false);
   if (conferma) {
@@ -75,7 +75,7 @@ function StatoPasto({ titolo, conferma, apri, portata }: { titolo: string; confe
       <button
         className="bottone primario piccolo"
         aria-label={`Mangiato come previsto: ${titolo}`}
-        onClick={() => esegui('conferma_pasto', { id: crypto.randomUUID(), portata_id: portata.id, esito: 'come_previsto' })}
+        onClick={segna}
       >
         ✓ Mangiato
       </button>
@@ -135,6 +135,8 @@ export function Oggi({ vai }: { vai: (scheda: 'spesa' | 'casa' | 'menu') => void
   useProlungaFissi(piuGiorni(giorno, 13));
   const { attive } = useConferme(vista);
   const [aperto, setAperto] = useState<string | null>(null);
+  /** I piatti appena segnati «mangiato»: si chiede se è avanzato qualcosa. */
+  const [segnati, setSegnati] = useState<string[] | null>(null);
   const [ricetta, setRicetta] = useState<Aperta | null>(null);
   const [spesa, setSpesa] = useState(false);
   /** Il pasto di cui è aperto il dettaglio (conferme piatto per piatto, porzioni, avvisi, foto). */
@@ -183,7 +185,7 @@ export function Oggi({ vai }: { vai: (scheda: 'spesa' | 'casa' | 'menu') => void
               <span className="primo-presto">
                 {presto
                   .slice(0, 3)
-                  .map((l) => indice.nome(l.ingrediente_id).toLowerCase())
+                  .map((l) => (l.nome ?? indice.nome(l.ingrediente_id)).toLowerCase())
                   .join(', ')}
                 {presto.length > 3 && '…'}
               </span>
@@ -206,8 +208,11 @@ export function Oggi({ vai }: { vai: (scheda: 'spesa' | 'casa' | 'menu') => void
                 return (
                   <li key={l.id}>
                     <button className={`mattonella ${tono}`} onClick={() => vai('casa')}>
-                      <strong>{indice.nome(l.ingrediente_id)}</strong>
-                      <span>{quando}</span>
+                      <strong>{l.nome ?? indice.nome(l.ingrediente_id)}</strong>
+                      <span>
+                        {l.ingrediente_id === 'ing:avanzo' && `avanzo, ${porzioniTesto(l.quantita)} · `}
+                        {quando}
+                      </span>
                     </button>
                   </li>
                 );
@@ -239,6 +244,7 @@ export function Oggi({ vai }: { vai: (scheda: 'spesa' | 'casa' | 'menu') => void
               daConfermare={iEvidenza < 0 || i <= iEvidenza}
               apriRicetta={setRicetta}
               apriDettaglio={() => setPastoAperto(c.valore)}
+              segna={setSegnati}
               aggiungi={() => vai('menu')}
             />
           ))
@@ -271,7 +277,7 @@ export function Oggi({ vai }: { vai: (scheda: 'spesa' | 'casa' | 'menu') => void
                         {categoria && `, ${categoria.nome.toLowerCase()}`}
                       </span>
                     </span>
-                    <StatoPasto titolo={titolo} portata={p} apri={() => setAperto(p.id)} />
+                    <StatoPasto titolo={titolo} apri={() => setAperto(p.id)} segna={() => setSegnati([p.id])} />
                   </li>
                 );
               })}
@@ -304,11 +310,29 @@ export function Oggi({ vai }: { vai: (scheda: 'spesa' | 'casa' | 'menu') => void
                   pasto={dettaglio.nome}
                   conferma={attive.get(p.id)}
                   apriConferma={() => setAperto(p.id)}
+                  segna={() => setSegnati([p.id])}
                   apriRicetta={setRicetta}
                 />
               ))}
           </ul>
         </Foglio>
+      )}
+      {indice && segnati && (
+        <SegnaMangiato
+          indice={indice}
+          dati={dati}
+          portate={dati.portate.filter((p) => segnati.includes(p.id) && !attive.has(p.id))}
+          titolo={(p) => titoloDi(indice, p)}
+          altro={
+            segnati.length === 1
+              ? () => {
+                  setAperto(segnati[0]);
+                  setSegnati(null);
+                }
+              : undefined
+          }
+          chiudi={() => setSegnati(null)}
+        />
       )}
       {indice && ricetta && <RicettaDiOggi indice={indice} dati={dati} aperta={ricetta} chiudi={() => setRicetta(null)} />}
       {indice && spesa && (
@@ -355,6 +379,7 @@ function Riquadro({
   daConfermare,
   apriRicetta,
   apriDettaglio,
+  segna,
   aggiungi,
 }: {
   indice: Indice;
@@ -367,9 +392,9 @@ function Riquadro({
   daConfermare: boolean;
   apriRicetta: (a: Aperta) => void;
   apriDettaglio: () => void;
+  segna: (portate: string[]) => void;
   aggiungi: () => void;
 }) {
-  const { esegui } = useFamiglia();
   const fatte = portate.filter((p) => attive.has(p.id));
   const fatto = portate.length > 0 && fatte.length === portate.length;
   const mancano = portate.filter((p) => !attive.has(p.id));
@@ -473,9 +498,7 @@ function Riquadro({
           <button
             className="bottone primario piccolo mangiato-riquadro"
             aria-label={`Mangiato come previsto: ${mancano.map((p) => descrivi(indice, dati, p).titolo).join(', ')}`}
-            onClick={() => {
-              for (const p of mancano) void esegui('conferma_pasto', { id: crypto.randomUUID(), portata_id: p.id, esito: 'come_previsto' });
-            }}
+            onClick={() => segna(mancano.map((p) => p.id))}
           >
             ✓ Mangiato
           </button>
@@ -492,6 +515,7 @@ function PiattoDiOggi({
   pasto,
   conferma,
   apriConferma,
+  segna,
   apriRicetta,
 }: {
   indice: Indice;
@@ -500,6 +524,7 @@ function PiattoDiOggi({
   pasto: string;
   conferma?: Conferma;
   apriConferma: () => void;
+  segna: () => void;
   apriRicetta: (a: Aperta) => void;
 }) {
   const d = descrivi(indice, dati, p);
@@ -557,7 +582,7 @@ function PiattoDiOggi({
         </ul>
       )}
       <div style={{ marginTop: 4 }}>
-        <StatoPasto titolo={d.titolo} portata={p} conferma={conferma} apri={apriConferma} />
+        <StatoPasto titolo={d.titolo} conferma={conferma} apri={apriConferma} segna={segna} />
       </div>
     </li>
   );
