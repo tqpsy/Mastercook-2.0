@@ -65,7 +65,7 @@ test('ricetta di Mastercook modificata: prende il posto dell’originale, anche 
   await page.getByLabel('Cerca', { exact: true }).fill('carbonara');
   await page.getByRole('button', { name: `Apri ${carbonara}` }).click();
   let scheda = page.getByRole('dialog', { name: carbonara });
-  await scheda.getByRole('button', { name: '⭐ Preferita' }).click();
+  await scheda.getByRole('button', { name: 'Preferita', exact: true }).click();
   await scheda.getByRole('button', { name: 'Modifica', exact: true }).click();
   const editor = page.getByRole('dialog', { name: 'Modifica ricetta' });
   await expect(editor.getByText('valgono solo per la vostra famiglia')).toBeVisible();
@@ -75,7 +75,7 @@ test('ricetta di Mastercook modificata: prende il posto dell’originale, anche 
   scheda = page.getByRole('dialog', { name: carbonara });
   await expect(scheda.getByText('200 g')).toBeVisible();
   await expect(scheda.getByText(/È la vostra versione di/)).toBeVisible();
-  await expect(scheda.getByRole('button', { name: '⭐ Preferita' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(scheda.getByRole('button', { name: 'Preferita', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
   await scheda.getByRole('button', { name: 'Chiudi' }).click();
 
