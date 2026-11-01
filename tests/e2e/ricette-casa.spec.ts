@@ -378,10 +378,12 @@ test('ricette ⭐ preferite e 💫 da ospiti, cerca per ingrediente e suggerite,
   await page.getByLabel('Cerca', { exact: true }).fill('carbonara');
   await page.getByRole('button', { name: 'Apri Spaghetti alla carbonara' }).click();
   const scheda = page.getByRole('dialog', { name: 'Spaghetti alla carbonara' });
-  await scheda.getByRole('button', { name: '⭐ Preferita' }).click();
-  await scheda.getByRole('button', { name: '💫 Da ospiti' }).click();
-  await expect(scheda.getByRole('button', { name: '⭐ Preferita' })).toHaveAttribute('aria-pressed', 'true');
-  await expect(scheda.getByRole('button', { name: '💫 Da ospiti' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(scheda.getByRole('button', { name: 'Preferita', exact: true })).toContainText('Aggiungi ai preferiti');
+  await scheda.getByRole('button', { name: 'Preferita', exact: true }).click();
+  await expect(scheda.getByRole('button', { name: 'Preferita', exact: true })).toContainText('Nei preferiti');
+  await scheda.getByRole('button', { name: 'Da ospiti', exact: true }).click();
+  await expect(scheda.getByRole('button', { name: 'Preferita', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(scheda.getByRole('button', { name: 'Da ospiti', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await scheda.getByRole('button', { name: 'Chiudi' }).click();
   await expect(page.getByRole('img', { name: 'preferita e da ospiti' })).toBeVisible();
   await page.getByLabel('Cerca', { exact: true }).fill('');

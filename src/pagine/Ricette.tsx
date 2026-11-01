@@ -462,26 +462,40 @@ export function SchedaRicetta({
             <IconaCibo valore={iconaRicetta(indice, r, iconaScelta)} /> Cambia icona
           </button>
         )}
-        {modifica &&
-          r.categoria !== 'base' &&
-          SEGNI.map((x) => (
-            <button
-              key={x.id}
-              className="bottone piccolo segno-ricetta"
-              aria-pressed={segnata(x.id)}
-              title={segnata(x.id) ? `Togli «${x.nome.toLowerCase()}»` : `Segna come ${x.nome.toLowerCase()} per tutta la famiglia`}
-              onClick={() => esegui('segna_ricetta', { ricetta_id: r.id, segno: x.id, attivo: !segnata(x.id) })}
-              style={{ marginRight: 8 }}
-            >
-              {x.emoji} {x.nome}
-            </button>
-          ))}
 
         {[CATEGORIE.find((c) => c.id === r.categoria)?.nome, minutiDi(r) && `${minutiDi(r)} min`, r.difficolta && ['facile', 'media', 'impegnativa'][r.difficolta - 1], r.di_sistema ? 'ricetta di Mastercook' : 'ricetta della famiglia']
           .filter(Boolean)
           .join(' · ')}
         {origine && ` · tratta da «${origine.titolo}»`}
       </p>
+      {modifica && r.categoria !== 'base' && (
+        <div className="segni-scheda" role="group" aria-label="Segna la ricetta">
+          {SEGNI.map((x) => {
+            const si = segnata(x.id);
+            return (
+              <button
+                key={x.id}
+                type="button"
+                className="segno-ricetta"
+                aria-pressed={si}
+                aria-label={x.nome}
+                title={si ? `Tocca per togliere «${x.acceso}»` : `Tocca per segnarla per tutta la famiglia`}
+                onClick={() => esegui('segna_ricetta', { ricetta_id: r.id, segno: x.id, attivo: !si })}
+              >
+                <span className="segno-emoji" aria-hidden>
+                  {x.emoji}
+                </span>
+                <span>{si ? x.acceso : x.spento}</span>
+                {si && (
+                  <span className="segno-spunta" aria-hidden>
+                    ✓
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
       {r.descrizione && <p>{r.descrizione}</p>}
 
       {valutazione && (

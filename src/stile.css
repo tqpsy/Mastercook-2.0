@@ -2104,13 +2104,41 @@ details > summary:has(.primo-presto) {
   min-height: 40px;
   font-size: 0.9rem;
 }
-.bottone.segno-ricetta[aria-pressed='false'] {
-  opacity: 0.75;
-  filter: grayscale(0.6);
+/* Scheda ricetta: ⭐ e 💫 ben diversi da accesi (pieni, con la spunta) a spenti (tratteggiati, icona grigia). */
+.segni-scheda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 12px;
 }
-.bottone.segno-ricetta[aria-pressed='true'] {
-  background: var(--senape-tenue, var(--superficie));
-  border-color: var(--senape, var(--bordo));
+.segno-ricetta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.segno-ricetta[aria-pressed='false'] {
+  background: transparent;
+  border: 1.5px dashed var(--bordo-forte, var(--testo-tenue));
+  color: var(--testo-tenue);
+}
+.segno-ricetta[aria-pressed='false'] .segno-emoji {
+  filter: grayscale(1);
+  opacity: 0.55;
+}
+.segno-ricetta[aria-pressed='true'] {
+  background: var(--senape);
+  border: 1.5px solid var(--senape);
+  color: var(--senape-testo, #2b2c2e);
+  font-weight: 600;
+}
+.segno-ricetta .segno-spunta {
+  font-weight: 700;
 }
 .voce .perche {
   font-size: 0.82rem;

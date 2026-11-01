@@ -65,9 +65,10 @@ export function FiltroIngrediente({ indice, filtro, cambia }: { indice: Indice; 
 
 export type Segno = 'preferita' | 'ospiti';
 
-export const SEGNI: { id: Segno; emoji: string; nome: string; filtro: string }[] = [
-  { id: 'preferita', emoji: '⭐', nome: 'Preferita', filtro: 'Preferite' },
-  { id: 'ospiti', emoji: '💫', nome: 'Da ospiti', filtro: 'Per ospiti' },
+/** `acceso` e `spento`: cosa dice il tasto nella scheda ricetta quando è segnata e quando no. */
+export const SEGNI: { id: Segno; emoji: string; nome: string; filtro: string; acceso: string; spento: string }[] = [
+  { id: 'preferita', emoji: '⭐', nome: 'Preferita', filtro: 'Preferite', acceso: 'Nei preferiti', spento: 'Aggiungi ai preferiti' },
+  { id: 'ospiti', emoji: '💫', nome: 'Da ospiti', filtro: 'Per ospiti', acceso: 'Per gli ospiti', spento: 'Aggiungi per gli ospiti' },
 ];
 
 /** Solo le ⭐ preferite o solo le 💫 da fare agli ospiti (un tocco accende, un altro spegne). */
