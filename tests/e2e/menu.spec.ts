@@ -213,21 +213,22 @@ test('torta che dura più giorni: avanzo domani, la conferma la mette in casa', 
     .toEqual([{ nome: 'Torta di mele', q: 1 }]);
 });
 
-test('proposte: l’app propone i pasti vuoti, si cambia o si toglie, entra solo ciò che si conferma', async ({ browser }, info) => {
+test('Antonino propone la settimana: si cambia o si toglie, entra solo ciò che si conferma, e lui impara', async ({ browser }, info) => {
   const luca = await nuovoUtente('Luca');
   const { page } = await apri(browser, luca, info.project.use);
   await creaFamiglia(page, 'Casa Proposte');
   await page.getByRole('button', { name: 'Menu', exact: true }).click();
-  await page.getByRole('button', { name: '✨ Riempi i vuoti' }).click();
-  const foglio = page.getByRole('dialog', { name: 'Proposte per la settimana' });
-  const voci = foglio.getByRole('list', { name: 'Proposte' }).getByRole('listitem');
+  await page.getByRole('button', { name: 'Antonino, riempi la settimana' }).click();
+  const foglio = page.getByRole('dialog', { name: 'Antonino ti propone la settimana' });
+  await expect(foglio.getByRole('list', { name: 'Equilibrio della settimana' })).toBeVisible();
+  const voci = foglio.getByRole('listitem').filter({ has: page.getByRole('button', { name: /^Togli / }) });
   const quante = await voci.count();
   expect(quante).toBeGreaterThan(0);
   const prima = (await voci.first().textContent()) ?? '';
-  await voci.first().getByRole('button', { name: /Un’altra/ }).click();
+  await voci.first().getByRole('button', { name: /^Un’altra per / }).click();
   await expect(voci.first()).not.toHaveText(prima);
-  await voci.nth(0).getByRole('checkbox').uncheck();
-  await foglio.getByRole('button', { name: `Metti nel menu (${quante - 1})` }).click();
+  await voci.first().getByRole('button', { name: /^Togli / }).click();
+  await foglio.getByRole('button', { name: `✓ Metti nel menu (${quante - 1})` }).click();
   await expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
   const proposte = () =>
     sql<{ n: number }>(
@@ -236,9 +237,18 @@ test('proposte: l’app propone i pasti vuoti, si cambia o si toglie, entra solo
       [luca.id],
     );
   await expect.poll(async () => (await proposte())[0].n).toBe(quante - 1);
+  // Antonino ricorda cosa è stato scelto e cosa scartato.
+  const memoria = () =>
+    sql<{ scelte: number; scartate: number }>(
+      `select (select count(*) from jsonb_object_keys(impostazioni -> 'antonino' -> 'scelte'))::int as scelte,
+              (select count(*) from jsonb_object_keys(impostazioni -> 'antonino' -> 'scartate'))::int as scartate
+         from famiglia where id in (select famiglia_id from utente_famiglia where utente_id = $1)`,
+      [luca.id],
+    );
+  await expect.poll(async () => (await memoria())[0]).toEqual({ scelte: quante - 1, scartate: 1 });
   // Riaprendo, resta da proporre solo il pasto tolto.
-  await page.getByRole('button', { name: '✨ Riempi i vuoti' }).click();
-  await expect(foglio.getByRole('list', { name: 'Proposte' }).getByRole('listitem')).toHaveCount(1);
+  await page.getByRole('button', { name: 'Antonino, riempi la settimana' }).click();
+  await expect(foglio.getByRole('listitem').filter({ has: page.getByRole('button', { name: /^Togli / }) })).toHaveCount(1);
 });
 
 test('ospiti a cena: porzioni che crescono, allergia controllata, niente nomi', async ({ browser }, info) => {
@@ -297,7 +307,7 @@ test('menu: si apre su oggi e la settimana prossima si programma dalla stessa st
   await page.getByRole('dialog').getByLabel('Cosa si mangia').fill('Pizza');
   await page.getByRole('dialog').getByRole('button', { name: 'Scrivi «Pizza» senza ricetta' }).click();
   await expect(page.getByRole('region', { name: dataLunga(lunediProssimo) }).getByRole('button', { name: 'Apri Pizza' })).toBeVisible();
-  await expect(page.getByRole('button', { name: '✨ Riempi i vuoti' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Antonino, riempi la settimana' })).toBeVisible();
 });
 
 test('scelta del piatto: filtri per categoria e ingrediente, un’idea alla volta, chi mangia in fondo', async ({ browser }, info) => {
@@ -311,7 +321,7 @@ test('scelta del piatto: filtri per categoria e ingrediente, un’idea alla volt
   const foglio = page.getByRole('dialog');
 
   // Chi mangia è sotto l'idea e la ricerca.
-  const idea = foglio.getByRole('region', { name: 'Idea per questo pasto' });
+  const idea = foglio.getByRole('region', { name: 'Antonino consiglia' });
   const chi = foglio.getByRole('group', { name: 'Chi mangia questo piatto' });
   expect((await chi.boundingBox())!.y).toBeGreaterThan((await idea.boundingBox())!.y);
 
@@ -338,4 +348,35 @@ test('scelta del piatto: filtri per categoria e ingrediente, un’idea alla volt
   const scelta = (await idea.getByRole('button', { name: /^Metti nel menu/ }).getAttribute('aria-label'))!.replace('Metti nel menu ', '');
   await idea.getByRole('button', { name: /^Metti nel menu/ }).click();
   await expect(page.getByRole('button', { name: `Apri ${scelta}` })).toBeVisible();
+});
+
+test('Antonino: «mai più» toglie un’idea, in Impostazioni si riprende e si insegna la settimana', async ({ browser }, info) => {
+  const luca = await nuovoUtente('Luca');
+  const { page } = await apri(browser, luca, info.project.use);
+  await creaFamiglia(page, 'Casa Antonino');
+  await page.getByRole('button', { name: 'Menu', exact: true }).click();
+  await page.getByRole('group', { name: 'Vista' }).getByRole('button', { name: 'Giorni' }).click();
+  await page.getByRole('button', { name: `Aggiungi a cena di ${dataLunga(oggi())}` }).click();
+  const idea = page.getByRole('dialog').getByRole('region', { name: 'Antonino consiglia' });
+  const titolo = (await idea.getByRole('button', { name: /^Metti nel menu/ }).getAttribute('aria-label'))!.replace('Metti nel menu ', '');
+  await idea.getByRole('button', { name: `Non proporre più ${titolo}` }).click();
+  await expect(idea.getByRole('button', { name: /^Metti nel menu/ })).not.toHaveAttribute('aria-label', `Metti nel menu ${titolo}`);
+  await page.getByRole('dialog').getByRole('button', { name: 'Chiudi' }).click();
+
+  await page.getByRole('button', { name: 'Impostazioni' }).click();
+  const mai = page.getByRole('list', { name: 'Piatti che non propone più' });
+  await expect(mai.getByText(titolo)).toBeVisible();
+  await mai.getByRole('button', { name: 'Riproponila' }).click();
+  await expect(mai).toHaveCount(0);
+
+  await page.getByRole('button', { name: /La settimana che preferite/ }).click();
+  await page.getByRole('button', { name: 'Pesce, almeno: più' }).click();
+  await expect(page.getByRole('list', { name: 'Quante volte a settimana' }).getByText('3 volte', { exact: true })).toBeVisible();
+  const regole = () =>
+    sql<{ r: unknown }>(`select impostazioni -> 'antonino' -> 'regole' as r from famiglia where id in (select famiglia_id from utente_famiglia where utente_id = $1)`, [
+      luca.id,
+    ]);
+  await expect.poll(async () => (await regole())[0].r).toEqual({ obiettivi: { pesce: { min: 3, max: 3 } } });
+  await page.getByRole('button', { name: 'Torna alle linee guida' }).click();
+  await expect.poll(async () => (await regole())[0].r).toBeNull();
 });

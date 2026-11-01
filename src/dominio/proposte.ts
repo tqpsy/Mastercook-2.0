@@ -12,6 +12,7 @@ import type { Categoria } from '../catalogo/tipi';
 import { haPrincipale, type Principale, usaIngrediente } from './principale';
 import { copertura, type Indice, mancanti, principali, type Ricetta } from './ricette';
 import { bastaLaCasa, MASSIMO_MANCANTI, type ModoSuggerimento, type Segni, testoMancanti } from './suggerimenti';
+import { type Gruppo, gruppiDi, type MemoriaAntonino, PESI_BASE, pesoMemoria, type RegoleAntonino, spintaEquilibrio } from './antonino';
 
 /** Le categorie di ricetta adatte a ogni pasto. Gli altri pasti (spuntino…) non si propongono. */
 export const RICETTE_PER_PASTO: Record<string, Ricetta['categoria'][]> = {
@@ -48,6 +49,12 @@ export interface ContestoProposte {
   segni?: Segni;
   /** Al pasto ci sono ospiti: le ricette 💫 valgono di più. */
   conOspiti?: boolean;
+  /** Le regole di Antonino (pesi e obiettivi della settimana). Senza: i pesi di base e nessun obiettivo. */
+  regole?: RegoleAntonino;
+  /** Cosa Antonino ricorda di questa famiglia (scarti, scelte, «non proporla più»). */
+  memoria?: MemoriaAntonino;
+  /** Oggi, per pesare meno i ricordi vecchi. */
+  oggi?: string;
 }
 
 export interface Candidata {
@@ -80,9 +87,11 @@ export function candidate(indice: Indice, pasto: string, c: ContestoProposte, fi
   const urgenti = indice.estendi(c.urgenti.filter((id) => id !== 'ing:avanzo'));
   const recenti = new Map<string, number>();
   for (const id of c.recenti) recenti.set(id, (recenti.get(id) ?? 0) + 1);
+  const pesi = c.regole?.pesi ?? PESI_BASE;
   const esito: Candidata[] = [];
   for (const r of indice.ricette) {
     if (r.archiviata || !categorie.includes(r.categoria)) continue;
+    if (c.memoria?.maiPiu.has(r.id)) continue;
     if (!haPrincipale(indice, r, filtro.principale) || !usaIngrediente(indice, r, filtro.ingrediente)) continue;
     const preferita = !!c.segni?.preferite.has(r.id);
     const daOspiti = !!c.segni?.perOspiti.has(r.id);
@@ -95,7 +104,7 @@ export function candidate(indice: Indice, pasto: string, c: ContestoProposte, fi
     let punti = 0;
     const usa = principali(indice, r).filter((g) => urgenti.has(g.ingrediente_id));
     if (usa.length) {
-      punti += 5 * usa.length;
+      punti += pesi.scade * usa.length;
       motivi.push(`usa ${[...new Set(usa.map((g) => indice.nome(g.ingrediente_id).toLowerCase()))].join(', ')} che scade presto`);
     }
     const { presenti, totali } = copertura(indice, r, casa);
@@ -105,26 +114,31 @@ export function candidate(indice: Indice, pasto: string, c: ContestoProposte, fi
     } else if (totali && filtro.modo === 'ricettario') {
       punti += presenti / totali;
     } else if (totali) {
-      punti += (3 * presenti) / totali;
+      punti += (pesi.casa * presenti) / totali;
       if (presenti === totali) motivi.push('tutto in casa');
       else if (presenti) motivi.push(`${presenti} su ${totali} ingredienti in casa`);
     }
     if (preferita) {
-      punti += filtro.modo === 'ricettario' ? 3 : 2;
+      punti += pesi.preferita + (filtro.modo === 'ricettario' ? 1 : 0);
       motivi.push('⭐ preferita');
     }
     if (daOspiti && c.conOspiti) {
-      punti += 3;
+      punti += pesi.ospiti;
       motivi.push('💫 da ospiti');
     }
     const piace = gusti.filter((g) => g.valore === 'piace');
     if (piace.length) {
-      punti += 2;
+      punti += pesi.piace;
       motivi.push(`piace a ${[...new Set(piace.map((g) => g.nome))].join(', ')}`);
     }
     // Il tipo di ricetta più adatto al pasto (a pranzo un primo, a cena un secondo) vale un po' di più.
     punti += (categorie.length - categorie.indexOf(r.categoria)) * 0.3;
-    punti -= 4 * (recenti.get(r.id) ?? 0);
+    punti -= pesi.ripetuta * (recenti.get(r.id) ?? 0);
+    if (c.memoria && c.oggi) {
+      const m = pesoMemoria(c.memoria, r.id, pesi, c.oggi);
+      punti += m.punti;
+      if (m.motivo) motivi.push(m.motivo);
+    }
     esito.push({ ricetta: r, punti, motivi, tipo: tipoPiatto(indice, r) });
   }
   return esito.sort((a, b) => b.punti - a.punti || a.ricetta.titolo.localeCompare(b.ricetta.titolo, 'it'));
@@ -139,6 +153,11 @@ export interface Proposta {
   altre: Ricetta[];
 }
 
+/** Per l'equilibrio della settimana: i piatti già nel menu (pranzi e cene) e i giorni da contare. */
+export interface Settimana {
+  piatti: { data: string; ricetta: Ricetta }[];
+}
+
 /**
  * Propone un piatto per ogni pasto vuoto. `posti` sono i pasti da riempire, in ordine di giorno;
  * `tipiDelGiorno` dice cosa c'è già in ogni giorno (per non fare pasta due volte).
@@ -150,27 +169,60 @@ export function proponi(
   c: ContestoProposte,
   tipiDelGiorno: Map<string, string[]> = new Map(),
   scarta: Map<string, string[]> = new Map(),
+  settimana?: Settimana,
 ): Proposta[] {
   const perPasto = new Map<string, Candidata[]>();
   const usate = new Set<string>();
   const tipi = new Map([...tipiDelGiorno].map(([k, v]) => [k, [...v]]));
   const proposte: Proposta[] = [];
-  for (const posto of posti) {
+  // Con le regole di Antonino si guarda anche l'equilibrio: cosa c'è già nella settimana, gruppo per gruppo.
+  const regole = c.regole;
+  const gruppi = new Map<string, Set<Gruppo>>();
+  const gruppiDiRicetta = (r: Ricetta) => {
+    if (!gruppi.has(r.id)) gruppi.set(r.id, gruppiDi(indice, r));
+    return gruppi.get(r.id)!;
+  };
+  const conta = new Map<Gruppo, number>();
+  const conVerdure = new Set<string>();
+  const conta1 = (data: string, r: Ricetta) => {
+    const g = gruppiDiRicetta(r);
+    for (const x of g) conta.set(x, (conta.get(x) ?? 0) + 1);
+    if (g.has('verdure')) conVerdure.add(data);
+  };
+  if (regole) for (const p of settimana?.piatti ?? []) conta1(p.data, p.ricetta);
+  posti.forEach((posto, k) => {
     if (!perPasto.has(posto.categoria)) perPasto.set(posto.categoria, candidate(indice, posto.categoria, c));
     const tutte = perPasto.get(posto.categoria)!;
     const no = new Set(scarta.get(`${posto.data}|${posto.categoria}`) ?? []);
     const giorno = tipi.get(posto.data) ?? [];
     const libere = tutte.filter((x) => !usate.has(x.ricetta.id) && !no.has(x.ricetta.id));
-    const scelta = libere.find((x) => !giorno.includes(x.tipo)) ?? libere[0];
-    if (!scelta) continue;
-    usate.add(scelta.ricetta.id);
-    tipi.set(posto.data, [...giorno, scelta.tipo]);
+    let ordinate: { x: Candidata; motivo?: string }[];
+    if (regole && libere.length) {
+      // Ultimo pasto del giorno ancora senza verdure: si spinge per metterle.
+      const ultimoDelGiorno = !posti.slice(k + 1).some((p) => p.data === posto.data);
+      const senzaVerdure = regole.verdureOgniGiorno && ultimoDelGiorno && !conVerdure.has(posto.data);
+      const restanti = posti.length - k;
+      ordinate = libere
+        .map((x) => {
+          const s = spintaEquilibrio(gruppiDiRicetta(x.ricetta), conta, regole, restanti, senzaVerdure);
+          return { x, motivo: s.motivo, punti: x.punti + s.punti - (giorno.includes(x.tipo) ? 50 : 0) };
+        })
+        .sort((a, b) => b.punti - a.punti);
+    } else {
+      const prima = libere.find((x) => !giorno.includes(x.tipo)) ?? libere[0];
+      ordinate = prima ? [{ x: prima }, ...libere.filter((x) => x !== prima).map((x) => ({ x }))] : [];
+    }
+    const scelta = ordinate[0];
+    if (!scelta) return;
+    usate.add(scelta.x.ricetta.id);
+    tipi.set(posto.data, [...giorno, scelta.x.tipo]);
+    if (regole) conta1(posto.data, scelta.x.ricetta);
     proposte.push({
       ...posto,
-      ricetta: scelta.ricetta,
-      motivi: scelta.motivi,
-      altre: libere.filter((x) => x !== scelta).slice(0, 5).map((x) => x.ricetta),
+      ricetta: scelta.x.ricetta,
+      motivi: scelta.motivo ? [...scelta.x.motivi, scelta.motivo] : scelta.x.motivi,
+      altre: ordinate.slice(1, 6).map((o) => o.x.ricetta),
     });
-  }
+  });
   return proposte;
 }
