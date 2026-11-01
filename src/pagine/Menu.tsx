@@ -24,16 +24,18 @@ import {
 } from '../dominio/menu';
 import { avanziDi, porzioniPortata } from '../dominio/consumi';
 import { CATEGORIE, type Categoria } from '../catalogo/tipi';
-import { haPrincipale, PRINCIPALI, type Principale, usaIngrediente } from '../dominio/principale';
+import { haPrincipale, type Principale, usaIngrediente } from '../dominio/principale';
+import { BottoniSegno, FiltroIngrediente, type Segno } from '../ui/FiltriRicetta';
 import { RICETTE_PER_PASTO } from '../dominio/proposte';
 import { filtra, iconaRicetta, type Indice } from '../dominio/ricette';
 import { ALLERGENI_UE, ESIGENZE, INTOLLERANZE, type VoceVincolo } from '../dominio/vincoli';
 import { IdeePerPasto, ProponiSettimana } from './Proposte';
+import { FacciaAntonino } from './Antonino';
 import { useConferme } from './ConfermaPasto';
 import { SegnaCucinato, usePronti } from './Cucinato';
 import { oggi, piuGiorni } from '../dominio/scadenze';
 import { Foglio } from '../ui/Foglio';
-import { ICONA_ESITO, motiviInBreve, useIcone } from './Ricette';
+import { ICONA_ESITO, MarchiSegni, motiviInBreve, useIcone, useSegni } from './Ricette';
 import { IconaCibo } from '../ui/IconaCibo';
 import { Sigla, type SiglaPersona, sigleDi } from '../ui/Sigla';
 
@@ -335,8 +337,8 @@ export function Menu() {
     </button>
   );
   const riempi = fine >= giorno && vuoti > 0 && modo !== 'panoramica' && (
-    <button className={`bottone primario riempi-vuoti${largo ? '' : ' pieno'}`} onClick={() => setProponi(true)}>
-      ✨ Riempi i vuoti{largo ? '' : ' della settimana'}
+    <button className={`bottone primario riempi-vuoti con-antonino${largo ? '' : ' pieno'}`} onClick={() => setProponi(true)} aria-label="Antonino, riempi la settimana">
+      <FacciaAntonino piccola /> Riempi i vuoti{largo ? '' : ' della settimana'}
     </button>
   );
   /** Una striscia di 7 giorni: un pallino per pasto, colorato se ha già un piatto, vuoto se è da riempire. */
@@ -776,12 +778,10 @@ interface FiltroPiatto {
   principale: Principale | null;
   /** Un ingrediente preciso (id), cercato per nome. */
   ingrediente: string | null;
+  /** Solo le ⭐ preferite o le 💫 da ospiti. */
+  segno: Segno | null;
 }
-const SENZA_FILTRI: FiltroPiatto = {
-  categoria: null,
-  principale: null,
-  ingrediente: null,
-};
+const SENZA_FILTRI: FiltroPiatto = { categoria: null, principale: null, ingrediente: null, segno: null };
 const PER_PAGINA = 12;
 
 /** Cerca una ricetta per nome oppure scrivi il piatto a mano (per cambiare un piatto già nel menu). */
@@ -821,9 +821,10 @@ function RisultatiPiatto({
 }) {
   const [quante, setQuante] = useState(PER_PAGINA);
   const chi = persone ?? dati.persone;
-  const filtrato = !!(filtro.categoria || filtro.principale || filtro.ingrediente);
+  const segni = useSegni();
+  const filtrato = !!(filtro.categoria || filtro.principale || filtro.ingrediente || filtro.segno);
   const cerca = !!testo.trim() || filtrato;
-  const chiave = `${testo}|${filtro.categoria}|${filtro.principale}|${filtro.ingrediente}`;
+  const chiave = `${testo}|${filtro.categoria}|${filtro.principale}|${filtro.ingrediente}|${filtro.segno}`;
   const [ultima, setUltima] = useState(chiave);
   if (ultima !== chiave) {
     setUltima(chiave);
@@ -843,8 +844,9 @@ function RisultatiPiatto({
           })
             .filter((r) => r.categoria !== 'base' || filtro.categoria === 'base')
             .filter((r) => haPrincipale(indice, r, filtro.principale) && usaIngrediente(indice, r, filtro.ingrediente))
+            .filter((r) => (filtro.segno === 'preferita' ? segni.preferite.has(r.id) : filtro.segno === 'ospiti' ? segni.perOspiti.has(r.id) : true))
         : [],
-    [indice, testo, cerca, filtro],
+    [indice, testo, cerca, filtro, segni],
   );
   if (!cerca) return vuoto ? <p className="tenue piccolo risultati-piatto">{vuoto}</p> : null;
   const trovate = tutte.slice(0, quante);
@@ -863,6 +865,7 @@ function RisultatiPiatto({
                 </span>
                 <span className="cresce">
                   {r.titolo}
+                  <MarchiSegni id={r.id} segni={segni} />
                   {(v || no.length > 0) && (
                     <span className="tenue" style={{ display: 'block' }}>
                       {[v && NOME_ESITO[v.esito], no.length > 0 && `non piace a ${no.map((g) => g.nome).join(', ')}`].filter(Boolean).join(' · ')}
@@ -894,92 +897,18 @@ function RisultatiPiatto({
 }
 
 /** Le categorie di piatto: una riga di bottoni piccoli, prima quelle adatte al pasto. */
+/** Prima ⭐ preferite e 💫 per ospiti, poi le categorie (quelle adatte al pasto per prime), sulla stessa riga. */
 function FiltroCategoria({ pasto, filtro, cambia }: { pasto: string; filtro: FiltroPiatto; cambia: (f: FiltroPiatto) => void }) {
   const adatte = RICETTE_PER_PASTO[pasto] ?? [];
   const categorie = [...CATEGORIE.filter((c) => adatte.includes(c.id)), ...CATEGORIE.filter((c) => !adatte.includes(c.id))];
   return (
-    <div className="scelte compatte" role="group" aria-label="Categoria">
-      {categorie.map((c) => (
-        <button
-          key={c.id}
-          type="button"
-          aria-pressed={filtro.categoria === c.id}
-          onClick={() =>
-            cambia({
-              ...filtro,
-              categoria: filtro.categoria === c.id ? null : c.id,
-            })
-          }
-        >
-          {c.emoji} {c.nome}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-/** Cerca per ingrediente: un ingrediente preciso scritto a mano, oppure un tipo (pasta, pesce, legumi…) con un tocco. */
-function FiltroIngrediente({ indice, filtro, cambia }: { indice: Indice; filtro: FiltroPiatto; cambia: (f: FiltroPiatto) => void }) {
-  const [testo, setTesto] = useState('');
-  // Solo gli ingredienti che qualche ricetta usa (con i loro «genitori»: pasta, funghi…).
-  const usati = useMemo(() => indice.estendi(indice.ricette.flatMap((r) => r.ingredienti.map((g) => g.ingrediente_id))), [indice]);
-  const proposti = testo.trim()
-    ? indice
-        .cercaIngredienti(testo, 30)
-        .filter((i) => usati.has(i.id) && !indice.ingrediente(i.id)?.base)
-        .slice(0, 6)
-    : [];
-  const scelto = filtro.ingrediente ? indice.ingrediente(filtro.ingrediente) : null;
-  return (
-    <div className="campo filtro-ingrediente">
-      {scelto ? (
-        <div className="riga" style={{ gap: 6 }}>
-          <span className="etichetta-campo">Ingrediente</span>
-          <button type="button" className="chip-scelto" onClick={() => cambia({ ...filtro, ingrediente: null })} aria-label={`Togli ${scelto.nome}`}>
-            {scelto.emoji} {scelto.nome} ✕
-          </button>
-        </div>
-      ) : (
-        <label>
-          <span>Cerca per ingrediente</span>
-          <input type="search" value={testo} onChange={(e) => setTesto(e.target.value)} placeholder="Zucchine, ceci, salmone…" />
-        </label>
-      )}
-      {!scelto && proposti.length > 0 && (
-        <div className="scelte compatte" role="group" aria-label="Ingredienti trovati" style={{ marginTop: 6 }}>
-          {proposti.map((i) => (
-            <button
-              key={i.id}
-              type="button"
-              onClick={() => {
-                cambia({ ...filtro, ingrediente: i.id });
-                setTesto('');
-              }}
-            >
-              {i.emoji} {i.nome}
-            </button>
-          ))}
-        </div>
-      )}
-      {!scelto && testo.trim() && !proposti.length && (
-        <p className="tenue piccolo" style={{ margin: '4px 0 0' }}>
-          Nessuna ricetta usa «{testo.trim()}».
-        </p>
-      )}
-      <div className="scelte compatte" role="group" aria-label="Ingrediente principale" style={{ marginTop: 6 }}>
-        {PRINCIPALI.map((p) => (
-          <button
-            key={p.id}
-            type="button"
-            aria-pressed={filtro.principale === p.id}
-            onClick={() =>
-              cambia({
-                ...filtro,
-                principale: filtro.principale === p.id ? null : p.id,
-              })
-            }
-          >
-            {p.emoji} {p.nome}
+    <div className="scelte compatte">
+      <BottoniSegno segno={filtro.segno} cambia={(segno) => cambia({ ...filtro, segno })} />
+      <span className="separatore" aria-hidden />
+      <div className="gruppo-in-riga" role="group" aria-label="Categoria">
+        {categorie.map((c) => (
+          <button key={c.id} type="button" aria-pressed={filtro.categoria === c.id} onClick={() => cambia({ ...filtro, categoria: filtro.categoria === c.id ? null : c.id })}>
+            {c.emoji} {c.nome}
           </button>
         ))}
       </div>
@@ -1047,7 +976,7 @@ function NuovoPiatto({
     <Foglio titolo={`${nomeCategoria(dati, categoria)} di ${dataLunga(data)}`} chiudi={chiudi} alto>
       <div className="nuovo-piatto">
         <FiltroCategoria pasto={categoria} filtro={filtro} cambia={setFiltro} />
-        <FiltroIngrediente indice={indice} filtro={filtro} cambia={setFiltro} />
+        <FiltroIngrediente indice={indice} filtro={filtro} cambia={(f) => setFiltro({ ...filtro, ...f })} />
         <label className="campo cerca-nome">
           <span>Cosa si mangia</span>
           <input type="search" value={testo} onChange={(e) => setTesto(e.target.value)} placeholder="Nome della ricetta: carbonara, minestrone…" />
@@ -1056,15 +985,7 @@ function NuovoPiatto({
           <p className="tenue">Spunta almeno una persona qui sotto.</p>
         ) : (
           <>
-            <IdeePerPasto
-              indice={indice}
-              dati={perLoro}
-              data={data}
-              categoria={categoria}
-              filtro={filtro}
-              icone={icone}
-              scegli={(ricetta_id) => aggiungi({ ricetta_id, origine: 'automatica' })}
-            />
+            <IdeePerPasto indice={indice} dati={perLoro} data={data} categoria={categoria} filtro={filtro} conOspiti={!!ospitiDel(tutti.ospiti, data, categoria)} icone={icone} scegli={(ricetta_id) => aggiungi({ ricetta_id, origine: 'automatica' })} />
             <RisultatiPiatto
               indice={indice}
               dati={perLoro}

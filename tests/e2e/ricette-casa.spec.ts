@@ -18,7 +18,7 @@ test('ricette: cerca, scala le porzioni, segnala l’allergia e crea la propria 
   await page.getByRole('button', { name: 'Chiudi' }).click();
 
   await page.getByRole('button', { name: 'Ricette' }).click();
-  await page.getByLabel('Cerca').fill('carbonara');
+  await page.getByLabel('Cerca', { exact: true }).fill('carbonara');
   await page.getByRole('button', { name: 'Apri Spaghetti alla carbonara' }).click();
   const scheda = page.getByRole('dialog', { name: 'Spaghetti alla carbonara' });
   await expect(scheda.getByText('Non adatta a tutti')).toBeVisible();
@@ -222,7 +222,7 @@ test('foto: si aggiunge anche senza rete, parte prima della ricetta e non si sos
   // Su un altro dispositivo la foto arriva dal deposito.
   const { page: tablet } = await apri(browser, luca, info.project.use);
   await tablet.getByRole('button', { name: 'Ricette' }).click();
-  await tablet.getByLabel('Cerca').fill('bruschetta');
+  await tablet.getByLabel('Cerca', { exact: true }).fill('bruschetta');
   await tablet.getByRole('button', { name: `Apri ${titolo} con pomodoro` }).click();
   await expect(tablet.getByRole('img', { name: `Foto di ${titolo} con pomodoro` })).toBeVisible();
 });
@@ -245,11 +245,11 @@ test('crudi e testo libero: il guanciale cotto e «niente funghi» vanno bene su
   await page.getByRole('button', { name: 'Chiudi' }).click();
 
   await page.getByRole('button', { name: 'Ricette' }).click();
-  await page.getByLabel('Cerca').fill('carbonara');
+  await page.getByLabel('Cerca', { exact: true }).fill('carbonara');
   await page.getByRole('button', { name: 'Apri Spaghetti alla carbonara' }).click();
   await expect(page.getByRole('dialog', { name: 'Spaghetti alla carbonara' }).getByText('Adatta a tutti')).toBeVisible();
   await page.getByRole('button', { name: 'Chiudi' }).click();
-  await page.getByLabel('Cerca').fill('bresaola');
+  await page.getByLabel('Cerca', { exact: true }).fill('bresaola');
   await page.getByRole('button', { name: 'Apri Bresaola, rucola e grana' }).click();
   const bresaola = page.getByRole('dialog', { name: 'Bresaola, rucola e grana' });
   await expect(bresaola.getByText(/Anna: ⛔/)).toBeVisible();
@@ -265,7 +265,7 @@ test('crudi e testo libero: il guanciale cotto e «niente funghi» vanno bene su
     .toEqual([{ ricetta_id: 'sys:bresaola_rucola' }]);
   await page.getByRole('button', { name: 'Chiudi' }).click();
 
-  await page.getByLabel('Cerca').fill('basmati');
+  await page.getByLabel('Cerca', { exact: true }).fill('basmati');
   const voce = page.getByRole('button', { name: 'Apri Riso basmati speziato (pulao)' });
   await expect(voce).toContainText('🍚');
   await voce.click();
@@ -299,7 +299,7 @@ test('una ricetta da verificare si chiude anche con «❌ non va bene», e si pu
   await page.getByRole('button', { name: 'Chiudi' }).click();
 
   await page.getByRole('button', { name: 'Ricette' }).click();
-  await page.getByLabel('Cerca').fill('insalata greca');
+  await page.getByLabel('Cerca', { exact: true }).fill('insalata greca');
   await page.getByRole('button', { name: 'Apri Insalata greca' }).click();
   const greca = page.getByRole('dialog', { name: 'Insalata greca' });
   await expect(greca.getByText(/Anna: ❔/)).toBeVisible();
@@ -367,4 +367,51 @@ test('foto del frigo: prima l’avviso su Google, poi si controlla e in casa ent
   // La seconda volta l'avviso non si ripete.
   await page.getByRole('button', { name: '📷 Foto del frigo' }).click();
   await expect(foglio.getByLabel('Foto del frigo')).toBeAttached();
+});
+
+test('ricette ⭐ preferite e 💫 da ospiti, cerca per ingrediente e suggerite, anche nella scelta del piatto', async ({ browser }, info) => {
+  const luca = await nuovoUtente('Luca');
+  const { page } = await apri(browser, luca, info.project.use);
+  await creaFamiglia(page, 'Casa Stelle');
+
+  await page.getByRole('button', { name: 'Ricette' }).click();
+  await page.getByLabel('Cerca', { exact: true }).fill('carbonara');
+  await page.getByRole('button', { name: 'Apri Spaghetti alla carbonara' }).click();
+  const scheda = page.getByRole('dialog', { name: 'Spaghetti alla carbonara' });
+  await scheda.getByRole('button', { name: '⭐ Preferita' }).click();
+  await scheda.getByRole('button', { name: '💫 Da ospiti' }).click();
+  await expect(scheda.getByRole('button', { name: '⭐ Preferita' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(scheda.getByRole('button', { name: '💫 Da ospiti' })).toHaveAttribute('aria-pressed', 'true');
+  await scheda.getByRole('button', { name: 'Chiudi' }).click();
+  await expect(page.getByRole('img', { name: 'preferita e da ospiti' })).toBeVisible();
+  await page.getByLabel('Cerca', { exact: true }).fill('');
+
+  // Solo le preferite; poi dal ricettario la preferita viene prima, con il perché.
+  const segnate = page.getByRole('group', { name: 'Ricette segnate' });
+  await segnate.getByRole('button', { name: '⭐ Preferite' }).click();
+  await expect(page.getByText('1 ricetta', { exact: false })).toBeVisible();
+  await segnate.getByRole('button', { name: '⭐ Preferite' }).click();
+  await page.getByRole('group', { name: 'Suggerisci' }).getByRole('button', { name: '📖 Dal ricettario' }).click();
+  const prima = page.getByRole('button', { name: /^Apri / }).first();
+  await expect(prima).toHaveAccessibleName('Apri Spaghetti alla carbonara');
+  await expect(prima.getByText(/⭐ preferita/)).toBeVisible();
+  // Con la casa vuota «con ciò che ho» non si può usare.
+  await expect(page.getByRole('group', { name: 'Suggerisci' }).getByRole('button', { name: '🏠 Con ciò che ho' })).toBeDisabled();
+
+  // Cerca per ingrediente anche in Ricette.
+  await page.getByLabel('Cerca per ingrediente').fill('zucchin');
+  await page.getByRole('group', { name: 'Ingredienti trovati' }).getByRole('button', { name: /Zucchine/ }).click();
+  await expect(page.getByRole('button', { name: 'Apri Pasta con le zucchine' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Apri Spaghetti alla carbonara' })).toHaveCount(0);
+
+  // Nella scelta del piatto: il filtro ⭐ trova la carbonara.
+  await page.getByRole('button', { name: 'Menu', exact: true }).click();
+  await page.getByRole('group', { name: 'Vista' }).getByRole('button', { name: 'Giorni' }).click();
+  await page.getByRole('button', { name: /^Aggiungi a cena di / }).first().click();
+  const foglio = page.getByRole('dialog');
+  await foglio.getByRole('group', { name: 'Ricette segnate' }).getByRole('button', { name: '⭐ Preferite' }).click();
+  const risultati = foglio.getByRole('list', { name: 'Risultati' });
+  await expect(risultati.getByRole('button')).toHaveCount(1);
+  await expect(risultati.getByRole('button', { name: /Spaghetti alla carbonara/ })).toBeVisible();
+  await expect(foglio.getByRole('region', { name: 'Antonino consiglia' }).getByRole('button', { name: 'Metti nel menu Spaghetti alla carbonara' })).toBeVisible();
 });

@@ -20,7 +20,7 @@ test('Indietro segue la navigazione, chiude i pannelli e alla fine chiede confer
   await titolo(page, 'Ricette');
 
   // Un pannello aperto si chiude con Indietro, e si resta sulla scheda.
-  await page.getByLabel('Cerca').fill('carbonara');
+  await page.getByLabel('Cerca', { exact: true }).fill('carbonara');
   await page.getByRole('button', { name: 'Apri Spaghetti alla carbonara' }).click();
   await expect(page.getByRole('dialog', { name: 'Spaghetti alla carbonara' })).toBeVisible();
   await indietro(page);

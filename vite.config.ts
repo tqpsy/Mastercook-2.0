@@ -39,7 +39,7 @@ export default defineConfig({
         // Il database delle famiglie tenute sul telefono (PGlite, circa 17 MB): non si scarica in anticipo per tutti,
         // ma la prima volta che serve resta in cache, così poi funziona anche senza rete.
         // I caratteri (Outfit e Figtree) stanno nell'app: niente richieste a Google, e funzionano anche senza rete.
-        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,webp,woff2}'],
         globIgnores: ['**/anteprima-link.png', '**/pglite*', '**/initdb*', '**/motore.worker*'],
         runtimeCaching: [
           {

@@ -286,6 +286,12 @@ export function copertura(indice: Indice, r: Ricetta, inCasa: Set<string>): { pr
   return { presenti: p.filter((g) => casa.has(g.ingrediente_id)).length, totali: p.length };
 }
 
+/** Gli ingredienti principali che mancano in casa (gli spaghetti in casa valgono per «pasta»). */
+export function mancanti(indice: Indice, r: Ricetta, inCasa: Set<string>): RigaRicetta[] {
+  const casa = indice.estendi(inCasa);
+  return principali(indice, r).filter((g) => !casa.has(g.ingrediente_id));
+}
+
 /** Icone di ingredienti troppo generiche per rappresentare un piatto (la farina). */
 const ICONE_GENERICHE = ['🌾'];
 

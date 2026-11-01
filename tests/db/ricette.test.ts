@@ -216,6 +216,31 @@ describe('icona scelta per una ricetta', () => {
   });
 });
 
+describe('ricette segnate ⭐ preferite e 💫 per ospiti', () => {
+  it('si segnano, ripetute non scrivono due volte, si tolgono; solo ricette visibili e segni noti', async () => {
+    const { u, famiglia } = await famigliaCon();
+    const impostazioni = async () => (await banco.sql<{ i: Record<string, unknown> }>(`select impostazioni as i from famiglia where id = $1`, [famiglia]))[0].i;
+    const segna = (segno: string, ricetta_id: string, attivo = true) => u.applica(comando('segna_ricetta', famiglia, { ricetta_id, segno, attivo }));
+
+    expect((await segna('preferita', 'sys:carbonara')).esito).toBe('applicato');
+    expect((await segna('preferita', 'sys:carbonara')).esito).toBe('applicato');
+    await segna('preferita', 'sys:riso_basmati_spezie');
+    await segna('ospiti', 'sys:carbonara');
+    expect(await impostazioni()).toMatchObject({ preferite: ['sys:carbonara', 'sys:riso_basmati_spezie'], per_ospiti: ['sys:carbonara'] });
+    await segna('preferita', 'sys:carbonara', false);
+    await segna('preferita', 'sys:carbonara', false);
+    expect(await impostazioni()).toMatchObject({ preferite: ['sys:riso_basmati_spezie'], per_ospiti: ['sys:carbonara'] });
+
+    expect((await segna('altro', 'sys:carbonara')).esito).not.toBe('applicato');
+    expect((await segna('preferita', 'sys:non_esiste')).esito).not.toBe('applicato');
+    const altra = await famigliaCon();
+    const { id, c } = nuovaRicetta(altra.famiglia);
+    await altra.u.applica(c);
+    expect((await segna('ospiti', id)).esito).not.toBe('applicato');
+    expect(await impostazioni()).toMatchObject({ preferite: ['sys:riso_basmati_spezie'], per_ospiti: ['sys:carbonara'] });
+  });
+});
+
 describe('ricetta segnata «va bene» per un membro', () => {
   it('si segna, si aggiorna alla nuova versione, ripetuta non scrive, si toglie; solo membri e ricette della famiglia', async () => {
     const { u, famiglia } = await famigliaCon();
@@ -319,5 +344,41 @@ describe('ricette collegate: una base dentro la ricetta', () => {
     await u.applica(c);
     const dentro = await u.applica(comando('salva_ricetta', famiglia, { id: salsa.id, basi: { imposta: [{ ricetta_id: 'sys:besciamella', dosi: 1 }] } }));
     expect(dentro.dettaglio.motivo).toBe('base_non_valida');
+  });
+});
+
+describe('Antonino impara e si fa insegnare le regole', () => {
+  it('conta scarti e scelte, ricorda «mai più», dimentica; le regole si salvano e si tolgono', async () => {
+    const { u, famiglia } = await famigliaCon();
+    const antonino = async () => (await banco.sql<{ a: Record<string, unknown> | null }>(`select impostazioni -> 'antonino' as a from famiglia where id = $1`, [famiglia]))[0].a;
+    const impara = (evento: string, ricetta_id = 'sys:carbonara', data = '2026-11-01') => u.applica(comando('antonino_impara', famiglia, { evento, ricetta_id, data }));
+
+    expect((await impara('scartata')).esito).toBe('applicato');
+    await impara('scartata', 'sys:carbonara', '2026-11-03');
+    await impara('scartata', 'sys:carbonara', '2026-10-01');
+    await impara('scelta', 'sys:pasta_zucchine');
+    await impara('mai_piu', 'sys:lasagne');
+    await impara('mai_piu', 'sys:lasagne');
+    expect(await antonino()).toEqual({
+      scartate: { 'sys:carbonara': { n: 3, ultima: '2026-11-03' } },
+      scelte: { 'sys:pasta_zucchine': { n: 1, ultima: '2026-11-01' } },
+      mai_piu: ['sys:lasagne'],
+    });
+    await impara('riproponi', 'sys:lasagne');
+    expect((await antonino())?.mai_piu).toEqual([]);
+
+    expect((await impara('boh')).esito).not.toBe('applicato');
+    expect((await impara('scartata', 'sys:non_esiste')).esito).not.toBe('applicato');
+    expect((await impara('scartata', 'sys:carbonara', 'ieri')).esito).not.toBe('applicato');
+
+    const regole = { obiettivi: { pesce: { min: 3 } } };
+    expect((await u.applica(comando('antonino_regole', famiglia, { regole }))).esito).toBe('applicato');
+    expect((await antonino())?.regole).toEqual(regole);
+    expect((await u.applica(comando('antonino_regole', famiglia, { regole: 'tanti' }))).esito).not.toBe('applicato');
+
+    await impara('dimentica');
+    expect(await antonino()).toEqual({ regole });
+    await u.applica(comando('antonino_regole', famiglia, { regole: null }));
+    expect(await antonino()).toEqual({});
   });
 });

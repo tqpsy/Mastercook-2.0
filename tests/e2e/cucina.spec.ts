@@ -7,7 +7,7 @@ test('modalità cucina: passo passo con gli ingredienti del passaggio', async ({
   const { page } = await apri(browser, luca, info.project.use);
   await creaFamiglia(page, 'Casa Cucina');
   await page.getByRole('button', { name: 'Ricette' }).click();
-  await page.getByLabel('Cerca').fill('carbonara');
+  await page.getByLabel('Cerca', { exact: true }).fill('carbonara');
   await page.getByRole('button', { name: 'Apri Spaghetti alla carbonara' }).click();
   await page.getByRole('dialog', { name: 'Spaghetti alla carbonara' }).getByRole('button', { name: /Cucina passo passo/ }).click();
 
