@@ -3155,3 +3155,10 @@ details > summary:has(.primo-presto) {
   width: 60px;
   height: 80px;
 }
+/* Il frigo di casa (configurato) nel riquadro «Ripiano consigliato». */
+.consiglio-ripiano .frigo-mio {
+  width: 96px;
+}
+.consiglio-ripiano.compatto .frigo-mio {
+  width: 60px;
+}

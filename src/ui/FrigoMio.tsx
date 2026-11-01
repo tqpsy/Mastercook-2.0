@@ -1,5 +1,13 @@
-import type { KeyboardEvent, ReactNode } from 'react';
-import { type Frigo, posti } from '../dominio/frigo';
+import { type KeyboardEvent, type ReactNode, useMemo } from 'react';
+import { useVista } from '../dati/contesto';
+import { type Frigo, frigoDa, posti } from '../dominio/frigo';
+
+/** Il frigo salvato nelle impostazioni della famiglia (null se non è ancora configurato). */
+export function useFrigo(): Frigo | null {
+  const impostazioni = useVista().righe.famiglia?.find((r) => !r.eliminato_il)?.impostazioni as Record<string, unknown> | undefined;
+  const chiave = JSON.stringify(impostazioni?.frigo ?? null);
+  return useMemo(() => frigoDa(impostazioni), [chiave]); // eslint-disable-line react-hooks/exhaustive-deps
+}
 
 /** Un rettangolo del disegno: una parte del frigo che si può evidenziare o toccare. */
 interface Area {

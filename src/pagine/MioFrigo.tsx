@@ -1,16 +1,11 @@
-import { useMemo, useState } from 'react';
-import { useFamiglia, useVista } from '../dati/contesto';
-import { cosaCiVa, FRIGO_BASE, type Frigo, frigoDa, LIMITI, type PosizioneFreezer, posto, riassunto } from '../dominio/frigo';
+import { useState } from 'react';
+import { useFamiglia } from '../dati/contesto';
+import { cosaCiVa, FRIGO_BASE, type Frigo, LIMITI, type PosizioneFreezer, posto, riassunto } from '../dominio/frigo';
 import { Foglio } from '../ui/Foglio';
-import { DisegnoFrigoMio } from '../ui/FrigoMio';
+import { DisegnoFrigoMio, useFrigo } from '../ui/FrigoMio';
 import { Icona } from '../ui/Icona';
 
-/** Il frigo salvato nelle impostazioni della famiglia (null se non è ancora configurato). */
-export function useFrigo(): Frigo | null {
-  const impostazioni = useVista().righe.famiglia?.find((r) => !r.eliminato_il)?.impostazioni as Record<string, unknown> | undefined;
-  const chiave = JSON.stringify(impostazioni?.frigo ?? null);
-  return useMemo(() => frigoDa(impostazioni), [chiave]); // eslint-disable-line react-hooks/exhaustive-deps
-}
+export { useFrigo };
 
 /** La voce in Impostazioni: apre il configuratore. */
 export function VoceMioFrigo() {
