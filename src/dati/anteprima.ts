@@ -5,7 +5,7 @@
  */
 import type { VoceCoda } from './archivio';
 import type { Riga, Tabella } from './tipi';
-import { piuGiorni } from '../dominio/scadenze';
+import { oggi, piuGiorni } from '../dominio/scadenze';
 
 export interface RigaInVista extends Riga {
   /** Effetto di un comando non ancora applicato dal server. */
@@ -482,6 +482,7 @@ const EFFETTI: Record<string, Effetto> = {
         quantita: Number(x.quantita),
         unita: 'pz',
         luogo: x.luogo ?? 'frigo',
+        data_acquisto: x.data_acquisto ?? oggi(),
         data_limite: x.data_limite ?? null,
         tipo_data: x.tipo_data ?? 'sconosciuta',
         fonte_data: x.fonte_data ?? null,
