@@ -161,7 +161,7 @@ export function IdeePerPasto({
   }, [indice, dati, data, categoria, contesto, filtro]);
   const [quale, setQuale] = useState(0);
   // Cambiando i filtri si riparte dalla migliore.
-  const chiave = `${filtro.categoria ?? ''}|${filtro.principale ?? ''}`;
+  const chiave = `${filtro.categoria ?? ''}|${filtro.principale ?? ''}|${filtro.ingrediente ?? ''}`;
   const [ultima, setUltima] = useState(chiave);
   if (ultima !== chiave) {
     setUltima(chiave);
@@ -180,7 +180,7 @@ export function IdeePerPasto({
       </div>
       {!idea ? (
         <p className="tenue" style={{ margin: '4px 0 0' }}>
-          {filtro.categoria || filtro.principale ? 'Nessuna idea adatta con questi filtri: prova a toglierne uno.' : 'Nessuna idea per questo pasto: cerca qui sotto.'}
+          {filtro.categoria || filtro.principale || filtro.ingrediente ? 'Nessuna idea adatta con questi filtri: prova a toglierne uno.' : 'Nessuna idea per questo pasto: cerca qui sotto.'}
         </p>
       ) : (
         <>

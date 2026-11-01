@@ -9,7 +9,7 @@
 import { valutaPerFamiglia, type Verifica, type Vincolo } from './compatibilita';
 import { gustiPerPiatto, type Gusto, type Persona } from './menu';
 import type { Categoria } from '../catalogo/tipi';
-import { haPrincipale, type Principale } from './principale';
+import { haPrincipale, type Principale, usaIngrediente } from './principale';
 import { copertura, type Indice, principali, type Ricetta } from './ricette';
 
 /** Le categorie di ricetta adatte a ogni pasto. Gli altri pasti (spuntino…) non si propongono. */
@@ -56,6 +56,8 @@ export interface Candidata {
 export interface FiltroProposte {
   categoria?: Categoria | null;
   principale?: Principale | null;
+  /** Un ingrediente preciso che la ricetta deve usare (zucchine, ceci…). */
+  ingrediente?: string | null;
 }
 
 /** Le ricette proponibili per un pasto, dalla migliore. Solo ricette adatte a tutti e senza «non mi piace». */
@@ -69,7 +71,7 @@ export function candidate(indice: Indice, pasto: string, c: ContestoProposte, fi
   const esito: Candidata[] = [];
   for (const r of indice.ricette) {
     if (r.archiviata || !categorie.includes(r.categoria)) continue;
-    if (!haPrincipale(indice, r, filtro.principale)) continue;
+    if (!haPrincipale(indice, r, filtro.principale) || !usaIngrediente(indice, r, filtro.ingrediente)) continue;
     if (valutaPerFamiglia(indice, r, c.persone, c.vincoli, c.verifiche).esito !== 'adatta') continue;
     const gusti = gustiPerPiatto(indice, r, c.persone, c.gusti);
     if (gusti.some((g) => g.valore === 'non_piace')) continue;
