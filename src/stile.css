@@ -3245,3 +3245,73 @@ details > summary:has(.primo-presto) {
 .consiglio-ripiano.compatto .frigo-mio {
   width: 60px;
 }
+
+/* Scheda prodotto da Open Food Facts: valori, ingredienti, indicatori ufficiali. */
+.scheda-prodotto section {
+  margin-bottom: 18px;
+}
+.scheda-prodotto h3 {
+  font-family: var(--carattere-titoli);
+  font-size: 1.05rem;
+  margin: 0 0 8px;
+}
+.piccolo-testo {
+  font-size: 0.8rem;
+}
+.tabella-valori {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+.tabella-valori th,
+.tabella-valori td {
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--bordo);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.tabella-valori th[scope='row'] {
+  text-align: left;
+  font-weight: 600;
+}
+.tabella-valori thead th {
+  font-weight: 500;
+  color: var(--testo-tenue);
+  font-size: 0.8rem;
+}
+.tabella-valori tr.sotto th[scope='row'] {
+  font-weight: 400;
+  padding-left: 18px;
+}
+.elenco-ingredienti {
+  margin: 6px 0 0;
+  padding-left: 20px;
+}
+.etichetta.indicatore b {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  color: #fff;
+  font-weight: 700;
+}
+/* Colori ufficiali del Nutri-Score e del NOVA. */
+.ns-a { background: #038141; }
+.ns-b { background: #85bb2f; color: #1b1b1b !important; }
+.ns-c { background: #fecb02; color: #1b1b1b !important; }
+.ns-d { background: #ee8100; color: #1b1b1b !important; }
+.ns-e { background: #e63e11; }
+.nova-1 { background: #00aa00; }
+.nova-2 { background: #c7a600; color: #1b1b1b !important; }
+.nova-3 { background: #ff6600; color: #1b1b1b !important; }
+.nova-4 { background: #c80000; }
+.etichetta.livello-basso {
+  background: var(--salvia-tenue);
+}
+.etichetta.livello-moderato {
+  background: var(--senape-tenue);
+}
+.etichetta.livello-alto {
+  background: var(--errore-tenue);
+}

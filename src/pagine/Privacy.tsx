@@ -54,7 +54,7 @@ export function TestoPrivacy() {
           usa per addestrare i suoi modelli, ma la può conservare per un periodo limitato per i controlli contro gli abusi.
         </li>
         <li>
-          <strong>Codici a barre</strong>: per un prodotto che l’app non conosce si chiede il nome a Open Food Facts, mandando solo il numero del codice.
+          <strong>Codici a barre</strong>: si chiedono a Open Food Facts nome, valori nutrizionali e ingredienti del prodotto, mandando solo il numero del codice.
         </li>
         <li>
           <strong>Scontrini</strong>: il testo si legge sul telefono; la foto non esce dal dispositivo.

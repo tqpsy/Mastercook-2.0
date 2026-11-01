@@ -14,6 +14,7 @@ import { daUsarePresto, descriviData, giorniTra, type Luogo, oggi, piuGiorni, RE
 import { formatta, inBase, leggiNumero, UNITA, type Unita, UNITA_BASE, type UnitaBase, unitaPer } from '../dominio/unita';
 import { CercaIngrediente } from '../ui/CercaIngrediente';
 import { type ProdottoScansionato, ScansionaProdotto } from '../ui/CodiceProdotto';
+import { FoglioSchedaProdotto } from '../ui/SchedaProdotto';
 import { Foglio } from '../ui/Foglio';
 import { FotoFrigo } from './FotoFrigo';
 import { useDatiMenu } from './Menu';
@@ -280,6 +281,7 @@ function NuovoLotto({ indice, luogo: luogoIniziale, chiudi }: { indice: Indice; 
   const [errore, setErrore] = useState<string | null>(null);
   const [scansiona, setScansiona] = useState(false);
   const [codice, setCodice] = useState<ProdottoScansionato | null>(null);
+  const [dettagli, setDettagli] = useState(false);
   const giorno = oggi();
 
   function scegli(i: Ingrediente) {
@@ -369,9 +371,13 @@ function NuovoLotto({ indice, luogo: luogoIniziale, chiudi }: { indice: Indice; 
           </div>
           {codice && (
             <p className="tenue" style={{ margin: '4px 0 0' }}>
-              Codice {codice.codice}: {codice.prodotto ? 'già conosciuto, ho riempito la confezione.' : 'nuovo, lo ricorderò con questi dati.'}
+              Codice {codice.codice}: {codice.prodotto ? 'già conosciuto, ho riempito la confezione.' : 'nuovo, lo ricorderò con questi dati.'}{' '}
+              <button type="button" className="bottone piccolo" onClick={() => setDettagli(true)}>
+                <span aria-hidden>📋</span> Valori e ingredienti
+              </button>
             </p>
           )}
+          {codice && dettagli && <FoglioSchedaProdotto codice={codice.codice} nome={nome.trim() || ing.nome} chiudi={() => setDettagli(false)} />}
           <div className="riga" style={{ alignItems: 'flex-end', marginTop: 12 }}>
             <label className="campo cresce">
               <span>Quantità</span>

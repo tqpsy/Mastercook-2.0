@@ -5,7 +5,8 @@ import { type ProdottoEsterno, suggerisciIngrediente } from '../dominio/scontrin
 import type { UnitaBase } from '../dominio/unita';
 import { CercaIngrediente } from './CercaIngrediente';
 import { Foglio } from './Foglio';
-import { cercaSuOpenFoodFacts } from './openFoodFacts';
+import { chiediAOpenFoodFacts, cercaSuOpenFoodFacts } from './openFoodFacts';
+import { FoglioSchedaProdotto } from './SchedaProdotto';
 import { Scanner } from './Scanner';
 
 /** Un codice a barre che la famiglia ha già associato a un ingrediente. */
@@ -56,6 +57,8 @@ export function ScansionaProdotto({ indice, trovato, chiudi }: { indice: Indice;
       chiudi={chiudi}
       trovato={(codice) => {
         const p = prodotti.get(codice);
+        // Valori e ingredienti si chiedono subito: quando si apre la scheda sono già pronti.
+        void chiediAOpenFoodFacts(codice);
         const ingrediente = p ? indice.ingrediente(p.ingrediente_id) : undefined;
         if (p && ingrediente) trovato({ codice, ingrediente, prodotto: p });
         else setNuovo(codice);
@@ -66,6 +69,7 @@ export function ScansionaProdotto({ indice, trovato, chiudi }: { indice: Indice;
 
 function CodiceNuovo({ indice, codice, trovato, chiudi }: { indice: Indice; codice: string; trovato: (p: ProdottoScansionato) => void; chiudi: () => void }) {
   const [esterno, setEsterno] = useState<ProdottoEsterno | null | undefined>(undefined);
+  const [dettagli, setDettagli] = useState(false);
   useEffect(() => {
     let attivo = true;
     void cercaSuOpenFoodFacts(codice).then((x) => attivo && setEsterno(x ?? null));
@@ -90,6 +94,9 @@ function CodiceNuovo({ indice, codice, trovato, chiudi }: { indice: Indice; codi
           {esterno && (
             <div className="avviso info">
               Open Food Facts: <strong>{esterno.nome}</strong>
+              <button className="bottone piccolo" style={{ marginLeft: 8 }} onClick={() => setDettagli(true)}>
+                <span aria-hidden>📋</span> Valori e ingredienti
+              </button>
               {suggerito && (
                 <button className="bottone primario pieno" style={{ marginTop: 8 }} onClick={() => scelto(suggerito)}>
                   È <span aria-hidden>{suggerito.emoji}</span> {suggerito.nome}
@@ -100,6 +107,7 @@ function CodiceNuovo({ indice, codice, trovato, chiudi }: { indice: Indice; codi
           <CercaIngrediente indice={indice} etichetta={suggerito ? 'Oppure cerca' : 'Cos’è?'} autoFocus={!suggerito} scegli={scelto} />
         </>
       )}
+      {dettagli && <FoglioSchedaProdotto codice={codice} {...(esterno ? { nome: esterno.nome } : {})} chiudi={() => setDettagli(false)} />}
     </Foglio>
   );
 }
