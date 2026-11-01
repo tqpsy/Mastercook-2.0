@@ -114,3 +114,8 @@ function uovaPerPorzione(quantita: number | null, unita: string, porzioni: numbe
 export function haPrincipale(indice: Indice, r: Ricetta, p: Principale | null | undefined): boolean {
   return !p || tipiPrincipali(indice, r).has(p);
 }
+
+/** Vero se la ricetta usa quell'ingrediente (o uno più preciso: «pasta» vale per gli spaghetti), facoltativi esclusi. */
+export function usaIngrediente(indice: Indice, r: Ricetta, id: string | null | undefined): boolean {
+  return !id || r.ingredienti.some((g) => !g.opzionale && indice.antenati(g.ingrediente_id).includes(id));
+}
