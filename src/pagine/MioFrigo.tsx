@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useFamiglia } from '../dati/contesto';
-import { cosaCiVa, FRIGO_BASE, type Frigo, LIMITI, type PosizioneFreezer, posto, riassunto } from '../dominio/frigo';
+import { cosaCiVa, FRIGO_BASE, type Frigo, LIMITI, type PosizioneFreezer, posti, posto, PRODUCONO_ETILENE, REGOLE_CONFEZIONE, riassunto, temperatura, zonaPerGuida } from '../dominio/frigo';
 import { Foglio } from '../ui/Foglio';
 import { DisegnoFrigoMio, useFrigo } from '../ui/FrigoMio';
 import { Icona } from '../ui/Icona';
@@ -127,6 +127,7 @@ export function EditorFrigo({ iniziale, salva, chiudi }: { iniziale: Frigo | nul
             {parte ? (
               <>
                 <strong>{parte.nome}</strong>
+                <span className="tenue piccolo">🌡️ {temperatura(f, parte)}</span>
                 {ciVa.length ? (
                   <ul>
                     {ciVa.map((c) => (
@@ -203,8 +204,52 @@ export function EditorFrigo({ iniziale, salva, chiudi }: { iniziale: Frigo | nul
           <p className="tenue piccolo" style={{ textAlign: 'center' }}>
             Serve per dirti il ripiano preciso dove mettere le cose e per capire, dalle foto, dove sono.
           </p>
+          <GuidaFrigo frigo={f} />
         </div>
       </div>
     </Foglio>
+  );
+}
+
+/** Nomi in chiaro di chi produce etilene, per la guida. */
+const NOMI_ETILENE = [...PRODUCONO_ETILENE].map((id) => id.slice(4).replace(/_/g, ' ')).join(', ');
+
+/**
+ * «Come sistemare il frigo»: la mappa termica del frigo configurato (zona, temperatura, cosa ci va), la regola
+ * dell'etilene e le regole d'oro del confezionamento.
+ */
+function GuidaFrigo({ frigo }: { frigo: Frigo }) {
+  const zone = posti(frigo);
+  return (
+    <details className="guida-frigo">
+      <summary>
+        <strong>Come sistemare il frigo</strong>
+        <span className="tenue piccolo">Temperature, etilene e confezioni</span>
+      </summary>
+      <h3>Zona per zona, dall’alto</h3>
+      <ul className="elenco">
+        {zone.map((p) => (
+          <li key={p.id} className="zona-guida">
+            <strong>{p.nome}</strong> <span className="etichetta">{temperatura(frigo, p)}</span>
+            <span className="tenue">{zonaPerGuida(frigo, p)}</span>
+          </li>
+        ))}
+      </ul>
+      <h3>Etilene: frutta e verdura separate</h3>
+      <p className="tenue">
+        Alcuni frutti emettono etilene maturando ({NOMI_ETILENE}) e fanno ingiallire e appassire prima insalate, cavoli, broccoli, carote, cetrioli, zucchine,
+        asparagi ed erbe aromatiche.{' '}
+        {frigo.cassetti >= 2
+          ? 'Con due cassetti: verdure nel primo, frutta nel secondo.'
+          : 'Con un solo cassetto: tienili in sacchetti chiusi separati, ai due lati del cassetto.'}{' '}
+        Banane, avocado, pomodori, meloni e mango acerbi maturano meglio fuori dal frigo.
+      </p>
+      <h3>Regole d’oro per confezionare</h3>
+      <ul>
+        {REGOLE_CONFEZIONE.map((r) => (
+          <li key={r}>{r}</li>
+        ))}
+      </ul>
+    </details>
   );
 }

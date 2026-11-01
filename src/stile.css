@@ -3245,6 +3245,33 @@ details > summary:has(.primo-presto) {
 .consiglio-ripiano.compatto .frigo-mio {
   width: 60px;
 }
+.cosa-ci-va > span {
+  display: block;
+}
+.guida-frigo {
+  margin-top: 18px;
+  padding: 12px 14px;
+  border-radius: var(--raggio);
+  background: var(--superficie);
+  border: 1px solid var(--bordo);
+}
+.guida-frigo summary {
+  cursor: pointer;
+  min-height: 44px;
+}
+.guida-frigo summary > span {
+  display: block;
+}
+.guida-frigo .zona-guida > span.tenue {
+  display: block;
+}
+.guida-frigo li {
+  margin-bottom: 6px;
+}
+.guida-frigo ul:not(.elenco) {
+  padding-left: 18px;
+  font-size: 0.95rem;
+}
 
 /* Aggiungi piatto: gli avanzi in casa, in cima, da mangiare in questo pasto. */
 .avanzi-in-casa {

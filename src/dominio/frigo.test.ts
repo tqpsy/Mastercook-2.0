@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cosaCiVa, descriviPerFoto, FRIGO_BASE, frigoDa, posti, postoDelLotto, postoIngrediente, postoPiatto, postoValido, riassunto } from './frigo';
+import { cosaCiVa, descriviPerFoto, etilene, temperatura, zonaPerGuida, FRIGO_BASE, frigoDa, posti, postoDelLotto, postoIngrediente, postoPiatto, postoValido, riassunto } from './frigo';
 
 describe('il mio frigorifero', () => {
   it('senza configurazione: null; valori strani tornano quelli di base', () => {
@@ -29,10 +29,37 @@ describe('il mio frigorifero', () => {
     expect(postoIngrediente(FRIGO_BASE, { reparto: 'carne' }, 'frigo')!.posto.id).toBe('r4');
     expect(postoIngrediente(FRIGO_BASE, { reparto: 'frutta_verdura', sottocategoria: 'Ortaggi' }, 'frigo')!.posto.id).toBe('c1');
     expect(postoIngrediente({ ...FRIGO_BASE, cassetti: 0 }, { reparto: 'frutta_verdura' }, 'frigo')!.posto.id).toBe('r4');
-    expect(postoIngrediente(FRIGO_BASE, { reparto: 'latticini', sottocategoria: 'Latte' }, 'frigo')!.posto.zona).toBe('sportello');
+    expect(postoIngrediente(FRIGO_BASE, { reparto: 'latticini', sottocategoria: 'Latte' }, 'frigo')!.posto.zona).toBe('ripiano');
+    expect(postoIngrediente(FRIGO_BASE, { reparto: 'latticini', sottocategoria: 'Burro e panna' }, 'frigo')!.posto.id).toBe('s1');
+    expect(postoIngrediente(FRIGO_BASE, { reparto: 'condimenti', sottocategoria: 'Salse' }, 'frigo')!.posto.id).toBe('s2');
+    expect(postoIngrediente(FRIGO_BASE, { reparto: 'bevande' }, 'frigo')!.posto.id).toBe('s4');
+    expect(postoIngrediente(FRIGO_BASE, { reparto: 'carne' }, 'frigo')!.confezione).toMatch(/ermetico/);
     expect(postoIngrediente(FRIGO_BASE, { reparto: 'latticini', sottocategoria: 'Uova' }, 'frigo')!.posto.zona).toBe('ripiano');
     expect(postoIngrediente(FRIGO_BASE, { reparto: 'pesce' }, 'freezer')!.posto.id).toBe('f3');
     expect(postoIngrediente({ ...FRIGO_BASE, freezer: { ...FRIGO_BASE.freezer, posizione: 'nessuno' } }, { reparto: 'pesce' }, 'freezer')).toBeNull();
+  });
+
+  it('etilene: chi lo produce sta separato dalle verdure sensibili', () => {
+    const mela = { id: 'ing:mela', reparto: 'frutta_verdura', sottocategoria: 'Frutta' };
+    const insalata = { id: 'ing:insalata', reparto: 'frutta_verdura', sottocategoria: 'Insalate e verdure a foglia' };
+    expect(etilene(mela)).toBe('produce');
+    expect(etilene(insalata)).toBe('sensibile');
+    expect(etilene({ id: 'ing:arancia', sottocategoria: 'Frutta' })).toBeNull();
+    const due = { ...FRIGO_BASE, cassetti: 2 };
+    expect(postoIngrediente(due, mela, 'frigo')!.posto.id).toBe('c2');
+    expect(postoIngrediente(due, insalata, 'frigo')!.posto.id).toBe('c1');
+    // Un cassetto solo: insieme, ma in sacchetti separati.
+    expect(postoIngrediente(FRIGO_BASE, mela, 'frigo')!.perche).toMatch(/sacchetto a parte/);
+    expect(postoIngrediente(FRIGO_BASE, insalata, 'frigo')!.confezione).toMatch(/microforato.*carta assorbente/);
+    expect(postoIngrediente(FRIGO_BASE, { id: 'ing:funghi', reparto: 'frutta_verdura', sottocategoria: 'Funghi' }, 'frigo')!.confezione).toMatch(/carta/);
+  });
+
+  it('mappa termica: in basso il più freddo, sportello il più caldo', () => {
+    const p = posti(FRIGO_BASE);
+    expect(temperatura(FRIGO_BASE, p.find((x) => x.id === 'r4')!)).toMatch(/0–2 °C/);
+    expect(temperatura(FRIGO_BASE, p.find((x) => x.id === 'r1')!)).toBe('4–5 °C');
+    expect(temperatura(FRIGO_BASE, p.find((x) => x.id === 's1')!)).toBe('8–10 °C');
+    expect(zonaPerGuida(FRIGO_BASE, p.find((x) => x.id === 'r4')!)).toMatch(/crudi/);
   });
 
   it('cosa ci va: la legenda del configuratore', () => {

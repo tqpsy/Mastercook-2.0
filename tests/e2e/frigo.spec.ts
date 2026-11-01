@@ -18,7 +18,11 @@ test('configuro il frigo e aggiungendo il pollo mi dice il ripiano in basso', as
   await foglio.getByRole('button', { name: 'Ripiani: uno in più' }).click();
   await foglio.getByRole('radiogroup', { name: 'Da che parte si apre lo sportello' }).getByRole('radio', { name: 'Sinistra' }).click();
   await foglio.getByRole('button', { name: 'Ripiano 5, in basso' }).click();
-  await expect(foglio.getByText('Carne e pesce crudi')).toBeVisible();
+  await expect(foglio.getByText('Carne e pesce crudi', { exact: true })).toBeVisible();
+  await expect(foglio.getByText('0–2 °C, il più freddo').first()).toBeVisible();
+  // La guida: zone con le temperature, etilene e confezioni.
+  await foglio.getByText('Come sistemare il frigo').click();
+  await expect(foglio.getByRole('heading', { name: 'Etilene: frutta e verdura separate' })).toBeVisible();
   await foglio.getByRole('button', { name: 'Salva il frigorifero' }).click();
   await salvato(page);
   await expect(page.getByText('freezer sotto · 5 ripiani · 1 cassetto · sportello a sinistra')).toBeVisible();
@@ -30,6 +34,7 @@ test('configuro il frigo e aggiungendo il pollo mi dice il ripiano in basso', as
   await nuovo.getByRole('button', { name: /Petto di pollo/ }).first().click();
   await nuovo.getByLabel('Quantità').fill('400');
   await expect(nuovo.getByLabel('Dove metterlo')).toContainText('Ripiano 5, in basso');
+  await expect(nuovo.getByLabel('Dove metterlo')).toContainText('contenitore ermetico');
   await nuovo.getByRole('button', { name: 'Senza data' }).click();
   await nuovo.getByRole('button', { name: 'Aggiungi', exact: true }).click();
   await salvato(page);

@@ -90,6 +90,7 @@ export function ConsiglioRipiano({ ripiano, compatto }: { ripiano: Ripiano; comp
             {c.inFondo ? ', in fondo' : ''}
           </strong>
           <span className="tenue">{c.perche}</span>
+          {c.confezione && !compatto && <span className="tenue piccolo">📦 {c.confezione}</span>}
         </span>
       </div>
     );
