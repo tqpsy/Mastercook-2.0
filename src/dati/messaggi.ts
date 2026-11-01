@@ -113,6 +113,7 @@ const AZIONI: Record<string, string> = {
   fissa_pasto: 'Ripetere un piatto ogni giorno',
   prolunga_pasti_fissi: 'Preparare i giorni dei piatti fissi',
   ferma_pasto_fisso: 'Fermare un piatto fisso',
+  allinea_chi_mangia_fisso: 'Cambiare chi mangia un piatto di ogni giorno',
   conferma_pasto: 'Confermare un pasto',
   foto_pasto: 'Aggiungere la foto di un piatto',
   imposta_ospiti: 'Segnare gli ospiti',

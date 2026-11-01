@@ -143,7 +143,9 @@ test('colazione fissa: ogni giorno da oggi, cambiata da un giorno in poi, poi fe
   await page.getByRole('dialog').getByLabel('Cosa si mangia').fill('Latte e caffè');
   await page.getByRole('dialog').getByRole('button', { name: 'Scrivi «Latte e caffè» senza ricetta' }).click();
   await page.getByRole('button', { name: 'Apri Latte e caffè' }).first().click();
-  await page.getByRole('dialog', { name: 'Latte e caffè' }).getByRole('button', { name: '🔁 Ogni giorno da qui' }).click();
+  const spunta = page.getByRole('dialog', { name: 'Latte e caffè' }).getByRole('checkbox', { name: '🔁 Ogni giorno, da questo giorno in poi' });
+  await spunta.click();
+  await expect(spunta).toBeChecked();
   await expect(page.getByRole('dialog', { name: 'Latte e caffè' })).toContainText('🔁 ogni giorno');
   await page.getByRole('button', { name: 'Chiudi' }).click();
 
@@ -174,6 +176,22 @@ test('colazione fissa: ogni giorno da oggi, cambiata da un giorno in poi, poi fe
     .poll(async () => (await colazioni()).slice(0, 4).map((r) => r.testo))
     .toEqual(['Latte e caffè', 'Latte e caffè', 'Cappuccino', 'Cappuccino']);
   expect((await sql<{ id: string }>(`select id from portata where id = $1 and testo = 'Cappuccino' and eliminato_il is null`, [id])).length).toBe(1);
+
+  // Togliere la spunta oggi ferma il latte e caffè dal giorno dopo: quello di oggi resta.
+  await page.getByRole('button', { name: 'Chiudi' }).click();
+  await scegliGiorno(page, oggi());
+  await page.getByRole('region', { name: dataLunga(oggi()) }).getByRole('button', { name: 'Apri Latte e caffè' }).click();
+  const diOggi = page.getByRole('dialog', { name: 'Latte e caffè' });
+  page.once('dialog', (d) => void d.accept());
+  await diOggi.getByRole('checkbox', { name: '🔁 Ogni giorno, da questo giorno in poi' }).click();
+  await expect(diOggi.getByRole('checkbox', { name: '🔁 Ogni giorno, da questo giorno in poi' })).not.toBeChecked();
+  await expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
+  await expect
+    .poll(async () => (await colazioni()).slice(0, 2).map((r) => [r.data, r.testo]))
+    .toEqual([
+      [oggi(), 'Latte e caffè'],
+      [dopodomani, 'Cappuccino'],
+    ]);
 });
 
 test('torta che dura più giorni: avanzo domani, la conferma la mette in casa', async ({ browser }, info) => {
