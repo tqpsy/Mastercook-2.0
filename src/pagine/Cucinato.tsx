@@ -3,12 +3,13 @@ import { useFamiglia } from '../dati/contesto';
 import { avanziDi, porzioniPortata } from '../dominio/consumi';
 import { consiglioCucinato } from '../dominio/cucinato';
 import type { PortataMenu } from '../dominio/menu';
-import type { Indice } from '../dominio/ricette';
+import { iconaRicetta, type Indice } from '../dominio/ricette';
 import { giorniTra, oggi } from '../dominio/scadenze';
 import { formattaGiorno, leggiNumero } from '../dominio/unita';
 import { Foglio } from '../ui/Foglio';
 import { type Lotto, useLotti } from './Casa';
-import { PorzioniAvanzate, SceltaLuogo, testoNumero } from './ConfermaPasto';
+import { PorzioniAvanzate, SceltaLuogo, TestaPiatto, testoNumero } from './ConfermaPasto';
+import { useIcone } from './Ricette';
 import type { DatiMenu } from './Menu';
 
 /** Il piatto pronto in casa di una portata cucinata in anticipo (anche già finito), se c'è. */
@@ -38,6 +39,7 @@ export function SegnaCucinato({
   chiudi: () => void;
 }) {
   const { esegui } = useFamiglia();
+  const icone = useIcone();
   const giorno = oggi();
   const dopo = avanziDi(portata, dati.portate);
   const porzioni = [portata, ...dopo].reduce((t, p) => t + porzioniPortata(p, dati.persone, dati.eccezioni, dati.ospiti), 0);
@@ -82,60 +84,69 @@ export function SegnaCucinato({
   }
 
   const quando = `${fraGiorni(c.giorniAlPasto)}${c.giorniAlPasto > 1 ? ` (${formattaGiorno(ultimo)})` : ''}`;
+  const automatica = entro && entro === (luogo === 'freezer' ? c.entroFreezer : c.entroFrigo);
+  const icona = ricetta ? iconaRicetta(indice, ricetta, icone.get(ricetta.id)) : '🍽️';
+  const regge = c.limiteFrigo === 1 ? '1 giorno' : `${c.limiteFrigo} giorni`;
   // L'avviso dopo il foglio: così si apre sopra.
   return (
     <>
       <Foglio titolo="Cucinato" chiudi={chiudi}>
-        <p className="tenue" style={{ marginTop: 0 }}>
-          {titolo} · da mangiare {quando}
-        </p>
-        <p className="tenue">Tolgo adesso dalla casa gli ingredienti e metto il piatto pronto in casa. Quando lo mangiate, non li tolgo una seconda volta.</p>
+        <TestaPiatto icona={icona} titolo={titolo} sotto={`Da mangiare ${quando}`} />
 
-        <div className="riga spazio campo" style={{ flexWrap: 'wrap' }}>
+        <div className="riquadro-porzioni">
           <span>Porzioni cucinate</span>
           <PorzioniAvanzate nome="Porzioni cucinate" valore={quante} cambia={setQuante} />
         </div>
 
         <div className="campo">
           <span>Dove lo metti?</span>
-          <SceltaLuogo luogo={luogo} cambia={cambiaLuogo} />
+          <SceltaLuogo
+            etichetta="Dove lo metti"
+            luogo={luogo}
+            cambia={cambiaLuogo}
+            frigo={c.congela ? `regge solo ${regge}` : `entro ${formattaGiorno(c.entroFrigo)}`}
+            freezer="fino a 3 mesi"
+            consigliato={c.congela ? 'freezer' : 'frigo'}
+          />
         </div>
         {luogo === 'frigo' ? (
-          <div className={`avviso ${c.congela ? 'errore' : 'info'}`}>
-            {c.congela ? (
-              <>
-                ❄️ Lo mangiate {quando}: in frigo regge al massimo {c.limiteFrigo === 1 ? '1 giorno' : `${c.limiteFrigo} giorni`}. Meglio il freezer.
-              </>
-            ) : (
-              <>
-                <strong>🧊 Ripiano consigliato</strong>
-                <br />
-                {c.ripiano}
-              </>
-            )}
-          </div>
+          c.congela ? (
+            <div className="avviso errore">
+              ❄️ Lo mangiate {quando}: in frigo regge al massimo {regge}. Meglio il freezer.
+            </div>
+          ) : (
+            <div className="consiglio-ripiano">
+              <Frigo ripiani={c.ripiani} />
+              <span>
+                <span className="tenue piccolo">Ripiano consigliato</span>
+                <strong>{c.ripiani.length === 1 ? 'Centrale, in fondo' : 'Alto o centrale'}</strong>
+                <span className="tenue">In un contenitore chiuso, mai nella porta.</span>
+              </span>
+            </div>
+          )
         ) : (
-          <p className="tenue">In freezer: il giorno prima spostalo in frigo a scongelare (sul ripiano basso, in un piatto).</p>
+          <p className="tenue piccolo">In freezer: il giorno prima spostalo in frigo a scongelare (sul ripiano basso, in un piatto).</p>
         )}
 
-        <label className="campo">
+        <label className="campo riga-data">
           <span>Da mangiare entro</span>
           <input type="date" className="dato" value={entro} min={giorno} onChange={(e) => setEntro(e.target.value)} />
-          <span className="tenue piccolo">
-            {entro && entro === (luogo === 'freezer' ? c.entroFreezer : c.entroFrigo)
-              ? `Calcolata da oggi (${giorniTra(giorno, entro) === 1 ? '1 giorno' : `${giorniTra(giorno, entro)} giorni`} in ${luogo}): puoi cambiarla.`
-              : 'Data scritta da te.'}
-          </span>
         </label>
+        <p className="tenue piccolo" style={{ marginTop: -6 }}>
+          {automatica
+            ? `Calcolata da oggi (${giorniTra(giorno, entro) === 1 ? '1 giorno' : `${giorniTra(giorno, entro)} giorni`} in ${luogo}): puoi cambiarla.`
+            : 'Data scritta da te.'}
+        </p>
 
         {errore && (
           <div className="avviso errore" role="alert">
             {errore}
           </div>
         )}
-        <button className="bottone primario pieno" onClick={salva}>
+        <button className="bottone primario pieno grande" onClick={salva}>
           🍳 Cucinato, metti in {luogo}
         </button>
+        <p className="tenue piccolo nota-piede">Gli ingredienti li tolgo adesso dalla casa: quando lo mangiate non li tolgo una seconda volta.</p>
       </Foglio>
       {avviso && (
         <Foglio titolo="Meglio congelarlo" chiudi={() => setAvviso(false)}>
@@ -166,5 +177,22 @@ export function SegnaCucinato({
         </Foglio>
       )}
     </>
+  );
+}
+
+/** Un frigo disegnato con il ripiano consigliato in senape (mai la porta). */
+function Frigo({ ripiani }: { ripiani: ('alto' | 'centrale')[] }) {
+  const y = { alto: 10, centrale: 26 } as const;
+  return (
+    <svg className="frigo" viewBox="0 0 44 64" aria-hidden>
+      <rect x="2" y="2" width="40" height="60" rx="5" fill="var(--superficie)" stroke="var(--testo-tenue)" strokeWidth="2" />
+      <line x1="32" y1="4" x2="32" y2="60" stroke="var(--bordo)" strokeWidth="1.5" />
+      {(['alto', 'centrale'] as const).map((r) => (
+        <rect key={r} x="5" y={y[r]} width="24" height="13" rx="2" fill={ripiani.includes(r) ? 'var(--senape)' : 'var(--superficie-2)'} />
+      ))}
+      <rect x="5" y="42" width="24" height="16" rx="2" fill="var(--superficie-2)" />
+      <line x1="5" y1="24.5" x2="29" y2="24.5" stroke="var(--testo-tenue)" strokeWidth="1" />
+      <line x1="5" y1="40.5" x2="29" y2="40.5" stroke="var(--testo-tenue)" strokeWidth="1" />
+    </svg>
   );
 }

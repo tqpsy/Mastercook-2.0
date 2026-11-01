@@ -27,6 +27,8 @@ export interface ConsiglioCucinato {
   entroFreezer: string;
   /** Su quale ripiano del frigo metterlo. */
   ripiano: string;
+  /** Il ripiano da segnare nel disegno del frigo: «centrale» per i delicati, altrimenti «alto» o centrale. */
+  ripiani: ('alto' | 'centrale')[];
 }
 
 export function consiglioCucinato(regola: Pick<RegolaCotti, 'id' | 'consigliati'> | undefined, cucinatoIl: string, ultimoPasto: string): ConsiglioCucinato {
@@ -43,5 +45,6 @@ export function consiglioCucinato(regola: Pick<RegolaCotti, 'id' | 'consigliati'
       regola && DELICATI.has(regola.id)
         ? 'Ripiano centrale, in fondo (il punto più freddo e stabile), in un contenitore chiuso. Mai nella porta.'
         : 'Ripiano alto o centrale, in un contenitore chiuso: i cibi cotti stanno sopra carne e pesce crudi. Mai nella porta.',
+    ripiani: regola && DELICATI.has(regola.id) ? ['centrale'] : ['alto', 'centrale'],
   };
 }

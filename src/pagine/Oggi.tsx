@@ -4,7 +4,7 @@ import { iconaIngrediente } from '../dominio/iconeCibo';
 import { righeAttive, useFamiglia, useVista } from '../dati/contesto';
 import { useIndice } from '../dati/indice';
 import { valutaPerFamiglia } from '../dominio/compatibilita';
-import { type ConfermaPasto as Conferma, daConfermare, NOME_ESITO } from '../dominio/consumi';
+import { type ConfermaPasto as Conferma, daConfermare, type EsitoPasto, NOME_ESITO } from '../dominio/consumi';
 import type { CategoriaPasto, Eccezione, PortataMenu } from '../dominio/menu';
 import type { Indice, Ricetta } from '../dominio/ricette';
 import { daUsarePresto, giorniTra, oggi, piuGiorni, statoData } from '../dominio/scadenze';
@@ -163,6 +163,8 @@ export function Oggi({ vai }: { vai: (scheda: 'spesa' | 'casa' | 'menu') => void
   useProlungaFissi(piuGiorni(giorno, 13));
   const { attive } = useConferme(vista);
   const [aperto, setAperto] = useState<string | null>(null);
+  /** «Non è andata così?» dal foglio degli avanzi: la risposta già scelta. */
+  const [esitoAperto, setEsitoAperto] = useState<EsitoPasto | undefined>(undefined);
   /** I piatti appena segnati «mangiato»: si chiede se è avanzato qualcosa. */
   const [segnati, setSegnati] = useState<string[] | null>(null);
   /** Il piatto che si segna «cucinato» (preparato in anticipo). */
@@ -325,7 +327,11 @@ export function Oggi({ vai }: { vai: (scheda: 'spesa' | 'casa' | 'menu') => void
           portata={portataAperta}
           titolo={titoloDi(indice, portataAperta)}
           attiva={attive.get(portataAperta.id)}
-          chiudi={() => setAperto(null)}
+          esitoIniziale={esitoAperto}
+          chiudi={() => {
+            setAperto(null);
+            setEsitoAperto(undefined);
+          }}
         />
       )}
       {indice && dettaglio && (
@@ -368,7 +374,8 @@ export function Oggi({ vai }: { vai: (scheda: 'spesa' | 'casa' | 'menu') => void
           titolo={(p) => titoloDi(indice, p)}
           altro={
             segnati.length === 1
-              ? () => {
+              ? (esito) => {
+                  setEsitoAperto(esito);
                   setAperto(segnati[0]);
                   setSegnati(null);
                 }

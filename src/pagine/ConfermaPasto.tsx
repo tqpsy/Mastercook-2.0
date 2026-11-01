@@ -1,15 +1,16 @@
-import { useMemo, useState } from 'react';
+import { type ReactNode, useMemo, useState } from 'react';
 import { IconaCibo } from '../ui/IconaCibo';
 import { iconaIngrediente } from '../dominio/iconeCibo';
 import { useFamiglia, useVista, type Vista } from '../dati/contesto';
 import { avanziDi, type ConfermaPasto as Conferma, type Consumo, type EsitoPasto, giorniAvanzo, NOME_ESITO, porzioniPortata, previstoPortata } from '../dominio/consumi';
 import type { PortataMenu } from '../dominio/menu';
-import { type Indice, normalizza, type Ricetta } from '../dominio/ricette';
+import { iconaRicetta, type Indice, normalizza, type Ricetta } from '../dominio/ricette';
 import { oggi, piuGiorni } from '../dominio/scadenze';
 import { formatta, formattaGiorno, leggiNumero } from '../dominio/unita';
 import { Foglio } from '../ui/Foglio';
 import { usePronti } from './Cucinato';
 import type { DatiMenu } from './Menu';
+import { useIcone } from './Ricette';
 
 const numero = (x: unknown) => (x === null || x === undefined ? null : Number(x));
 
@@ -49,38 +50,96 @@ export function lottoAvanzo(nome: string, quantita: number, luogo: 'frigo' | 'fr
 
 export const testoNumero = (n: number) => String(n).replace('.', ',');
 
-/** Quante porzioni sono avanzate: − e + di una porzione, oppure si scrive (anche mezze, «1,5»). */
-export function PorzioniAvanzate({ valore, cambia, piatto, nome = 'Porzioni avanzate' }: { valore: string; cambia: (v: string) => void; piatto?: string; nome?: string }) {
+/** Quante porzioni: − e + di una porzione, oppure si scrive (anche mezze, «1,5»). `grande`: al centro del foglio. */
+export function PorzioniAvanzate({
+  valore,
+  cambia,
+  piatto,
+  nome = 'Porzioni avanzate',
+  grande,
+}: {
+  valore: string;
+  cambia: (v: string) => void;
+  piatto?: string;
+  nome?: string;
+  grande?: boolean;
+}) {
   const di = piatto ? `: ${piatto}` : '';
   const etichetta = `${nome}${di}`;
   const n = leggiNumero(valore) ?? 0;
   const passo = (d: number) => cambia(testoNumero(Math.max(0, Math.round((n + d) * 2) / 2)));
   return (
-    <span className="contatore">
-      <button type="button" className="bottone piccolo" aria-label={`Una porzione in meno${di}`} disabled={n <= 0} onClick={() => passo(-1)}>
+    <span className={`porzioni-contatore${grande ? ' grande' : ''}`}>
+      <button type="button" className="bottone tondo" aria-label={`Una porzione in meno${di}`} disabled={n <= 0} onClick={() => passo(-1)}>
         −
       </button>
       <input className="dato" inputMode="decimal" aria-label={etichetta} value={valore} onChange={(e) => cambia(e.target.value)} onFocus={(e) => e.target.select()} />
-      <button type="button" className="bottone piccolo" aria-label={`Una porzione in più${di}`} onClick={() => passo(1)}>
+      <button type="button" className="bottone tondo piu" aria-label={`Una porzione in più${di}`} onClick={() => passo(1)}>
         +
       </button>
     </span>
   );
 }
 
-export function SceltaLuogo({ luogo, cambia }: { luogo: 'frigo' | 'freezer'; cambia: (l: 'frigo' | 'freezer') => void }) {
+/** Frigo o freezer: due riquadri grandi, con sotto fino a quando si tiene. */
+export function SceltaLuogo({
+  luogo,
+  cambia,
+  frigo,
+  freezer,
+  consigliato,
+  etichetta = 'Dove va l’avanzo',
+}: {
+  luogo: 'frigo' | 'freezer';
+  cambia: (l: 'frigo' | 'freezer') => void;
+  frigo?: string;
+  freezer?: string;
+  consigliato?: 'frigo' | 'freezer';
+  etichetta?: string;
+}) {
+  const voci = [
+    { id: 'frigo', icona: '🧊', nome: 'In frigo', dettaglio: frigo },
+    { id: 'freezer', icona: '❄️', nome: 'In freezer', dettaglio: freezer ?? 'fino a 3 mesi' },
+  ] as const;
   return (
-    <div className="scelte segmenti" role="radiogroup" aria-label="Dove va l’avanzo" style={{ display: 'inline-flex' }}>
-      {(['frigo', 'freezer'] as const).map((l) => (
-        <button key={l} type="button" role="radio" aria-checked={luogo === l} aria-pressed={luogo === l} onClick={() => cambia(l)}>
-          {l === 'frigo' ? 'In frigo' : 'In freezer'}
+    <div className="scelta-luogo" role="radiogroup" aria-label={etichetta}>
+      {voci.map((v) => (
+        <button key={v.id} type="button" role="radio" aria-checked={luogo === v.id} aria-pressed={luogo === v.id} aria-label={v.nome} onClick={() => cambia(v.id)}>
+          <span className="icona-luogo" aria-hidden>
+            {v.icona}
+          </span>
+          <span className="nome-luogo">{v.nome}</span>
+          {v.dettaglio && <span className="dettaglio-luogo">{v.dettaglio}</span>}
+          {consigliato === v.id && <span className="consigliato">Consigliato</span>}
         </button>
       ))}
     </div>
   );
 }
 
+/** Il piatto in testa a un foglio: icona nel tondo, nome e una riga sotto. */
+export function TestaPiatto({ icona, titolo, sotto }: { icona?: string; titolo: string; sotto?: ReactNode }) {
+  return (
+    <div className="testa-piatto">
+      <span className="tondo-piatto" aria-hidden>
+        <IconaCibo valore={icona ?? '🍽️'} />
+      </span>
+      <span className="cresce">
+        <strong>{titolo}</strong>
+        {sotto && <span className="tenue piccolo">{sotto}</span>}
+      </span>
+    </div>
+  );
+}
+
 const STIMA = (giorni: number) => `da mangiare entro ${giorni === 1 ? 'domani' : `${giorni} giorni`} (stima, controlla sempre)`;
+
+/** L'icona di un piatto del menu: la ricetta (con l'icona scelta dalla famiglia) o l'avanzo del piatto di prima. */
+function iconaPortata(indice: Indice, icone: Map<string, string>, p: PortataMenu, tutte: PortataMenu[]) {
+  const id = p.ricetta_id ?? (p.avanzo_di ? tutte.find((x) => x.id === p.avanzo_di)?.ricetta_id : null);
+  const r = id ? indice.perId.get(id) : undefined;
+  return r ? iconaRicetta(indice, r, icone.get(r.id)) : '🍽️';
+}
 
 /**
  * «✓ Mangiato»: prima di confermare chiede se è avanzato qualcosa e quante porzioni, piatto per piatto.
@@ -100,11 +159,12 @@ export function SegnaMangiato({
   portate: PortataMenu[];
   titolo: (p: PortataMenu) => string;
   /** Per un piatto solo: apre le altre domande (quantità diverse, altro piatto, saltato). */
-  altro?: () => void;
+  altro?: (esito: EsitoPasto) => void;
   chiudi: () => void;
 }) {
   const { esegui } = useFamiglia();
   const pronti = usePronti();
+  const icone = useIcone();
   const piatti = useMemo(
     () =>
       portate.map((p) => {
@@ -115,15 +175,24 @@ export function SegnaMangiato({
           : avanziDi(p, dati.portate).reduce((t, a) => t + porzioniPortata(a, dati.persone, dati.eccezioni, dati.ospiti), 0);
         const origine = p.avanzo_di ? dati.portate.find((x) => x.id === p.avanzo_di) : undefined;
         const ricettaId = p.ricetta_id ?? origine?.ricetta_id;
-        return { p, titolo: titolo(p), perDopo, pronto, giorni: giorniAvanzo(ricettaId ? indice.perId.get(ricettaId) : null, indice.catalogo.regole_cotti) };
+        return {
+          p,
+          titolo: titolo(p),
+          icona: iconaPortata(indice, icone, p, dati.portate),
+          mangiano: porzioniPortata(p, dati.persone, dati.eccezioni, dati.ospiti),
+          perDopo,
+          pronto,
+          giorni: giorniAvanzo(ricettaId ? indice.perId.get(ricettaId) : null, indice.catalogo.regole_cotti),
+        };
       }),
-    [portate, dati, indice, titolo, pronti],
+    [portate, dati, indice, titolo, pronti, icone],
   );
   const [quante, setQuante] = useState<Record<string, string>>(() => Object.fromEntries(piatti.map((x) => [x.p.id, testoNumero(Math.round(x.perDopo * 2) / 2)])));
   const [luogo, setLuogo] = useState<'frigo' | 'freezer'>('frigo');
   const [errore, setErrore] = useState<string | null>(null);
   const valori = piatti.map((x) => ({ ...x, q: leggiNumero(quante[x.p.id] ?? '') }));
   const totale = valori.reduce((t, x) => t + (x.q && x.q > 0 ? x.q : 0), 0);
+  const uno = valori.length === 1;
 
   async function conferma() {
     const sbagliato = valori.find((x) => x.q === null || x.q < 0);
@@ -141,37 +210,36 @@ export function SegnaMangiato({
   }
 
   const unaStima = valori.find((x) => x.q && x.q > 0 && x.giorni !== null);
+  const nota = (x: (typeof valori)[number]) =>
+    x.pronto
+      ? `🍳 Cucinato: in ${x.pronto.luogo} ce ne sono ${testoNumero(x.pronto.quantita)}`
+      : x.perDopo > 0
+        ? `Nel menu dei giorni dopo ne avete messe ${testoNumero(x.perDopo)}`
+        : `${testoNumero(x.mangiano)} ${x.mangiano === 1 ? 'porzione' : 'porzioni'} a tavola`;
   return (
     <Foglio titolo="È avanzato qualcosa?" chiudi={chiudi}>
-      <p className="tenue" style={{ marginTop: 0 }}>
-        Se sono avanzate delle porzioni le metto in Casa, tra le cose da usare presto. Se avete finito tutto, lascia 0.
-      </p>
-      <ul className="elenco avanzi-mangiato" aria-label="Porzioni avanzate">
+      <ul className={`avanzi-mangiato${uno ? ' uno' : ''}`} aria-label="Porzioni avanzate">
         {valori.map((x) => (
-          <li key={x.p.id} className="riga spazio" style={{ flexWrap: 'wrap' }}>
-            <span className="cresce">
-              <strong>{x.titolo}</strong>
-              {x.pronto ? (
-                <span className="tenue piccolo" style={{ display: 'block' }}>
-                  🍳 Cucinato: in {x.pronto.luogo} ce ne sono {testoNumero(x.pronto.quantita)}
-                </span>
-              ) : (
-                x.perDopo > 0 && (
-                  <span className="tenue piccolo" style={{ display: 'block' }}>
-                    Nel menu dei giorni dopo ne avete messe {testoNumero(x.perDopo)}
-                  </span>
-                )
-              )}
-            </span>
-            <PorzioniAvanzate piatto={x.titolo} valore={quante[x.p.id] ?? ''} cambia={(v) => setQuante({ ...quante, [x.p.id]: v })} />
+          <li key={x.p.id}>
+            <TestaPiatto icona={x.icona} titolo={x.titolo} sotto={nota(x)} />
+            <div className="porzioni-blocco">
+              <PorzioniAvanzate grande={uno} piatto={x.titolo} valore={quante[x.p.id] ?? ''} cambia={(v) => setQuante({ ...quante, [x.p.id]: v })} />
+              {uno && <span className="tenue piccolo">{x.q ? (x.q === 1 ? 'porzione avanzata' : 'porzioni avanzate') : 'finito tutto'}</span>}
+            </div>
           </li>
         ))}
       </ul>
       {totale > 0 && (
         <div className="campo">
-          <SceltaLuogo luogo={luogo} cambia={setLuogo} />
-          <p className="tenue" style={{ margin: '6px 0 0' }}>
-            {luogo === 'frigo' && unaStima ? `In frigo: ${STIMA(unaStima.giorni!)}.` : 'La data per consumarlo la puoi scrivere in Casa.'}
+          <span>Dove le metti?</span>
+          <SceltaLuogo
+            luogo={luogo}
+            cambia={setLuogo}
+            frigo={unaStima ? `entro ${formattaGiorno(piuGiorni(oggi(), unaStima.giorni!))}` : 'data da scrivere'}
+          />
+          <p className="tenue piccolo" style={{ margin: '8px 0 0' }}>
+            {luogo === 'frigo' && unaStima ? `In frigo: ${STIMA(unaStima.giorni!)}.` : 'La data per consumarlo la puoi scrivere in Casa.'} Le trovi in Casa, tra le cose
+            da usare presto.
           </p>
         </div>
       )}
@@ -180,13 +248,20 @@ export function SegnaMangiato({
           {errore}
         </div>
       )}
-      <button className="bottone primario pieno" onClick={conferma}>
+      <button className="bottone primario pieno grande" onClick={conferma}>
         {totale > 0 ? `✓ Mangiato · ${testoNumero(totale)} ${totale === 1 ? 'porzione avanzata' : 'porzioni avanzate'}` : '✓ Mangiato, niente avanzi'}
       </button>
       {altro && (
-        <button className="link" style={{ marginTop: 10 }} onClick={altro}>
-          Non è andata come previsto? Quantità diverse, altro piatto o saltato
-        </button>
+        <div className="non-previsto">
+          <span className="tenue piccolo">Non è andata così?</span>
+          <div className="riga" role="group" aria-label="Non è andata così?">
+            {ESITI.filter((e) => e.id !== 'come_previsto' && !(valori[0]?.pronto && e.id === 'quantita_diverse')).map((e) => (
+              <button key={e.id} type="button" className="bottone piccolo" onClick={() => altro(e.id)}>
+                {e.nome}
+              </button>
+            ))}
+          </div>
+        </div>
       )}
     </Foglio>
   );
@@ -209,6 +284,7 @@ export function ConfermaPasto({
   portata,
   titolo,
   attiva,
+  esitoIniziale,
   chiudi,
 }: {
   indice: Indice;
@@ -216,6 +292,8 @@ export function ConfermaPasto({
   portata: PortataMenu;
   titolo: string;
   attiva?: Conferma;
+  /** Arrivando da «Non è andata così?»: la risposta già scelta. */
+  esitoIniziale?: EsitoPasto;
   chiudi: () => void;
 }) {
   const { esegui } = useFamiglia();
@@ -240,7 +318,7 @@ export function ConfermaPasto({
     ? Math.max(0, pronto.quantita - porzioniPortata(portata, dati.persone, dati.eccezioni, dati.ospiti))
     : avanziDi(portata, dati.portate).reduce((t, a) => t + porzioniPortata(a, dati.persone, dati.eccezioni, dati.ospiti), 0);
   const usatePrima = attiva ? consumi.filter((c) => c.conferma_id === attiva.id) : [];
-  const [esito, setEsito] = useState<EsitoPasto>(attiva?.esito ?? 'come_previsto');
+  const [esito, setEsito] = useState<EsitoPasto>(attiva?.esito ?? esitoIniziale ?? 'come_previsto');
   const [quantita, setQuantita] = useState<Record<string, string>>(() =>
     Object.fromEntries(
       previsto.map((c) => {
