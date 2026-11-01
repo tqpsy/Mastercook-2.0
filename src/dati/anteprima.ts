@@ -364,8 +364,34 @@ const EFFETTI: Record<string, Effetto> = {
     if (esistente) righe.prodotto = (righe.prodotto ?? []).map((p) => (p === esistente ? { ...p, ...campi, in_attesa: true } : p));
     else aggiungi('prodotto', () => ({ ...campi, versione: 1 }))(righe, d, famiglia);
   },
+  cucina_portata: (righe, d, famiglia) => {
+    if ((righe.lotto ?? []).some((l) => l.portata_id === d.portata_id && !l.eliminato_il)) return;
+    aggiungi('lotto', (x) => ({
+      ingrediente_id: 'ing:avanzo',
+      nome: x.nome ?? null,
+      quantita: Number(x.porzioni),
+      unita: 'pz',
+      luogo: x.luogo ?? 'frigo',
+      data_limite: x.data_limite ?? null,
+      tipo_data: x.tipo_data ?? 'sconosciuta',
+      fonte_data: x.fonte_data ?? null,
+      calcolata_il: x.calcolata_il ?? null,
+      origine: 'avanzo',
+      portata_id: x.portata_id,
+      versione: 1,
+    }))(righe, d, famiglia);
+  },
   conferma_pasto: (righe, d, famiglia) => {
     if ((righe.conferma_pasto ?? []).some((c) => c.id === d.id)) return;
+    // Piatto già cucinato: restano nel piatto pronto le porzioni avanzate, nessun lotto nuovo.
+    const pronto = (righe.lotto ?? []).find((l) => l.portata_id === d.portata_id && !l.eliminato_il);
+    if (pronto) {
+      const resta = Array.isArray(d.avanzi) && (d.esito === 'come_previsto' || d.esito === 'quantita_diverse')
+        ? (d.avanzi as Record<string, unknown>[]).reduce((t, a) => t + Number(a.quantita), 0)
+        : null;
+      d = { ...d, avanzi: [] };
+      if (resta !== null) cambiaQuantita(righe, pronto.id, () => resta);
+    }
     const prima = (righe.conferma_pasto ?? []).find((c) => c.portata_id === d.portata_id && c.attiva);
     if (prima && d.revisione_attesa == null) return;
     righe.conferma_pasto = (righe.conferma_pasto ?? []).map((c) => (c === prima ? { ...c, attiva: false, in_attesa: true } : c));

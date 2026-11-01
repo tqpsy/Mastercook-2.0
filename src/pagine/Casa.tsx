@@ -27,6 +27,8 @@ export interface Lotto {
   fonte_data: string | null;
   chiuso_il: string | null;
   note: string | null;
+  /** Il piatto del menu cucinato in anticipo, se il lotto è un piatto pronto. */
+  portata_id?: string | null;
   versione: number;
   in_attesa?: boolean;
 }
@@ -43,6 +45,7 @@ const aLotto = (r: RigaInVista): Lotto => ({
   fonte_data: (r.fonte_data as string | null) ?? null,
   chiuso_il: (r.chiuso_il as string | null) ?? null,
   note: (r.note as string | null) ?? null,
+  portata_id: (r.portata_id as string | null) ?? null,
   versione: Number(r.versione ?? 1),
   in_attesa: r.in_attesa,
 });

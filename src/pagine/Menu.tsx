@@ -29,6 +29,8 @@ import { RICETTE_PER_PASTO } from '../dominio/proposte';
 import { filtra, iconaRicetta, type Indice } from '../dominio/ricette';
 import { ALLERGENI_UE, ESIGENZE, INTOLLERANZE, type VoceVincolo } from '../dominio/vincoli';
 import { IdeePerPasto, ProponiSettimana } from './Proposte';
+import { useConferme } from './ConfermaPasto';
+import { SegnaCucinato, usePronti } from './Cucinato';
 import { oggi, piuGiorni } from '../dominio/scadenze';
 import { Foglio } from '../ui/Foglio';
 import { ICONA_ESITO, motiviInBreve, useIcone } from './Ricette';
@@ -789,6 +791,9 @@ function SchedaPiatto({
   const delPasto = dati.portate.filter((x) => x.data === p.data && x.categoria === p.categoria);
   const senzaPiatto = dati.persone.filter((x) => delPasto.every((q) => dati.eccezioni.some((e) => e.portata_id === q.id && e.membro_id === x.id && e.tipo === 'non_mangia')));
   const [cambia, setCambia] = useState(false);
+  const [cucina, setCucina] = useState(false);
+  const pronto = usePronti().get(p.id);
+  const confermato = useConferme(useVista()).attive.has(p.id);
   const [data, setData] = useState(p.data);
   const [categoria, setCategoria] = useState(p.categoria);
   const [note, setNote] = useState(p.note ?? '');
@@ -888,6 +893,22 @@ function SchedaPiatto({
       </div>
 
       {p.ricetta_id && !p.avanzo_di && <DuraPiuGiorni dati={dati} portata={p} cucinate={d.porzioni + d.dopo} />}
+      {!p.avanzo_di && !confermato && (
+        <div className="campo" style={{ marginTop: 16 }}>
+          <span>Preparato in anticipo?</span>
+          {pronto ? (
+            <p className="tenue" style={{ margin: 0 }}>
+              🍳 Cucinato: in {pronto.luogo} {pronto.quantita === 1 ? 'c’è' : 'ci sono'} {formattaPorzioni(pronto.quantita)}
+              {pronto.data_limite && `, da mangiare entro ${dataLunga(pronto.data_limite)}`}.
+            </p>
+          ) : (
+            <button className="bottone" aria-label={`Cucinato: ${d.titolo}`} onClick={() => setCucina(true)}>
+              🍳 Cucinato
+            </button>
+          )}
+        </div>
+      )}
+      {cucina && <SegnaCucinato indice={indice} dati={dati} portata={p} titolo={d.titolo} chiudi={() => setCucina(false)} />}
 
       <div className="campo">
         {dati.persone.length > 1 && (
