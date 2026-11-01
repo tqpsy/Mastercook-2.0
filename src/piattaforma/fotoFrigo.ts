@@ -3,7 +3,7 @@
  * Per una famiglia tenuta solo sul telefono la chiave resta sul telefono e la foto va da qui a Gemini.
  * La foto non si salva da nessuna parte.
  */
-import { riconosci } from '../../supabase/functions/foto-frigo/nucleo';
+import { riconosci, testoFrigo } from '../../supabase/functions/foto-frigo/nucleo';
 import type { Riconosciuto } from '../dominio/fotoFrigo';
 import { chiamaLocale, chiaveGeminiLocale } from './locale/motore';
 import { type Dove, supabase } from './supabase';
@@ -23,20 +23,21 @@ async function base64(file: Blob): Promise<string> {
   return btoa(s);
 }
 
-export async function riconosciFoto(famiglia_id: string, foto: Blob, luogo?: Luogo): Promise<{ alimenti: Riconosciuto[] } | { errore: ErroreFoto; dettaglio?: string }> {
+/** `frigo`: il frigo della famiglia descritto a parole, perché Gemini dica anche dove vede ogni alimento. */
+export async function riconosciFoto(famiglia_id: string, foto: Blob, luogo?: Luogo, frigo: string | null = null): Promise<{ alimenti: Riconosciuto[] } | { errore: ErroreFoto; dettaglio?: string }> {
   if (!navigator.onLine) return { errore: 'rete' };
   if (luogo?.dove === 'locale') {
     try {
       const chiave = await chiaveGeminiLocale(luogo.utenteId, famiglia_id);
       if (!chiave) return { errore: 'non_configurata' };
-      const esito = await riconosci(await base64(foto), chiave);
+      const esito = await riconosci(await base64(foto), chiave, fetch, undefined, testoFrigo(frigo));
       return 'errore' in esito ? { errore: esito.errore, dettaglio: esito.dettaglio } : { alimenti: esito.alimenti };
     } catch {
       return { errore: 'rete' };
     }
   }
   try {
-    const { data, error } = await supabase().functions.invoke('foto-frigo', { body: { famiglia_id, immagine: await base64(foto) } });
+    const { data, error } = await supabase().functions.invoke('foto-frigo', { body: { famiglia_id, immagine: await base64(foto), ...(frigo ? { frigo } : {}) } });
     if (error) {
       const risposta = (error as { context?: Response }).context;
       const corpo = risposta && typeof risposta.json === 'function' ? await risposta.json().catch(() => null) : null;
