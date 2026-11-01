@@ -13,6 +13,7 @@ import { formatta, formattaGiorno } from '../dominio/unita';
 import { Foglio } from '../ui/Foglio';
 import { Foto, riduciFoto } from '../ui/Foto';
 import { Icona } from '../ui/Icona';
+import { Sigla, type SiglaPersona, sigleDi } from '../ui/Sigla';
 import { useLotti } from './Casa';
 import { ConfermaPasto, useConferme } from './ConfermaPasto';
 import { chiLoMangia, type DatiMenu, descrivi, useDatiMenu, useProlungaFissi } from './Menu';
@@ -94,7 +95,8 @@ interface Aperta {
   chi: string[];
 }
 
-const SEMPRE = new Set(['colazione', 'pranzo', 'merenda', 'cena']);
+/** Sempre in Oggi; merenda, spuntino e i pasti della famiglia solo se accesi nel Menu o se oggi hanno un piatto. */
+const SEMPRE = new Set(['colazione', 'pranzo', 'cena']);
 const mezze = (n: number) => Math.max(0.5, Math.round(n * 2) / 2);
 const porzioniTesto = (n: number) => (n === 1 ? '1 porzione' : `${n.toLocaleString('it-IT')} porzioni`);
 
@@ -135,9 +137,11 @@ export function Oggi({ vai }: { vai: (scheda: 'spesa' | 'casa' | 'menu') => void
   const [aperto, setAperto] = useState<string | null>(null);
   const [ricetta, setRicetta] = useState<Aperta | null>(null);
   const [spesa, setSpesa] = useState(false);
+  /** Il pasto di cui è aperto il dettaglio (conferme piatto per piatto, porzioni, avvisi, foto). */
+  const [pastoAperto, setPastoAperto] = useState<string | null>(null);
   const adesso = new Date();
   const diOggi = dati.portate.filter((p) => p.data === giorno);
-  // Colazione, pranzo, merenda e cena ci sono sempre; gli altri pasti se accesi o se oggi hanno un piatto.
+  // Colazione, pranzo e cena ci sono sempre; gli altri pasti se accesi o se oggi hanno un piatto: 3, 4 o 5 riquadri.
   const pasti = dati.categorie.filter((c) => SEMPRE.has(c.valore) || c.attiva || diOggi.some((p) => p.categoria === c.valore));
   const evidenza = pastoInEvidenza(pasti, diOggi, attive, adesso);
   const arretrati = daConfermare(dati.portate, attive, giorno).filter((p) => p.data < giorno);
@@ -145,25 +149,13 @@ export function Oggi({ vai }: { vai: (scheda: 'spesa' | 'casa' | 'menu') => void
   const daMangiare = diOggi.filter((p) => !attive.has(p.id));
   const bisogni = indice ? spesaDelGiorno(indice, daMangiare, dati.persone, dati.eccezioni, dati.portate, dati.ospiti, lotti) : [];
   const mancano = bisogni.filter((b) => b.manca > 0).length;
-  const presto = daUsarePresto(lotti, giorno).slice(0, 3);
+  const presto = daUsarePresto(lotti, giorno);
   const data = adesso.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
   const nome = String(io?.nome ?? famiglia?.nome ?? '').split(' ')[0];
 
-  const pasto = (c: CategoriaPasto, inEvidenza = false) =>
-    indice && (
-      <Pasto
-        key={c.valore}
-        indice={indice}
-        dati={dati}
-        categoria={c}
-        portate={diOggi.filter((p) => p.categoria === c.valore)}
-        attive={attive}
-        inEvidenza={inEvidenza}
-        apriConferma={setAperto}
-        apriRicetta={setRicetta}
-        aggiungi={() => vai('menu')}
-      />
-    );
+  const sigle = sigleDi(dati.persone);
+  const iEvidenza = evidenza ? pasti.indexOf(evidenza) : -1;
+  const dettaglio = pasti.find((c) => c.valore === pastoAperto);
 
   return (
     <div className="pagina-oggi">
@@ -180,60 +172,82 @@ export function Oggi({ vai }: { vai: (scheda: 'spesa' | 'casa' | 'menu') => void
         <h2 className="titolo-grande">{nome ? `${saluto(adesso)}, ${nome}` : saluto(adesso)}</h2>
       </header>
 
-      <section aria-label="Oggi si mangia" className="oggi-pasti">
+      {indice && presto.length > 0 && (
+        // Una tendina chiusa di base, come in Casa: si vede subito quanti prodotti stanno per scadere.
+        <section className="scheda oggi-presto" aria-label="Da usare presto">
+          <details>
+            <summary>
+              <h3 style={{ display: 'inline', margin: 0 }}>
+                Da usare presto <span className="etichetta">{presto.length}</span>
+              </h3>
+              <span className="primo-presto">
+                {presto
+                  .slice(0, 3)
+                  .map((l) => indice.nome(l.ingrediente_id).toLowerCase())
+                  .join(', ')}
+                {presto.length > 3 && '…'}
+              </span>
+            </summary>
+            <ul className="mattonelle">
+              {presto.slice(0, 6).map((l) => {
+                const s = statoData(l, giorno);
+                const mancano = l.data_limite ? giorniTra(giorno, l.data_limite) : null;
+                const quando =
+                  s === 'sconosciuta' || mancano === null
+                    ? 'da controllare'
+                    : mancano < 0
+                      ? 'scaduto'
+                      : mancano === 0
+                        ? 'oggi'
+                        : mancano === 1
+                          ? 'domani'
+                          : `${mancano} giorni`;
+                const tono = mancano !== null && mancano <= 1 ? 'urgente' : s === 'presto' ? 'presto' : 'calmo';
+                return (
+                  <li key={l.id}>
+                    <button className={`mattonella ${tono}`} onClick={() => vai('casa')}>
+                      <strong>{indice.nome(l.ingrediente_id)}</strong>
+                      <span>{quando}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+            <button className="link" style={{ marginTop: 8 }} onClick={() => vai('casa')}>
+              {presto.length > 6 ? `Tutti e ${presto.length} in Casa` : 'Apri in Casa'}
+            </button>
+          </details>
+        </section>
+      )}
+
+      {/* I pasti di oggi come riquadri: 2 per riga sul telefono (con 3 o 5 pasti l'ultimo prende tutta la riga),
+          tutti in una riga sul tablet e sul telefono girato. */}
+      <section aria-label="Oggi si mangia" className={`oggi-pasti riquadri${pasti.length >= 5 ? ' fitto' : ''}`}>
         {!indice ? (
           <p className="tenue">Sto caricando il menu…</p>
         ) : (
-          <>
-            {evidenza && pasto(evidenza, true)}
-            {diOggi.length === 0 && <div className="avviso info">Niente in menu per oggi: lo prepari dalla scheda Menu.</div>}
-            {presto.length > 0 && (
-              <section aria-label="Da usare presto" className="oggi-presto">
-                <div className="riga spazio">
-                  <h3 className="sopratitolo">Da usare presto</h3>
-                  <button className="link" onClick={() => vai('casa')}>
-                    Tutto
-                  </button>
-                </div>
-                <ul className="mattonelle">
-                  {presto.map((l) => {
-                    const s = statoData(l, giorno);
-                    const mancano = l.data_limite ? giorniTra(giorno, l.data_limite) : null;
-                    const quando =
-                      s === 'sconosciuta' || mancano === null
-                        ? 'da controllare'
-                        : mancano < 0
-                          ? 'scaduto'
-                          : mancano === 0
-                            ? 'oggi'
-                            : mancano === 1
-                              ? 'domani'
-                              : `${mancano} giorni`;
-                    const tono = mancano !== null && mancano <= 1 ? 'urgente' : s === 'presto' ? 'presto' : 'calmo';
-                    return (
-                      <li key={l.id}>
-                        <button className={`mattonella ${tono}`} onClick={() => vai('casa')}>
-                          <strong>{indice.nome(l.ingrediente_id)}</strong>
-                          <span>{quando}</span>
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </section>
-            )}
-            {pasti.some((c) => c !== evidenza) && (
-              <section aria-label="Il resto di oggi" className="oggi-resto">
-                <h3 className="sopratitolo">{evidenza ? 'Il resto di oggi' : 'Oggi'}</h3>
-                <div className="scheda elenco-pasti">{pasti.filter((c) => c !== evidenza).map((c) => pasto(c))}</div>
-              </section>
-            )}
-          </>
+          pasti.map((c, i) => (
+            <Riquadro
+              key={c.valore}
+              indice={indice}
+              dati={dati}
+              sigle={sigle}
+              categoria={c}
+              portate={diOggi.filter((p) => p.categoria === c.valore)}
+              attive={attive}
+              inEvidenza={c === evidenza}
+              daConfermare={iEvidenza < 0 || i <= iEvidenza}
+              apriRicetta={setRicetta}
+              apriDettaglio={() => setPastoAperto(c.valore)}
+              aggiungi={() => vai('menu')}
+            />
+          ))
         )}
       </section>
+      {indice && diOggi.length === 0 && <div className="avviso info oggi-vuoto">Niente in menu per oggi: lo prepari dalla scheda Menu.</div>}
 
       <div className="oggi-lato">
-        <button className="bottone pieno spesa-oggi" onClick={() => setSpesa(true)} disabled={!indice}>
+        <button className="bottone pieno primario spesa-oggi" onClick={() => setSpesa(true)} disabled={!indice}>
           <Icona nome="spesa" />
           Spesa per oggi{mancano ? ` · ${mancano} ${mancano === 1 ? 'cosa' : 'cose'}` : ''}
         </button>
@@ -276,6 +290,26 @@ export function Oggi({ vai }: { vai: (scheda: 'spesa' | 'casa' | 'menu') => void
           chiudi={() => setAperto(null)}
         />
       )}
+      {indice && dettaglio && (
+        <Foglio titolo={`${dettaglio.nome} di oggi`} chiudi={() => setPastoAperto(null)}>
+          <ul className="elenco dettaglio-pasto">
+            {diOggi
+              .filter((p) => p.categoria === dettaglio.valore)
+              .map((p) => (
+                <PiattoDiOggi
+                  key={p.id}
+                  indice={indice}
+                  dati={dati}
+                  portata={p}
+                  pasto={dettaglio.nome}
+                  conferma={attive.get(p.id)}
+                  apriConferma={() => setAperto(p.id)}
+                  apriRicetta={setRicetta}
+                />
+              ))}
+          </ul>
+        </Foglio>
+      )}
       {indice && ricetta && <RicettaDiOggi indice={indice} dati={dati} aperta={ricetta} chiudi={() => setRicetta(null)} />}
       {indice && spesa && (
         <SpesaDiOggi
@@ -293,65 +327,159 @@ export function Oggi({ vai }: { vai: (scheda: 'spesa' | 'casa' | 'menu') => void
   );
 }
 
-/** Un pasto di oggi: i suoi piatti, chi mangia altro, gli avvisi per le esigenze e la conferma. */
-function Pasto({
+/** Un piatto in un riquadro: il nome (tocco = ricetta) e le sigle di chi lo mangia. */
+interface RigaRiquadro {
+  chiave: string;
+  titolo: string;
+  ricetta?: Ricetta;
+  porzioni: number;
+  chi: string[];
+  esito?: 'adatta' | 'da_verificare' | 'non_adatta';
+  /** «Ricetta per Sara: …» per i piatti a parte. */
+  perChi?: string;
+  nota?: string;
+}
+
+/**
+ * Un pasto di oggi come riquadro: i piatti con le sigle di chi li mangia (anche i piatti a parte), «✓ Mangiato»
+ * per il prossimo pasto e quelli già passati, «⋯» per il dettaglio (correggere, foto, porzioni, avvisi).
+ */
+function Riquadro({
   indice,
   dati,
+  sigle,
   categoria: c,
   portate,
   attive,
   inEvidenza,
-  apriConferma,
+  daConfermare,
   apriRicetta,
+  apriDettaglio,
   aggiungi,
 }: {
   indice: Indice;
   dati: DatiMenu;
+  sigle: Map<string, SiglaPersona>;
   categoria: CategoriaPasto;
   portate: PortataMenu[];
   attive: Map<string, Conferma>;
   inEvidenza: boolean;
-  apriConferma: (id: string) => void;
+  daConfermare: boolean;
   apriRicetta: (a: Aperta) => void;
+  apriDettaglio: () => void;
   aggiungi: () => void;
 }) {
-  const fatto = portate.length > 0 && portate.every((p) => attive.has(p.id));
-  const aTavola = dati.persone.length;
+  const { esegui } = useFamiglia();
+  const fatte = portate.filter((p) => attive.has(p.id));
+  const fatto = portate.length > 0 && fatte.length === portate.length;
+  const mancano = portate.filter((p) => !attive.has(p.id));
+  const esiti = new Set(fatte.map((p) => attive.get(p.id)!.esito));
+  const righe: RigaRiquadro[] = [];
+  for (const p of portate) {
+    const d = descrivi(indice, dati, p);
+    const origine = p.avanzo_di ? dati.portate.find((x) => x.id === p.avanzo_di) : undefined;
+    const ricetta = d.ricetta ?? (origine?.ricetta_id ? indice.perId.get(origine.ricetta_id) : undefined);
+    const ospiti = dati.ospiti.find((o) => o.data === p.data && o.categoria === p.categoria && o.adulti + o.bambini > 0);
+    righe.push({
+      chiave: p.id,
+      titolo: d.titolo,
+      ricetta,
+      porzioni: mezze(d.porzioni + d.dopo),
+      chi: dati.persone.filter((x) => !d.eccezioni.some((e) => e.membro_id === x.id)).map((x) => x.id),
+      esito: d.valutazione?.esito,
+      nota: [p.avanzo_di && 'avanzo', ospiti && `+${ospiti.adulti + ospiti.bambini} ospiti`].filter(Boolean).join(' · ') || undefined,
+    });
+    for (const e of d.eccezioni.filter((x) => x.tipo === 'alternativa')) {
+      const persona = dati.persone.find((x) => x.id === e.membro_id);
+      if (!persona) continue;
+      const r = e.ricetta_id ? indice.perId.get(e.ricetta_id) : undefined;
+      righe.push({ chiave: e.id, titolo: r?.titolo ?? e.testo ?? 'altro', ricetta: r, porzioni: mezze(e.porzioni ?? persona.porzione), chi: [persona.id], perChi: persona.nome });
+    }
+  }
+  const nomi = (chi: string[]) => {
+    const n = dati.persone.filter((x) => chi.includes(x.id)).map((x) => x.nome);
+    return n.length ? `per ${n.length > 1 ? `${n.slice(0, -1).join(', ')} e ${n[n.length - 1]}` : n[0]}` : 'per nessuno della famiglia';
+  };
+  const conSigle = dati.persone.length > 1;
+
   return (
-    <section className={inEvidenza ? 'pasto-ora' : `pasto-riga${fatto ? ' fatto' : ''}`} aria-label={c.nome}>
-      <div className="riga spazio testa-pasto">
-        {inEvidenza ? (
-          <h3>
-            <span className="pillola-testo">
-              <span aria-hidden>{c.emoji}</span>&nbsp;{c.nome}
-            </span>
-          </h3>
-        ) : (
-          <h3>
-            <span className="tessera" aria-hidden>
-              {c.emoji}
-            </span>
-            {c.nome}
-          </h3>
-        )}
-        {inEvidenza && aTavola > 0 && <span className="a-tavola">{aTavola} a tavola</span>}
-        {!inEvidenza && fatto && <Icona nome="spunta" />}
-      </div>
-      {portate.length === 0 ? (
-        <div className="riga spazio">
-          <p className="tenue" style={{ margin: 0 }}>
-            Niente in menu.
-          </p>
-          <button className="bottone piccolo tondo aggiungi-pasto" aria-label={`Aggiungi a ${c.nome.toLowerCase()} dal Menu`} onClick={aggiungi}>
-            +
+    <section className={`riquadro t-${c.valore}${inEvidenza ? ' prossimo' : ''}${fatto ? ' fatto' : ''}`} aria-label={c.nome}>
+      <div className="testa-riquadro">
+        <h3>
+          <span className="emoji-pasto" aria-hidden>
+            {c.emoji}
+          </span>
+          {c.nome}
+        </h3>
+        {portate.length > 0 && (
+          <button className="altro-riquadro" onClick={apriDettaglio} aria-label={`Dettagli di ${c.nome.toLowerCase()}: conferme, porzioni e avvisi`}>
+            ⋯
           </button>
-        </div>
+        )}
+      </div>
+      {inEvidenza && !fatto && <span className="pillola-prossimo">Prossimo</span>}
+      {portate.length === 0 ? (
+        <>
+          <p className="vuoto-riquadro">Niente in menu</p>
+          <button className="aggiungi-riquadro" aria-label={`Aggiungi a ${c.nome.toLowerCase()} dal Menu`} onClick={aggiungi}>
+            + Aggiungi
+          </button>
+        </>
       ) : (
-        <ul className="elenco">
-          {portate.map((p) => (
-            <PiattoDiOggi key={p.id} indice={indice} dati={dati} portata={p} pasto={c.nome} conferma={attive.get(p.id)} apriConferma={() => apriConferma(p.id)} apriRicetta={apriRicetta} />
-          ))}
+        <ul className="piatti-riquadro">
+          {righe.map((r) => {
+            const dentro = (
+              <>
+                <span className="nome-piatto">
+                  {r.esito && r.esito !== 'adatta' && <span aria-label={NOME_ESITO_PIATTO[r.esito]}>{ICONA_ESITO[r.esito]} </span>}
+                  {r.titolo}
+                  {r.nota && <span className="nota-piatto"> · {r.nota}</span>}
+                </span>
+                {conSigle && (
+                  <span className="sigle">
+                    {[...r.chi].sort((a, b) => (sigle.get(a)?.ordine ?? 0) - (sigle.get(b)?.ordine ?? 0)).map((id) => (
+                      <Sigla key={id} s={sigle.get(id)} />
+                    ))}
+                  </span>
+                )}
+                <span className="solo-lettura"> {nomi(r.chi)}</span>
+              </>
+            );
+            return (
+              <li key={r.chiave}>
+                {r.ricetta ? (
+                  <button
+                    className="piatto-riquadro"
+                    aria-label={r.perChi ? `Ricetta per ${r.perChi}: ${r.titolo}` : `Ricetta: ${r.titolo}`}
+                    onClick={() => apriRicetta({ ricetta: r.ricetta!, porzioni: r.porzioni, pasto: c.nome, chi: r.chi })}
+                  >
+                    {dentro}
+                  </button>
+                ) : (
+                  <div className="piatto-riquadro">{dentro}</div>
+                )}
+              </li>
+            );
+          })}
         </ul>
+      )}
+      {fatto ? (
+        <p className="esito-riquadro">
+          <Icona nome="spunta" /> {esiti.size === 1 ? NOME_ESITO[[...esiti][0]] : 'Confermato'}
+        </p>
+      ) : (
+        daConfermare &&
+        mancano.length > 0 && (
+          <button
+            className="bottone primario piccolo mangiato-riquadro"
+            aria-label={`Mangiato come previsto: ${mancano.map((p) => descrivi(indice, dati, p).titolo).join(', ')}`}
+            onClick={() => {
+              for (const p of mancano) void esegui('conferma_pasto', { id: crypto.randomUUID(), portata_id: p.id, esito: 'come_previsto' });
+            }}
+          >
+            ✓ Mangiato
+          </button>
+        )
       )}
     </section>
   );

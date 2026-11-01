@@ -1002,112 +1002,278 @@ button.etichetta {
   gap: 10px;
   margin: 0;
 }
-/* Il prossimo pasto: la scheda petrolio, come le ante della cucina. */
-.pasto-ora {
-  --tenue-su-petrolio: rgb(255 255 255 / 0.82);
-  background-color: var(--petrolio);
-  background-image: linear-gradient(rgb(255 255 255 / 0.05) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / 0.05) 1px, transparent 1px);
-  background-size: 24px 24px;
-  color: #fff;
+/* Oggi: i pasti come riquadri colorati. Telefono: due per riga; con 3 o 5 pasti l'ultimo (la cena) prende tutta
+   la riga, e con 5 i pasti principali stanno larghi a sinistra e le merende strette a destra. */
+.riquadri {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.riquadri.fitto {
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+}
+.riquadri > .riquadro:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+.riquadri > .riquadro:last-child:nth-child(odd) .piatti-riquadro {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+.riquadro {
+  position: relative;
+  --fondo-r: var(--superficie);
+  --fondo-piatto: color-mix(in srgb, var(--superficie) 72%, var(--fondo-r));
+  background: var(--fondo-r);
+  border: 1px solid color-mix(in srgb, var(--bordo) 60%, var(--fondo-r));
   border-radius: 18px;
-  padding: 18px;
-  margin-bottom: 8px;
-}
-.pasto-ora .testa-pasto {
-  margin-bottom: 10px;
-}
-.pasto-ora .pillola-testo {
-  display: inline-flex;
-  align-items: center;
-  min-height: 34px;
-  padding: 0 14px;
-  border-radius: 999px;
-  background: rgb(255 255 255 / 0.16);
-  font-size: 1rem;
-}
-.pasto-ora .a-tavola,
-.pasto-ora .tenue {
-  color: var(--tenue-su-petrolio);
-}
-.pasto-ora .elenco > li {
-  border-color: rgb(255 255 255 / 0.18);
-}
-.pasto-ora .piatto {
-  background: transparent;
-  border-left: 0;
-  padding: 4px 0;
-  color: #fff;
-}
-.pasto-ora .piatto strong {
-  font-family: var(--carattere-titoli);
-  font-size: 1.6rem;
-  line-height: 1.15;
-}
-.pasto-ora .piatto .piccolo {
-  font-size: 0.95rem;
-}
-.pasto-ora .bottone:not(.primario) {
-  background: transparent;
-  border-color: rgb(255 255 255 / 0.7);
-  color: #fff;
-}
-.pasto-ora .bottone.primario {
-  flex: 1;
-  max-width: 220px;
-}
-.pasto-ora .etichetta {
-  background: rgb(255 255 255 / 0.16);
-  color: #fff;
-}
-.pasto-ora .elenco.varianti {
-  color: var(--tenue-su-petrolio);
-}
-.pasto-ora .bottone.aggiungi-pasto {
-  background: var(--senape);
-  border-color: var(--senape);
-  color: var(--senape-testo);
-}
-.pasto-ora .piatto:focus-visible {
-  outline-color: #fff;
-}
-
-/* Il resto della giornata: una scheda sola, un pasto per riga. */
-.elenco-pasti {
-  padding: 4px 16px;
-}
-.pasto-riga {
-  padding: 12px 0;
-  border-top: 1px solid var(--bordo);
-}
-.pasto-riga:first-child {
-  border-top: 0;
-}
-.pasto-riga .testa-pasto {
-  margin-bottom: 6px;
-  color: var(--primario);
-}
-.pasto-riga .testa-pasto h3 {
+  padding: 10px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
   color: var(--testo);
 }
-.pasto-riga.fatto .testa-pasto h3,
-.pasto-riga.fatto .piatto {
-  color: var(--testo-tenue);
+.riquadro.t-colazione {
+  --fondo-r: var(--senape-tenue);
 }
-.tessera {
+.riquadro.t-pranzo {
+  --fondo-r: var(--primario-tenue);
+}
+.riquadro.t-merenda,
+.riquadro.t-spuntino {
+  --fondo-r: var(--salvia-tenue);
+}
+.riquadro.t-cena {
+  --fondo-r: color-mix(in srgb, var(--rovere) 20%, var(--superficie));
+}
+.riquadro.prossimo {
+  --fondo-r: var(--petrolio);
+  --fondo-piatto: rgb(255 255 255 / 0.13);
+  background-image: linear-gradient(rgb(255 255 255 / 0.05) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / 0.05) 1px, transparent 1px);
+  background-size: 22px 22px;
+  border-color: var(--petrolio);
+  box-shadow: 0 6px 18px rgb(18 101 111 / 0.28);
+  color: #fff;
+}
+.testa-riquadro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  min-height: 40px;
+}
+.testa-riquadro h3 {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 1.05rem;
+  min-width: 0;
+  padding-right: 24px;
+}
+.riquadri.fitto .testa-riquadro h3 {
+  gap: 4px;
+  font-size: 0.95rem;
+}
+.riquadri.fitto .emoji-pasto {
+  font-size: 1.25rem;
+}
+.emoji-pasto {
+  font-size: 1.45rem;
+  line-height: 1;
+}
+.altro-riquadro {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  flex: none;
+  position: absolute;
+  top: 6px;
+  right: 2px;
   width: 40px;
   height: 40px;
   display: grid;
   place-items: center;
-  border-radius: 10px;
-  background: var(--senape-tenue);
+  border-radius: 50%;
   font-size: 1.3rem;
+  font-weight: 700;
+  opacity: 0.75;
+}
+.altro-riquadro:focus-visible,
+.piatto-riquadro:focus-visible,
+.aggiungi-riquadro:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+.pillola-prossimo {
+  align-self: flex-start;
+  margin-top: -6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--senape);
+  color: var(--senape-testo);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.piatti-riquadro {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.piatto-riquadro {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  width: 100%;
+  height: 100%;
+  min-height: 48px;
+  padding: 8px 10px;
+  border-radius: 11px;
+  background: var(--fondo-piatto);
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.2;
+  overflow-wrap: break-word;
+}
+div.piatto-riquadro {
+  cursor: default;
+}
+.riquadri.fitto .piatto-riquadro {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 6px 8px;
+  min-height: 44px;
+}
+.riquadri.fitto > .riquadro:last-child:nth-child(odd) .piatto-riquadro {
+  flex-direction: column;
+  align-items: flex-start;
+}
+.nota-piatto {
+  font-weight: 500;
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+.riquadro.fatto .nome-piatto {
+  color: var(--testo-tenue);
+}
+.sigle {
+  display: flex;
   flex: none;
 }
-.bottone.aggiungi-pasto {
-  font-size: 1.5rem;
-  background: var(--salvia-tenue);
-  border-color: transparent;
+.sigla {
+  width: 24px;
+  height: 24px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: 0 0 0 2px var(--superficie);
+  flex: none;
+}
+.sigle .sigla + .sigla {
+  margin-left: -5px;
+}
+.riquadro.prossimo .sigla {
+  box-shadow: 0 0 0 2px var(--petrolio);
+}
+.sigla.c0 {
+  background: #12656f;
+}
+.sigla.c1 {
+  background: #5e7f7e;
+}
+.sigla.c2 {
+  background: #9a6a40;
+}
+.sigla.c3 {
+  background: #b85f1f;
+}
+.sigla.c4 {
+  background: #7a5508;
+}
+.sigla.c5 {
+  background: #4a4b4e;
+}
+.sigla.grande {
+  width: 34px;
+  height: 34px;
+  font-size: 0.85rem;
+}
+.solo-lettura {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.vuoto-riquadro {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--testo-tenue);
+}
+.riquadro.prossimo .vuoto-riquadro {
+  color: rgb(255 255 255 / 0.82);
+}
+.aggiungi-riquadro {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  min-height: 44px;
+  display: grid;
+  place-items: center;
+  border: 1.5px dashed currentColor;
+  border-radius: 11px;
+  font-weight: 600;
+  font-size: 0.9rem;
   color: var(--primario);
+}
+.riquadro.prossimo .aggiungi-riquadro {
+  color: #fff;
+}
+.esito-riquadro {
+  margin: auto 0 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--primario);
+}
+.esito-riquadro svg {
+  width: 16px;
+  height: 16px;
+}
+.riquadro.prossimo .esito-riquadro {
+  color: #fff;
+}
+.mangiato-riquadro {
+  margin-top: auto;
+  width: 100%;
+}
+.oggi-presto {
+  margin-bottom: 12px;
+}
+.oggi-presto .mattonelle {
+  margin-top: 6px;
+}
+.oggi-vuoto {
+  margin-top: 8px;
 }
 
 /* Da usare presto: tre mattonelle, arancio se scade entro domani, senape entro tre giorni, salvia dopo. */
@@ -1157,39 +1323,58 @@ button.etichetta {
   margin-bottom: 14px;
 }
 
-/* Tablet: il pasto e la giornata a sinistra, scadenze e spesa a destra. */
+/* Tablet e telefono girato: saluto e «Da usare presto» affiancati, tutti i pasti in una riga, sotto la spesa. */
 @media (min-width: 900px), (orientation: landscape) and (min-width: 560px) and (max-height: 600px) {
   .pagina-oggi {
     display: grid;
-    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-    column-gap: 28px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: 24px;
     align-items: start;
   }
-  .oggi-saluto {
+  .oggi-presto {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: end;
+  }
+  .oggi-pasti,
+  .oggi-vuoto,
+  .oggi-lato {
     grid-column: 1 / -1;
   }
-  .oggi-pasti {
-    display: contents;
+  .riquadri,
+  .riquadri.fitto {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
   }
-  .oggi-pasti > * {
-    grid-column: 1;
+  .riquadri > .riquadro:last-child:nth-child(odd) {
+    grid-column: auto;
   }
-  .oggi-pasti > .oggi-presto {
-    grid-column: 2;
-    grid-row: 2;
+  .riquadri > .riquadro:last-child:nth-child(odd) .piatti-riquadro {
+    display: flex;
   }
-  .oggi-presto .sopratitolo {
-    margin-top: 0;
+  .testa-riquadro h3,
+  .riquadri.fitto .testa-riquadro h3 {
+    font-size: 0.95rem;
+    gap: 4px;
   }
-  .mattonelle {
-    grid-template-columns: 1fr;
+  .emoji-pasto,
+  .riquadri.fitto .emoji-pasto {
+    font-size: 1.2rem;
+  }
+  .riquadri.fitto .piatto-riquadro {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 8px 10px;
   }
   .oggi-lato {
-    grid-column: 2;
-    grid-row: 3 / span 4;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    column-gap: 24px;
+    align-items: start;
   }
   .oggi-lato .spesa-oggi {
-    margin-top: 0;
+    grid-column: 1;
   }
 }
 
