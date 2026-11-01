@@ -52,10 +52,12 @@ export async function creaFamiglia(page: Page, nome = 'Casa Prova') {
   await expect(page.getByText(nome, { exact: true })).toBeVisible();
 }
 
-/** Menu, vista «Giorni»: si mostra un giorno alla volta, scelto dalla striscia (passando alla settimana dopo se serve). */
+/** Menu, vista «Giorni»: si mostra un giorno alla volta, scelto dalla striscia (passando alla settimana dopo o prima se serve). */
 export async function scegliGiorno(page: Page, data: string) {
   const giorno = page.getByRole('button', { name: `Mostra ${dataLunga(data)}` });
   if (!(await giorno.count())) await page.getByRole('button', { name: 'Settimana dopo' }).click();
+  if (!(await giorno.count())) await page.getByRole('button', { name: 'Settimana prima' }).click();
+  if (!(await giorno.count())) await page.getByRole('button', { name: 'Settimana prima' }).click();
   await giorno.click();
 }
 

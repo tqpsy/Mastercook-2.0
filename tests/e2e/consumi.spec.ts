@@ -4,8 +4,8 @@
  */
 import { expect, type Page, test } from '@playwright/test';
 import { dataLunga } from '../../src/dominio/menu';
-import { oggi } from '../../src/dominio/scadenze';
-import { apri, creaFamiglia, nuovoUtente, sql } from './aiuti';
+import { oggi, piuGiorni } from '../../src/dominio/scadenze';
+import { apri, creaFamiglia, nuovoUtente, scegliGiorno, sql } from './aiuti';
 
 const famigliaDi = '(select famiglia_id from utente_famiglia where utente_id = $1)';
 const salvato = (page: Page) => expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
@@ -137,4 +137,43 @@ test('ciò che scade: in Casa le ricette che lo usano, «stasera» in un tocco, 
   await expect
     .poll(async () => (await sql<{ n: number }>(`select count(*)::int as n from portata where categoria = 'cena' and data = current_date and famiglia_id = ${famigliaDi}`, [luca.id]))[0].n)
     .toBe(1);
+});
+
+test('l’avanzo di ieri, in casa, si mette nel menu di domani da «Aggiungi»', async ({ browser }, info) => {
+  const luca = await nuovoUtente('Luca');
+  const { page } = await apri(browser, luca, info.project.use);
+  await creaFamiglia(page, 'Casa Avanzi');
+  await sql(
+    `insert into portata (id, famiglia_id, data, categoria, ricetta_id, porzioni) select gen_random_uuid(), famiglia_id, current_date - 1, 'pranzo', 'sys:lasagne', 4
+       from utente_famiglia where utente_id = $1`,
+    [luca.id],
+  );
+  await page.reload();
+  // Il pranzo di ieri si conferma oggi: avanzano 2 porzioni, in frigo.
+  await page.getByRole('region', { name: 'Pasti da confermare' }).getByRole('button', { name: /Com’è andato: Lasagne/ }).click();
+  const foglio = page.getByRole('dialog', { name: 'Com’è andato il pasto?' });
+  await foglio.getByRole('button', { name: 'Una porzione in più' }).click();
+  await foglio.getByRole('button', { name: 'Una porzione in più' }).click();
+  await foglio.getByRole('button', { name: 'Conferma' }).click();
+  await salvato(page);
+
+  // Domani a cena: in «Aggiungi» c'è l'avanzo in casa, un tocco e il pasto lo prende.
+  const domani = piuGiorni(oggi(), 1);
+  await page.getByRole('button', { name: 'Menu', exact: true }).click();
+  await page.getByRole('group', { name: 'Vista' }).getByRole('button', { name: 'Giorni' }).click();
+  await scegliGiorno(page, domani);
+  await page.getByRole('button', { name: `Aggiungi a cena di ${dataLunga(domani)}` }).click();
+  const avanzi = page.getByRole('dialog').getByRole('group', { name: 'Avanzi in casa' });
+  await expect(avanzi).toContainText('2 porzioni in frigo');
+  await avanzi.getByRole('button', { name: /Mangia l’avanzo: Lasagne/ }).click();
+  await salvato(page);
+  await expect
+    .poll(() =>
+      sql(
+        `select a.categoria, a.data = current_date + 1 as domani, o.data = current_date - 1 as da_ieri from portata a join portata o on o.id = a.avanzo_di
+          where a.famiglia_id = ${famigliaDi} and a.eliminato_il is null`,
+        [luca.id],
+      ),
+    )
+    .toEqual([{ categoria: 'cena', domani: true, da_ieri: true }]);
 });

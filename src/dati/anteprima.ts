@@ -5,7 +5,7 @@
  */
 import type { VoceCoda } from './archivio';
 import type { Riga, Tabella } from './tipi';
-import { piuGiorni } from '../dominio/scadenze';
+import { oggi, piuGiorni } from '../dominio/scadenze';
 
 export interface RigaInVista extends Riga {
   /** Effetto di un comando non ancora applicato dal server. */
@@ -376,6 +376,13 @@ const EFFETTI: Record<string, Effetto> = {
     }
   },
   fissa_pasto: (righe, d, famiglia) => {
+    const da = d.da_portata ? (righe.portata ?? []).find((p) => p.id === d.da_portata) : undefined;
+    if (da?.fisso_id && da.fisso_id !== d.id) {
+      const ieri = piuGiorni(String(d.dal), -1);
+      righe.pasto_fisso = (righe.pasto_fisso ?? []).map((f) =>
+        f.id === da.fisso_id && String(f.dal) <= String(d.dal) ? { ...f, al: f.al && String(f.al) < ieri ? f.al : ieri, in_attesa: true } : f,
+      );
+    }
     aggiungi('pasto_fisso', (x) => ({
       categoria: x.categoria,
       ricetta_id: x.ricetta_id ?? null,
@@ -387,6 +394,29 @@ const EFFETTI: Record<string, Effetto> = {
       versione: 1,
     }))(righe, d, famiglia);
     if (d.da_portata) righe.portata = (righe.portata ?? []).map((p) => (p.id === d.da_portata ? { ...p, fisso_id: d.id, in_attesa: true } : p));
+  },
+  allinea_chi_mangia_fisso: (righe, d, famiglia) => {
+    const p = (righe.portata ?? []).find((x) => x.id === d.portata_id);
+    const f = p?.fisso_id ? (righe.pasto_fisso ?? []).find((x) => x.id === p.fisso_id && !x.eliminato_il) : undefined;
+    if (!p || !f || (f.al && String(f.al) <= String(p.data))) return;
+    const attive = (id: unknown) => (righe.eccezione_membro ?? []).filter((e) => e.portata_id === id && !e.eliminato_il);
+    const modello = attive(p.id);
+    const confermate = new Set((righe.conferma_pasto ?? []).filter((c) => c.attiva && !c.eliminato_il).map((c) => c.portata_id));
+    const dopo = (righe.portata ?? []).filter((q) => q.fisso_id === f.id && String(q.data) > String(p.data) && !q.eliminato_il && !confermate.has(q.id));
+    for (const q of dopo) {
+      const tolte = new Set(attive(q.id).map((e) => e.id));
+      righe.eccezione_membro = (righe.eccezione_membro ?? []).map((e) => (tolte.has(e.id) ? { ...e, eliminato_il: 'in_attesa', in_attesa: true } : e));
+      for (const e of modello)
+        aggiungi('eccezione_membro', () => ({
+          portata_id: q.id,
+          membro_id: e.membro_id,
+          tipo: e.tipo,
+          ricetta_id: e.ricetta_id ?? null,
+          testo: e.testo ?? null,
+          porzioni: e.porzioni ?? null,
+          versione: 1,
+        }))(righe, { id: `${String(q.id)}:${String(e.membro_id)}:${String(d.portata_id)}` }, famiglia);
+    }
   },
   ferma_pasto_fisso: (righe, d) => {
     const dal = String(d.dal);
@@ -482,6 +512,7 @@ const EFFETTI: Record<string, Effetto> = {
         quantita: Number(x.quantita),
         unita: 'pz',
         luogo: x.luogo ?? 'frigo',
+        data_acquisto: x.data_acquisto ?? oggi(),
         data_limite: x.data_limite ?? null,
         tipo_data: x.tipo_data ?? 'sconosciuta',
         fonte_data: x.fonte_data ?? null,
