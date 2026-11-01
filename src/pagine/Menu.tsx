@@ -36,6 +36,7 @@ import { useConferme } from './ConfermaPasto';
 import { SegnaCucinato, usePronti } from './Cucinato';
 import { oggi, piuGiorni } from '../dominio/scadenze';
 import { Foglio } from '../ui/Foglio';
+import { formattaGiorno } from '../dominio/unita';
 import { ICONA_ESITO, MarchiSegni, motiviInBreve, useIcone, useSegni } from './Ricette';
 import { IconaCibo } from '../ui/IconaCibo';
 import { elencoNomi, leggiSenza, type Rimedio, rimedio, type Senza } from '../dominio/senza';
@@ -948,6 +949,68 @@ function nomeCategoria(dati: DatiMenu, valore: string) {
   return dati.categorie.find((c) => c.valore === valore)?.nome ?? 'Pasto';
 }
 
+/**
+ * Gli avanzi che sono in casa (in frigo o in freezer), da mettere nel pasto: quelli segnati con «✓ Mangiato» e i
+ * piatti cucinati in anticipo, di un giorno prima di questo. Toccandone uno il pasto prende l'avanzo, non una
+ * ricetta da cucinare.
+ */
+function AvanziInCasa({
+  indice,
+  dati,
+  data,
+  icone,
+  scegli,
+}: {
+  indice: Indice;
+  dati: DatiMenu;
+  data: string;
+  icone: Map<string, string>;
+  scegli: (avanzo_di: string) => void;
+}) {
+  const vista = useVista();
+  const { conferme } = useConferme(vista);
+  const lotti = vista.righe.lotto;
+  const avanzi = useMemo(() => {
+    const portataDi = new Map(conferme.map((c) => [c.id, c.portata_id]));
+    const visti = new Set<string>();
+    const out: { origine: PortataMenu; ricetta: Ricetta; porzioni: number; luogo: string; entro: string | null }[] = [];
+    for (const l of lotti ?? []) {
+      if (l.eliminato_il || l.chiuso_il || l.ingrediente_id !== 'ing:avanzo' || Number(l.quantita) <= 0) continue;
+      const pid = (l.portata_id as string | null) ?? portataDi.get(String(l.conferma_id));
+      let origine = pid ? dati.portate.find((p) => p.id === pid) : undefined;
+      // L'avanzo di un avanzo: il piatto è sempre quello cucinato la prima volta.
+      if (origine?.avanzo_di) origine = dati.portate.find((p) => p.id === origine!.avanzo_di);
+      const ricetta = origine?.ricetta_id ? indice.perId.get(origine.ricetta_id) : undefined;
+      if (!origine || !ricetta || origine.data >= data || visti.has(origine.id)) continue;
+      visti.add(origine.id);
+      out.push({ origine, ricetta, porzioni: Number(l.quantita), luogo: String(l.luogo), entro: (l.data_limite as string | null) ?? null });
+    }
+    return out.sort((a, b) => (a.entro ?? '9999').localeCompare(b.entro ?? '9999'));
+  }, [lotti, conferme, dati.portate, indice, data]);
+  if (!avanzi.length) return null;
+  return (
+    <div className="avanzi-in-casa" role="group" aria-label="Avanzi in casa">
+      <span className="titoletto-avanzi">🍰 Avanzi in casa: toccane uno per mangiarlo qui</span>
+      <div className="avanzi-scelte">
+        {avanzi.map((a) => (
+          <button key={a.origine.id} type="button" className="voce-avanzo" aria-label={`Mangia l’avanzo: ${a.ricetta.titolo}`} onClick={() => scegli(a.origine.id)}>
+            <span className="tondo-piatto" aria-hidden>
+              <IconaCibo valore={iconaRicetta(indice, a.ricetta, icone.get(a.ricetta.id))} />
+            </span>
+            <span className="cresce">
+              <strong>{a.ricetta.titolo}</strong>
+              <span className="tenue piccolo">
+                {a.porzioni.toLocaleString('it-IT')} {a.porzioni === 1 ? 'porzione' : 'porzioni'} in {a.luogo}
+                {a.entro ? ` · entro ${formattaGiorno(a.entro)}` : ''}
+              </span>
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function NuovoPiatto({
   indice,
   dati: tutti,
@@ -992,6 +1055,14 @@ function NuovoPiatto({
     chiudi();
   }
 
+  /** Un avanzo in casa nel pasto: si mangia quello, non si cucina e non va nella spesa. */
+  async function aggiungiAvanzo(avanzo_di: string) {
+    const id = crypto.randomUUID();
+    await esegui('aggiungi_avanzo', { id, avanzo_di, data, categoria, ordine: quanti });
+    for (const x of tutti.persone) if (!chi.has(x.id)) await esegui('imposta_eccezione', { id: crypto.randomUUID(), portata_id: id, membro_id: x.id, tipo: 'non_mangia' });
+    chiudi();
+  }
+
   if (daTogliere)
     return (
       <FoglioSenza
@@ -1010,6 +1081,7 @@ function NuovoPiatto({
   return (
     <Foglio titolo={`${nomeCategoria(dati, categoria)} di ${dataLunga(data)}`} chiudi={chiudi} alto>
       <div className="nuovo-piatto">
+        <AvanziInCasa indice={indice} dati={tutti} data={data} icone={icone} scegli={(avanzo_di) => aggiungiAvanzo(avanzo_di)} />
         <FiltroCategoria pasto={categoria} filtro={filtro} cambia={setFiltro} />
         <CercaRicetta
           indice={indice}
