@@ -2063,4 +2063,56 @@ details > summary:has(.primo-presto) {
 .avanzi-mangiato li {
   gap: 8px;
   padding: 8px 0;
+/* Due gruppi di bottoni sulla stessa riga (⭐/💫 accanto alle categorie o ai modi di suggerire). */
+.gruppo-in-riga {
+  display: flex;
+  flex-wrap: wrap;
+  gap: inherit;
+}
+.scelte.compatte .gruppo-in-riga {
+  flex: none;
+  flex-wrap: nowrap;
+}
+.scelte .separatore {
+  flex: none;
+  align-self: stretch;
+  width: 1px;
+  margin: 4px 2px;
+  background: var(--bordo);
+}
+@media (min-width: 900px) and (min-height: 601px) {
+  .nuovo-piatto .scelte.compatte .gruppo-in-riga {
+    flex-wrap: wrap;
+  }
+}
+.segni-ricetta {
+  margin-left: 6px;
+  font-size: 0.85em;
+  white-space: nowrap;
+}
+.idea-pasto .scelte.modo-idea {
+  margin: 0;
+  padding: 0;
+}
+.idea-pasto .scelte.modo-idea button {
+  min-height: 30px;
+  padding: 0 10px;
+  font-size: 0.78rem;
+}
+.scelte.compatte.suggerisci button {
+  min-height: 40px;
+  font-size: 0.9rem;
+}
+.bottone.segno-ricetta[aria-pressed='false'] {
+  opacity: 0.75;
+  filter: grayscale(0.6);
+}
+.bottone.segno-ricetta[aria-pressed='true'] {
+  background: var(--senape-tenue, var(--superficie));
+  border-color: var(--senape, var(--bordo));
+}
+.voce .perche {
+  font-size: 0.82rem;
+  color: var(--petrolio, var(--testo-tenue));
+  margin-top: 2px;
 }

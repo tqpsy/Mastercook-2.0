@@ -68,6 +68,19 @@ const EFFETTI: Record<string, Effetto> = {
     });
   },
 
+  // ⭐ e 💫 si vedono subito: un id in più o in meno nell'elenco delle impostazioni della famiglia.
+  segna_ricetta: (righe, d, famiglia) => {
+    const chiave = d.segno === 'preferita' ? 'preferite' : d.segno === 'ospiti' ? 'per_ospiti' : null;
+    if (!chiave) return;
+    righe.famiglia = (righe.famiglia ?? []).map((r) => {
+      if (r.id !== famiglia) return r;
+      const impostazioni = { ...((r.impostazioni as Record<string, unknown> | undefined) ?? {}) };
+      const prima = Array.isArray(impostazioni[chiave]) ? (impostazioni[chiave] as string[]) : [];
+      impostazioni[chiave] = [...prima.filter((id) => id !== d.ricetta_id), ...(d.attivo === false ? [] : [String(d.ricetta_id)])];
+      return { ...r, impostazioni, in_attesa: true };
+    });
+  },
+
   crea_ingrediente: aggiungi('ingrediente', (d) => ({
     nome: d.nome,
     reparto: d.reparto ?? 'altro',

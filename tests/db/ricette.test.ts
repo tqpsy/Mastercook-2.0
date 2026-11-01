@@ -216,6 +216,31 @@ describe('icona scelta per una ricetta', () => {
   });
 });
 
+describe('ricette segnate ⭐ preferite e 💫 per ospiti', () => {
+  it('si segnano, ripetute non scrivono due volte, si tolgono; solo ricette visibili e segni noti', async () => {
+    const { u, famiglia } = await famigliaCon();
+    const impostazioni = async () => (await banco.sql<{ i: Record<string, unknown> }>(`select impostazioni as i from famiglia where id = $1`, [famiglia]))[0].i;
+    const segna = (segno: string, ricetta_id: string, attivo = true) => u.applica(comando('segna_ricetta', famiglia, { ricetta_id, segno, attivo }));
+
+    expect((await segna('preferita', 'sys:carbonara')).esito).toBe('applicato');
+    expect((await segna('preferita', 'sys:carbonara')).esito).toBe('applicato');
+    await segna('preferita', 'sys:riso_basmati_spezie');
+    await segna('ospiti', 'sys:carbonara');
+    expect(await impostazioni()).toMatchObject({ preferite: ['sys:carbonara', 'sys:riso_basmati_spezie'], per_ospiti: ['sys:carbonara'] });
+    await segna('preferita', 'sys:carbonara', false);
+    await segna('preferita', 'sys:carbonara', false);
+    expect(await impostazioni()).toMatchObject({ preferite: ['sys:riso_basmati_spezie'], per_ospiti: ['sys:carbonara'] });
+
+    expect((await segna('altro', 'sys:carbonara')).esito).not.toBe('applicato');
+    expect((await segna('preferita', 'sys:non_esiste')).esito).not.toBe('applicato');
+    const altra = await famigliaCon();
+    const { id, c } = nuovaRicetta(altra.famiglia);
+    await altra.u.applica(c);
+    expect((await segna('ospiti', id)).esito).not.toBe('applicato');
+    expect(await impostazioni()).toMatchObject({ preferite: ['sys:riso_basmati_spezie'], per_ospiti: ['sys:carbonara'] });
+  });
+});
+
 describe('ricetta segnata «va bene» per un membro', () => {
   it('si segna, si aggiorna alla nuova versione, ripetuta non scrive, si toglie; solo membri e ricette della famiglia', async () => {
     const { u, famiglia } = await famigliaCon();
