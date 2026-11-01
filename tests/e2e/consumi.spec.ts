@@ -13,7 +13,7 @@ const CARBONARA = 'Spaghetti alla carbonara';
 // Un'immagine PNG di 1×1 pixel.
 const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==';
 
-test('pasti: «mangiato» in un tocco, correzione a differenza, avanzi e pasti arretrati', async ({ browser }, info) => {
+test('pasti: «mangiato» con le porzioni avanzate, correzione a differenza, avanzi e pasti arretrati', async ({ browser }, info) => {
   const luca = await nuovoUtente('Luca');
   const { page } = await apri(browser, luca, info.project.use);
   await creaFamiglia(page, 'Casa Pasti');
@@ -38,9 +38,15 @@ test('pasti: «mangiato» in un tocco, correzione a differenza, avanzi e pasti a
   const spaghetti = async () =>
     (await sql<{ q: number }>(`select quantita::float as q from lotto where ingrediente_id = 'ing:spaghetti' and famiglia_id = ${famigliaDi}`, [luca.id]))[0].q;
 
-  // Un tocco da Oggi: 1 porzione di carbonara = 80 g di spaghetti.
+  // «✓ Mangiato» da Oggi chiede se è avanzato qualcosa: 1 porzione di carbonara = 80 g di spaghetti, ne avanza 1.
   await page.getByRole('button', { name: 'Oggi', exact: true }).click();
   await page.getByRole('button', { name: `Mangiato come previsto: ${CARBONARA}` }).click();
+  const avanzi = page.getByRole('dialog', { name: 'È avanzato qualcosa?' });
+  await expect(avanzi.getByLabel(`Porzioni avanzate: ${CARBONARA}`, { exact: true })).toHaveValue('0');
+  await expect(avanzi.getByRole('button', { name: '✓ Mangiato, niente avanzi' })).toBeVisible();
+  await avanzi.getByRole('button', { name: `Una porzione in più: ${CARBONARA}` }).click();
+  await expect(avanzi.getByText(/In frigo: da mangiare entro domani/)).toBeVisible();
+  await avanzi.getByRole('button', { name: '✓ Mangiato · 1 porzione avanzata' }).click();
   await expect(page.getByRole('region', { name: 'Oggi si mangia' })).toContainText('Mangiato come previsto');
   await expect.poll(spaghetti).toBe(420);
 
@@ -50,21 +56,27 @@ test('pasti: «mangiato» in un tocco, correzione a differenza, avanzi e pasti a
   const foglio = page.getByRole('dialog', { name: 'Correggi il pasto' });
   await foglio.getByRole('radio', { name: 'Quantità diverse' }).click();
   await foglio.getByLabel('Quanto Spaghetti hai usato').fill('100');
-  await foglio.getByLabel('Sono avanzate delle porzioni').click();
-  await foglio.getByLabel('Porzioni avanzate').fill('1');
-  await expect(foglio.getByText(/Stima indicativa: da consumare entro domani/)).toBeVisible();
+  // Gli avanzi segnati prima sono già scritti; correggerli li sostituisce.
+  await expect(foglio.getByLabel('Porzioni avanzate', { exact: true })).toHaveValue('1');
+  await foglio.getByRole('button', { name: 'Una porzione in più' }).click();
+  await expect(foglio.getByText(/In frigo: da mangiare entro domani/)).toBeVisible();
   await foglio.getByRole('button', { name: 'Salva la correzione' }).click();
   await expect(page.getByRole('region', { name: 'Oggi si mangia' })).toContainText('Mangiato, quantità diverse');
   await expect.poll(spaghetti).toBe(400);
   expect(
-    await sql(`select causale, variazione::float as v from movimento where famiglia_id = ${famigliaDi} and causale <> 'carico' order by seq`, [luca.id]),
+    await sql(`select causale, variazione::float as v from movimento where famiglia_id = ${famigliaDi} and causale not in ('carico', 'annullo') order by seq`, [luca.id]),
   ).toEqual([
     { causale: 'consumo', v: -80 },
     { causale: 'consumo', v: -20 },
   ]);
   await expect
-    .poll(() => sql(`select nome, quantita::float as q, tipo_data from lotto where origine = 'avanzo' and famiglia_id = ${famigliaDi}`, [luca.id]))
-    .toEqual([{ nome: CARBONARA, q: 1, tipo_data: 'stimata' }]);
+    .poll(() => sql(`select nome, quantita::float as q, tipo_data from lotto where origine = 'avanzo' and quantita > 0 and famiglia_id = ${famigliaDi}`, [luca.id]))
+    .toEqual([{ nome: CARBONARA, q: 2, tipo_data: 'stimata' }]);
+
+  // L'avanzo compare in Oggi tra le cose da usare presto, con il nome del piatto e le porzioni.
+  await page.getByRole('dialog', { name: 'Cena di oggi' }).getByRole('button', { name: 'Chiudi' }).click();
+  await page.getByRole('region', { name: 'Da usare presto' }).locator('summary').click();
+  await expect(page.getByRole('region', { name: 'Da usare presto' }).getByRole('button', { name: new RegExp(CARBONARA) })).toContainText('avanzo, 2 porzioni');
 
   // Il pasto di ieri, mai confermato, compare tra quelli da confermare.
   await sql(

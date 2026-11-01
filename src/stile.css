@@ -2045,3 +2045,22 @@ details > summary:has(.primo-presto) {
     overflow: visible;
   }
 }
+
+/* Porzioni avanzate: − numero + (mezze porzioni ammesse scrivendo). */
+.contatore {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.contatore .bottone {
+  min-width: 44px;
+  font-size: 1.2rem;
+}
+.contatore .dato {
+  width: 64px;
+  text-align: center;
+}
+.avanzi-mangiato li {
+  gap: 8px;
+  padding: 8px 0;
+}
