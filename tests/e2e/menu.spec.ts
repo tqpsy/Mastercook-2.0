@@ -94,7 +94,7 @@ test('menu: ripeti la settimana prima, accendi la merenda, la vista scelta resta
   const { page } = await apri(browser, luca, info.project.use);
   await creaFamiglia(page, 'Casa Settimane');
   await page.getByRole('button', { name: 'Menu', exact: true }).click();
-  await page.getByRole('group', { name: 'Vista' }).getByRole('button', { name: 'Griglia' }).click();
+  await page.getByRole('group', { name: 'Vista' }).getByRole('button', { name: 'Settimana' }).click();
   const lun = lunedi(oggi());
   await page.getByRole('button', { name: `Aggiungi a pranzo di ${dataLunga(lun)}` }).click();
   await page.getByRole('dialog').getByLabel('Cosa si mangia').fill('Pizza da asporto');
@@ -108,7 +108,7 @@ test('menu: ripeti la settimana prima, accendi la merenda, la vista scelta resta
   await expect(page.getByRole('button', { name: 'Apri Pizza da asporto' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Altre azioni' }).click();
-  await page.getByRole('button', { name: 'Pasti' }).click();
+  await page.getByRole('button', { name: 'Pasti', exact: true }).click();
   const merenda = page.getByRole('dialog', { name: 'Pasti della famiglia' }).getByLabel('Merenda');
   await merenda.click();
   await expect(merenda).toBeChecked();
@@ -295,7 +295,7 @@ test('ospiti a cena: porzioni che crescono, allergia controllata, niente nomi', 
   await expect(page.getByRole('button', { name: 'Apri Spaghetti alla carbonara' })).toContainText('1 porzione');
 });
 
-test('menu: si apre su oggi e la settimana prossima si programma dalla stessa striscia', async ({ browser }, info) => {
+test('menu: si apre su oggi e la settimana prossima si programma dalla striscia', async ({ browser }, info) => {
   const luca = await nuovoUtente('Luca');
   const { page } = await apri(browser, luca, info.project.use);
   await creaFamiglia(page, 'Casa Prossima');
@@ -305,7 +305,8 @@ test('menu: si apre su oggi e la settimana prossima si programma dalla stessa st
   await expect(page.getByRole('region', { name: dataLunga(oggi()) })).toBeVisible();
 
   const lunediProssimo = piuGiorni(lunedi(oggi()), 7);
-  await page.getByRole('button', { name: `Mostra ${dataLunga(lunediProssimo)}` }).click();
+  // Sul tablet le due settimane sono affiancate; sul telefono si passa alla prossima con la freccia.
+  await scegliGiorno(page, lunediProssimo);
   await page.getByRole('button', { name: `Aggiungi a cena di ${dataLunga(lunediProssimo)}` }).click();
   await page.getByRole('dialog').getByLabel('Cosa si mangia').fill('Pizza');
   await page.getByRole('dialog').getByRole('button', { name: 'Scrivi «Pizza» senza ricetta' }).click();

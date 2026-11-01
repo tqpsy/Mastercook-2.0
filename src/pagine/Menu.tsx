@@ -40,24 +40,40 @@ import { ICONA_ESITO, MarchiSegni, motiviInBreve, useIcone, useSegni } from './R
 import { IconaCibo } from '../ui/IconaCibo';
 import { elencoNomi, leggiSenza, type Rimedio, rimedio, type Senza } from '../dominio/senza';
 import { AvvisoNonSiToglie, EtichettaRimedio, FoglioSenza, testoSenza } from './Senza';
+import { Sigla, type SiglaPersona, sigleDi } from '../ui/Sigla';
 
-type Modo = 'giorni' | 'griglia' | 'panoramica';
+type Modo = 'giorni' | 'settimana' | 'panoramica';
 const MODI: { id: Modo; nome: string }[] = [
   { id: 'giorni', nome: 'Giorni' },
-  { id: 'griglia', nome: 'Griglia' },
+  { id: 'settimana', nome: 'Settimana' },
   { id: 'panoramica', nome: 'Panoramica' },
 ];
 const CHIAVE_MODO = 'mc-menu-modo';
 
-/** La scelta della vista è di questo dispositivo: sul telefono di base i giorni, sul tablet la griglia. */
+/** Tablet e telefono girato: la stessa soglia dei fogli di stile. */
+const LARGO = '(min-width: 900px), (orientation: landscape) and (min-width: 560px) and (max-height: 600px)';
+
+function useLargo() {
+  const [largo, setLargo] = useState(() => window.matchMedia(LARGO).matches);
+  useEffect(() => {
+    const m = window.matchMedia(LARGO);
+    const cambia = () => setLargo(m.matches);
+    m.addEventListener('change', cambia);
+    return () => m.removeEventListener('change', cambia);
+  }, []);
+  return largo;
+}
+
+/** La scelta della vista è di questo dispositivo: sul telefono di base i giorni, sul tablet la settimana. */
 function modoIniziale(): Modo {
   try {
     const v = localStorage.getItem(CHIAVE_MODO);
-    if (v === 'giorni' || v === 'griglia' || v === 'panoramica') return v;
+    if (v === 'griglia') return 'settimana';
+    if (v === 'giorni' || v === 'settimana' || v === 'panoramica') return v;
   } catch {
     // Archivio del browser non disponibile.
   }
-  return window.innerWidth >= 900 ? 'griglia' : 'giorni';
+  return window.innerWidth >= 900 ? 'settimana' : 'giorni';
 }
 
 export interface DatiMenu {
@@ -80,9 +96,18 @@ export function useDatiMenu(vista: Vista): DatiMenu {
     return {
       persone: attive('membro')
         .filter((m) => !m.archiviato)
-        .map((m) => ({ id: m.id, nome: String(m.nome), porzione: Number(m.porzione ?? 1) })),
+        .map((m) => ({
+          id: m.id,
+          nome: String(m.nome),
+          porzione: Number(m.porzione ?? 1),
+        })),
       vincoli: attive('vincolo_alimentare') as unknown as Vincolo[],
-      verifiche: attive('ricetta_verificata').map((v) => ({ membro_id: String(v.membro_id), ricetta_id: String(v.ricetta_id), versione_ricetta: Number(v.versione_ricetta), va_bene: v.va_bene !== false })),
+      verifiche: attive('ricetta_verificata').map((v) => ({
+        membro_id: String(v.membro_id),
+        ricetta_id: String(v.ricetta_id),
+        versione_ricetta: Number(v.versione_ricetta),
+        va_bene: v.va_bene !== false,
+      })),
       gusti: attive('gusto') as unknown as Gusto[],
       categorie: categorieDellaFamiglia(attive('categoria_pasto')),
       portate: attive('portata')
@@ -96,7 +121,10 @@ export function useDatiMenu(vista: Vista): DatiMenu {
           senza: leggiSenza(p.senza),
         }))
         .sort((a, b) => a.ordine - b.ordine || String(a.id).localeCompare(String(b.id))),
-      eccezioni: attive('eccezione_membro').map((e) => ({ ...(e as unknown as Eccezione), porzioni: numero(e.porzioni) })),
+      eccezioni: attive('eccezione_membro').map((e) => ({
+        ...(e as unknown as Eccezione),
+        porzioni: numero(e.porzioni),
+      })),
       ospiti: attive('ospiti_pasto').map((o) => ({
         ...(o as unknown as OspitiPasto),
         adulti: Number(o.adulti ?? 0),
@@ -109,7 +137,10 @@ export function useDatiMenu(vista: Vista): DatiMenu {
 
 /** I dati del menu visti da un pasto: gli ospiti di quel pasto contano come una persona in più, con le loro esigenze. */
 export function datiAlPasto(dati: DatiMenu, data: string, categoria: string): DatiMenu {
-  return { ...dati, ...alPasto(dati.persone, dati.vincoli, ospitiDel(dati.ospiti, data, categoria)) };
+  return {
+    ...dati,
+    ...alPasto(dati.persone, dati.vincoli, ospitiDel(dati.ospiti, data, categoria)),
+  };
 }
 
 /** Come si presenta un piatto: nome, esito per chi lo mangia (ospiti compresi), gusti contrari, porzioni. */
@@ -180,11 +211,19 @@ export function Menu() {
     setScelto(l === lunedi(giorno) ? giorno : l);
   };
   const [modo, setModo] = useState<Modo>(modoIniziale);
-  const [nuova, setNuova] = useState<{ data: string; categoria: string; per?: string[] } | null>(null);
+  const [nuova, setNuova] = useState<{
+    data: string;
+    categoria: string;
+    per?: string[];
+  } | null>(null);
   const [aperta, setAperta] = useState<string | null>(null);
   const [pasti, setPasti] = useState(false);
   const [proponi, setProponi] = useState(false);
-  const [ospiti, setOspiti] = useState<{ data: string; categoria: string } | null>(null);
+  const [ospiti, setOspiti] = useState<{
+    data: string;
+    categoria: string;
+  } | null>(null);
+  const largo = useLargo();
   const fineSettimana = piuGiorni(lun, 6);
   const dueSettimane = piuGiorni(giorno, 13);
   useProlungaFissi(fineSettimana > dueSettimane ? fineSettimana : dueSettimane);
@@ -216,169 +255,203 @@ export function Menu() {
     await esegui('ripeti_portate', dati2);
   }
 
-  const cella = (data: string, c: CategoriaPasto) => (
+  const sigle = sigleDi(dati.persone);
+  const aggiungi = (data: string, categoria: string) => setNuova({ data, categoria });
+  const apriOspiti = (data: string, categoria: string) => setOspiti({ data, categoria });
+  // I pasti ancora vuoti da oggi in poi: quelli che «Riempi i vuoti» può proporre.
+  const vuoti = giorni.filter((g) => g >= giorno).reduce((n, g) => n + categorie.filter((c) => !piatti(g, c.valore).length).length, 0);
+  const riquadro = (data: string, c: CategoriaPasto, cella = false) => (
+    <RiquadroMenu
+      key={`${data}|${c.valore}`}
+      indice={indice}
+      dati={dati}
+      sigle={sigle}
+      data={data}
+      categoria={c}
+      portate={piatti(data, c.valore)}
+      cella={cella}
+      largo={largo}
+      apri={setAperta}
+      aggiungi={() => aggiungi(data, c.valore)}
+      apriOspiti={() => apriOspiti(data, c.valore)}
+    />
+  );
+
+  const etichettaSettimana = (l: string) => (l === lunedi(giorno) ? 'Questa settimana' : l === piuGiorni(lunedi(giorno), 7) ? 'Settimana prossima' : null);
+  const frecce = (centro: React.ReactNode) => (
     <>
-      <EtichettaOspiti ospiti={ospitiDel(dati.ospiti, data, c.valore)} apri={() => setOspiti({ data, categoria: c.valore })} />
-      {piatti(data, c.valore).map((p) => (
-        <Piatto key={p.id} indice={indice} dati={dati} portata={p} apri={() => setAperta(p.id)} />
-      ))}
-      <button className="aggiungi-piatto" aria-label={`Aggiungi a ${c.nome.toLowerCase()} di ${dataLunga(data)}`} onClick={() => setNuova({ data, categoria: c.valore })}>
-        +
+      <button className="bottone piccolo freccia" aria-label="Settimana prima" onClick={() => setLun(piuGiorni(lun, -7))}>
+        ‹
+      </button>
+      <div className="cresce titolo-settimana" aria-live="polite">
+        {centro}
+      </div>
+      <button className="bottone piccolo freccia" aria-label="Settimana dopo" onClick={() => setLun(piuGiorni(lun, 7))}>
+        ›
       </button>
     </>
+  );
+  const nomeSett = (
+    <>
+      {etichettaSettimana(lun) && <span className="sopratitolo">{etichettaSettimana(lun)}</span>}
+      <h2>{nomeSettimana(lun)}</h2>
+    </>
+  );
+  const altreAzioni = (
+    <div className="altre-azioni">
+      <button className="bottone piccolo tondo" aria-label="Altre azioni" aria-expanded={altro} onClick={() => setAltro(!altro)}>
+        ⋯
+      </button>
+      {altro && (
+        <div className="tendina" role="group" aria-label="Altre azioni sul menu">
+          {precedente.length > 0 && (
+            <button
+              className="voce"
+              onClick={() => {
+                setAltro(false);
+                void ripeti();
+              }}
+            >
+              ↻ Ripeti la settimana prima
+            </button>
+          )}
+          <button
+            className="voce"
+            onClick={() => {
+              setAltro(false);
+              setPasti(true);
+            }}
+          >
+            Pasti
+          </button>
+        </div>
+      )}
+    </div>
+  );
+  const sceltaVista = (
+    <div className="scelte segmenti" role="group" aria-label="Vista">
+      {MODI.map((m) => (
+        <button key={m.id} aria-pressed={modo === m.id} onClick={() => cambiaModo(m.id)}>
+          {m.nome}
+        </button>
+      ))}
+    </div>
+  );
+  const tornaOggi = lun !== lunedi(giorno) && (
+    <button className="bottone piccolo" onClick={() => setLun(lunedi(giorno))}>
+      Oggi
+    </button>
+  );
+  const riempi = fine >= giorno && vuoti > 0 && modo !== 'panoramica' && (
+    <button className={`bottone primario riempi-vuoti con-antonino${largo ? '' : ' pieno'}`} onClick={() => setProponi(true)} aria-label="Antonino, riempi la settimana">
+      <FacciaAntonino piccola /> Riempi i vuoti{largo ? '' : ' della settimana'}
+    </button>
+  );
+  /** Una striscia di 7 giorni: un pallino per pasto, colorato se ha già un piatto, vuoto se è da riempire. */
+  const striscia = (l: string) => (
+    <div className="striscia-giorni" role="group" aria-label={`Giorni: ${nomeSettimana(l)}`}>
+      {giorniDellaSettimana(l).map((g) => (
+        <button
+          key={g}
+          className={`${g < giorno ? 'passato' : ''}${g === giorno ? ' oggi' : ''}`}
+          aria-pressed={g === scelto}
+          aria-label={`Mostra ${dataLunga(g)}`}
+          onClick={() => {
+            setLunStato(lunedi(g));
+            setScelto(g);
+          }}
+        >
+          <small>{nomeGiorno(g, true)}</small>
+          <strong>{Number(g.slice(8))}</strong>
+          <span className="pallini-pasti" aria-hidden>
+            {categorie.map((c) => (
+              <i key={c.valore} className={dati.portate.some((p) => p.data === g && p.categoria === c.valore) ? `pieno t-${c.valore}` : 'vuoto'} />
+            ))}
+          </span>
+        </button>
+      ))}
+    </div>
   );
 
   return (
     <>
-      <div className="riga spazio" style={{ marginBottom: 8 }}>
-        <button className="bottone piccolo" aria-label="Settimana prima" style={{ fontSize: '1.5rem' }} onClick={() => setLun(piuGiorni(lun, -7))}>
-          ‹
-        </button>
-        <h2 style={{ margin: 0, textAlign: 'center' }} className="cresce" aria-live="polite">
-          {nomeSettimana(lun)}
-        </h2>
-        <button className="bottone piccolo" aria-label="Settimana dopo" style={{ fontSize: '1.5rem' }} onClick={() => setLun(piuGiorni(lun, 7))}>
-          ›
-        </button>
-      </div>
-      {/* Pochi comandi in testa: la vista, «Questa settimana» se serve e il resto nel «⋯». */}
-      <div className="riga comandi-menu">
-        <div className="scelte segmenti" role="group" aria-label="Vista">
-          {MODI.map((m) => (
-            <button key={m.id} aria-pressed={modo === m.id} onClick={() => cambiaModo(m.id)}>
-              {m.nome}
-            </button>
-          ))}
+      {largo ? (
+        <div className="riga comandi-menu largo">
+          {sceltaVista}
+          <span className="cresce" />
+          {tornaOggi}
+          {riempi}
+          {altreAzioni}
         </div>
-        <span className="cresce" />
-        {lun !== lunedi(giorno) && (
-          <button className="bottone piccolo" onClick={() => setLun(lunedi(giorno))}>
-            Oggi
-          </button>
-        )}
-        <div className="altre-azioni">
-          <button className="bottone piccolo tondo" aria-label="Altre azioni" aria-expanded={altro} onClick={() => setAltro(!altro)}>
-            ⋯
-          </button>
-          {altro && (
-            <div className="tendina" role="group" aria-label="Altre azioni sul menu">
-              {precedente.length > 0 && (
-                <button
-                  className="voce"
-                  onClick={() => {
-                    setAltro(false);
-                    void ripeti();
-                  }}
-                >
-                  ↻ Ripeti la settimana prima
-                </button>
-              )}
-              <button
-                className="voce"
-                onClick={() => {
-                  setAltro(false);
-                  setPasti(true);
-                }}
-              >
-                Pasti
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-      {modo === 'giorni' && (
-        // Due settimane di fila, questa e la prossima: nel fine settimana si programma la settimana dopo con un tocco.
-        <div className="due-settimane">
-          {[baseStriscia, piuGiorni(baseStriscia, 7)].map((l) => (
-            <div key={l}>
-              <p className="sopratitolo striscia-titolo">
-                {l === lunedi(giorno) ? 'Questa settimana' : l === piuGiorni(lunedi(giorno), 7) ? 'Settimana prossima' : nomeSettimana(l)}
-              </p>
-              <div className="striscia-giorni" role="group" aria-label={`Giorni: ${nomeSettimana(l)}`}>
-                {giorniDellaSettimana(l).map((g) => {
-                  const pieni = new Set(dati.portate.filter((p) => p.data === g).map((p) => p.categoria)).size;
-                  return (
-                    <button
-                      key={g}
-                      className={`${g < giorno ? 'passato' : ''}${g === giorno ? ' oggi' : ''}`}
-                      aria-pressed={g === scelto}
-                      aria-label={`Mostra ${dataLunga(g)}`}
-                      onClick={() => {
-                        setLunStato(lunedi(g));
-                        setScelto(g);
-                      }}
-                    >
-                      <small>{nomeGiorno(g, true)}</small>
-                      <strong>{Number(g.slice(8))}</strong>
-                      <span className="puntini" aria-hidden>
-                        {'•'.repeat(Math.min(pieni, 4))}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
+      ) : (
+        <>
+          <div className="riga testa-settimana">
+            {frecce(nomeSett)}
+            {altreAzioni}
+          </div>
+          <div className="riga comandi-menu">
+            {sceltaVista}
+            <span className="cresce" />
+            {tornaOggi}
+          </div>
+        </>
       )}
+      {largo && modo === 'settimana' && <div className="riga testa-settimana">{frecce(nomeSett)}</div>}
+
+      {modo === 'giorni' &&
+        (largo ? (
+          // Tablet: questa settimana e la prossima affiancate.
+          <div className="due-settimane">
+            {[baseStriscia, piuGiorni(baseStriscia, 7)].map((l) => (
+              <div key={l}>
+                <p className="sopratitolo striscia-titolo">{etichettaSettimana(l) ? `${etichettaSettimana(l)} · ${nomeSettimana(l)}` : nomeSettimana(l)}</p>
+                {striscia(l)}
+              </div>
+            ))}
+          </div>
+        ) : (
+          striscia(lun)
+        ))}
       {dati.vincoli.length > 0 && <p className="tenue">✅ adatto · ❔ da verificare · ⛔ non adatto a chi lo mangia · 🙅 a qualcuno non piace</p>}
 
-      {modo === 'griglia' && (
-        <div className="griglia-menu" role="region" aria-label="Griglia della settimana" tabIndex={0}>
-          <table>
-            <thead>
-              <tr>
-                <th />
-                {giorni.map((g) => (
-                  <th key={g} scope="col" className={g === giorno ? 'oggi' : undefined}>
-                    {nomeGiorno(g, true)} {Number(g.slice(8))}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {categorie.map((c) => (
-                <tr key={c.valore}>
-                  <th scope="row">
-                    <span aria-hidden>{c.emoji}</span> {c.nome}
-                  </th>
-                  {giorni.map((g) => (
-                    <td key={g} className={g === giorno ? 'oggi' : undefined}>
-                      {cella(g, c)}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      {modo === 'settimana' && <SettimanaGriglia largo={largo} giorni={giorni} categorie={categorie} oggiData={giorno} scelto={scelto} cella={(g, c) => riquadro(g, c, true)} />}
 
       {modo === 'giorni' &&
         giorni
           .filter((g) => g === scelto)
-          .map((g) => (
-          <section key={g} className={`scheda giorno${g === giorno ? ' oggi' : ''}`} aria-label={dataLunga(g)}>
-            <h3 style={{ marginTop: 0, textTransform: 'capitalize' }}>
-              {dataLunga(g)}
-              {g === giorno && <span className="etichetta" style={{ marginLeft: 8 }}>oggi</span>}
-            </h3>
-            {categorie.map((c) => (
-              <div key={c.valore} className="pasto">
-                <span className="tenue nome-pasto">
-                  <span aria-hidden>{c.emoji}</span> {c.nome}
-                </span>
-                <div className="piatti">{cella(g, c)}</div>
-              </div>
-            ))}
-          </section>
-        ))}
+          .map((g) => {
+            const daRiempire = categorie.filter((c) => !piatti(g, c.valore).length).length;
+            const ospitiDelGiorno = categorie.map((c) => ({ c, o: ospitiDel(dati.ospiti, g, c.valore) })).filter((x) => x.o);
+            // Tablet: i pasti in una riga (le merende più strette) e l'ultimo, la cena, largo sotto.
+            const colonne = largo
+              ? categorie
+                  .slice(0, -1)
+                  .map((c) => (c.valore === 'merenda' || c.valore === 'spuntino' ? 'minmax(0, 1fr)' : 'minmax(0, 1.5fr)'))
+                  .join(' ')
+              : undefined;
+            return (
+              <section key={g} className={`giorno-riquadri${g === giorno ? ' oggi' : ''}`} aria-label={dataLunga(g)}>
+                <h3 className="titolo-giorno">
+                  <span className="maiuscola">{dataLunga(g)}</span>
+                  {g === giorno && <span className="etichetta">oggi</span>}
+                  {daRiempire > 0 && g >= giorno && <span className="etichetta da-riempire">{daRiempire === 1 ? '1 pasto da riempire' : `${daRiempire} pasti da riempire`}</span>}
+                  {ospitiDelGiorno.map(({ c, o }) => (
+                    <span key={c.valore} className="etichetta ospiti-giorno">
+                      👥 {o!.adulti + o!.bambini} ospiti a {c.nome.toLowerCase()}
+                    </span>
+                  ))}
+                </h3>
+                <div
+                  className={`riquadri${largo ? ' riquadri-menu-largo' : categorie.length >= 5 ? ' fitto' : ''}`}
+                  style={colonne && categorie.length > 1 ? { gridTemplateColumns: colonne } : undefined}
+                >
+                  {categorie.map((c) => riquadro(g, c))}
+                </div>
+              </section>
+            );
+          })}
 
-      {fine >= giorno && (
-        <button className="bottone primario fluttuante con-antonino" onClick={() => setProponi(true)} aria-label="Antonino, riempi la settimana">
-          <FacciaAntonino piccola /> Riempi la settimana
-        </button>
-      )}
+      {!largo && riempi}
 
       {modo === 'panoramica' && <Panoramica indice={indice} dati={dati} giorni={giorni} categorie={categorie} settimana={settimana} apri={setAperta} oggiData={giorno} />}
 
@@ -401,11 +474,18 @@ export function Menu() {
           portata={portataAperta}
           chiudi={() => setAperta(null)}
           apriOspiti={() => {
-            setOspiti({ data: portataAperta.data, categoria: portataAperta.categoria });
+            setOspiti({
+              data: portataAperta.data,
+              categoria: portataAperta.categoria,
+            });
             setAperta(null);
           }}
           apriNuovo={(per) => {
-            setNuova({ data: portataAperta.data, categoria: portataAperta.categoria, per });
+            setNuova({
+              data: portataAperta.data,
+              categoria: portataAperta.categoria,
+              per,
+            });
             setAperta(null);
           }}
         />
@@ -417,27 +497,210 @@ export function Menu() {
   );
 }
 
-function Piatto({ indice, dati, portata: p, apri }: { indice: Indice; dati: DatiMenu; portata: PortataMenu; apri: () => void }) {
-  const d = descrivi(indice, dati, p);
+/** Le icone accanto al nome di un piatto del menu: esito per le esigenze, gusti, bloccato, già confermato. */
+function SegniPiatto({ d, portata: p, confermato }: { d: ReturnType<typeof descrivi>; portata: PortataMenu; confermato: boolean }) {
   const esito = d.valutazione?.esito;
-  const confermato = useVista().righe.conferma_pasto?.some((c) => c.portata_id === p.id && c.attiva && !c.eliminato_il);
   return (
-    <button className={`piatto${esito ? ` ${esito}` : ''}`} onClick={apri} aria-label={`Apri ${d.titolo}`}>
-      <span className="cresce">
-        {esito && <span aria-label={NOME_ESITO[esito]}>{ICONA_ESITO[esito]} </span>}
-        {d.titolo}
-        {d.nonPiace.length > 0 && <span title={d.nonPiace.map((g) => `a ${g.nome} non piace ${g.cosa.toLowerCase()}`).join('; ')}> 🙅</span>}
-        {p.bloccata && <span aria-label="bloccato"> 🔒</span>}
-        {confermato && <span aria-label="pasto confermato"> ✔️</span>}
-      </span>
-      <span className="tenue piccolo">
-        {formattaPorzioni(d.porzioni)}
-        {p.avanzo_di && ' · avanzo'}
-        {d.dopo > 0 && ` · +${d.dopo.toLocaleString('it-IT')} per i giorni dopo`}
-        {d.eccezioni.length > 0 && ` · ${chiLoMangia(dati, d.eccezioni)}`}
-        {p.in_attesa && ' · in invio'}
-      </span>
-    </button>
+    <>
+      {esito && esito !== 'adatta' && <span aria-label={NOME_ESITO[esito]}>{ICONA_ESITO[esito]} </span>}
+      {d.nonPiace.length > 0 && <span title={d.nonPiace.map((g) => `a ${g.nome} non piace ${g.cosa.toLowerCase()}`).join('; ')}>🙅 </span>}
+      {p.bloccata && <span aria-label="bloccato">🔒 </span>}
+      {confermato && <span aria-label="pasto confermato">✔️ </span>}
+    </>
+  );
+}
+
+const chiMangia = (dati: DatiMenu, eccezioni: Eccezione[]) => dati.persone.filter((x) => !eccezioni.some((e) => e.membro_id === x.id)).map((x) => x.id);
+
+function SigleDi({ sigle, chi }: { sigle: Map<string, SiglaPersona>; chi: string[] }) {
+  return (
+    <span className="sigle">
+      {[...chi]
+        .sort((a, b) => (sigle.get(a)?.ordine ?? 0) - (sigle.get(b)?.ordine ?? 0))
+        .map((id) => (
+          <Sigla key={id} s={sigle.get(id)} />
+        ))}
+    </span>
+  );
+}
+
+/**
+ * Un pasto di un giorno come riquadro, uguale a quelli di Oggi: i piatti con le sigle di chi li mangia
+ * (tocco = scheda del piatto), gli ospiti, «+» per aggiungere. `cella`: la versione compatta della settimana.
+ */
+function RiquadroMenu({
+  indice,
+  dati,
+  sigle,
+  data,
+  categoria: c,
+  portate,
+  cella,
+  largo,
+  apri,
+  aggiungi,
+  apriOspiti,
+}: {
+  indice: Indice;
+  dati: DatiMenu;
+  sigle: Map<string, SiglaPersona>;
+  data: string;
+  categoria: CategoriaPasto;
+  portate: PortataMenu[];
+  cella?: boolean;
+  largo?: boolean;
+  apri: (id: string) => void;
+  aggiungi: () => void;
+  apriOspiti: () => void;
+}) {
+  const conferme = useVista().righe.conferma_pasto;
+  const confermato = (id: string) => !!conferme?.some((x) => x.portata_id === id && x.attiva && !x.eliminato_il);
+  const etichetta = `Aggiungi a ${c.nome.toLowerCase()} di ${dataLunga(data)}`;
+  const vuoto = portate.length === 0;
+  return (
+    <div className={`riquadro t-${c.valore}${vuoto ? ' vuoto' : ''}${cella ? ' cella' : ''}`}>
+      {!cella && (
+        <div className="testa-riquadro">
+          <h4>
+            <span className="emoji-pasto" aria-hidden>
+              {c.emoji}
+            </span>
+            {c.nome}
+          </h4>
+        </div>
+      )}
+      {/* Telefono: «+» tondo in alto a destra; tablet: «+ Aggiungi» tratteggiato in fondo al riquadro. Nella settimana
+          le caselle piene non hanno il «+»: si aggiunge dal giorno. */}
+      {!vuoto && !cella && !largo && (
+        <button className="altro-riquadro piu" aria-label={etichetta} onClick={aggiungi}>
+          +
+        </button>
+      )}
+      {vuoto ? (
+        <button className="aggiungi-riquadro" aria-label={etichetta} onClick={aggiungi}>
+          + Aggiungi
+        </button>
+      ) : (
+        <ul className="piatti-riquadro">
+          {portate.map((p) => {
+            const d = descrivi(indice, dati, p);
+            const nota = [p.avanzo_di && 'avanzo', d.dopo > 0 && `+${d.dopo.toLocaleString('it-IT')} per i giorni dopo`, p.in_attesa && 'in invio'].filter(Boolean).join(' · ');
+            return (
+              <li key={p.id}>
+                <button className={`piatto-riquadro${d.valutazione ? ` ${d.valutazione.esito}` : ''}`} onClick={() => apri(p.id)} aria-label={`Apri ${d.titolo}`}>
+                  <span className="nome-piatto">
+                    <SegniPiatto d={d} portata={p} confermato={confermato(p.id)} />
+                    {d.titolo}
+                    {nota && <span className="nota-piatto"> · {nota}</span>}
+                  </span>
+                  {dati.persone.length > 1 && <SigleDi sigle={sigle} chi={chiMangia(dati, d.eccezioni)} />}
+                  <span className="solo-lettura">
+                    {' '}
+                    {formattaPorzioni(d.porzioni)}
+                    {d.eccezioni.length > 0 && ` · ${chiLoMangia(dati, d.eccezioni)}`}
+                  </span>
+                </button>
+                {/* I piatti a parte (Sara mangia altro) con la sua sigla: si aprono sulla scheda del piatto. */}
+                {d.eccezioni
+                  .filter((e) => e.tipo === 'alternativa')
+                  .map((e) => {
+                    const persona = dati.persone.find((x) => x.id === e.membro_id);
+                    if (!persona) return null;
+                    const titolo = (e.ricetta_id ? indice.perId.get(e.ricetta_id)?.titolo : null) ?? e.testo ?? 'altro';
+                    return (
+                      <button key={e.id} className="piatto-riquadro a-parte" onClick={() => apri(p.id)} aria-label={`Apri ${titolo} (per ${persona.nome})`}>
+                        <span className="nome-piatto">{titolo}</span>
+                        {dati.persone.length > 1 && <SigleDi sigle={sigle} chi={[persona.id]} />}
+                      </button>
+                    );
+                  })}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {!vuoto && !cella && largo && (
+        <button className="aggiungi-riquadro" aria-label={etichetta} onClick={aggiungi}>
+          + Aggiungi
+        </button>
+      )}
+      <EtichettaOspiti ospiti={ospitiDel(dati.ospiti, data, c.valore)} apri={apriOspiti} />
+    </div>
+  );
+}
+
+/**
+ * La settimana come griglia pasti × giorni, ogni casella un riquadro. Sul tablet tutta la settimana; sul
+ * telefono due giorni e mezzo che scorrono di lato, con i pallini che dicono a che punto si è.
+ */
+function SettimanaGriglia({
+  largo,
+  giorni,
+  categorie,
+  oggiData,
+  scelto,
+  cella,
+}: {
+  largo: boolean;
+  giorni: string[];
+  categorie: CategoriaPasto[];
+  oggiData: string;
+  scelto: string;
+  cella: (data: string, c: CategoriaPasto) => React.ReactNode;
+}) {
+  const scorre = useRef<HTMLDivElement>(null);
+  const [pagina, setPagina] = useState(0);
+  const pagine = 3;
+  // Sul telefono si parte dal giorno scelto (di solito oggi).
+  useEffect(() => {
+    const el = scorre.current;
+    if (largo || !el) return;
+    const i = giorni.indexOf(scelto);
+    const colonna = el.querySelector<HTMLElement>(`[data-giorno="${giorni[Math.max(0, i)]}"]`);
+    if (colonna && i > 0) el.scrollLeft = colonna.offsetLeft - 52;
+  }, [largo, giorni, scelto]);
+  return (
+    <>
+      <div
+        ref={scorre}
+        className={`settimana-griglia${largo ? '' : ' scorre'}`}
+        role="region"
+        aria-label="Settimana"
+        tabIndex={largo ? undefined : 0}
+        onScroll={(e) => {
+          const el = e.currentTarget;
+          const max = el.scrollWidth - el.clientWidth;
+          setPagina(max > 0 ? Math.round((el.scrollLeft / max) * (pagine - 1)) : 0);
+        }}
+        style={{
+          ['--giorni' as string]: giorni.length,
+          ['--pasti' as string]: categorie.length,
+        }}
+      >
+        <span className="angolo" />
+        {giorni.map((g) => (
+          <span key={g} data-giorno={g} className={`testa-giorno${g === (largo ? oggiData : scelto) ? ' scelto' : ''}${g === oggiData ? ' oggi' : ''}`}>
+            {nomeGiorno(g, true)} <strong>{Number(g.slice(8))}</strong>
+          </span>
+        ))}
+        {categorie.map((c) => (
+          <div key={c.valore} style={{ display: 'contents' }}>
+            <span className="testa-pasto-settimana">
+              <span aria-hidden>{c.emoji}</span>
+              <small>{largo ? c.nome.toLowerCase() : c.nome.slice(0, 3).toLowerCase()}</small>
+            </span>
+            {giorni.map((g) => cella(g, c))}
+          </div>
+        ))}
+      </div>
+      {!largo && (
+        <div className="pallini-pagina" aria-hidden>
+          {Array.from({ length: pagine }, (_, i) => (
+            <i key={i} className={i === pagina ? 'attivo' : undefined} />
+          ))}
+        </div>
+      )}
+    </>
   );
 }
 
@@ -583,7 +846,15 @@ function RisultatiPiatto({
   const tutte = useMemo(
     () =>
       cerca
-        ? filtra(indice, { testo, categoria: filtro.categoria, cucina: null, minuti: null, inCasa: null, origine: 'tutte', archiviate: false })
+        ? filtra(indice, {
+            testo,
+            categoria: filtro.categoria,
+            cucina: null,
+            minuti: null,
+            inCasa: null,
+            origine: 'tutte',
+            archiviate: false,
+          })
             .filter((r) => r.categoria !== 'base' || filtro.categoria === 'base')
             .filter((r) => haPrincipale(indice, r, filtro.principale) && usaIngrediente(indice, r, filtro.ingrediente))
             .filter((r) => (filtro.segno === 'preferita' ? segni.preferite.has(r.id) : filtro.segno === 'ospiti' ? segni.perOspiti.has(r.id) : true))
@@ -703,7 +974,10 @@ function NuovoPiatto({
   const [testo, setTesto] = useState('');
   const icone = useIcone();
   // Le proposte e gli avvisi guardano solo chi lo mangia (e gli ospiti del pasto, se ci sono).
-  const perLoro = { ...dati, persone: dati.persone.filter((x) => chi.has(x.id) || !tutti.persone.some((m) => m.id === x.id)) };
+  const perLoro = {
+    ...dati,
+    persone: dati.persone.filter((x) => chi.has(x.id) || !tutti.persone.some((m) => m.id === x.id)),
+  };
 
   /** Una ricetta ⛔ che va bene togliendo un ingrediente: si sceglie per chi toglierlo prima di aggiungerla. */
   const [daTogliere, setDaTogliere] = useState<{ ricetta: Ricetta; rimedio: Rimedio; origine: 'manuale' | 'automatica' } | null>(null);
@@ -819,7 +1093,12 @@ function SchedaPiatto({
   const [data, setData] = useState(p.data);
   const [categoria, setCategoria] = useState(p.categoria);
   const [note, setNote] = useState(p.note ?? '');
-  const modifica = (campi: Record<string, unknown>) => esegui('modifica_portata', { id: p.id, versione_attesa: p.versione ?? 1, campi });
+  const modifica = (campi: Record<string, unknown>) =>
+    esegui('modifica_portata', {
+      id: p.id,
+      versione_attesa: p.versione ?? 1,
+      campi,
+    });
   const automatiche = porzioniPortata({ ...p, porzioni: null }, dati.persone, dati.eccezioni, dati.ospiti);
 
   return (
@@ -864,8 +1143,20 @@ function SchedaPiatto({
             await modifica(s);
             // Un piatto fisso si può cambiare solo per oggi o da questo giorno in poi.
             if (p.fisso_id && window.confirm('Cambiarlo anche nei giorni dopo? (Annulla = solo questo giorno)')) {
-              await esegui('ferma_pasto_fisso', { id: p.fisso_id, dal: p.data, tieni: p.id });
-              await esegui('fissa_pasto', { id: crypto.randomUUID(), categoria: p.categoria, ...s, porzioni: p.porzioni, ordine: p.ordine, dal: p.data, da_portata: p.id });
+              await esegui('ferma_pasto_fisso', {
+                id: p.fisso_id,
+                dal: p.data,
+                tieni: p.id,
+              });
+              await esegui('fissa_pasto', {
+                id: crypto.randomUUID(),
+                categoria: p.categoria,
+                ...s,
+                porzioni: p.porzioni,
+                ordine: p.ordine,
+                dal: p.data,
+                da_portata: p.id,
+              });
             }
             setCambia(false);
           }}
@@ -880,7 +1171,10 @@ function SchedaPiatto({
               className="bottone piccolo"
               onClick={async () => {
                 if (!window.confirm('Togliere questo piatto da oggi in poi? I giorni già confermati restano.')) return;
-                await esegui('ferma_pasto_fisso', { id: p.fisso_id, dal: p.data });
+                await esegui('ferma_pasto_fisso', {
+                  id: p.fisso_id,
+                  dal: p.data,
+                });
                 chiudi();
               }}
             >
@@ -956,7 +1250,14 @@ function SchedaPiatto({
               cambia={(id, si) => {
                 const e = d.eccezioni.find((x) => x.membro_id === id);
                 if (si && e) void esegui('rimuovi_eccezione', { id: e.id });
-                if (!si) void esegui('imposta_eccezione', { id: crypto.randomUUID(), portata_id: p.id, membro_id: id, tipo: 'non_mangia', versione_attesa: e?.versione });
+                if (!si)
+                  void esegui('imposta_eccezione', {
+                    id: crypto.randomUUID(),
+                    portata_id: p.id,
+                    membro_id: id,
+                    tipo: 'non_mangia',
+                    versione_attesa: e?.versione,
+                  });
               }}
             />
             {senzaPiatto.length > 0 && (
@@ -1029,8 +1330,8 @@ function AvanzoDi({ dati, portata: p }: { dati: DatiMenu; portata: PortataMenu }
   const origine = dati.portate.find((x) => x.id === p.avanzo_di);
   return (
     <p className="avviso" style={{ marginTop: 0 }}>
-      🍰 Avanzo {origine ? `di ${nomeCategoria(dati, origine.categoria).toLowerCase()} di ${dataLunga(origine.data)}` : 'di un altro giorno'}: non si cucina e non va nella spesa. Confermando, si toglie
-      dall’avanzo in casa.
+      🍰 Avanzo {origine ? `di ${nomeCategoria(dati, origine.categoria).toLowerCase()} di ${dataLunga(origine.data)}` : 'di un altro giorno'}: non si cucina e non va nella spesa.
+      Confermando, si toglie dall’avanzo in casa.
     </p>
   );
 }
@@ -1172,7 +1473,17 @@ function SenzaNelPiatto({
 
 function EsitoPiatto({ esito, righe }: { esito: Esito; righe: string[] }) {
   return (
-    <div className={`avviso ${esito === 'adatta' ? 'info' : 'errore'}`} style={esito === 'da_verificare' ? { background: 'var(--attenzione-tenue)', color: 'var(--attenzione)' } : undefined}>
+    <div
+      className={`avviso ${esito === 'adatta' ? 'info' : 'errore'}`}
+      style={
+        esito === 'da_verificare'
+          ? {
+              background: 'var(--attenzione-tenue)',
+              color: 'var(--attenzione)',
+            }
+          : undefined
+      }
+    >
       <strong>
         {ICONA_ESITO[esito]} {esito === 'adatta' ? 'Adatto a chi lo mangia' : NOME_ESITO[esito]}
       </strong>
@@ -1348,7 +1659,12 @@ function Pasti({ categorie, chiudi }: { categorie: CategoriaPasto[]; chiudi: () 
 
   function accendi(c: CategoriaPasto, attiva: boolean) {
     if (c.standard) void esegui('imposta_categoria', { chiave: c.valore, attiva });
-    else void esegui('modifica_categoria', { id: c.id, versione_attesa: c.versione, campi: { attiva } });
+    else
+      void esegui('modifica_categoria', {
+        id: c.id,
+        versione_attesa: c.versione,
+        campi: { attiva },
+      });
   }
 
   return (
@@ -1369,7 +1685,12 @@ function Pasti({ categorie, chiudi }: { categorie: CategoriaPasto[]; chiudi: () 
         onSubmit={async (e) => {
           e.preventDefault();
           if (!nome.trim()) return;
-          await esegui('crea_categoria', { id: crypto.randomUUID(), nome: nome.trim(), emoji: emoji || null, ordine: 10 + categorie.length });
+          await esegui('crea_categoria', {
+            id: crypto.randomUUID(),
+            nome: nome.trim(),
+            emoji: emoji || null,
+            ordine: 10 + categorie.length,
+          });
           setNome('');
         }}
       >

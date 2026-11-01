@@ -12,7 +12,7 @@ import { formatta, scala } from '../dominio/unita';
 import { Foglio } from '../ui/Foglio';
 import { Foto } from '../ui/Foto';
 import { ModalitaCucina } from '../ui/ModalitaCucina';
-import { EditorRicetta, type Bozza } from './EditorRicetta';
+import { EditorRicetta, type Bozza, spostaPiatti } from './EditorRicetta';
 import { useLotti } from './Casa';
 import { useDatiMenu } from './Menu';
 import { BottoniModo, BottoniSegno, CercaRicetta, type FiltroIngredienti, MODI, type Segno, SEGNI } from '../ui/FiltriRicetta';
@@ -65,7 +65,8 @@ export function useIcone(): Map<string, string> {
 export function useSegni(): Segni {
   const righe = useVista().righe.famiglia;
   const impostazioni = righe?.find((r) => !r.eliminato_il)?.impostazioni;
-  const chiave = JSON.stringify([(impostazioni as Record<string, unknown> | undefined)?.preferite, (impostazioni as Record<string, unknown> | undefined)?.per_ospiti]);
+  const i = impostazioni as Record<string, unknown> | undefined;
+  const chiave = JSON.stringify([i?.preferite, i?.per_ospiti, i?.modificate]);
   return useMemo(() => segniDa(impostazioni), [chiave]); // eslint-disable-line react-hooks/exhaustive-deps
 }
 
@@ -358,7 +359,7 @@ function VoceRicetta({
           <MarchiSegni id={r.id} segni={segni} />
           {r.in_attesa && <span className="etichetta attesa" style={{ marginLeft: 8 }}>in invio</span>}
           <span className="tenue" style={{ display: 'block' }}>
-            {[cat?.nome, cucina && `${cucina.bandiera} ${cucina.nome}`, minutiDi(r) && `${minutiDi(r)} min`, !r.di_sistema && 'della famiglia', r.archiviata && 'archiviata', cop && cop.totali > 0 && `${cop.presenti}/${cop.totali} in casa`]
+            {[cat?.nome, cucina && `${cucina.bandiera} ${cucina.nome}`, minutiDi(r) && `${minutiDi(r)} min`, !r.di_sistema && (indice.sostituite.get(r.derivata_da ?? '')?.id === r.id ? 'modificata da voi' : 'della famiglia'), r.archiviata && 'archiviata', cop && cop.totali > 0 && `${cop.presenti}/${cop.totali} in casa`]
               .filter(Boolean)
               .join(' · ')}
           </span>
@@ -453,6 +454,16 @@ export function SchedaRicetta({
       </li>
     );
   };
+
+  // La versione modificata di una ricetta di Mastercook: per la famiglia ne prende il posto.
+  const modificata = !r.di_sistema && !r.archiviata && indice.sostituite.get(r.derivata_da ?? '')?.id === r.id;
+  async function tornaAllOriginale() {
+    if (!origine || !window.confirm(`Tornare alla ricetta originale «${origine.titolo}»? La vostra versione va tra le archiviate e i piatti in programma riprendono l’originale.`)) return;
+    await spostaPiatti(esegui, vista, r.id, origine.id);
+    await esegui('segna_ricetta', { ricetta_id: r.id, segno: 'modificata', attivo: false });
+    await archivia(true);
+    chiudi();
+  }
 
   async function archivia(archiviata: boolean) {
     await esegui('salva_ricetta', { id: r.id, versione_attesa: r.versione, campi: { archiviata } });
@@ -625,24 +636,42 @@ export function SchedaRicetta({
       {modifica && (
         <>
           <div className="riga" style={{ flexWrap: 'wrap', marginTop: 16 }}>
-            <button className="bottone" onClick={() => modifica({ tipo: 'copia', da: r })}>
-              {r.di_sistema ? 'Crea la mia versione' : 'Duplica'}
-            </button>
-            {!r.di_sistema && (
+            {r.di_sistema ? (
+              <>
+                <button className="bottone primario" onClick={() => modifica({ tipo: 'copia', da: r, sostituisce: true })}>
+                  Modifica
+                </button>
+                <button className="bottone" onClick={() => modifica({ tipo: 'copia', da: r })}>
+                  Duplica
+                </button>
+              </>
+            ) : (
               <>
                 <button className="bottone primario" onClick={() => modifica({ tipo: 'modifica', ricetta: r })}>
                   Modifica
                 </button>
-                <button className="bottone" onClick={() => archivia(!r.archiviata)}>
-                  {r.archiviata ? 'Riporta tra le ricette' : 'Archivia'}
+                <button className="bottone" onClick={() => modifica({ tipo: 'copia', da: r })}>
+                  Duplica
                 </button>
-                <button className="bottone pericolo" onClick={elimina}>
-                  Elimina
-                </button>
+                {modificata && origine ? (
+                  <button className="bottone" onClick={tornaAllOriginale}>
+                    Torna alla ricetta originale
+                  </button>
+                ) : (
+                  <>
+                    <button className="bottone" onClick={() => archivia(!r.archiviata)}>
+                      {r.archiviata ? 'Riporta tra le ricette' : 'Archivia'}
+                    </button>
+                    <button className="bottone pericolo" onClick={elimina}>
+                      Elimina
+                    </button>
+                  </>
+                )}
               </>
             )}
           </div>
-          {r.di_sistema && <p className="tenue">Le ricette di Mastercook non si modificano: crea la tua versione e cambiala come vuoi.</p>}
+          {r.di_sistema && <p className="tenue">«Modifica» cambia la ricetta solo per la vostra famiglia (l’originale di Mastercook resta com’è); «Duplica» ne fa una ricetta nuova accanto a questa.</p>}
+          {modificata && origine && <p className="tenue">È la vostra versione di «{origine.titolo}»: ne prende il posto in ricette, menu e proposte.</p>}
         </>
       )}
     </Foglio>

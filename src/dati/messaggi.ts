@@ -105,7 +105,7 @@ const AZIONI: Record<string, string> = {
   importa_scontrino: 'Aggiungere uno scontrino',
   salva_prodotto: 'Ricordare un codice a barre',
   scegli_icona: 'Cambiare l’icona di una ricetta',
-  segna_ricetta: 'Segnare una ricetta ⭐ preferita o 💫 per gli ospiti',
+  segna_ricetta: 'Segnare una ricetta ⭐ preferita, 💫 per gli ospiti o modificata',
   antonino_impara: 'Insegnare ad Antonino cosa vi piace',
   antonino_regole: 'Cambiare le regole di Antonino',
   verifica_ricetta: 'Segnare «va bene» o «non va bene» una ricetta',
