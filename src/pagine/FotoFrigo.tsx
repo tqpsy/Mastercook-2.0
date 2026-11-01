@@ -9,6 +9,9 @@ import { type Luogo, oggi, REPARTI_SFUSI, stima } from '../dominio/scadenze';
 import { leggiNumero } from '../dominio/unita';
 import { type ErroreFoto, riconosciFoto } from '../piattaforma/fotoFrigo';
 import { Foglio } from '../ui/Foglio';
+import { DisegnoFrigoMio } from '../ui/FrigoMio';
+import { descriviPerFoto, posto as postoFrigo, postiDi } from '../dominio/frigo';
+import { useFrigo } from './MioFrigo';
 import { riduciFoto } from '../ui/Foto';
 
 const CHIAVE_AVVISO = 'mc-foto-frigo-avviso';
@@ -43,12 +46,19 @@ export function FotoFrigo({ indice, luogo: luogoIniziale, chiudi }: { indice: In
   const [scelte, setScelte] = useState<Record<number, boolean>>({});
   const [quantita, setQuantita] = useState<Record<number, string>>({});
   const [luogo, setLuogo] = useState<Luogo>(luogoIniziale);
+  const frigo = useFrigo();
+  /** La parte del frigo che si fotografa (null = tutto il frigo o tutto il freezer). */
+  const [parte, setParte] = useState<string | null>(null);
+  const [posti, setPosti] = useState<Record<number, string>>({});
+  const scelta = frigo ? postoFrigo(frigo, parte) : null;
+  const postiLuogo = frigo ? postiDi(frigo, luogo) : [];
 
   async function leggi(file: File | undefined) {
     if (!file) return;
     setErrore(null);
     setStato('leggo');
-    const r = await riconosciFoto(famiglia, await riduciFoto(file), { dove, utenteId });
+    const descrizione = frigo && luogo !== 'dispensa' ? descriviPerFoto(frigo, scelta?.id ?? null) : null;
+    const r = await riconosciFoto(famiglia, await riduciFoto(file), { dove, utenteId }, descrizione);
     if ('errore' in r) {
       setErrore(SPIEGA_ERRORE[r.errore] + (r.dettaglio ? ` (Risposta di Google: ${r.dettaglio})` : ''));
       return setStato('scatta');
@@ -57,6 +67,8 @@ export function FotoFrigo({ indice, luogo: luogoIniziale, chiudi }: { indice: In
     setProposte(p);
     setScelte(Object.fromEntries(p.map((x, i) => [i, !!x.ingrediente])));
     setQuantita(Object.fromEntries(p.map((x, i) => [i, x.quantita === null ? '' : String(x.quantita).replace('.', ',')])));
+    // Il posto visto da Gemini se è una parte di questo luogo; altrimenti la parte fotografata.
+    setPosti(Object.fromEntries(p.map((x, i) => [i, postiLuogo.find((q) => q.id === x.posto)?.id ?? scelta?.id ?? ''])));
     setStato('scegli');
   }
 
@@ -79,6 +91,7 @@ export function FotoFrigo({ indice, luogo: luogoIniziale, chiudi }: { indice: In
         luogo,
         data_acquisto: null,
         origine: 'manuale',
+        posto: posti[i] || null,
         ...(s
           ? { tipo_data: 'stimata', data_limite: s.data_limite, fonte_data: 'app', calcolata_il: s.calcolata_il, affidabilita: 'bassa' }
           : { tipo_data: 'sconosciuta', data_limite: null, fonte_data: null }),
@@ -123,7 +136,14 @@ export function FotoFrigo({ indice, luogo: luogoIniziale, chiudi }: { indice: In
         <>
           <label className="campo">
             <span>Dove la scatti?</span>
-            <select className="dato" value={luogo} onChange={(e) => setLuogo(e.target.value as Luogo)}>
+            <select
+              className="dato"
+              value={luogo}
+              onChange={(e) => {
+                setLuogo(e.target.value as Luogo);
+                setParte(null);
+              }}
+            >
               {LUOGHI.map((l) => (
                 <option key={l} value={l}>
                   {NOME_LUOGO[l]}
@@ -131,6 +151,37 @@ export function FotoFrigo({ indice, luogo: luogoIniziale, chiudi }: { indice: In
               ))}
             </select>
           </label>
+          {frigo && luogo !== 'dispensa' && (
+            <div className="campo">
+              <span>Cosa fotografi?</span>
+              <div className="consiglio-ripiano-mio">
+                <DisegnoFrigoMio
+                  frigo={frigo}
+                  scelto={parte}
+                  scegli={(id) => {
+                    const p = postoFrigo(frigo, id);
+                    if (!p) return;
+                    setLuogo(p.zona === 'freezer' ? 'freezer' : 'frigo');
+                    setParte((x) => (x === id ? null : id));
+                  }}
+                />
+                <div className="cosa-ci-va" aria-live="polite">
+                  <strong>{scelta ? scelta.nome : luogo === 'freezer' ? 'Tutto il freezer' : 'Tutto il frigo'}</strong>
+                  <span className="tenue">
+                    {scelta ? 'Metto in questa parte tutto quello che vedo.' : 'Tocca una parte se fotografi solo quella. Ti dico dove ho visto ogni cosa.'}
+                  </span>
+                  {scelta && (
+                    <button type="button" className="bottone piccolo" style={{ marginTop: 8 }} onClick={() => setParte(null)}>
+                      {luogo === 'freezer' ? 'Tutto il freezer' : 'Tutto il frigo'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+          {!frigo && luogo !== 'dispensa' && (
+            <p className="tenue piccolo">Configura il frigo in Impostazioni › Il mio frigorifero: ti dirò anche su che ripiano ho visto ogni cosa.</p>
+          )}
           <label className="bottone primario pieno">
             <span aria-hidden>📷</span> Scatta o scegli la foto
             <input type="file" accept="image/*" capture="environment" hidden aria-label="Foto del frigo" onChange={(e) => void leggi(e.target.files?.[0])} />
@@ -156,6 +207,15 @@ export function FotoFrigo({ indice, luogo: luogoIniziale, chiudi }: { indice: In
             <p className="tenue" style={{ marginTop: 0 }}>
               Ecco cosa mi sembra di vedere in {NOME_LUOGO[luogo].toLowerCase()}. Togli la spunta a ciò che è sbagliato e controlla le quantità.
             </p>
+            {frigo && postiLuogo.length > 0 && (
+              <DisegnoFrigoMio
+                frigo={frigo}
+                segni={proposte.reduce<Record<string, number>>((acc, p, i) => {
+                  if (p.ingrediente && scelte[i] && posti[i]) acc[posti[i]] = (acc[posti[i]] ?? 0) + 1;
+                  return acc;
+                }, {})}
+              />
+            )}
             <ul className="elenco" aria-label="Alimenti nella foto">
               {proposte.map((p, i) => (
                 <li key={i} className="riga" style={{ flexWrap: 'wrap' }}>
@@ -177,6 +237,24 @@ export function FotoFrigo({ indice, luogo: luogoIniziale, chiudi }: { indice: In
                         style={{ width: 80 }}
                       />
                       <span className="tenue">{p.unita}</span>
+                      {postiLuogo.length > 0 && (
+                        <label className="riga posto-foto">
+                          <span aria-hidden>📍</span>
+                          <select
+                            className="dato"
+                            aria-label={`Dove sta ${p.ingrediente.nome}`}
+                            value={posti[i] ?? ''}
+                            onChange={(e) => setPosti((x) => ({ ...x, [i]: e.target.value }))}
+                          >
+                            <option value="">Non so dove</option>
+                            {postiLuogo.map((q) => (
+                              <option key={q.id} value={q.id}>
+                                {q.nome}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      )}
                     </>
                   ) : (
                     <span className="tenue">«{p.nome}»: non lo trovo nel catalogo, aggiungilo a mano se serve.</span>

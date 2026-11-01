@@ -4,7 +4,10 @@ import { iconaIngrediente } from '../dominio/iconeCibo';
 import { LUOGHI, NOME_LUOGO } from '../catalogo/tipi';
 import type { RigaInVista } from '../dati/anteprima';
 import { useFamiglia, useVista } from '../dati/contesto';
-import { useIndice } from '../dati/indice';
+import { useCatalogo, useIndice } from '../dati/indice';
+import { type Consiglio, postoDelLotto, postoIngrediente, postiDi } from '../dominio/frigo';
+import { DisegnoFrigoMio } from '../ui/FrigoMio';
+import { useFrigo } from './MioFrigo';
 import { ricettePerUrgenti } from '../dominio/consumi';
 import type { Indice, Ingrediente } from '../dominio/ricette';
 import { daUsarePresto, descriviData, giorniTra, type Luogo, oggi, piuGiorni, REPARTI_SFUSI, spreco, statoData, stima, type TipoData } from '../dominio/scadenze';
@@ -29,6 +32,8 @@ export interface Lotto {
   note: string | null;
   /** Il piatto del menu cucinato in anticipo, se il lotto è un piatto pronto. */
   portata_id?: string | null;
+  /** Dove sta nel frigo o nel freezer (Impostazioni › Il mio frigorifero). */
+  posto?: string | null;
   versione: number;
   in_attesa?: boolean;
 }
@@ -46,6 +51,7 @@ const aLotto = (r: RigaInVista): Lotto => ({
   chiuso_il: (r.chiuso_il as string | null) ?? null,
   note: (r.note as string | null) ?? null,
   portata_id: (r.portata_id as string | null) ?? null,
+  posto: (r.posto as string | null) ?? null,
   versione: Number(r.versione ?? 1),
   in_attesa: r.in_attesa,
 });
@@ -211,7 +217,17 @@ function RicettePerUrgenti({ indice, presto, lotti, giorno }: { indice: Indice; 
   );
 }
 
+/** Dove mettere un ingrediente nel frigo della famiglia (null senza frigo configurato o in dispensa). */
+export function useConsiglioPosto(ing: Ingrediente | null, luogo: Luogo): Consiglio | null {
+  const frigo = useFrigo();
+  const catalogo = useCatalogo();
+  if (!frigo || !ing || luogo === 'dispensa') return null;
+  const sottocategoria = catalogo?.ingredienti.find((x) => x.id === ing.id)?.sottocategoria ?? null;
+  return postoIngrediente(frigo, { reparto: ing.reparto, sottocategoria }, luogo);
+}
+
 function ElencoLotti({ indice, lotti, giorno, apri, conLuogo }: { indice: Indice; lotti: Lotto[]; giorno: string; apri: (id: string) => void; conLuogo?: boolean }) {
+  const frigo = useFrigo();
   return (
     <ul className="elenco">
       {lotti.map((l) => {
@@ -228,6 +244,7 @@ function ElencoLotti({ indice, lotti, giorno, apri, conLuogo }: { indice: Indice
                 <span className="tenue" style={{ display: 'block' }}>
                   {formatta({ valore: l.quantita, unita: l.unita })}
                   {conLuogo && ` · ${NOME_LUOGO[l.luogo]}`}
+                  {postoDelLotto(frigo, l) && ` · 📍 ${postoDelLotto(frigo, l)!.nome}`}
                 </span>
               </span>
               <EtichettaData lotto={l} giorno={giorno} />
@@ -273,6 +290,8 @@ function NuovoLotto({ indice, luogo: luogoIniziale, chiudi }: { indice: Indice; 
   }
 
   const proposta = ing && sceltaData === 'nessuna' && sfuso ? stima(ing, luogo, giorno) : null;
+  const consiglio = useConsiglioPosto(ing, luogo);
+  const frigo = useFrigo();
 
   async function salva(e: FormEvent) {
     e.preventDefault();
@@ -298,6 +317,7 @@ function NuovoLotto({ indice, luogo: luogoIniziale, chiudi }: { indice: Indice; 
       luogo,
       data_acquisto: giorno,
       origine: 'manuale',
+      posto: consiglio?.posto.id ?? null,
       ...date,
     });
     // Il codice a barre si ricorda con quello che si è scritto: la prossima volta propone la stessa confezione.
@@ -378,6 +398,19 @@ function NuovoLotto({ indice, luogo: luogoIniziale, chiudi }: { indice: Indice; 
               ))}
             </div>
           </div>
+          {frigo && consiglio && (
+            <div className="consiglio-ripiano-mio" aria-label="Dove metterlo">
+              <DisegnoFrigoMio frigo={frigo} evidenzia={consiglio.posto.id} inFondo={consiglio.inFondo} />
+              <div className="cosa-ci-va">
+                <span className="tenue piccolo">Mettilo qui</span>
+                <strong>
+                  {consiglio.posto.nome}
+                  {consiglio.inFondo ? ', in fondo' : ''}
+                </strong>
+                <span className="tenue">{consiglio.perche}</span>
+              </div>
+            </div>
+          )}
           <div className="campo">
             <span>Data sulla confezione</span>
             <div className="scelte">
@@ -456,6 +489,9 @@ function SchedaLotto({ indice, lotto: l, giorno, chiudi }: { indice: Indice; lot
   const [tipo, setTipo] = useState<TipoData>(l.tipo_data);
   const [data, setData] = useState(l.data_limite ?? '');
   const [errore, setErrore] = useState<string | null>(null);
+  const frigo = useFrigo();
+  const consiglio = useConsiglioPosto(ing ?? null, l.luogo);
+  const postoOra = postoDelLotto(frigo, l);
   const storia = (vista.righe.movimento ?? []).filter((m) => m.lotto_id === l.id).sort((a, b) => String(b.creato_il ?? '').localeCompare(String(a.creato_il ?? '')));
   const dataProtetta = l.fonte_data === 'confezione';
 
@@ -518,6 +554,30 @@ function SchedaLotto({ indice, lotto: l, giorno, chiudi }: { indice: Indice; lot
       <p>
         <strong>{formatta({ valore: l.quantita, unita: l.unita })}</strong> in {NOME_LUOGO[l.luogo].toLowerCase()} · <EtichettaData lotto={l} giorno={giorno} />
       </p>
+      {frigo && l.luogo !== 'dispensa' && (
+        <div className="consiglio-ripiano-mio">
+          <DisegnoFrigoMio frigo={frigo} evidenzia={postoOra?.id ?? consiglio?.posto.id} inFondo={!postoOra && consiglio?.inFondo} />
+          <div className="cosa-ci-va">
+            <label className="campo" style={{ margin: 0 }}>
+              <span className="tenue piccolo">{postoOra ? 'Sta qui' : 'Mettilo qui'}</span>
+              <select
+                className="dato"
+                aria-label="Dove sta nel frigo"
+                value={postoOra?.id ?? ''}
+                onChange={(e) => void esegui('modifica_lotto', { id: l.id, versione_attesa: l.versione, campi: { posto: e.target.value || null } })}
+              >
+                <option value="">{consiglio ? `Non segnato (consiglio: ${consiglio.posto.nome})` : 'Non segnato'}</option>
+                {postiDi(frigo, l.luogo).map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.nome}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {!postoOra && consiglio && <span className="tenue">{consiglio.perche}</span>}
+          </div>
+        </div>
+      )}
       {l.tipo_data === 'stimata' && <p className="tenue">Data stimata dall’app per un alimento senza data: è indicativa, controlla sempre.</p>}
       {l.tipo_data === 'tmc' && scaduto && <p className="tenue">«Preferibilmente entro» superato: non vuol dire per forza da buttare, controlla aspetto e odore.</p>}
 

@@ -107,6 +107,16 @@ const EFFETTI: Record<string, Effetto> = {
       return { ...r, impostazioni, in_attesa: true };
     });
   },
+  // Il frigo configurato si vede subito (Impostazioni › Il mio frigorifero).
+  imposta_frigo: (righe, d, famiglia) => {
+    righe.famiglia = (righe.famiglia ?? []).map((r) => {
+      if (r.id !== famiglia) return r;
+      const impostazioni = { ...((r.impostazioni as Record<string, unknown> | undefined) ?? {}) };
+      if (d.frigo && typeof d.frigo === 'object') impostazioni.frigo = d.frigo;
+      else delete impostazioni.frigo;
+      return { ...r, impostazioni, in_attesa: true };
+    });
+  },
   antonino_regole: (righe, d, famiglia) => {
     righe.famiglia = (righe.famiglia ?? []).map((r) => {
       if (r.id !== famiglia) return r;
@@ -161,6 +171,7 @@ const EFFETTI: Record<string, Effetto> = {
     calcolata_il: d.calcolata_il ?? null,
     origine: 'manuale',
     note: d.note ?? null,
+    posto: d.luogo === 'dispensa' ? null : (d.posto ?? null),
     chiuso_il: null,
     versione: 1,
   })),

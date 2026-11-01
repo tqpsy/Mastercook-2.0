@@ -10,6 +10,7 @@ export interface Riconosciuto {
   nome: string;
   quantita: number | null;
   unita: 'g' | 'ml' | 'pz' | null;
+  posto?: string | null;
 }
 
 export interface PropostaFoto {
@@ -18,6 +19,8 @@ export interface PropostaFoto {
   /** Nell'unità dell'ingrediente; null se dalla foto non si capisce (va scritta). */
   quantita: number | null;
   unita: UnitaBase | null;
+  /** Dove l'ha visto nel frigo (id di src/dominio/frigo.ts), se la famiglia l'ha configurato. */
+  posto: string | null;
 }
 
 export function abbinaAlimenti(indice: Indice, alimenti: Riconosciuto[]): PropostaFoto[] {
@@ -29,7 +32,7 @@ export function abbinaAlimenti(indice: Indice, alimenti: Riconosciuto[]): Propos
     if (ingrediente) visti.add(ingrediente.id);
     const unita = ingrediente ? UNITA_BASE[ingrediente.dimensione] : null;
     const quantita = ingrediente && a.quantita !== null && a.unita === unita ? a.quantita : null;
-    esito.push({ nome: a.nome, ingrediente, quantita, unita });
+    esito.push({ nome: a.nome, ingrediente, quantita, unita, posto: a.posto ?? null });
   }
   // Prima quelli riconosciuti, poi quelli da aggiungere a mano.
   return [...esito.filter((x) => x.ingrediente), ...esito.filter((x) => !x.ingrediente)];

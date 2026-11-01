@@ -65,11 +65,12 @@ I comandi sono registrati in `interno.tipo_comando` (tipo → funzione); tutti r
 | `modifica_ingrediente` | `id`, `versione_attesa`, `campi` |
 | `salva_ricetta` | `id`, `nuova?`, `versione_attesa?`, `campi`, `ingredienti` e `passi` come `{aggiungi, modifica: [{id, versione_attesa, campi}], rimuovi}` |
 | `elimina_ricetta` | `id` |
-| `aggiungi_lotto` | `id`, `ingrediente_id`, `quantita`, `unita`, `luogo`, date (vedi sotto), `nome`, `note` |
+| `aggiungi_lotto` | `id`, `ingrediente_id`, `quantita`, `unita`, `luogo`, date (vedi sotto), `nome`, `note`, `posto?` (parte del frigo: r1…, c1…, s1…, f1…; ignorato in dispensa) |
 | `scarica_lotto` | `lotto_id`, `quantita`, `causale` (consumo/spreco/scaduto) |
 | `correggi_lotto` | `lotto_id`, `quantita_vista`, `quantita_nuova` (conflitto `quantita_cambiata` se nel frattempo è cambiata) |
 | `sposta_lotto` | `lotto_id`, `luogo`, `quantita?` + `nuovo_id?` (spostamento parziale), `stima?` |
-| `modifica_lotto` | `id`, `versione_attesa`, `campi` (nome, note, date) |
+| `modifica_lotto` | `id`, `versione_attesa`, `campi` (nome, note, date, posto) |
+| `imposta_frigo` | `frigo` (oggetto di src/dominio/frigo.ts, al più 1000 caratteri) o `null` per toglierlo: va in `famiglia.impostazioni.frigo` |
 
 Regole principali, tutte nel database e coperte da test (`tests/db/ricette.test.ts`, `tests/db/casa.test.ts`):
 

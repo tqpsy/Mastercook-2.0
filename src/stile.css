@@ -2950,6 +2950,134 @@ details > summary:has(.primo-presto) {
 }
 .comandi-menu.largo .riempi-vuoti.con-antonino {
   padding-left: 6px;
+
+/* Il mio frigorifero: il disegno in alto (a sinistra su tablet), i comandi sotto. */
+.configura-frigo h3 {
+  margin: 18px 0 8px;
+  font-size: 1rem;
+}
+.configura-frigo .disegno {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.frigo-mio {
+  width: 140px;
+  flex: none;
+  height: auto;
+}
+.frigo-mio.grande {
+  width: min(46%, 220px);
+}
+.frigo-mio.toccabile .parte-frigo {
+  cursor: pointer;
+}
+.frigo-mio .parte-frigo:focus-visible {
+  outline: none;
+}
+.frigo-mio .parte-frigo:focus-visible > rect:first-child {
+  stroke: var(--primario);
+  stroke-width: 2.5;
+}
+.cosa-ci-va {
+  flex: 1;
+  min-width: 0;
+  padding: 12px;
+  border-radius: var(--raggio);
+  background: var(--salvia-tenue);
+  align-self: stretch;
+}
+.cosa-ci-va strong {
+  display: block;
+  font-family: var(--carattere-titoli);
+  font-size: 1.1rem;
+}
+.cosa-ci-va ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+.contatore-frigo {
+  min-height: 52px;
+}
+.contatore-frigo .numero {
+  min-width: 32px;
+  text-align: center;
+  font-size: 1.2rem;
+}
+.configura-frigo .scheda > .riga + .riga {
+  border-top: 1px solid var(--bordo);
+}
+.configura-frigo > .comandi > .scelte.segmenti {
+  display: flex;
+}
+.configura-frigo > .comandi > .scelte.segmenti button {
+  flex: 1;
+}
+.configura-frigo .comandi > .bottone.primario {
+  margin-top: 18px;
+}
+@media (min-width: 900px) {
+  .foglio:has(.configura-frigo) {
+    max-width: 880px;
+  }
+  .configura-frigo {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 28px;
+    align-items: start;
+  }
+  .configura-frigo .disegno {
+    position: sticky;
+    top: 0;
+    flex-direction: column;
+  }
+  .configura-frigo .frigo-mio.grande {
+    width: 100%;
+  }
+  .configura-frigo .cosa-ci-va {
+    align-self: stretch;
+  }
+  .configura-frigo .comandi h3:first-child {
+    margin-top: 0;
+  }
+}
+.contatore-frigo .bottone.tondo {
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  font-size: 1.3rem;
+}
+.frigo-mio .parte-frigo {
+  outline: none;
+}
+.configura-frigo .scelte.segmenti button {
+  white-space: nowrap;
+  padding-inline: 10px;
+}
+.configura-frigo .cosa-ci-va {
+  align-self: flex-start;
+}
+.consiglio-ripiano-mio {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.consiglio-ripiano-mio .frigo-mio {
+  width: 150px;
+}
+@media (min-width: 900px) {
+  .configura-frigo .cosa-ci-va {
+    align-self: stretch;
+  }
+}
+.posto-foto {
+  flex-basis: 100%;
+  padding-left: 32px;
+  gap: 6px;
+}
+.posto-foto .dato {
+  flex: 1;
+  min-height: 40px;
 }
 /* Più piatti nello stesso pasto: righe compatte, il nome ha più spazio. */
 .avanzi-mangiato:not(.uno) .tondo-piatto {

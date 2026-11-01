@@ -2,7 +2,7 @@
 // gli alimenti che Gemini riconosce. La chiave Gemini è quella della famiglia (scritta nelle Impostazioni) oppure,
 // per le famiglie di chi gestisce l'app, il segreto del progetto (GEMINI_API_KEY): non arriva mai sui telefoni.
 // La foto non si salva: passa a Google e basta.
-import { riconosci } from './nucleo.ts';
+import { riconosci, testoFrigo } from './nucleo.ts';
 
 const CORS = {
   'access-control-allow-origin': '*',
@@ -28,7 +28,7 @@ const rispondi = (stato: number, dati: unknown) => new Response(JSON.stringify(d
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
   if (req.method !== 'POST') return rispondi(405, { errore: 'metodo' });
-  let d: { famiglia_id?: string; immagine?: string };
+  let d: { famiglia_id?: string; immagine?: string; frigo?: unknown };
   try {
     d = await req.json();
   } catch {
@@ -58,6 +58,6 @@ Deno.serve(async (req) => {
   const chiave = scelta.chiave ?? (scelta.condivisa ? Deno.env.get('GEMINI_API_KEY') : undefined);
   if (!chiave) return rispondi(503, { errore: 'non_configurata' });
 
-  const esito = await riconosci(d.immagine, chiave);
+  const esito = await riconosci(d.immagine, chiave, fetch, undefined, testoFrigo(d.frigo));
   return rispondi('errore' in esito ? (esito.errore === 'quota' ? 429 : 502) : 200, esito);
 });
