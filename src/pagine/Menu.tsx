@@ -1,7 +1,7 @@
 import { type KeyboardEvent, type RefObject, type TouchEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { idDispositivo, useFamiglia, useVista, type Vista } from '../dati/contesto';
 import { useIndice } from '../dati/indice';
-import { type Esito, NOME_ESITO, type Verifica, type Vincolo } from '../dominio/compatibilita';
+import { NOME_ESITO, type Verifica, type Vincolo } from '../dominio/compatibilita';
 import {
   alPasto,
   type CategoriaPasto,
@@ -39,9 +39,9 @@ import { Icona, IconaLuogo } from '../ui/Icona';
 import { avanziInCasa } from '../dominio/avanzi';
 import { Foglio } from '../ui/Foglio';
 import { formattaGiorno } from '../dominio/unita';
-import { ICONA_ESITO, MarchiSegni, motiviInBreve, RicettaDelPiatto, useIcone, useSegni } from './Ricette';
+import { AvvisoAdatto, ICONA_ESITO, MarchiSegni, motiviInBreve, RicettaDelPiatto, useIcone, useSegni } from './Ricette';
 import { IconaCibo } from '../ui/IconaCibo';
-import { elencoNomi, leggiSenza, type Rimedio, rimedio, type Senza } from '../dominio/senza';
+import { leggiSenza, type Rimedio, rimedio, type Senza } from '../dominio/senza';
 import { AvvisoNonSiToglie, EtichettaRimedio, FoglioSenza, testoSenza } from './Senza';
 import { Sigla, type SiglaPersona, sigleDi } from '../ui/Sigla';
 
@@ -1302,14 +1302,21 @@ function SchedaPiatto({
       {p.avanzo_di && <AvanzoDi dati={dati} portata={p} />}
 
       {d.valutazione && (
-        <EsitoPiatto
+        <AvvisoAdatto
           esito={d.valutazione.esito}
-          righe={d.valutazione.perMembro
-            .filter((m) => m.valutazione)
-            .map(
-              (m) =>
-                `${m.nome}${m.mangia === 'alternativa' ? ' (piatto a parte)' : ''}: ${m.valutazione!.esito === 'adatta' || !m.valutazione!.dettagli?.length ? `${ICONA_ESITO[m.valutazione!.esito]} ` : ''}${motiviInBreve(m.valutazione!) || (m.senza?.length ? `senza ${elencoNomi(indice, m.senza)} ✂️` : 'nessun problema noto')}`,
-            )}
+          adatto="Adatto a chi lo mangia"
+          righe={d.valutazione.perMembro.flatMap((m) =>
+            m.valutazione
+              ? [
+                  {
+                    id: m.membro_id,
+                    nome: `${m.nome}${m.mangia === 'alternativa' ? ' (piatto a parte)' : ''}`,
+                    esito: m.valutazione.esito,
+                    testo: motiviInBreve(m.valutazione) || 'da controllare',
+                  },
+                ]
+              : [],
+          )}
         />
       )}
       {d.ricetta && !!p.senza?.length && <SenzaNelPiatto indice={indice} dati={dati} portata={p} ricetta={d.ricetta} testo={d.senza} modifica={modifica} />}
@@ -1631,18 +1638,20 @@ function SenzaNelPiatto({
           {perTutti ? 'Nessuno lo mette: non va nella spesa' : 'La sua porzione si mette da parte prima di aggiungerlo'}
         </span>
       </span>
-      {x?.possibile && (
-        <button type="button" className="bottone piccolo" onClick={() => setCambia(true)}>
-          Cambia
+      <span className="senza-bottoni">
+        {x?.possibile && (
+          <button type="button" className="bottone piccolo" onClick={() => setCambia(true)}>
+            Cambia
+          </button>
+        )}
+        <button
+          type="button"
+          className="bottone piccolo"
+          onClick={() => window.confirm('Rimettere gli ingredienti tolti? Il piatto tornerà ⛔ per chi non può mangiarli.') && modifica({ senza: [] })}
+        >
+          Rimetti
         </button>
-      )}
-      <button
-        type="button"
-        className="bottone piccolo"
-        onClick={() => window.confirm('Rimettere gli ingredienti tolti? Il piatto tornerà ⛔ per chi non può mangiarli.') && modifica({ senza: [] })}
-      >
-        Rimetti
-      </button>
+      </span>
       {cambia && x?.possibile && (
         <FoglioSenza
           indice={indice}
@@ -1660,31 +1669,6 @@ function SenzaNelPiatto({
           chiudi={() => setCambia(false)}
         />
       )}
-    </div>
-  );
-}
-
-function EsitoPiatto({ esito, righe }: { esito: Esito; righe: string[] }) {
-  return (
-    <div
-      className={`avviso ${esito === 'adatta' ? 'info' : 'errore'}`}
-      style={
-        esito === 'da_verificare'
-          ? {
-              background: 'var(--attenzione-tenue)',
-              color: 'var(--attenzione)',
-            }
-          : undefined
-      }
-    >
-      <strong>
-        {ICONA_ESITO[esito]} {esito === 'adatta' ? 'Adatto a chi lo mangia' : NOME_ESITO[esito]}
-      </strong>
-      <ul style={{ margin: '6px 0 0', paddingLeft: 18 }}>
-        {righe.map((r) => (
-          <li key={r}>{r}</li>
-        ))}
-      </ul>
     </div>
   );
 }

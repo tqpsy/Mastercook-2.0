@@ -30,7 +30,7 @@ test('menu: un piatto per cena, Sara mangia altro, nessun movimento in casa', as
 
   await page.getByRole('button', { name: 'Apri Spaghetti alla carbonara' }).click();
   const scheda = page.getByRole('dialog', { name: 'Spaghetti alla carbonara' });
-  await expect(scheda.getByText(/Non adatta a tutti/)).toBeVisible();
+  await expect(scheda.getByRole('list', { name: 'Non adatta a tutti' })).toBeVisible();
   // Sara non mangia la carbonara: si toglie la spunta e le si dà un altro piatto nello stesso pasto.
   const chi = scheda.getByRole('group', { name: 'Chi mangia questo piatto' });
   await expect(chi.getByRole('checkbox', { name: /Sara/ })).toBeChecked();
@@ -299,8 +299,8 @@ test('ospiti a cena: porzioni che crescono, allergia controllata, niente nomi', 
   const scheda = page.getByRole('dialog', { name: 'Spaghetti alla carbonara' });
   // 1 (Luca) + 2 adulti + 0,6 = 3,6 → 3,5; la carbonara ha le uova.
   await expect(scheda.getByRole('button', { name: 'Automatiche (3,5)' })).toBeVisible();
-  await expect(scheda.getByText(/Non adatta a tutti/)).toBeVisible();
-  await expect(scheda.getByText(/Ospiti: ⛔/)).toBeVisible();
+  await expect(scheda.getByRole('list', { name: 'Non adatta a tutti' })).toBeVisible();
+  await expect(scheda.getByText(/Ospiti · /)).toBeVisible();
   await scheda.getByRole('button', { name: 'Chiudi' }).click();
   await expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
 
