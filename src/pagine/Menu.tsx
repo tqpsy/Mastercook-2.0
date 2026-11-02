@@ -77,15 +77,7 @@ const SOGLIA_DITO = 50;
  */
 function useScorrimento(passo: (verso: 1 | -1, bersaglio: Element) => void) {
   const inizio = useRef<{ x: number; y: number; bersaglio: Element; scorre: HTMLElement | null; sx: number } | null>(null);
-  const area = useRef<HTMLDivElement>(null);
-  const sposta = (dx: number) => {
-    const el = area.current;
-    if (!el) return;
-    el.style.transition = dx ? 'none' : '';
-    el.style.transform = dx ? `translateX(${dx}px)` : '';
-  };
   return {
-    ref: area,
     onTouchStart(e: TouchEvent) {
       const t = e.touches[0];
       if (e.touches.length !== 1 || !t) return void (inizio.current = null);
@@ -93,17 +85,9 @@ function useScorrimento(passo: (verso: 1 | -1, bersaglio: Element) => void) {
       const scorre = bersaglio.closest<HTMLElement>('.scorre');
       inizio.current = { x: t.clientX, y: t.clientY, bersaglio, scorre, sx: scorre?.scrollLeft ?? 0 };
     },
-    onTouchMove(e: TouchEvent) {
-      const i = inizio.current;
-      const t = e.touches[0];
-      if (!i || !t || i.scorre) return;
-      const dx = t.clientX - i.x;
-      if (Math.abs(dx) > Math.abs(t.clientY - i.y) * 1.5) sposta(Math.max(-60, Math.min(60, dx * 0.35)));
-    },
     onTouchEnd(e: TouchEvent) {
       const i = inizio.current;
       inizio.current = null;
-      sposta(0);
       const t = e.changedTouches[0];
       if (!i || !t) return;
       const dx = t.clientX - i.x;
@@ -119,7 +103,6 @@ function useScorrimento(passo: (verso: 1 | -1, bersaglio: Element) => void) {
     },
     onTouchCancel() {
       inizio.current = null;
-      sposta(0);
     },
     onKeyDown(e: KeyboardEvent) {
       if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
@@ -134,6 +117,112 @@ function useScorrimento(passo: (verso: 1 | -1, bersaglio: Element) => void) {
       }
       e.preventDefault();
       passo(verso, bersaglio);
+    },
+  };
+}
+
+/** Molla del carosello: rigida quanto basta per essere svelta, smorzata poco sotto il critico per un leggero rimbalzo. */
+const MOLLA = { rigidita: 420, smorzamento: 0.72 };
+
+/**
+ * I giorni come carosello: ieri, oggi e domani affiancati; il binario segue il dito in tempo reale e al rilascio una
+ * molla lo aggancia al giorno nuovo (o lo riporta indietro), con un piccolo rimbalzo. `cambia(±1)` arriva a molla ferma;
+ * `chiave` è il giorno mostrato: quando cambia il binario torna al centro prima che si veda.
+ */
+function useCarosello(cambia: (verso: 1 | -1) => void, chiave: string) {
+  const finestra = useRef<HTMLDivElement>(null);
+  const binario = useRef<HTMLDivElement>(null);
+  const stato = useRef<{ x: number; y: number; asse: 'x' | 'y' | null; dx: number; v: number; t: number } | null>(null);
+  const molla = useRef(0);
+  const posa = (dx: number) => {
+    if (binario.current) binario.current.style.transform = `translate3d(calc(-100% + ${dx}px), 0, 0)`;
+  };
+  useLayoutEffect(() => {
+    cancelAnimationFrame(molla.current);
+    posa(0);
+  }, [chiave]);
+  useEffect(() => () => cancelAnimationFrame(molla.current), []);
+
+  function lancia(da: number, a: number, velocita: number, fine: () => void) {
+    const k = MOLLA.rigidita;
+    const c = 2 * Math.sqrt(k) * MOLLA.smorzamento;
+    let x = da;
+    let v = velocita;
+    let prima = performance.now();
+    cancelAnimationFrame(molla.current);
+    const passo = (ora: number) => {
+      // Passi piccoli e fissi: la molla resta stabile anche se un fotogramma arriva in ritardo.
+      let dt = Math.min(0.064, (ora - prima) / 1000);
+      prima = ora;
+      while (dt > 0) {
+        const h = Math.min(dt, 1 / 240);
+        v += (-k * (x - a) - c * v) * h;
+        x += v * h;
+        dt -= h;
+      }
+      if (Math.abs(x - a) < 0.5 && Math.abs(v) < 20) {
+        posa(a);
+        return fine();
+      }
+      posa(x);
+      molla.current = requestAnimationFrame(passo);
+    };
+    molla.current = requestAnimationFrame(passo);
+  }
+
+  return {
+    finestra,
+    binario,
+    gesti: {
+      onTouchStart(e: TouchEvent) {
+        e.stopPropagation();
+        const t = e.touches[0];
+        if (e.touches.length !== 1 || !t) return void (stato.current = null);
+        cancelAnimationFrame(molla.current);
+        // Se una molla era in corsa si riparte da dove si trova il binario.
+        const m = binario.current ? new DOMMatrixReadOnly(getComputedStyle(binario.current).transform) : null;
+        const da = m && finestra.current ? m.m41 + finestra.current.clientWidth : 0;
+        stato.current = { x: t.clientX - da, y: t.clientY, asse: null, dx: da, v: 0, t: e.timeStamp };
+      },
+      onTouchMove(e: TouchEvent) {
+        e.stopPropagation();
+        const s = stato.current;
+        const t = e.touches[0];
+        if (!s || !t) return;
+        const dx = t.clientX - s.x;
+        if (!s.asse) {
+          if (Math.abs(dx - s.dx) < 8 && Math.abs(t.clientY - s.y) < 8) return;
+          s.asse = Math.abs(dx - s.dx) > Math.abs(t.clientY - s.y) ? 'x' : 'y';
+        }
+        if (s.asse !== 'x') return;
+        const dt = e.timeStamp - s.t;
+        if (dt > 0) s.v = ((dx - s.dx) / dt) * 1000;
+        s.dx = dx;
+        s.t = e.timeStamp;
+        posa(dx);
+      },
+      onTouchEnd(e: TouchEvent) {
+        e.stopPropagation();
+        const s = stato.current;
+        stato.current = null;
+        const larghezza = finestra.current?.clientWidth ?? 0;
+        if (!s || !larghezza) return;
+        if (s.asse !== 'x') {
+          if (s.dx) lancia(s.dx, 0, 0, () => undefined);
+          return;
+        }
+        // Si cambia giorno se il dito è andato oltre un quarto dello schermo o è stato lanciato con decisione.
+        const lancio = Math.abs(s.v) > 450 ? Math.sign(s.v) : 0;
+        const verso = s.dx < -larghezza / 4 || lancio < 0 ? 1 : s.dx > larghezza / 4 || lancio > 0 ? -1 : 0;
+        if (!verso) return lancia(s.dx, 0, s.v, () => undefined);
+        lancia(s.dx, -verso * larghezza, s.v, () => cambia(verso));
+      },
+      onTouchCancel(e: TouchEvent) {
+        e.stopPropagation();
+        const s = stato.current;
+        stato.current = null;
+        if (s?.dx) lancia(s.dx, 0, 0, () => undefined);
+      },
     },
   };
 }
@@ -304,10 +393,6 @@ export function Menu() {
   // Il giorno mostrato nella vista «Giorni»: oggi, oppure il lunedì delle altre settimane.
   const [scelto, setScelto] = useState(giorno);
   const [altro, setAltro] = useState(false);
-  const setLun = (l: string) => {
-    setLunStato(l);
-    setScelto(l === lunedi(giorno) ? giorno : l);
-  };
   const [modo, setModo] = useState<Modo>(modoIniziale);
   const [nuova, setNuova] = useState<{
     data: string;
@@ -336,8 +421,8 @@ export function Menu() {
     const nuovo = piuGiorni(lun, 7 * verso);
     vaiAl(nuovo === lunedi(giorno) ? giorno : verso === 1 ? nuovo : piuGiorni(nuovo, 6));
   });
-  const riquadriGiorno = useRef<HTMLDivElement>(null);
-  useFinoInFondo(riquadriGiorno, largo ? 16 : 92, modo === 'giorni', `${modo}|${scelto}|${largo}`);
+  const { finestra, binario, gesti } = useCarosello((verso) => vaiAl(piuGiorni(scelto, verso)), scelto);
+  useFinoInFondo(finestra, largo ? 16 : 92, modo === 'giorni', `${modo}|${scelto}|${largo}`);
 
   if (!vista.pronta || !indice) return <p className="tenue">Sto caricando il menu…</p>;
   const giorni = giorniDellaSettimana(lun);
@@ -348,7 +433,8 @@ export function Menu() {
   const precedente = dati.portate.filter((p) => p.data >= piuGiorni(lun, -7) && p.data < lun);
   // Si vedono i pasti attivi, più quelli spenti che in questa settimana hanno già qualcosa.
   const categorie = dati.categorie.filter((c) => c.attiva || settimana.some((p) => p.categoria === c.valore));
-  const piatti = (data: string, categoria: string) => settimana.filter((p) => p.data === data && p.categoria === categoria);
+  // Anche fuori dalla settimana: il carosello mostra accanto il giorno prima e quello dopo.
+  const piatti = (data: string, categoria: string) => dati.portate.filter((p) => p.data === data && p.categoria === categoria);
   const portataAperta = aperta ? dati.portate.find((p) => p.id === aperta) : undefined;
 
   function cambiaModo(m: Modo) {
@@ -429,9 +515,10 @@ export function Menu() {
       ))}
     </div>
   );
-  // Senza più il titolo della settimana, «Oggi» riporta indietro quando si è andati in un'altra settimana.
-  const tornaOggi = lun !== lunedi(giorno) && !(largo && modo === 'giorni' && lun === piuGiorni(lunedi(giorno), 7)) && (
-    <button className="bottone piccolo" onClick={() => setLun(lunedi(giorno))}>
+  // «Oggi» c'è sempre (la riga in alto non cambia mai): spento quando si sta già guardando oggi.
+  const giaOggi = modo === 'giorni' ? scelto === giorno : lun === lunedi(giorno);
+  const tornaOggi = (
+    <button className="bottone piccolo torna-oggi" aria-label="Torna a oggi" disabled={giaOggi} onClick={() => vaiAl(giorno)}>
       Oggi
     </button>
   );
@@ -460,10 +547,11 @@ export function Menu() {
 
   return (
     <>
+      {/* Ancorata in alto e sempre uguale: vista, «Oggi», (sul tablet «Riempi i vuoti») e «⋯». */}
       <div className={`riga comandi-menu${largo ? ' largo' : ''}`}>
         {sceltaVista}
-        <span className="cresce" />
         {tornaOggi}
+        <span className="cresce" />
         {largo && riempi}
         {altreAzioni}
       </div>
@@ -486,10 +574,12 @@ export function Menu() {
         ))}
       {modo === 'settimana' && <SettimanaGriglia riserva={largo ? 16 : 120} largo={largo} giorni={giorni} categorie={categorie} oggiData={giorno} scelto={scelto} cella={(g, c) => riquadro(g, c, true)} />}
 
-      {modo === 'giorni' &&
-        giorni
-          .filter((g) => g === scelto)
+      {modo === 'giorni' && (
+        <div className="carosello" ref={finestra} {...gesti}>
+          <div className="binario" ref={binario}>
+        {[piuGiorni(scelto, -1), scelto, piuGiorni(scelto, 1)]
           .map((g) => {
+            const accanto = g !== scelto;
             const daRiempire = categorie.filter((c) => !piatti(g, c.valore).length).length;
             const ospitiDelGiorno = categorie.map((c) => ({ c, o: ospitiDel(dati.ospiti, g, c.valore) })).filter((x) => x.o);
             // Tablet: i pasti in una riga (le merende più strette) e l'ultimo, la cena, largo sotto.
@@ -500,7 +590,7 @@ export function Menu() {
                   .join(' ')
               : undefined;
             return (
-              <section key={g} className={`giorno-riquadri${g === giorno ? ' oggi' : ''}`} aria-label={dataLunga(g)}>
+              <section key={g} className={`giorno-riquadri${g === giorno ? ' oggi' : ''}`} aria-label={dataLunga(g)} aria-hidden={accanto || undefined} inert={accanto}>
                 <h3 className="titolo-giorno">
                   <span className="maiuscola">{dataLunga(g)}</span>
                   {g === giorno && <span className="etichetta">oggi</span>}
@@ -512,7 +602,6 @@ export function Menu() {
                   ))}
                 </h3>
                 <div
-                  ref={riquadriGiorno}
                   className={`riquadri${largo ? ' riquadri-menu-largo' : categorie.length >= 5 ? ' fitto' : ''}`}
                   style={colonne && categorie.length > 1 ? { gridTemplateColumns: colonne } : undefined}
                 >
@@ -521,6 +610,9 @@ export function Menu() {
               </section>
             );
           })}
+          </div>
+        </div>
+      )}
 
       {modo === 'panoramica' && <Panoramica indice={indice} dati={dati} giorni={giorni} categorie={categorie} settimana={settimana} apri={setAperta} oggiData={giorno} />}
       </div>
