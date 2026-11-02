@@ -16,6 +16,13 @@ describe('compatibilità delle ricette con i vincoli', () => {
     expect(e.motivi[0]).toContain('uova');
   });
 
+  it('per un ⛔ dice in breve l’ingrediente che non va', () => {
+    const latte = valutaPerVincoli(indice, ricetta('sys:pasta_zucchine'), [v('ing:lattosio', { tipo: 'intolleranza' })]);
+    expect(latte.dettagli?.[0].cosa).toBe('parmigiano reggiano');
+    const vegetariano = valutaPerVincoli(indice, ricetta('sys:carbonara'), [v('cls:vegetariano', { tipo: 'esigenza' })]);
+    expect(vegetariano.dettagli?.[0].cosa).toBe('guanciale');
+  });
+
   it('senza l’allergene e con tutte le informazioni è adatta; «anche tracce» resta da verificare', () => {
     expect(valutaPerVincoli(indice, ricetta('sys:spaghetti_aglio_olio'), [v('all:arachidi')]).esito).toBe('adatta');
     const tracce = valutaPerVincoli(indice, ricetta('sys:spaghetti_aglio_olio'), [v('all:arachidi', { severita: 'evitare_anche_tracce' })]);

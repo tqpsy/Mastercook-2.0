@@ -3008,14 +3008,18 @@ details > summary:has(.primo-presto) {
   border: 1.5px solid var(--bordo);
   border-radius: 14px;
   background: var(--superficie);
-  flex-wrap: wrap;
 }
 .ingrediente-tolto {
   text-decoration: line-through;
   color: var(--testo-tenue);
 }
 .senza-nel-piatto > .cresce {
-  flex: 1 1 60%;
+  flex: 1 1 0;
+}
+.senza-bottoni {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 /* Il mio frigorifero: il disegno in alto (a sinistra su tablet), i comandi sotto. */
 .configura-frigo h3 {
@@ -3493,4 +3497,47 @@ details > summary:has(.primo-presto) {
   height: 40px;
   min-height: 40px;
   padding: 0;
+}
+
+/* Avviso «adatto a chi lo mangia»: una spunta se va bene a tutti, altrimenti solo chi ha un problema. */
+.adatto-spunta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 12px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--salvia-tenue);
+  color: var(--primario);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.adatto-avviso {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 4px 12px;
+  border-radius: var(--raggio);
+  border-left: 4px solid var(--errore);
+  background: var(--errore-tenue);
+}
+.adatto-avviso.da_verificare {
+  border-left-color: var(--attenzione);
+  background: var(--attenzione-tenue);
+}
+.adatto-avviso.adatta {
+  border-left-color: var(--salvia);
+  background: var(--salvia-tenue);
+}
+.adatto-avviso li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 4px 0;
+}
+.adatto-avviso li + li {
+  border-top: 1px solid color-mix(in srgb, var(--testo) 10%, transparent);
+}
+.adatto-avviso .cresce::first-letter {
+  text-transform: uppercase;
 }

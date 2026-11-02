@@ -636,7 +636,7 @@ function PiattoDiOggi({
           ))}
           {avvisi.map((m) => (
             <li key={m.membro_id} className="tenue">
-              {ICONA_ESITO[m.valutazione!.esito]} <strong>{m.nome}</strong>: {motiviInBreve(m.valutazione!) || 'da controllare'}
+              {ICONA_ESITO[m.valutazione!.esito]} <strong>{m.nome}</strong> · {motiviInBreve(m.valutazione!) || 'da controllare'}
             </li>
           ))}
         </ul>
