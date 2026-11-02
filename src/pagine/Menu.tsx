@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { type KeyboardEvent, type RefObject, type TouchEvent, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { idDispositivo, useFamiglia, useVista, type Vista } from '../dati/contesto';
 import { useIndice } from '../dati/indice';
 import { type Esito, NOME_ESITO, type Verifica, type Vincolo } from '../dominio/compatibilita';
@@ -65,6 +65,101 @@ function useLargo() {
     return () => m.removeEventListener('change', cambia);
   }, []);
   return largo;
+}
+
+/** Quanto deve spostarsi il dito, e quanto più di lato che in verticale, perché sia uno scorrimento. */
+const SOGLIA_DITO = 50;
+
+/**
+ * Scorrimento col dito a sinistra o a destra (e frecce della tastiera): `passo(+1)` va avanti, `passo(-1)` indietro.
+ * `zona` dice di che passo si tratta a seconda di dove parte il dito (per esempio la striscia dei giorni = una
+ * settimana). Dentro una zona che scorre già di lato, si cambia solo quando è arrivata in fondo.
+ */
+function useScorrimento(passo: (verso: 1 | -1, bersaglio: Element) => void) {
+  const inizio = useRef<{ x: number; y: number; bersaglio: Element; scorre: HTMLElement | null; sx: number } | null>(null);
+  const area = useRef<HTMLDivElement>(null);
+  const sposta = (dx: number) => {
+    const el = area.current;
+    if (!el) return;
+    el.style.transition = dx ? 'none' : '';
+    el.style.transform = dx ? `translateX(${dx}px)` : '';
+  };
+  return {
+    ref: area,
+    onTouchStart(e: TouchEvent) {
+      const t = e.touches[0];
+      if (e.touches.length !== 1 || !t) return void (inizio.current = null);
+      const bersaglio = e.target as Element;
+      const scorre = bersaglio.closest<HTMLElement>('.scorre');
+      inizio.current = { x: t.clientX, y: t.clientY, bersaglio, scorre, sx: scorre?.scrollLeft ?? 0 };
+    },
+    onTouchMove(e: TouchEvent) {
+      const i = inizio.current;
+      const t = e.touches[0];
+      if (!i || !t || i.scorre) return;
+      const dx = t.clientX - i.x;
+      if (Math.abs(dx) > Math.abs(t.clientY - i.y) * 1.5) sposta(Math.max(-60, Math.min(60, dx * 0.35)));
+    },
+    onTouchEnd(e: TouchEvent) {
+      const i = inizio.current;
+      inizio.current = null;
+      sposta(0);
+      const t = e.changedTouches[0];
+      if (!i || !t) return;
+      const dx = t.clientX - i.x;
+      if (Math.abs(dx) < SOGLIA_DITO || Math.abs(dx) < Math.abs(t.clientY - i.y) * 1.5) return;
+      const verso = dx < 0 ? 1 : -1;
+      if (i.scorre) {
+        // Prima si scorre la griglia; si cambia settimana solo se all'inizio del gesto era già al bordo.
+        const max = i.scorre.scrollWidth - i.scorre.clientWidth;
+        if (verso === 1 && i.sx < max - 4) return;
+        if (verso === -1 && i.sx > 4) return;
+      }
+      passo(verso, i.bersaglio);
+    },
+    onTouchCancel() {
+      inizio.current = null;
+      sposta(0);
+    },
+    onKeyDown(e: KeyboardEvent) {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      const bersaglio = e.target as Element;
+      if (bersaglio.closest('input, textarea, select, [role="dialog"]')) return;
+      const scorre = bersaglio.closest<HTMLElement>('.scorre');
+      const verso = e.key === 'ArrowRight' ? 1 : -1;
+      if (scorre) {
+        const max = scorre.scrollWidth - scorre.clientWidth;
+        if (verso === 1 && scorre.scrollLeft < max - 4) return;
+        if (verso === -1 && scorre.scrollLeft > 4) return;
+      }
+      e.preventDefault();
+      passo(verso, bersaglio);
+    },
+  };
+}
+
+/**
+ * Allunga un elemento fino in fondo allo schermo (sopra la barra delle schede, lasciando `riserva` px per ciò che
+ * sta sotto), così i riquadri usano tutto lo spazio. Se lo spazio è poco resta com'è e la pagina scorre.
+ */
+function useFinoInFondo(ref: RefObject<HTMLElement | null>, riserva: number, attivo: boolean, chiave: string) {
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (!attivo) {
+      el.style.minHeight = '';
+      return;
+    }
+    const calcola = () => {
+      const barra = document.querySelector('.schede')?.getBoundingClientRect();
+      const sotto = barra && barra.top > window.innerHeight / 2 ? window.innerHeight - barra.top : 0;
+      const libera = window.innerHeight - (el.getBoundingClientRect().top + window.scrollY) - sotto - riserva;
+      el.style.minHeight = libera > 220 ? `${Math.floor(libera)}px` : '';
+    };
+    calcola();
+    window.addEventListener('resize', calcola);
+    return () => window.removeEventListener('resize', calcola);
+  }, [ref, riserva, attivo, chiave]);
 }
 
 /** La scelta della vista è di questo dispositivo: sul telefono di base i giorni, sul tablet la settimana. */
@@ -230,6 +325,19 @@ export function Menu() {
   const fineSettimana = piuGiorni(lun, 6);
   const dueSettimane = piuGiorni(giorno, 13);
   useProlungaFissi(fineSettimana > dueSettimane ? fineSettimana : dueSettimane);
+  const vaiAl = (g: string) => {
+    setLunStato(lunedi(g));
+    setScelto(g);
+  };
+  // Col dito (o con le frecce della tastiera): nei Giorni un giorno alla volta, sulla striscia una settimana;
+  // nella Settimana e nella Panoramica una settimana (indietro si arriva alla domenica, l'ultima colonna).
+  const scorrimento = useScorrimento((verso, bersaglio) => {
+    if (modo === 'giorni') return vaiAl(piuGiorni(scelto, bersaglio.closest('.striscia-giorni') ? 7 * verso : verso));
+    const nuovo = piuGiorni(lun, 7 * verso);
+    vaiAl(nuovo === lunedi(giorno) ? giorno : verso === 1 ? nuovo : piuGiorni(nuovo, 6));
+  });
+  const riquadriGiorno = useRef<HTMLDivElement>(null);
+  useFinoInFondo(riquadriGiorno, largo ? 16 : 92, modo === 'giorni', `${modo}|${scelto}|${largo}`);
 
   if (!vista.pronta || !indice) return <p className="tenue">Sto caricando il menu…</p>;
   const giorni = giorniDellaSettimana(lun);
@@ -281,25 +389,6 @@ export function Menu() {
   );
 
   const etichettaSettimana = (l: string) => (l === lunedi(giorno) ? 'Questa settimana' : l === piuGiorni(lunedi(giorno), 7) ? 'Settimana prossima' : null);
-  const frecce = (centro: React.ReactNode) => (
-    <>
-      <button className="bottone piccolo freccia" aria-label="Settimana prima" onClick={() => setLun(piuGiorni(lun, -7))}>
-        ‹
-      </button>
-      <div className="cresce titolo-settimana" aria-live="polite">
-        {centro}
-      </div>
-      <button className="bottone piccolo freccia" aria-label="Settimana dopo" onClick={() => setLun(piuGiorni(lun, 7))}>
-        ›
-      </button>
-    </>
-  );
-  const nomeSett = (
-    <>
-      {etichettaSettimana(lun) && <span className="sopratitolo">{etichettaSettimana(lun)}</span>}
-      <h2>{nomeSettimana(lun)}</h2>
-    </>
-  );
   const altreAzioni = (
     <div className="altre-azioni">
       <button className="bottone piccolo tondo" aria-label="Altre azioni" aria-expanded={altro} onClick={() => setAltro(!altro)}>
@@ -325,7 +414,7 @@ export function Menu() {
               setPasti(true);
             }}
           >
-            Pasti
+            Tipi di pasti
           </button>
         </div>
       )}
@@ -340,7 +429,8 @@ export function Menu() {
       ))}
     </div>
   );
-  const tornaOggi = lun !== lunedi(giorno) && (
+  // Senza più il titolo della settimana, «Oggi» riporta indietro quando si è andati in un'altra settimana.
+  const tornaOggi = lun !== lunedi(giorno) && !(largo && modo === 'giorni' && lun === piuGiorni(lunedi(giorno), 7)) && (
     <button className="bottone piccolo" onClick={() => setLun(lunedi(giorno))}>
       Oggi
     </button>
@@ -350,7 +440,7 @@ export function Menu() {
       <FacciaAntonino piccola /> Riempi i vuoti{largo ? '' : ' della settimana'}
     </button>
   );
-  /** Una striscia di 7 giorni: un pallino per pasto, colorato se ha già un piatto, vuoto se è da riempire. */
+  /** Una striscia di 7 giorni: si tocca un giorno per vederlo, si scorre col dito per cambiare settimana. */
   const striscia = (l: string) => (
     <div className="striscia-giorni" role="group" aria-label={`Giorni: ${nomeSettimana(l)}`}>
       {giorniDellaSettimana(l).map((g) => (
@@ -359,18 +449,10 @@ export function Menu() {
           className={`${g < giorno ? 'passato' : ''}${g === giorno ? ' oggi' : ''}`}
           aria-pressed={g === scelto}
           aria-label={`Mostra ${dataLunga(g)}`}
-          onClick={() => {
-            setLunStato(lunedi(g));
-            setScelto(g);
-          }}
+          onClick={() => vaiAl(g)}
         >
           <small>{nomeGiorno(g, true)}</small>
           <strong>{Number(g.slice(8))}</strong>
-          <span className="pallini-pasti" aria-hidden>
-            {categorie.map((c) => (
-              <i key={c.valore} className={dati.portate.some((p) => p.data === g && p.categoria === c.valore) ? `pieno t-${c.valore}` : 'vuoto'} />
-            ))}
-          </span>
         </button>
       ))}
     </div>
@@ -378,28 +460,15 @@ export function Menu() {
 
   return (
     <>
-      {largo ? (
-        <div className="riga comandi-menu largo">
-          {sceltaVista}
-          <span className="cresce" />
-          {tornaOggi}
-          {riempi}
-          {altreAzioni}
-        </div>
-      ) : (
-        <>
-          <div className="riga testa-settimana">
-            {frecce(nomeSett)}
-            {altreAzioni}
-          </div>
-          <div className="riga comandi-menu">
-            {sceltaVista}
-            <span className="cresce" />
-            {tornaOggi}
-          </div>
-        </>
-      )}
-      {largo && modo === 'settimana' && <div className="riga testa-settimana">{frecce(nomeSett)}</div>}
+      <div className={`riga comandi-menu${largo ? ' largo' : ''}`}>
+        {sceltaVista}
+        <span className="cresce" />
+        {tornaOggi}
+        {largo && riempi}
+        {altreAzioni}
+      </div>
+
+      <div className="area-scorrevole" {...scorrimento}>
 
       {modo === 'giorni' &&
         (largo ? (
@@ -415,9 +484,7 @@ export function Menu() {
         ) : (
           striscia(lun)
         ))}
-      {dati.vincoli.length > 0 && <p className="tenue">✅ adatto · ❔ da verificare · ⛔ non adatto a chi lo mangia · 🙅 a qualcuno non piace</p>}
-
-      {modo === 'settimana' && <SettimanaGriglia largo={largo} giorni={giorni} categorie={categorie} oggiData={giorno} scelto={scelto} cella={(g, c) => riquadro(g, c, true)} />}
+      {modo === 'settimana' && <SettimanaGriglia riserva={largo ? 16 : 120} largo={largo} giorni={giorni} categorie={categorie} oggiData={giorno} scelto={scelto} cella={(g, c) => riquadro(g, c, true)} />}
 
       {modo === 'giorni' &&
         giorni
@@ -445,6 +512,7 @@ export function Menu() {
                   ))}
                 </h3>
                 <div
+                  ref={riquadriGiorno}
                   className={`riquadri${largo ? ' riquadri-menu-largo' : categorie.length >= 5 ? ' fitto' : ''}`}
                   style={colonne && categorie.length > 1 ? { gridTemplateColumns: colonne } : undefined}
                 >
@@ -454,9 +522,10 @@ export function Menu() {
             );
           })}
 
-      {!largo && riempi}
-
       {modo === 'panoramica' && <Panoramica indice={indice} dati={dati} giorni={giorni} categorie={categorie} settimana={settimana} apri={setAperta} oggiData={giorno} />}
+      </div>
+
+      {!largo && riempi}
 
       {nuova && (
         <NuovoPiatto
@@ -637,6 +706,7 @@ function RiquadroMenu({
  * telefono due giorni e mezzo che scorrono di lato, con i pallini che dicono a che punto si è.
  */
 function SettimanaGriglia({
+  riserva,
   largo,
   giorni,
   categorie,
@@ -644,6 +714,7 @@ function SettimanaGriglia({
   scelto,
   cella,
 }: {
+  riserva: number;
   largo: boolean;
   giorni: string[];
   categorie: CategoriaPasto[];
@@ -654,6 +725,7 @@ function SettimanaGriglia({
   const scorre = useRef<HTMLDivElement>(null);
   const [pagina, setPagina] = useState(0);
   const pagine = 3;
+  useFinoInFondo(scorre, riserva, true, `${largo}|${categorie.length}`);
   // Sul telefono si parte dal giorno scelto (di solito oggi).
   useEffect(() => {
     const el = scorre.current;
@@ -666,7 +738,7 @@ function SettimanaGriglia({
     <>
       <div
         ref={scorre}
-        className={`settimana-griglia${largo ? '' : ' scorre'}`}
+        className={`settimana-griglia riempie${largo ? '' : ' scorre'}`}
         role="region"
         aria-label="Settimana"
         tabIndex={largo ? undefined : 0}

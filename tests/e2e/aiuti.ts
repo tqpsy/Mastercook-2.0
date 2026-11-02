@@ -1,5 +1,5 @@
 /** Aiuti condivisi dalle prove dell'interfaccia: utenti di prova, sessione nel browser, passi ricorrenti. */
-import { type Browser, type BrowserContext, expect, type Page } from '@playwright/test';
+import { type Browser, type BrowserContext, expect, type Locator, type Page } from '@playwright/test';
 import { dataLunga } from '../../src/dominio/menu';
 
 export const SERVER = `http://localhost:${process.env.MC_PORTA_SERVER ?? '14400'}`;
@@ -52,12 +52,29 @@ export async function creaFamiglia(page: Page, nome = 'Casa Prova') {
   await expect(page.getByText(nome, { exact: true })).toBeVisible();
 }
 
-/** Menu, vista «Giorni»: si mostra un giorno alla volta, scelto dalla striscia (passando alla settimana dopo o prima se serve). */
+/** Uno scorrimento col dito sull'elemento: `avanti` = dito verso sinistra (giorno o settimana dopo), `indietro` = verso destra. */
+export async function scorri(elemento: Locator, verso: 'avanti' | 'indietro') {
+  await elemento.evaluate((el, verso) => {
+    const r = el.getBoundingClientRect();
+    const y = r.top + Math.min(r.height / 2, 30);
+    const x = r.left + r.width / 2;
+    const dx = verso === 'avanti' ? -120 : 120;
+    const tocco = (cx: number) => new Touch({ identifier: 1, target: el, clientX: cx, clientY: y });
+    const evento = (tipo: string, cx: number, attivo: boolean) =>
+      el.dispatchEvent(new TouchEvent(tipo, { touches: attivo ? [tocco(cx)] : [], changedTouches: [tocco(cx)], bubbles: true, cancelable: true }));
+    evento('touchstart', x, true);
+    evento('touchmove', x + dx / 2, true);
+    evento('touchend', x + dx, false);
+  }, verso);
+}
+
+/** Menu, vista «Giorni»: si mostra un giorno alla volta, scelto dalla striscia (scorrendola alla settimana dopo o prima se serve). */
 export async function scegliGiorno(page: Page, data: string) {
   const giorno = page.getByRole('button', { name: `Mostra ${dataLunga(data)}` });
-  if (!(await giorno.count())) await page.getByRole('button', { name: 'Settimana dopo' }).click();
-  if (!(await giorno.count())) await page.getByRole('button', { name: 'Settimana prima' }).click();
-  if (!(await giorno.count())) await page.getByRole('button', { name: 'Settimana prima' }).click();
+  const striscia = page.locator('.striscia-giorni').first();
+  if (!(await giorno.count())) await scorri(striscia, 'avanti');
+  if (!(await giorno.count())) await scorri(striscia, 'indietro');
+  if (!(await giorno.count())) await scorri(striscia, 'indietro');
   await giorno.click();
 }
 
