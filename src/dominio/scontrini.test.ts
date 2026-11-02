@@ -1,8 +1,9 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import catalogo from '../catalogo/catalogo.json';
 import type { Catalogo } from '../catalogo/tipi';
 import { Indice } from './ricette';
-import { abbinaRighe, daOpenFoodFacts, formatoDaDescrizione, leggiScontrino, quantitaProposta, suggerisciIngrediente } from './scontrini';
+import { abbinaRighe, daOpenFoodFacts, formatoDaDescrizione, leggiScontrino, pulisciLinea, quantitaProposta, suggerisciIngrediente } from './scontrini';
 
 const indice = new Indice(catalogo as Catalogo);
 
@@ -64,6 +65,54 @@ describe('lettura dello scontrino', () => {
     expect(formatoDaDescrizione('BIRRA 33CL')).toEqual({ quantita: 330, unita: 'ml' });
     expect(formatoDaDescrizione('FARINA 00 1KG')).toEqual({ quantita: 1000, unita: 'g' });
     expect(formatoDaDescrizione('DETERSIVO')).toBeUndefined();
+  });
+});
+
+describe('scontrini veri, letti da Tesseract', () => {
+  const esempio = (nome: string) => readFileSync(new URL(`./scontrini-esempi/${nome}`, import.meta.url), 'utf8');
+  const IPER = [
+    { descrizione: 'PANE GRATTUG.BARAT.I', prezzo: 1.65 },
+    { descrizione: 'BOCCONCINO IPER', prezzo: 1.89, grammi: 386 },
+    { descrizione: 'SFIZIOSO OLIVE', prezzo: 3.01, grammi: 276 },
+    { descrizione: 'PETTO POLLO FETTE', prezzo: 4.36, grammi: 314 },
+    { descrizione: 'PETTO POLLO FETTE', prezzo: 8.87, grammi: 638 },
+    { descrizione: 'SHOPPER 30X55 INATEC', prezzo: 0.1 },
+  ];
+
+  // Screenshot dello scontrino digitale Iper: pesi «0,386 * 4,90Kg» sotto la descrizione, lettera IVA dopo il
+  // prezzo, l'ora del telefono in alto, «4,90K8g» e «13,89%g» letti male.
+  it('Iper (screenshot): sei righe, pesi, negozio, data e ora dello scontrino', () => {
+    const s = leggiScontrino(esempio('iper-screenshot.txt'));
+    expect(s.righe.map(({ descrizione, prezzo, grammi }) => ({ descrizione, prezzo, ...(grammi ? { grammi } : {}) }))).toEqual(IPER);
+    expect(s).toMatchObject({ negozio: 'Iper Montebello S.P.A', data: '2026-11-02', ora: '18:41', totale: 19.88, quadra: true });
+  });
+
+  it('Iper (foto preparata): «3:01 A» è un prezzo', () => {
+    const s = leggiScontrino(esempio('iper-preparato.txt'));
+    expect(s.righe.map((r) => r.prezzo)).toEqual(IPER.map((r) => r.prezzo));
+    expect(s.quadra).toBe(true);
+  });
+
+  it('totale letto male: vale il subtotale o l’importo pagato se tornano con le righe', () => {
+    expect(leggiScontrino('PANE 1,50\nLATTE 1,29\nSUBTOTALE 2,79\nTOTALE 2,19\nPAGAMENTO ELETTRONICO 2,79')).toMatchObject({ totale: 2.79, quadra: true });
+    // Se nessuno torna resta il totale scritto, e la differenza si vede.
+    expect(leggiScontrino('PANE 1,50\nLATTE 1,29\nTOTALE 3,00\nPAGAMENTO CONTANTE 2,79')).toMatchObject({ totale: 3, quadra: false });
+  });
+
+  it('corregge gli errori tipici della lettura senza toccare il resto', () => {
+    expect(pulisciLinea('latte 1 ,2O €')).toBe('LATTE 1,20');
+    expect(pulisciLinea('olive 3:01 A')).toBe('OLIVE 3,01 A');
+    expect(pulisciLinea('02-11-2026 18:41')).toBe('02-11-2026 18:41');
+    expect(pulisciLinea('UOVA FRESCHE X6')).toBe('UOVA FRESCHE X6');
+  });
+
+  it('pezzi letti male, prezzo sotto la descrizione, segni sporchi dopo il prezzo', () => {
+    const s = leggiScontrino('DESCRIZIONE PREZZO\nYOGURT BIANCO\n2 xXx 0,99   1,98 B\nCARTA IGIENICA 4 ROT. 22% 2,30 |\nOLIO EVO 1L 4% 7,90 È\nTOTALF 12,18');
+    expect(s.righe).toEqual([
+      { descrizione: 'YOGURT BIANCO', prezzo: 1.98, pezzi: 2 },
+      { descrizione: 'CARTA IGIENICA 4 ROT.', prezzo: 2.3 },
+      { descrizione: 'OLIO EVO 1L', prezzo: 7.9, formato: { quantita: 1000, unita: 'ml' } },
+    ]);
   });
 });
 

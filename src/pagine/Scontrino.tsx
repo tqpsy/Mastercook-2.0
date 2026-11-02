@@ -190,17 +190,24 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
     return (
       <Foglio titolo="Aggiungi uno scontrino" chiudi={chiudi}>
         <p className="tenue" style={{ marginTop: 0 }}>
-          Fotografa lo scontrino: lo leggo sul telefono e poi controlli tu ogni riga. Le righe già confermate dal carrello prendono solo il prezzo.
+          Fotografa lo scontrino (dritto, intero, con buona luce) o scegli lo screenshot di quello digitale: lo leggo sul telefono e poi controlli tu ogni riga. Le righe già confermate dal carrello prendono solo il prezzo.
         </p>
         {lettura !== null ? (
           <div className="avviso info" aria-live="polite">
             Sto leggendo la foto… {Math.round(lettura * 100)}%
           </div>
         ) : (
-          <label className="bottone primario pieno">
-            <span aria-hidden>📷</span> Fotografa lo scontrino
-            <input type="file" accept="image/*" capture="environment" onChange={foto} hidden />
-          </label>
+          <>
+            <label className="bottone primario pieno">
+              <span aria-hidden>📷</span> Fotografa lo scontrino
+              <input type="file" accept="image/*" capture="environment" onChange={foto} hidden />
+            </label>
+            {/* Lo scontrino digitale (Iper, Coop, Esselunga…) è uno screenshot o un'immagine già sul telefono. */}
+            <label className="bottone pieno" style={{ marginTop: 8 }}>
+              <span aria-hidden>🖼️</span> Scegli una foto o uno screenshot
+              <input type="file" accept="image/*" onChange={foto} hidden />
+            </label>
+          </>
         )}
         <label className="campo" style={{ marginTop: 12 }}>
           <span>Oppure incolla il testo dello scontrino</span>
