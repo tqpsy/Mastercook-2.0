@@ -15,7 +15,10 @@ test('configuro il frigo e aggiungendo il pollo mi dice il ripiano in basso', as
   await page.getByRole('button', { name: 'Impostazioni' }).click();
   await page.getByRole('button', { name: /Configura il tuo frigorifero/ }).click();
   const foglio = page.getByRole('dialog', { name: 'Il mio frigorifero' });
-  await foglio.getByRole('button', { name: 'Ripiani: uno in più' }).click();
+  // Un piano in più in basso: il quinto diventa ripiano, il sesto cassetto (si possono impilare i cassetti).
+  await foglio.getByRole('button', { name: 'Aggiungi un piano in basso' }).click();
+  await foglio.getByRole('radiogroup', { name: /^Piano 5/ }).getByRole('radio', { name: 'Ripiano' }).click();
+  await foglio.getByRole('radiogroup', { name: /^Piano 6/ }).getByRole('radio', { name: 'Cassetto' }).click();
   await foglio.getByRole('radiogroup', { name: 'Da che parte si apre lo sportello' }).getByRole('radio', { name: 'Sinistra' }).click();
   await foglio.getByRole('button', { name: 'Ripiano 5, in basso' }).click();
   await expect(foglio.getByText('Carne e pesce crudi', { exact: true })).toBeVisible();

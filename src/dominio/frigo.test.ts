@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { cosaCiVa, descriviPerFoto, etilene, temperatura, zonaPerGuida, FRIGO_BASE, frigoDa, posti, postoDelLotto, postoIngrediente, postoPiatto, postoValido, riassunto } from './frigo';
+import { cosaCiVa, descriviPerFoto, etilene, temperatura, zonaPerGuida, FRIGO_BASE, frigoDa, livelli, posti, postoDelLotto, postoIngrediente, postoPiatto, postoValido, riassunto } from './frigo';
 
 describe('il mio frigorifero', () => {
   it('senza configurazione: null; valori strani tornano quelli di base', () => {
     expect(frigoDa({})).toBeNull();
     expect(frigoDa({ frigo: { ripiani: 40, cassetti: -1, sportello: 'su', freezer: { posizione: 'in cantina', parti: 2.5 } } })).toEqual(FRIGO_BASE);
-    expect(frigoDa({ frigo: { ...FRIGO_BASE, ripiani: 6, litri: 300.4 } })).toMatchObject({ ripiani: 6, litri: 300 });
+    expect(frigoDa({ frigo: { ...FRIGO_BASE, piani: ['r', 'r', 'r', 'r', 'r', 'r'], litri: 300.4 } })).toMatchObject({ ripiani: 6, cassetti: 0, litri: 300 });
+    // Il formato di prima (solo quanti ripiani e cassetti) diventa la lista dei piani.
+    expect(frigoDa({ frigo: { ripiani: 3, cassetti: 2, sportello: 'sx', balconcini: 3, freezer: { posizione: 'sotto', parti: 2, tipo: 'ripiani' } } })).toMatchObject({
+      piani: ['r', 'r', 'r', 'cc'],
+      freezer: { piani: ['r', 'r'], parti: 2, tipo: 'ripiani' },
+    });
   });
 
   it('le parti hanno id stabili e nomi chiari', () => {
@@ -16,6 +21,23 @@ describe('il mio frigorifero', () => {
     expect(p[4].nome).toBe('Cassetto delle verdure');
     expect(p.at(-1)!.nome).toBe('Freezer, cassetto 3');
     expect(posti({ ...FRIGO_BASE, freezer: { ...FRIGO_BASE.freezer, posizione: 'nessuno' } }).some((x) => x.zona === 'freezer')).toBe(false);
+  });
+
+  it('ogni piano è ripiano o cassetto: cassetti uno sopra l’altro o affiancati', () => {
+    const f = frigoDa({ frigo: { ...FRIGO_BASE, piani: ['r', 'r', 'r', 'c', 'c'] } })!;
+    expect(f).toMatchObject({ ripiani: 3, cassetti: 2 });
+    expect(livelli(f).map((l) => l.id)).toEqual([['r1'], ['r2'], ['r3'], ['c1'], ['c2']]);
+    expect(posti(f).filter((p) => p.zona === 'cassetto').map((p) => p.nome)).toEqual(['Cassetto 1', 'Cassetto 2']);
+    const affiancati = frigoDa({ frigo: { ...FRIGO_BASE, piani: ['r', 'r', 'cc'] } })!;
+    expect(posti(affiancati).filter((p) => p.zona === 'cassetto').map((p) => p.nome)).toEqual(['Cassetto 1, a sinistra', 'Cassetto 2, a destra']);
+    // Almeno un ripiano resta sempre; i cassetti del freezer seguono il piano.
+    expect(frigoDa({ frigo: { ...FRIGO_BASE, piani: ['c', 'c'] } })!.ripiani).toBe(1);
+    expect(posti(frigoDa({ frigo: { ...FRIGO_BASE, freezer: { posizione: 'sotto', piani: ['r', 'c'] } } })!).filter((p) => p.zona === 'freezer').map((p) => p.nome)).toEqual([
+      'Freezer, ripiano 1',
+      'Freezer, cassetto 2',
+    ]);
+    // Due cassetti: frutta e verdura separate anche se uno sopra l’altro.
+    expect(postoIngrediente(f, { reparto: 'frutta_verdura', sottocategoria: 'Ortaggi' }, 'frigo')!.posto.id).toBe('c1');
   });
 
   it('piatti cotti in alto, delicati sul ripiano centrale in fondo, in freezer il primo', () => {
