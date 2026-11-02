@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useFamiglia } from '../dati/contesto';
-import { cosaCiVa, FRIGO_BASE, type Frigo, LIMITI, type PosizioneFreezer, posti, posto, PRODUCONO_ETILENE, REGOLE_CONFEZIONE, riassunto, temperatura, zonaPerGuida } from '../dominio/frigo';
+import { conPiani, cosaCiVa, FRIGO_BASE, type Frigo, LIMITI, type Piano, type PianoFreezer, type PosizioneFreezer, posti, posto, PRODUCONO_ETILENE, REGOLE_CONFEZIONE, riassunto, temperatura, zonaPerGuida } from '../dominio/frigo';
 import { Foglio } from '../ui/Foglio';
 import { DisegnoFrigoMio, useFrigo } from '../ui/FrigoMio';
 import { Icona } from '../ui/Icona';
@@ -108,11 +108,71 @@ export function ConfiguraFrigo({ chiudi }: { chiudi: () => void }) {
   );
 }
 
+/**
+ * I piani dall'alto, uno per riga: per ognuno si sceglie ripiano o cassetto (nel frigo anche due cassetti
+ * affiancati), così si possono avere cassetti uno sopra l'altro. «+ Aggiungi un piano» lo mette in basso.
+ */
+function Piani<T extends string>({
+  nome,
+  piani,
+  scelte,
+  nuovo,
+  limiti,
+  cambia,
+}: {
+  nome: string;
+  piani: T[];
+  scelte: { id: T; nome: string }[];
+  nuovo: T;
+  limiti: readonly [number, number];
+  cambia: (p: T[]) => void;
+}) {
+  return (
+    <>
+      <p className="tenue piccolo" style={{ margin: '8px 0 0' }}>
+        Dall’alto (1) in basso: per ogni piano scegli ripiano o cassetto.{scelte.length > 2 && ' Più cassetti uno sotto l’altro? Metti «Cassetto» su più piani.'}
+      </p>
+      <ol className="piani-frigo" aria-label={`${nome}, dall’alto`}>
+        {piani.map((p, i) => {
+          const etichetta = `${nome} ${i + 1}${i === 0 && piani.length > 1 ? ' (in alto)' : i === piani.length - 1 && piani.length > 1 ? ' (in basso)' : ''}`;
+          return (
+            <li key={i}>
+              <span className="numero-piano" aria-hidden>
+                {i + 1}
+              </span>
+              <Segmenti nome={etichetta} valore={p} scelte={scelte} cambia={(v) => cambia(piani.map((x, j) => (j === i ? v : x)))} />
+              <button
+                type="button"
+                className="bottone tondo"
+                aria-label={`Togli ${etichetta.toLowerCase()}`}
+                disabled={piani.length <= limiti[0]}
+                onClick={() => cambia(piani.filter((_, j) => j !== i))}
+              >
+                ✕
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+      <button
+        type="button"
+        className="bottone piccolo"
+        aria-label={`Aggiungi un ${nome.toLowerCase()} in basso`}
+        disabled={piani.length >= limiti[1]}
+        onClick={() => cambia([...piani, nuovo])}
+      >
+        + Aggiungi un piano in basso
+      </button>
+    </>
+  );
+}
+
 export function EditorFrigo({ iniziale, salva, chiudi }: { iniziale: Frigo | null; salva: (f: Frigo) => Promise<void>; chiudi: () => void }) {
   const [f, setF] = useState<Frigo>(iniziale ?? FRIGO_BASE);
   const [scelto, setScelto] = useState<string | null>(null);
-  const cambia = (parte: Partial<Frigo>) => setF((x) => ({ ...x, ...parte }));
-  const cambiaFreezer = (parte: Partial<Frigo['freezer']>) => setF((x) => ({ ...x, freezer: { ...x.freezer, ...parte } }));
+  // Ogni modifica ricalcola i conteggi dai piani.
+  const cambia = (parte: Partial<Frigo>) => setF((x) => conPiani({ ...x, ...parte }));
+  const cambiaFreezer = (parte: Partial<Frigo['freezer']>) => setF((x) => conPiani({ ...x, freezer: { ...x.freezer, ...parte } }));
   const parte = posto(f, scelto);
   const ciVa = parte ? cosaCiVa(f, parte.id) : [];
   const litriValidi = (n: number | null) => n === null || (n >= LIMITI.litri[0] && n <= LIMITI.litri[1]);
@@ -150,8 +210,18 @@ export function EditorFrigo({ iniziale, salva, chiudi }: { iniziale: Frigo | nul
 
           <h3>Frigo</h3>
           <div className="scheda">
-            <Contatore nome="Ripiani" valore={f.ripiani} limiti={LIMITI.ripiani} cambia={(ripiani) => cambia({ ripiani })} />
-            <Contatore nome="Cassetti in basso" valore={f.cassetti} limiti={LIMITI.cassetti} cambia={(cassetti) => cambia({ cassetti })} />
+            <Piani<Piano>
+              nome="Piano"
+              piani={f.piani}
+              scelte={[
+                { id: 'r', nome: 'Ripiano' },
+                { id: 'c', nome: 'Cassetto' },
+                { id: 'cc', nome: '2 cassetti' },
+              ]}
+              nuovo="r"
+              limiti={LIMITI.piani}
+              cambia={(piani) => cambia({ piani })}
+            />
             <Litri nome="Capienza" valore={f.litri} cambia={(litri) => cambia({ litri })} />
           </div>
 
@@ -176,19 +246,17 @@ export function EditorFrigo({ iniziale, salva, chiudi }: { iniziale: Frigo | nul
             <>
               <h3>Dentro il freezer</h3>
               <div className="scheda">
-                <div className="riga contatore-frigo">
-                  <span className="cresce">Ha</span>
-                  <Segmenti
-                    nome="Cassetti o ripiani nel freezer"
-                    valore={f.freezer.tipo}
-                    scelte={[
-                      { id: 'cassetti', nome: 'Cassetti' },
-                      { id: 'ripiani', nome: 'Ripiani' },
-                    ]}
-                    cambia={(tipo) => cambiaFreezer({ tipo })}
-                  />
-                </div>
-                <Contatore nome={f.freezer.tipo === 'cassetti' ? 'Cassetti' : 'Ripiani'} valore={f.freezer.parti} limiti={LIMITI.freezer} cambia={(parti) => cambiaFreezer({ parti })} />
+                <Piani<PianoFreezer>
+                  nome="Piano del freezer"
+                  piani={f.freezer.piani}
+                  scelte={[
+                    { id: 'r', nome: 'Ripiano' },
+                    { id: 'c', nome: 'Cassetto' },
+                  ]}
+                  nuovo="c"
+                  limiti={LIMITI.freezer}
+                  cambia={(piani) => cambiaFreezer({ piani })}
+                />
                 <Litri nome="Capienza" valore={f.freezer.litri} cambia={(litri) => cambiaFreezer({ litri })} />
               </div>
             </>

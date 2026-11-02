@@ -1,6 +1,6 @@
 import { type KeyboardEvent, type ReactNode, useMemo } from 'react';
 import { useVista } from '../dati/contesto';
-import { type Frigo, frigoDa, posti } from '../dominio/frigo';
+import { type Frigo, frigoDa, livelli, posti } from '../dominio/frigo';
 
 /** Il frigo salvato nelle impostazioni della famiglia (null se non è ancora configurato). */
 export function useFrigo(): Frigo | null {
@@ -47,23 +47,22 @@ export function aree(frigo: Frigo) {
     frigoBox = portaSx ? { x: mx0, y: 4, w: mx1 - mx0 - wz - 6, h: A - 8 } : { x: mx0 + wz + 6, y: 4, w: mx1 - mx0 - wz - 6, h: A - 8 };
   }
   const dentro = { x: frigoBox.x + 6, y: frigoBox.y + 6, w: frigoBox.w - 12, h: frigoBox.h - 12 };
-  const hCassetti = frigo.cassetti ? Math.min(46, dentro.h * 0.28) : 0;
-  const hRipiani = dentro.h - hCassetti;
-  const ripiani: Area[] = Array.from({ length: frigo.ripiani }, (_, i) => ({
-    id: `r${i + 1}`,
-    x: dentro.x,
-    y: dentro.y + (hRipiani / frigo.ripiani) * i,
-    w: dentro.w,
-    h: hRipiani / frigo.ripiani,
-  }));
-  const wC = (dentro.w - 4 * (frigo.cassetti - 1)) / Math.max(1, frigo.cassetti);
-  const cassetti: Area[] = Array.from({ length: frigo.cassetti }, (_, i) => ({
-    id: `c${i + 1}`,
-    x: dentro.x + i * (wC + 4),
-    y: dentro.y + hRipiani + 3,
-    w: wC,
-    h: hCassetti - 3,
-  }));
+  // I piani dall'alto: un cassetto è un po' più basso di un ripiano; due cassetti affiancati si dividono il piano.
+  const PESO = { r: 1, c: 0.85, cc: 0.85 } as const;
+  const lv = livelli(frigo);
+  const totale = lv.reduce((t, l) => t + PESO[l.piano], 0);
+  const ripiani: Area[] = [];
+  const cassetti: Area[] = [];
+  let y = dentro.y;
+  for (const l of lv) {
+    const h = (dentro.h * PESO[l.piano]) / totale;
+    if (l.piano === 'r') ripiani.push({ id: l.id[0], x: dentro.x, y, w: dentro.w, h });
+    else {
+      const w = (dentro.w - 4 * (l.id.length - 1)) / l.id.length;
+      l.id.forEach((id, i) => cassetti.push({ id, x: dentro.x + i * (w + 4), y: y + 2, w, h: h - 3 }));
+    }
+    y += h;
+  }
   const porta = { x: portaSx ? 2 : L - PORTA - 2, y: frigoBox.y, w: PORTA, h: frigoBox.h };
   const hB = (porta.h - 16) / Math.max(1, frigo.balconcini);
   const sportello: Area[] = Array.from({ length: frigo.balconcini }, (_, i) => ({
@@ -192,7 +191,7 @@ export function DisegnoFrigoMio({
           {a.freezer.map((r) =>
             tocca(
               r,
-              frigo.freezer.tipo === 'cassetti' ? (
+              frigo.freezer.piani[Number(r.id.slice(1)) - 1] === 'c' ? (
                 <>
                   <rect x={r.x + 2} y={r.y + 2} width={r.w - 4} height={r.h - 4} rx="4" fill="none" stroke="var(--testo-tenue)" strokeWidth="1.5" />
                   <line x1={r.x + r.w / 2 - 10} y1={r.y + 9} x2={r.x + r.w / 2 + 10} y2={r.y + 9} stroke="var(--testo-tenue)" strokeWidth="2" strokeLinecap="round" />

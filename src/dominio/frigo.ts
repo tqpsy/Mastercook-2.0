@@ -11,7 +11,15 @@
 export type PosizioneFreezer = 'sotto' | 'sopra' | 'fianco' | 'nessuno';
 export type Lato = 'sx' | 'dx';
 
+/** Un piano del frigo, dall'alto: un ripiano (vassoio), un cassetto, o due cassetti affiancati. */
+export type Piano = 'r' | 'c' | 'cc';
+/** Un piano del freezer: ripiano o cassetto. */
+export type PianoFreezer = 'r' | 'c';
+
 export interface Frigo {
+  /** I piani del frigo dall'alto: ognuno è un ripiano o un cassetto (anche uno sopra l'altro). */
+  piani: Piano[];
+  /** Quanti ripiani e quanti cassetti: si contano dai piani (li tiene anche chi ha una versione vecchia dell'app). */
   ripiani: number;
   cassetti: number;
   balconcini: number;
@@ -20,48 +28,87 @@ export interface Frigo {
   litri: number | null;
   freezer: {
     posizione: PosizioneFreezer;
-    /** Quanti ripiani o cassetti. */
+    /** I piani del freezer dall'alto. */
+    piani: PianoFreezer[];
+    /** Quanti piani; `tipo` è «cassetti» se sono tutti cassetti (per le versioni vecchie dell'app). */
     parti: number;
     tipo: 'cassetti' | 'ripiani';
     litri: number | null;
   };
 }
 
+export const LIMITI = { piani: [1, 10], ripiani: [1, 8], cassetti: [0, 4], balconcini: [0, 7], freezer: [1, 8], litri: [10, 1000] } as const;
+
+/** Ricalcola i conteggi dai piani (dopo ogni modifica). Almeno un ripiano: è lì che vanno cotti e crudi. */
+export function conPiani(f: Omit<Frigo, 'ripiani' | 'cassetti' | 'freezer'> & { freezer: Omit<Frigo['freezer'], 'parti' | 'tipo'> }): Frigo {
+  const piani = f.piani.some((p) => p === 'r') ? f.piani : (['r', ...f.piani] as Piano[]);
+  const zp = f.freezer.piani.length ? f.freezer.piani : (['c'] as PianoFreezer[]);
+  return {
+    ...f,
+    piani,
+    ripiani: piani.filter((p) => p === 'r').length,
+    cassetti: piani.reduce((n, p) => n + (p === 'cc' ? 2 : p === 'c' ? 1 : 0), 0),
+    freezer: { ...f.freezer, piani: zp, parti: zp.length, tipo: zp.every((p) => p === 'c') ? 'cassetti' : 'ripiani' },
+  };
+}
+
 /** Il frigo più comune in Italia: combinato con freezer sotto a tre cassetti. */
-export const FRIGO_BASE: Frigo = {
-  ripiani: 4,
-  cassetti: 1,
+export const FRIGO_BASE: Frigo = conPiani({
+  piani: ['r', 'r', 'r', 'r', 'c'],
   balconcini: 4,
   sportello: 'dx',
   litri: null,
-  freezer: { posizione: 'sotto', parti: 3, tipo: 'cassetti', litri: null },
-};
-
-export const LIMITI = { ripiani: [1, 8], cassetti: [0, 3], balconcini: [0, 7], freezer: [1, 8], litri: [10, 1000] } as const;
+  freezer: { posizione: 'sotto', piani: ['c', 'c', 'c'], litri: null },
+});
 
 const intero = (v: unknown, [min, max]: readonly [number, number], base: number) =>
   typeof v === 'number' && Number.isInteger(v) && v >= min && v <= max ? v : base;
 const litri = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v >= LIMITI.litri[0] && v <= LIMITI.litri[1] ? Math.round(v) : null);
 
-/** Il frigo salvato nelle impostazioni della famiglia, o null se non è ancora stato configurato. Valori strani → quelli di base. */
+/** Un elenco di piani salvato, solo se è sensato; altrimenti null. */
+function pianiDa<T extends string>(v: unknown, ammessi: readonly T[], [min, max]: readonly [number, number]): T[] | null {
+  if (!Array.isArray(v) || v.length < min || v.length > max || !v.every((x) => ammessi.includes(x as T))) return null;
+  return v as T[];
+}
+
+/**
+ * Il frigo salvato nelle impostazioni della famiglia, o null se non è ancora stato configurato. Valori strani →
+ * quelli di base. Un frigo salvato prima dei piani (solo ripiani e cassetti affiancati in basso) si converte.
+ */
 export function frigoDa(impostazioni: unknown): Frigo | null {
   const f = ((impostazioni ?? {}) as Record<string, unknown>).frigo as Record<string, unknown> | undefined;
   if (!f || typeof f !== 'object') return null;
   const z = (f.freezer ?? {}) as Record<string, unknown>;
   const posizione = (['sotto', 'sopra', 'fianco', 'nessuno'] as const).find((p) => p === z.posizione) ?? FRIGO_BASE.freezer.posizione;
-  return {
-    ripiani: intero(f.ripiani, LIMITI.ripiani, FRIGO_BASE.ripiani),
-    cassetti: intero(f.cassetti, LIMITI.cassetti, FRIGO_BASE.cassetti),
+  let piani = pianiDa<Piano>(f.piani, ['r', 'c', 'cc'], LIMITI.piani);
+  if (!piani) {
+    const r = intero(f.ripiani, LIMITI.ripiani, FRIGO_BASE.ripiani);
+    const c = intero(f.cassetti, [0, 3], FRIGO_BASE.cassetti);
+    // Prima i cassetti erano tutti in basso, uno accanto all'altro.
+    piani = [...Array<Piano>(r).fill('r'), ...(c === 0 ? [] : c === 1 ? (['c'] as Piano[]) : c === 2 ? (['cc'] as Piano[]) : (['cc', 'c'] as Piano[]))];
+  }
+  let zp = pianiDa<PianoFreezer>(z.piani, ['r', 'c'], LIMITI.freezer);
+  if (!zp) zp = Array<PianoFreezer>(intero(z.parti, LIMITI.freezer, FRIGO_BASE.freezer.parti)).fill(z.tipo === 'ripiani' ? 'r' : 'c');
+  return conPiani({
+    piani,
     balconcini: intero(f.balconcini, LIMITI.balconcini, FRIGO_BASE.balconcini),
     sportello: f.sportello === 'sx' ? 'sx' : 'dx',
     litri: litri(f.litri),
-    freezer: {
-      posizione,
-      parti: intero(z.parti, LIMITI.freezer, FRIGO_BASE.freezer.parti),
-      tipo: z.tipo === 'ripiani' ? 'ripiani' : 'cassetti',
-      litri: litri(z.litri),
-    },
-  };
+    freezer: { posizione, piani: zp, litri: litri(z.litri) },
+  });
+}
+
+/** Dove sta ogni parte nei piani: per il disegno e per i nomi. */
+export interface Livello {
+  piano: Piano;
+  /** Gli id delle parti di questo piano: un ripiano (r…), uno o due cassetti (c…). */
+  id: string[];
+}
+
+export function livelli(frigo: Frigo): Livello[] {
+  let r = 0;
+  let c = 0;
+  return frigo.piani.map((p) => ({ piano: p, id: p === 'r' ? [`r${++r}`] : p === 'c' ? [`c${++c}`] : [`c${++c}`, `c${++c}`] }));
 }
 
 export type Zona = 'ripiano' | 'cassetto' | 'sportello' | 'freezer';
@@ -83,12 +130,16 @@ function nomeDi(frigo: Frigo, zona: Zona, n: number): string {
       if (n === 1) return 'Ripiano 1, in alto';
       if (n === frigo.ripiani) return `Ripiano ${n}, in basso`;
       return `Ripiano ${n}`;
-    case 'cassetto':
-      return frigo.cassetti === 1 ? 'Cassetto delle verdure' : `Cassetto ${n}`;
+    case 'cassetto': {
+      if (frigo.cassetti === 1) return 'Cassetto delle verdure';
+      const l = livelli(frigo).find((x) => x.id.includes(`c${n}`));
+      const lato = l && l.piano === 'cc' ? (l.id[0] === `c${n}` ? ', a sinistra' : ', a destra') : '';
+      return `Cassetto ${n}${lato}`;
+    }
     case 'sportello':
       return frigo.balconcini === 1 ? 'Sportello' : `Sportello, balconcino ${n}`;
     case 'freezer': {
-      const parte = frigo.freezer.tipo === 'cassetti' ? 'cassetto' : 'ripiano';
+      const parte = frigo.freezer.piani[n - 1] === 'r' ? 'ripiano' : 'cassetto';
       return frigo.freezer.parti === 1 ? 'Freezer' : `Freezer, ${parte} ${n}`;
     }
   }
@@ -337,7 +388,7 @@ export function descriviPerFoto(frigo: Frigo, inquadrato: string | null): string
   const freezer = { sotto: 'sotto il frigo', sopra: 'sopra il frigo', fianco: 'di fianco al frigo', nessuno: '' }[frigo.freezer.posizione];
   const parte = inquadrato ? posto(frigo, inquadrato) : null;
   return [
-    `Il frigo di questa famiglia ha ${frigo.ripiani} ripiani (numerati dall'alto), ${frigo.cassetti} cassetti in basso e lo sportello ${lato} con ${frigo.balconcini} balconcini${freezer ? `; il freezer è ${freezer}` : ''}.`,
+    `Il frigo di questa famiglia ha, dall'alto: ${livelli(frigo).map((l) => (l.piano === 'r' ? 'un ripiano' : l.piano === 'c' ? 'un cassetto' : 'due cassetti affiancati')).join(', ')}; lo sportello è ${lato} con ${frigo.balconcini} balconcini${freezer ? `; il freezer è ${freezer}` : ''}.`,
     'Le parti, con il loro codice:',
     ...righe,
     parte ? `Nella foto c'è solo questa parte: ${parte.id} (${parte.nome}).` : 'Nella foto può esserci tutto il frigo o una parte.',

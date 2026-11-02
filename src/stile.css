@@ -3453,3 +3453,41 @@ details > summary:has(.primo-presto) {
 .etichetta.livello-alto {
   background: var(--errore-tenue);
 }
+/* I piani del frigo, uno per riga: numero, ripiano/cassetto/2 cassetti, togli. */
+.piani-frigo {
+  list-style: none;
+  margin: 4px 0 8px;
+  padding: 0;
+}
+.piani-frigo > li {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) 40px;
+  align-items: center;
+  gap: 8px;
+  border-top: 1px solid var(--bordo);
+  padding: 6px 0;
+}
+.piani-frigo > li:first-child {
+  border-top: 0;
+}
+.piani-frigo .numero-piano {
+  font-weight: 700;
+  text-align: center;
+  color: var(--testo-tenue);
+}
+.piani-frigo .scelte.segmenti {
+  display: flex;
+}
+.piani-frigo .scelte.segmenti button {
+  flex: 1;
+  min-height: 40px;
+  padding-inline: 4px;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+.piani-frigo .bottone.tondo {
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
+  padding: 0;
+}
