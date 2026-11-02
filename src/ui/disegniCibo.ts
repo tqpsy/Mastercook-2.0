@@ -101,6 +101,15 @@ const cotoletta = () =>
   punti([[14, 27], [18, 23], [22, 29], [26, 22], [29, 27], [33, 24], [17, 31], [31, 31], [24, 25.5], [35, 28.5]], '#A8692A', 0.8) +
   `<path d="M30 21a6 6 0 0 0 10 5z" fill="#F4D03F" stroke-width="1.6"/><path d="M35 23.6l2.6-3.4M35 23.6l4.2 0.6" stroke="#E0B020" stroke-width="1"/>`;
 
+const cotolettaPollo = () =>
+  piatto(35, 20, 8) +
+  `<path d="M7 29c-1-8 6-14 14-13 6 1 9 4 13 4 5 0 8 3 7 7-1 6-9 9-18 9-9 0-15-2-16-7z" fill="#E6AE4E"/>` +
+  `<path d="M11 27c3-4 8-6 13-5M14 31c4 1 10 1 14-1" stroke="#C98A2E" stroke-width="1.1" fill="none"/>` +
+  punti([[12, 24], [17, 21], [23, 20], [29, 23], [34, 25], [37, 28], [20, 26], [26, 28], [31, 31], [16, 31.5], [10, 29]], '#B5772B', 0.8) +
+  `<circle cx="36" cy="18" r="5.4" fill="#F4D03F" stroke-width="1.6"/><circle cx="36" cy="18" r="3.4" fill="#FBE79A" stroke="#E0B020" stroke-width="0.9"/>` +
+  `<path d="M36 14.6v6.8M32.6 18h6.8M33.6 15.6l4.8 4.8M38.4 15.6l-4.8 4.8" stroke="#E0B020" stroke-width="0.8"/>` +
+  foglia(28, 18.5, -20, 0.8);
+
 const polpette = () => {
   const p = (x: number, y: number) => `<circle cx="${x}" cy="${y}" r="5.2" fill="#8A4B2E"/><circle cx="${x - 1.8}" cy="${y - 1.8}" r="1.6" fill="#B06A44" stroke="none"/>`;
   return piatto(34, 20, 8) + `<path d="M8 32c-1-6 9-9 16-9 9 0 17 3 16 9-5 4-27 4-32 0z" fill="${POM}" stroke="none"/>` + p(17, 29) + p(31, 29) + p(24, 23.5) + foglia(24, 31, 0, 0.9);
@@ -471,6 +480,7 @@ export const DISEGNI_CIBO: readonly DisegnoCibo[] = [
   d('vellutata', 'Vellutata', 'Piatti', vellutata),
   d('polenta', 'Polenta', 'Piatti', polenta),
   d('cotoletta', 'Cotoletta', 'Piatti', cotoletta),
+  d('cotoletta_pollo', 'Cotoletta di pollo', 'Piatti', cotolettaPollo),
   d('polpette', 'Polpette al sugo', 'Piatti', polpette),
   d('spezzatino', 'Spezzatino', 'Piatti', spezzatino),
   d('frittata', 'Frittata', 'Piatti', frittata),
