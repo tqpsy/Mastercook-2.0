@@ -21,8 +21,8 @@ test('ricette: cerca, scala le porzioni, segnala l’allergia e crea la propria 
   await page.getByLabel('Cerca', { exact: true }).fill('carbonara');
   await page.getByRole('button', { name: 'Apri Spaghetti alla carbonara' }).click();
   const scheda = page.getByRole('dialog', { name: 'Spaghetti alla carbonara' });
-  await expect(scheda.getByText('Non adatta a tutti')).toBeVisible();
-  await expect(scheda.getByText(/Sara: ⛔/)).toBeVisible();
+  // Solo chi ha un problema, con l'ingrediente che non va.
+  await expect(scheda.getByRole('list', { name: 'Non adatta a tutti' })).toHaveText(/Sara · uova/);
   await expect(scheda.getByText('150 g')).toBeVisible();
   await scheda.getByRole('button', { name: 'Una porzione in più' }).click();
   await scheda.getByRole('button', { name: 'Una porzione in più' }).click();
@@ -305,13 +305,12 @@ test('crudi e testo libero: il guanciale cotto e «niente funghi» vanno bene su
   await page.getByLabel('Cerca', { exact: true }).fill('bresaola');
   await page.getByRole('button', { name: 'Apri Bresaola, rucola e grana' }).click();
   const bresaola = page.getByRole('dialog', { name: 'Bresaola, rucola e grana' });
-  await expect(bresaola.getByText(/Anna: ⛔/)).toBeVisible();
-  await expect(bresaola.getByText('⛔ Niente salumi crudi: bresaola senza cottura completa in questa ricetta')).toBeVisible();
+  await expect(bresaola.getByText('Anna · bresaola senza cottura')).toBeVisible();
   // L'avete controllata e per voi va bene: si segna, con una conferma perché scavalca un'esigenza.
   page.once('dialog', (d) => void d.accept());
   await bresaola.getByRole('button', { name: 'Va bene per Anna' }).click();
   await expect(bresaola.getByText('Adatta a tutti')).toBeVisible();
-  await expect(bresaola.getByText(/Anna: ✅ segnata «va bene» da voi/)).toBeVisible();
+  await expect(bresaola.getByText('Anna · segnata «va bene» da voi')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
   await expect
     .poll(() => sql(`select ricetta_id from ricetta_verificata where famiglia_id in (select famiglia_id from utente_famiglia where utente_id = $1) and eliminato_il is null`, [luca.id]))
@@ -355,9 +354,9 @@ test('una ricetta da verificare si chiude anche con «❌ non va bene», e si pu
   await page.getByLabel('Cerca', { exact: true }).fill('insalata greca');
   await page.getByRole('button', { name: 'Apri Insalata greca' }).click();
   const greca = page.getByRole('dialog', { name: 'Insalata greca' });
-  await expect(greca.getByText(/Anna: ❔/)).toBeVisible();
+  await expect(greca.getByText(/Anna · /)).toBeVisible();
   await greca.getByRole('button', { name: 'Non va bene per Anna' }).click();
-  await expect(greca.getByText(/Anna: ⛔ segnata «non va bene» da voi/)).toBeVisible();
+  await expect(greca.getByText('Anna · segnata «non va bene» da voi')).toBeVisible();
   await expect(greca.getByRole('button', { name: 'Va bene per Anna' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
   const segnate = () =>
@@ -365,7 +364,7 @@ test('una ricetta da verificare si chiude anche con «❌ non va bene», e si pu
   await expect.poll(segnate).toEqual([{ ricetta_id: 'sys:insalata_greca', va_bene: false }]);
 
   await greca.getByRole('button', { name: 'Togli «non va bene» per Anna' }).click();
-  await expect(greca.getByText(/Anna: ❔/)).toBeVisible();
+  await expect(greca.getByText(/Anna · /)).toBeVisible();
   await expect.poll(segnate).toEqual([]);
 });
 

@@ -29,23 +29,56 @@ const TEMPI = [
 
 export const ICONA_ESITO: Record<Esito, string> = { adatta: '✅', da_verificare: '❔', non_adatta: '⛔' };
 
-/** I motivi uno per riga: prima quelli da evitare, poi quelli da controllare. */
-export function Motivi({ dettagli }: { dettagli: Motivo[] }) {
-  const ordinati = [...dettagli].sort((a, b) => (a.esito === b.esito ? 0 : a.esito === 'non_adatta' ? -1 : 1));
-  return (
-    <ul style={{ margin: '2px 0 6px', paddingLeft: 4, listStyle: 'none' }}>
-      {ordinati.map((d) => (
-        <li key={d.testo}>
-          {ICONA_ESITO[d.esito]} {d.testo.charAt(0).toUpperCase() + d.testo.slice(1)}
-        </li>
-      ))}
-    </ul>
-  );
+/** Un motivo in poche parole: per un ⛔ l'ingrediente che non va, per un ❔ cosa controllare. */
+export function inBreve(d: Motivo): string {
+  return d.esito === 'non_adatta' && d.cosa ? d.cosa : d.testo;
 }
 
 /** I motivi in una riga sola, per gli elenchi stretti. */
 export function motiviInBreve(v: { motivi: string[]; dettagli?: Motivo[] }): string {
-  return v.dettagli?.length ? v.dettagli.map((d) => `${ICONA_ESITO[d.esito]} ${d.testo}`).join('; ') : v.motivi.join('; ');
+  const ordinati = [...(v.dettagli ?? [])].sort((a, b) => (a.esito === b.esito ? 0 : a.esito === 'non_adatta' ? -1 : 1));
+  return ordinati.length ? [...new Set(ordinati.map(inBreve))].join(', ') : v.motivi.join('; ');
+}
+
+/** Una persona per cui il piatto non va, o va controllato. */
+export interface RigaAvviso {
+  id: string;
+  nome: string;
+  esito: Esito;
+  testo: string;
+  azioni?: ReactNode;
+}
+
+/**
+ * L'avviso «adatto a chi lo mangia», il più asciutto possibile: se va bene a tutti una spunta sola, senza
+ * nomi; altrimenti solo le persone con un problema, ognuna con l'ingrediente che non va.
+ */
+export function AvvisoAdatto({ esito, adatto, righe }: { esito: Esito; adatto: string; righe: RigaAvviso[] }) {
+  // Chi è a posto non si nomina, salvo chi è stato segnato «va bene» a mano (per poterlo togliere).
+  const problemi = righe.filter((r) => r.esito !== 'adatta' || r.azioni);
+  const tutti = esito === 'adatta' || !righe.some((r) => r.esito !== 'adatta');
+  return (
+    <>
+      {tutti && (
+        <p className="adatto-spunta">
+          <span aria-hidden>✓</span> {adatto}
+        </p>
+      )}
+      {problemi.length > 0 && (
+        <ul className={`adatto-avviso ${tutti ? 'adatta' : esito}`} aria-label={tutti ? 'Segnate a mano' : NOME_ESITO[esito]}>
+          {problemi.map((r) => (
+            <li key={r.id}>
+              <span aria-hidden>{ICONA_ESITO[r.esito]}</span>
+              <span className="cresce">
+                <strong>{r.nome}</strong> · {r.testo}
+              </span>
+              {r.azioni}
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  );
 }
 
 /** Gli ingredienti presenti in casa: i lotti aperti con qualcosa dentro. */
@@ -526,42 +559,38 @@ export function SchedaRicetta({
       {r.descrizione && <p>{r.descrizione}</p>}
 
       {valutazione && (
-        <div className={`avviso ${valutazione.esito === 'adatta' ? 'info' : 'errore'}`} style={valutazione.esito === 'da_verificare' ? { background: 'var(--attenzione-tenue)', color: 'var(--attenzione)' } : undefined}>
-          <strong>
-            {ICONA_ESITO[valutazione.esito]} {NOME_ESITO[valutazione.esito]}
-          </strong>
-          <ul style={{ margin: '6px 0 0', paddingLeft: 18 }}>
-            {valutazione.perMembro.map((m) => (
-              <li key={m.membro_id}>
-                <strong>{m.nome}</strong>: {ICONA_ESITO[m.valutazione.esito]}{' '}
-                {m.valutazione.dettagli?.length ? null : m.valutazione.motivi.length ? m.valutazione.motivi.join('; ') : 'nessun problema noto'}
-                {m.valutazione.verificabile &&
-                  (m.valutazione.verificata || m.valutazione.scartata ? (
-                    <button
-                      className="bottone piccolo"
-                      style={{ marginLeft: 8 }}
-                      aria-label={m.valutazione.verificata ? `Togli «va bene» per ${m.nome}` : `Togli «non va bene» per ${m.nome}`}
-                      onClick={() => segna(m.membro_id, m.nome, 'togli', false)}
-                    >
-                      {m.valutazione.verificata ? 'Togli «va bene»' : 'Togli «non va bene»'}
+        <AvvisoAdatto
+          esito={valutazione.esito}
+          adatto={NOME_ESITO.adatta}
+          righe={valutazione.perMembro.map((m) => ({
+            id: m.membro_id,
+            nome: m.nome,
+            esito: m.valutazione.esito,
+            testo: motiviInBreve(m.valutazione) || 'da controllare',
+            azioni: m.valutazione.verificabile ? (
+              m.valutazione.verificata || m.valutazione.scartata ? (
+                <button
+                  className="bottone piccolo"
+                  aria-label={m.valutazione.verificata ? `Togli «va bene» per ${m.nome}` : `Togli «non va bene» per ${m.nome}`}
+                  onClick={() => segna(m.membro_id, m.nome, 'togli', false)}
+                >
+                  Annulla
+                </button>
+              ) : (
+                <span className="riga" style={{ gap: 6 }}>
+                  <button className="bottone piccolo" aria-label={`Va bene per ${m.nome}`} onClick={() => segna(m.membro_id, m.nome, 'va_bene', m.valutazione.esito === 'non_adatta')}>
+                    Va bene
+                  </button>
+                  {m.valutazione.esito === 'da_verificare' && (
+                    <button className="bottone piccolo" aria-label={`Non va bene per ${m.nome}`} onClick={() => segna(m.membro_id, m.nome, 'non_va_bene', false)}>
+                      No
                     </button>
-                  ) : (
-                    <>
-                      <button className="bottone piccolo" style={{ marginLeft: 8 }} aria-label={`Va bene per ${m.nome}`} onClick={() => segna(m.membro_id, m.nome, 'va_bene', m.valutazione.esito === 'non_adatta')}>
-                        ✅ Va bene
-                      </button>
-                      {m.valutazione.esito === 'da_verificare' && (
-                        <button className="bottone piccolo" style={{ marginLeft: 8 }} aria-label={`Non va bene per ${m.nome}`} onClick={() => segna(m.membro_id, m.nome, 'non_va_bene', false)}>
-                          ❌ Non va bene
-                        </button>
-                      )}
-                    </>
-                  ))}
-                {!!m.valutazione.dettagli?.length && <Motivi dettagli={m.valutazione.dettagli} />}
-              </li>
-            ))}
-          </ul>
-        </div>
+                  )}
+                </span>
+              )
+            ) : undefined,
+          }))}
+        />
       )}
 
       <div className="riga spazio" style={{ margin: '12px 0' }}>
