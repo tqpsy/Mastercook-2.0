@@ -3383,6 +3383,23 @@ details > summary:has(.primo-presto) {
 .voce-avanzo .tenue {
   display: block;
 }
+.voce-avanzo .tondo-piatto .icona-luogo {
+  color: var(--petrolio, currentColor);
+}
+.icona-luogo {
+  display: inline-flex;
+  vertical-align: -0.15em;
+  margin-right: 2px;
+}
+.icona-luogo.luogo-freezer {
+  color: var(--petrolio, currentColor);
+}
+.avanzi-vuoto {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: var(--senape-tenue);
+}
 
 /* Scheda prodotto da Open Food Facts: valori, ingredienti, indicatori ufficiali. */
 .scheda-prodotto section {
