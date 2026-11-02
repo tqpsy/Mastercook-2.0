@@ -33,14 +33,47 @@ export interface ScontrinoLetto {
   quadra: boolean;
 }
 
-const IMPORTO = /(-?\s?\d{1,4}[.,]\d{2})\s*(?:€|EUR|EURO)?\s*(?:[A-Z]{1,2}|\*)?\s*$/;
-const FINE_RIGHE = /\b(SUBTOTALE|SUB TOTALE|TOTALE|TOTAL)\b|^SUBTOT/;
+/** Il prezzo in fondo alla riga, con quello che può seguirlo: «€», la lettera o la percentuale dell'IVA, un segno sporco. */
+const IMPORTO = /(-?\s?\d{1,4}\s?[.,:]\s?\d{2})(?![\d%])\s*(?:€|EUR|EURO)?\s*(?:[^\s\d]{1,2}|\d{1,2}\s?%)?\s*$/;
+const FINE_RIGHE = /\b(SUB\s?TOTALE|TOTALE|TOTAL)\b|^SUBTOT/;
+
+/** Le due parole differiscono al più di una lettera (sostituita, in più o in meno). */
+function quasiUguali(a: string, b: string): boolean {
+  if (Math.abs(a.length - b.length) > 1) return false;
+  let i = 0;
+  while (i < a.length && a[i] === b[i]) i++;
+  return a.slice(i + 1) === b.slice(i + 1) || a.slice(i) === b.slice(i + 1) || a.slice(i + 1) === b.slice(i);
+}
+
+/** «TOTALE» anche letto male («TOTALF», «T0TALE», «TOTAIE»). */
+const eTotale = (linea: string) => linea.split(/[^A-Z0-9]+/).some((p) => p === 'TOTALE' || (p.length >= 5 && quasiUguali(p, 'TOTALE')));
+const fineRighe = (linea: string) => FINE_RIGHE.test(linea) || eTotale(linea);
 const DA_SALTARE =
-  /\b(IVA|CONTANTE|CONTANTI|RESTO|PAGAMENTO|PAGATO|CARTA|BANCOMAT|ELETTRONICO|RESO|ARROTONDAMENTO|IMPORTO|NUMERO|DOCUMENTO|SCONTRINO|BUONO|PUNTI|SALDO|CASSA|CASSIERE|OPERATORE|TEL|P\.?\s?IVA|C\.?F\.?)\b/;
+  /\b(IVA|CONTANTE|CONTANTI|RESTO|PAGAMENTO|PAGATO|BANCOMAT|ELETTRONICO|RESO|ARROTONDAMENTO|IMPORTO|NUMERO|DOCUMENTO|SCONTRINO|BUONO|BUONI|PUNTI|SALDO|CASSA|CASSIERE|OPERATORE|TEL|TESSERA|ARTICOLI|VISA|MASTERCARD|MAESTRO|P\.?\s?IVA|C\.?F\.?)\b|CARTA (DI )?(CREDITO|DEBITO)/;
 const SCONTO = /\b(SCONTO|SC\.|SCONT|PROMO|OFFERTA|RIBASSO|RIDUZIONE|STORNO)\b/;
 const INTESTAZIONE_RIGHE = /\bDESCRIZIONE\b|\bPREZZO\s*\(?€?\)?\s*$/;
-const PEZZI = /^(\d{1,3})\s*(?:PZ|N\.?)?\s*[X*]\s*(\d{1,4}[.,]\d{2})\b/;
-const PESO = /(\d{1,3}[.,]\d{1,3})\s*KG\s*[X*]\s*(\d{1,4}[.,]\d{2})/;
+/** «2 x 0,99» (la lettura sbaglia la x: «xXx», «×», «*»). */
+const PEZZI = /^(\d{1,3})\s*(?:PZ|N\.?)?\s*[X*×]{1,3}\s*(\d{1,4}[.,]\d{2})\b/;
+/** «0,856 kg x 1,99 €/kg» oppure, alla Iper, «0,386 * 4,90Kg»: peso, poi prezzo al chilo. */
+const PESO = /(\d{1,3}[.,]\d{1,3})\s*KG\s*[X*×]\s*(\d{1,4}[.,]\d{2})|^(\d{1,3}[.,]\d{3})\s*[X*×]\s*(\d{1,4}[.,]\d{2})\s*(?:€\s*\/?\s*)?[^\s\d]{0,4}/;
+/** Ragione sociale nell'intestazione: il nome del negozio più affidabile. */
+const SOCIETA = /\b(S\.?\s?P\.?\s?A|S\.?\s?R\.?\s?L|S\.?\s?N\.?\s?C|S\.?\s?A\.?\s?S|SOC\.?\s?COOP|COOP)\b\.?/;
+
+/**
+ * Corregge gli errori tipici della lettura nei numeri: la O al posto dello zero («1,2O»), spazi attorno
+ * alla virgola («1 ,29»), i due punti al posto della virgola nei prezzi («3:01 A»).
+ */
+export function pulisciLinea(linea: string): string {
+  return linea
+    .toUpperCase()
+    .replace(/€/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/(^|[\s*X])([\dO]{1,4}) ?([.,]) ?([\dO]{2})(?=$|[\s%A-Z])/g, (_, a: string, i: string, sep: string, d: string) =>
+      /\d/.test(i + d) ? `${a}${i.replace(/O/g, '0')}${sep}${d.replace(/O/g, '0')}` : `${a}${i}${sep}${d}`,
+    )
+    .replace(/(\s)(\d{1,4}):(\d{2})(\s?[A-Z]{0,2})$/, (x, s: string, i: string, d: string, coda: string) => (Number(d) < 60 && Number(i) < 24 && !coda.trim() ? x : `${s}${i},${d}${coda}`))
+    .trim();
+}
 
 const numero = (s: string) => Number(s.replace(/\s/g, '').replace(',', '.'));
 const centesimi = (n: number) => Math.round(n * 100) / 100;
@@ -62,63 +95,107 @@ export function formatoDaDescrizione(descrizione: string): RigaLetta['formato'] 
   return quantita > 0 ? { quantita, unita } : undefined;
 }
 
-function dataDa(testo: string): string | null {
-  for (const m of testo.matchAll(/\b(\d{1,2})[/.-](\d{1,2})[/.-](\d{4}|\d{2})\b/g)) {
-    const g = Number(m[1]);
-    const mese = Number(m[2]);
-    const anno = m[3].length === 2 ? 2000 + Number(m[3]) : Number(m[3]);
-    if (g < 1 || g > 31 || mese < 1 || mese > 12 || anno < 2000 || anno > 2099) continue;
-    const d = new Date(Date.UTC(anno, mese - 1, g));
-    if (d.getUTCDate() !== g) continue;
-    return `${anno}-${String(mese).padStart(2, '0')}-${String(g).padStart(2, '0')}`;
-  }
-  return null;
+const DATA = /\b(\d{1,2})[/.-](\d{1,2})[/.-](\d{4}|\d{2})\b/g;
+
+function giornoValido(m: RegExpMatchArray): string | null {
+  const g = Number(m[1]);
+  const mese = Number(m[2]);
+  const anno = m[3].length === 2 ? 2000 + Number(m[3]) : Number(m[3]);
+  if (g < 1 || g > 31 || mese < 1 || mese > 12 || anno < 2000 || anno > 2099) return null;
+  const d = new Date(Date.UTC(anno, mese - 1, g));
+  if (d.getUTCDate() !== g) return null;
+  return `${anno}-${String(mese).padStart(2, '0')}-${String(g).padStart(2, '0')}`;
 }
 
+/**
+ * Data e ora dello scontrino. Prima si cerca una data con l'ora accanto («02-11-2026 18:41»): un'ora da sola
+ * può essere altro (l'orologio del telefono in uno screenshot, gli orari del negozio).
+ */
+function dataOraDa(testo: string): { data: string | null; ora: string | null } {
+  for (const m of testo.matchAll(new RegExp(`${DATA.source}\\s+([01]?\\d|2[0-3])[:.]([0-5]\\d)\\b`, 'g'))) {
+    const data = giornoValido(m);
+    if (data) return { data, ora: `${m[4].padStart(2, '0')}:${m[5]}` };
+  }
+  let data: string | null = null;
+  for (const m of testo.matchAll(DATA)) {
+    data = giornoValido(m);
+    if (data) break;
+  }
+  const ora = testo.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/);
+  return { data, ora: ora ? `${ora[1].padStart(2, '0')}:${ora[2]}` : null };
+}
+
+const nomeProprio = (l: string) =>
+  l
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/(^|[\s'.-])\p{L}/gu, (x) => x.toUpperCase())
+    .slice(0, 80);
+
 function negozioDa(linee: string[]): string | null {
+  const intestazione = linee.slice(0, 15);
+  // La ragione sociale («IPER MONTEBELLO S.P.A.») è quasi sempre il nome giusto.
+  const societa = intestazione.find((l) => SOCIETA.test(l) && !/^(VIA|CORSO|PIAZZA|V\.LE)\b/.test(l) && !/\d{5,}/.test(l));
+  if (societa) return nomeProprio(societa);
   for (const l of linee.slice(0, 6)) {
-    if ((l.match(/[A-Z]/g) ?? []).length < 3 || DA_SALTARE.test(l) || /^VIA\b|^CORSO\b|^PIAZZA\b|^V\.LE\b/.test(l)) continue;
-    const nome = l
-      .toLowerCase()
-      .replace(/\s+/g, ' ')
-      .trim()
-      .replace(/(^|[\s'.-])\p{L}/gu, (x) => x.toUpperCase());
-    return nome.slice(0, 80);
+    // Niente indirizzi, indirizzi web, orari (lo screenshot ha in alto l'ora del telefono).
+    if ((l.match(/[A-Z]/g) ?? []).length < 3 || DA_SALTARE.test(l) || /^VIA\b|^CORSO\b|^PIAZZA\b|^V\.LE\b|HTTP|WWW|\.(IT|COM)\b|\d{1,2}:\d{2}/.test(l)) continue;
+    return nomeProprio(l);
   }
   return null;
 }
 
 /** Legge il testo di uno scontrino. Non inventa: quello che non trova resta null o fuori dalle righe. */
 export function leggiScontrino(testo: string): ScontrinoLetto {
-  const linee = testo
-    .split(/\r?\n/)
-    .map((l) => l.toUpperCase().replace(/€/g, ' ').replace(/\s+/g, ' ').trim())
-    .filter(Boolean);
+  const linee = testo.split(/\r?\n/).map(pulisciLinea).filter(Boolean);
   const inizio = linee.findIndex((l) => INTESTAZIONE_RIGHE.test(l));
   const righe: RigaLetta[] = [];
   let totale: number | null = null;
   let inRighe = true;
   let descrizioneSospesa: string | null = null;
   let pezziSospesi: number | null = null;
+  /** Gli altri importi che dovrebbero valere quanto il totale (subtotale, pagato): servono se il totale è letto male. */
+  const altriTotali: number[] = [];
+
+  const aggiungi = (descrizione: string, prezzo: number, extra: Partial<RigaLetta> = {}) => {
+    const riga: RigaLetta = { descrizione: descrizione.slice(0, 120), prezzo, ...extra };
+    if (pezziSospesi && riga.pezzi === undefined) riga.pezzi = pezziSospesi;
+    pezziSospesi = null;
+    descrizioneSospesa = null;
+    const formato = formatoDaDescrizione(descrizione);
+    if (formato) riga.formato = formato;
+    righe.push(riga);
+  };
 
   for (const [i, linea] of linee.entries()) {
     if (inizio >= 0 && i <= inizio) continue;
-    if (FINE_RIGHE.test(linea)) {
+    if (fineRighe(linea) || (!inRighe && /\b(PAGAMENTO|PAGATO|ELETTRONICO)\b/.test(linea))) {
       inRighe = false;
-      if (totale === null && /\bTOTALE\b/.test(linea) && !/\bIVA\b/.test(linea)) {
+      const importo = linea.match(IMPORTO);
+      if (importo && !/\bIVA\b|RESTO|CONTANT/.test(linea)) altriTotali.push(numero(importo[1]));
+      if (totale === null && eTotale(linea) && !/SUB\s?TOT/.test(linea) && !/\bIVA\b/.test(linea)) {
         const m = linea.match(IMPORTO);
         if (m) totale = numero(m[1]);
       }
       continue;
     }
     if (!inRighe || DA_SALTARE.test(linea)) continue;
-    const importo = linea.match(IMPORTO);
     const peso = linea.match(PESO);
-    const pezzi = linea.match(PEZZI);
+    const pezzi = peso ? null : linea.match(PEZZI);
+    let importo = linea.match(IMPORTO);
+    // Il prezzo al chilo o al pezzo non è il prezzo della riga: deve venire dopo.
+    const fineMisura = (peso ?? pezzi) ? (peso ?? pezzi)!.index! + (peso ?? pezzi)![0].length : 0;
+    if (importo && importo.index! < fineMisura - 1) importo = null;
 
-    if (pezzi && !peso) {
+    if (pezzi) {
       const n = Number(pezzi[1]);
       const precedente = righe.at(-1);
+      if (importo && descrizioneSospesa) {
+        // «YOGURT» poi «2 x 0,99   1,98»: descrizione sopra, pezzi e prezzo sotto.
+        aggiungi(descrizioneSospesa, numero(importo[1]), { pezzi: n });
+        continue;
+      }
       // «YOGURT 1,98» poi «2 x 0,99»: i pezzi vanno alla riga sopra; altrimenti a quella sotto.
       if (precedente && precedente.pezzi === undefined && Math.abs(precedente.prezzo - n * numero(pezzi[2])) < 0.011) precedente.pezzi = n;
       else pezziSospesi = n;
@@ -126,15 +203,16 @@ export function leggiScontrino(testo: string): ScontrinoLetto {
     }
     if (!importo) {
       // Una descrizione senza prezzo: il prezzo è sulla linea sotto (peso o solo importo).
-      if ((linea.match(/[A-Z]/g) ?? []).length >= 3) descrizioneSospesa = linea;
+      if (!peso && (linea.match(/[A-Z]/g) ?? []).length >= 3) descrizioneSospesa = linea;
       continue;
     }
     const valore = numero(importo[1]);
     let descrizione = linea
       .slice(0, importo.index)
-      .replace(/\b\d{1,2}([.,]\d{1,2})?\s?%/g, '')
       .replace(PESO, '')
+      .replace(/\b\d{1,2}([.,]\d{1,2})?\s?%/g, '')
       .replace(/€\s*\/\s*KG|\/KG/g, '')
+      .replace(/^[^A-Z0-9]+|[^A-Z0-9.)]+$/g, '')
       .replace(/\s+/g, ' ')
       .trim();
 
@@ -149,22 +227,18 @@ export function leggiScontrino(testo: string): ScontrinoLetto {
     } else if (peso && descrizioneSospesa) {
       descrizione = descrizioneSospesa;
     }
-    descrizioneSospesa = null;
-    const riga: RigaLetta = { descrizione: descrizione.slice(0, 120), prezzo: valore };
-    if (peso) riga.grammi = Math.round(numero(peso[1]) * 1000);
-    if (pezziSospesi) riga.pezzi = pezziSospesi;
-    pezziSospesi = null;
-    const formato = formatoDaDescrizione(descrizione);
-    if (formato) riga.formato = formato;
-    righe.push(riga);
+    const grammi = peso ? Math.round(numero(peso[1] ?? peso[3]) * 1000) : 0;
+    aggiungi(descrizione, valore, grammi > 0 ? { grammi } : {});
   }
 
   const somma = centesimi(righe.reduce((s, r) => s + r.prezzo, 0));
-  const ora = testo.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/);
+  // Il totale letto non torna ma il subtotale o l'importo pagato sì: era il totale a essere letto male.
+  if (righe.length && (totale === null || Math.abs(somma - totale) >= 0.011) && altriTotali.some((x) => Math.abs(x - somma) < 0.011)) totale = somma;
+  const { data, ora } = dataOraDa(linee.join('\n'));
   return {
     negozio: negozioDa(linee),
-    data: dataDa(testo),
-    ora: ora ? `${ora[1].padStart(2, '0')}:${ora[2]}` : null,
+    data,
+    ora,
     totale,
     righe,
     quadra: totale !== null && righe.length > 0 && Math.abs(somma - totale) < 0.011,
