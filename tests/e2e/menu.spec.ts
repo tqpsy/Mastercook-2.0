@@ -413,3 +413,37 @@ test('Antonino: «mai più» toglie un’idea, in Impostazioni si riprende e si 
   await page.getByRole('button', { name: 'Torna alle linee guida' }).click();
   await expect.poll(async () => (await regole())[0].r).toBeNull();
 });
+
+test('menu: il ricettario nella scheda del piatto apre la ricetta da leggere', async ({ browser }, info) => {
+  const luca = await nuovoUtente('Luca');
+  const { page } = await apri(browser, luca, info.project.use);
+  await creaFamiglia(page, 'Casa Ricettario');
+  await page.getByRole('button', { name: 'Menu', exact: true }).click();
+  await page.getByRole('group', { name: 'Vista' }).getByRole('button', { name: 'Giorni' }).click();
+  await page.getByRole('button', { name: `Aggiungi a pranzo di ${dataLunga(oggi())}` }).click();
+  await page.getByRole('dialog').getByLabel('Cosa si mangia').fill('aglio');
+  await page.getByRole('dialog').getByRole('button', { name: /Spaghetti aglio, olio e peperoncino/ }).click();
+
+  await page.getByRole('button', { name: 'Apri Spaghetti aglio, olio e peperoncino' }).click();
+  const scheda = page.getByRole('dialog', { name: 'Spaghetti aglio, olio e peperoncino' });
+  await scheda.getByRole('button', { name: 'Apri la ricetta: Spaghetti aglio, olio e peperoncino' }).click();
+  const ricetta = page.getByRole('dialog', { name: 'Spaghetti aglio, olio e peperoncino' }).last();
+  await expect(ricetta.getByText(`Pranzo di ${dataLunga(oggi())}`)).toBeVisible();
+  await expect(ricetta.getByRole('heading', { name: 'Preparazione' })).toBeVisible();
+  await expect(ricetta.getByRole('button', { name: 'Duplica' })).toHaveCount(0);
+  if (info.project.name === 'telefono') await page.screenshot({ path: 'test-results/ricettario-menu.png' });
+  // Chiudendo la ricetta si torna alla scheda del piatto.
+  await ricetta.getByRole('button', { name: 'Chiudi' }).click();
+  await expect(scheda.getByRole('button', { name: 'Apri la ricetta: Spaghetti aglio, olio e peperoncino' })).toBeVisible();
+  if (info.project.name === 'telefono') await page.screenshot({ path: 'test-results/ricettario-scheda.png' });
+  await scheda.getByRole('button', { name: 'Chiudi' }).click();
+
+  // In Oggi, nei dettagli del pasto, il piatto mostra il ricettario e si apre con un tocco.
+  await page.getByRole('button', { name: 'Oggi', exact: true }).click();
+  await page.getByRole('button', { name: /Dettagli di pranzo/ }).click();
+  const dettaglio = page.getByRole('dialog', { name: 'Pranzo di oggi' });
+  await expect(dettaglio.locator('.ricettario-piatto')).toBeVisible();
+  if (info.project.name === 'telefono') await page.screenshot({ path: 'test-results/ricettario-oggi.png' });
+  await dettaglio.getByRole('button', { name: 'Ricetta: Spaghetti aglio, olio e peperoncino' }).click();
+  await expect(page.getByRole('dialog', { name: 'Spaghetti aglio, olio e peperoncino' }).getByText('Pranzo di oggi', { exact: true })).toBeVisible();
+});

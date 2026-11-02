@@ -6,8 +6,6 @@ import { useIndice } from '../dati/indice';
 import { type ConfermaPasto as Conferma, daConfermare, type EsitoPasto, NOME_ESITO } from '../dominio/consumi';
 import type { CategoriaPasto, Eccezione, PortataMenu } from '../dominio/menu';
 import type { Indice, Ricetta } from '../dominio/ricette';
-import { type Senza, valutaFamigliaSenza } from '../dominio/senza';
-import { toltiDellaPortata } from './Senza';
 import { daUsarePresto, giorniTra, oggi, piuGiorni, statoData } from '../dominio/scadenze';
 import { spesaDelGiorno, type BisognoDelGiorno } from '../dominio/spesa';
 import { formatta, formattaGiorno } from '../dominio/unita';
@@ -19,7 +17,7 @@ import { useLotti } from './Casa';
 import { ConfermaPasto, SegnaMangiato, useConferme } from './ConfermaPasto';
 import { SegnaCucinato, usePronti } from './Cucinato';
 import { chiLoMangia, type DatiMenu, descrivi, useDatiMenu, useProlungaFissi } from './Menu';
-import { ICONA_ESITO, motiviInBreve, SchedaRicetta, useCommensali, useInCasa } from './Ricette';
+import { ICONA_ESITO, motiviInBreve, type PiattoAperto, RicettaDelPiatto } from './Ricette';
 import { useDatiSpesa } from './Spesa';
 
 const titoloDi = (indice: Indice, p: PortataMenu) => (p.ricetta_id ? indice.perId.get(p.ricetta_id)?.titolo : null) ?? p.testo ?? 'Piatto';
@@ -115,15 +113,9 @@ function StatoPasto({
   );
 }
 
-/** La ricetta aperta da Oggi: quale piatto, per chi e per quante porzioni. */
-interface Aperta {
-  ricetta: Ricetta;
-  porzioni: number;
+/** La ricetta aperta da Oggi: quale piatto, per chi, per quante porzioni e a quale pasto. */
+interface Aperta extends PiattoAperto {
   pasto: string;
-  /** Chi mangia questo piatto (id dei membri). */
-  chi: string[];
-  /** Ingredienti tolti dal piatto, per tutti o per qualcuno. */
-  senza?: Senza[];
 }
 
 /** Sempre in Oggi; merenda, spuntino e i pasti della famiglia solo se accesi nel Menu o se oggi hanno un piatto. */
@@ -387,7 +379,7 @@ export function Oggi({ vai }: { vai: (scheda: 'spesa' | 'casa' | 'menu') => void
           chiudi={() => setSegnati(null)}
         />
       )}
-      {indice && ricetta && <RicettaDiOggi indice={indice} dati={dati} aperta={ricetta} chiudi={() => setRicetta(null)} />}
+      {indice && ricetta && <RicettaDelPiatto indice={indice} dati={dati} aperta={ricetta} quando={`${ricetta.pasto} di oggi`} chiudi={() => setRicetta(null)} />}
       {indice && spesa && (
         <SpesaDiOggi
           indice={indice}
@@ -623,6 +615,9 @@ function PiattoDiOggi({
           onClick={() => apriRicetta({ ricetta, porzioni: mezze(d.porzioni + d.dopo), pasto, chi, senza: p.avanzo_di ? origine?.senza : p.senza })}
         >
           {contenuto}
+          <span className="ricettario-piatto" aria-hidden>
+            <Icona nome="ricette" grandezza={20} />
+          </span>
         </button>
       ) : (
         <div className={`piatto${esito ? ` ${esito}` : ''}`} style={{ cursor: 'default' }}>
@@ -668,32 +663,6 @@ function Variante({ indice, dati, eccezione: e, pasto, apriRicetta }: { indice: 
         <strong>{titolo}</strong>
       )}
     </li>
-  );
-}
-
-/** La ricetta di un piatto di oggi, per le porzioni del pasto e valutata per chi lo mangia. */
-function RicettaDiOggi({ indice, dati, aperta, chiudi }: { indice: Indice; dati: DatiMenu; aperta: Aperta; chiudi: () => void }) {
-  const inCasa = useInCasa();
-  const { membri, vincoli, verifiche } = useCommensali();
-  const loro = membri.filter((m) => aperta.chi.includes(m.id));
-  const conVincoli = vincoli.some((v) => aperta.chi.includes(v.membro_id));
-  const nomi = loro.map((m) => m.nome).join(', ');
-  return (
-    <SchedaRicetta
-      key={`${aperta.ricetta.id}|${aperta.porzioni}`}
-      indice={indice}
-      ricetta={aperta.ricetta}
-      inCasa={inCasa}
-      porzioniIniziali={aperta.porzioni}
-      valutazione={conVincoli ? valutaFamigliaSenza(indice, aperta.ricetta, loro, vincoli, verifiche, aperta.senza) : null}
-      tolti={aperta.senza?.length ? toltiDellaPortata(aperta.senza, dati.persone, new Set(dati.persone.filter((x) => !aperta.chi.includes(x.id)).map((x) => x.id)), aperta.porzioni) : undefined}
-      chiudi={chiudi}
-      sopra={
-        <p className="tenue" style={{ marginTop: 0 }}>
-          {aperta.pasto} di oggi{nomi && dati.persone.length > 1 ? ` · per ${nomi}` : ''}
-        </p>
-      }
-    />
   );
 }
 

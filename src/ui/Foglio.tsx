@@ -10,8 +10,9 @@ let aperti = 0;
  * Pannello che sale dal basso sul telefono e si apre al centro sul tablet.
  * `alto`: altezza fissa, per i pannelli il cui contenuto cambia (schede con elenchi di lunghezza diversa)
  * che altrimenti salirebbero e scenderebbero a ogni tocco.
+ * `azione`: un tasto tondo in più nella testata, accanto alla ✕ (per esempio il ricettario).
  */
-export function Foglio({ titolo, chiudi, alto, children }: { titolo: string; chiudi: () => void; alto?: boolean; children: ReactNode }) {
+export function Foglio({ titolo, chiudi, alto, azione, children }: { titolo: string; chiudi: () => void; alto?: boolean; azione?: ReactNode; children: ReactNode }) {
   useEffect(() => {
     const esc = (e: KeyboardEvent) => e.key === 'Escape' && chiudi();
     window.addEventListener('keydown', esc);
@@ -38,6 +39,7 @@ export function Foglio({ titolo, chiudi, alto, children }: { titolo: string; chi
       <div className={`foglio${alto ? ' alto' : ''}`} role="dialog" aria-modal="true" aria-label={titolo} onClick={(e) => e.stopPropagation()}>
         <div className="testa-foglio">
           <h2>{titolo}</h2>
+          {azione}
           <button className="bottone tondo chiudi-foglio" onClick={chiudi} aria-label="Chiudi">
             <Icona nome="chiudi" grandezza={22} />
           </button>
