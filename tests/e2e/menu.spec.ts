@@ -4,7 +4,7 @@
 import { expect, test } from '@playwright/test';
 import { dataLunga, lunedi } from '../../src/dominio/menu';
 import { oggi, piuGiorni } from '../../src/dominio/scadenze';
-import { aggiungiPersona, apri, creaFamiglia, nuovoUtente, scegliGiorno, sql } from './aiuti';
+import { aggiungiPersona, apri, creaFamiglia, nuovoUtente, scegliGiorno, scorri, sql } from './aiuti';
 
 test('menu: un piatto per cena, Sara mangia altro, nessun movimento in casa', async ({ browser }, info) => {
   const luca = await nuovoUtente('Luca');
@@ -101,14 +101,18 @@ test('menu: ripeti la settimana prima, accendi la merenda, la vista scelta resta
   await page.getByRole('dialog').getByRole('button', { name: 'Scrivi «Pizza da asporto» senza ricetta' }).click();
   await expect(page.getByRole('button', { name: 'Apri Pizza da asporto' })).toBeVisible();
 
-  await page.getByRole('button', { name: 'Settimana dopo' }).click();
+  // Niente frecce: si passa alla settimana dopo col dito (sul telefono, dalla fine della griglia che scorre).
+  const griglia = page.getByRole('region', { name: 'Settimana' });
+  await griglia.evaluate((el) => (el.scrollLeft = el.scrollWidth));
+  await scorri(griglia, 'avanti');
   await expect(page.getByRole('button', { name: 'Apri Pizza da asporto' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: `Aggiungi a pranzo di ${dataLunga(piuGiorni(lun, 7))}` })).toBeVisible();
   await page.getByRole('button', { name: 'Altre azioni' }).click();
   await page.getByRole('button', { name: '↻ Ripeti la settimana prima' }).click();
   await expect(page.getByRole('button', { name: 'Apri Pizza da asporto' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Altre azioni' }).click();
-  await page.getByRole('button', { name: 'Pasti', exact: true }).click();
+  await page.getByRole('button', { name: 'Tipi di pasti', exact: true }).click();
   const merenda = page.getByRole('dialog', { name: 'Pasti della famiglia' }).getByLabel('Merenda');
   await merenda.click();
   await expect(merenda).toBeChecked();
@@ -321,9 +325,16 @@ test('menu: si apre su oggi e la settimana prossima si programma dalla striscia'
   await page.getByRole('group', { name: 'Vista' }).getByRole('button', { name: 'Giorni' }).click();
   await expect(page.getByRole('button', { name: `Mostra ${dataLunga(oggi())}` })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByRole('region', { name: dataLunga(oggi()) })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Settimana (prima|dopo)$/ })).toHaveCount(0);
+
+  // Col dito si passa al giorno dopo e si torna indietro.
+  await scorri(page.getByRole('region', { name: dataLunga(oggi()) }), 'avanti');
+  await expect(page.getByRole('region', { name: dataLunga(piuGiorni(oggi(), 1)) })).toBeVisible();
+  await scorri(page.getByRole('region', { name: dataLunga(piuGiorni(oggi(), 1)) }), 'indietro');
+  await expect(page.getByRole('region', { name: dataLunga(oggi()) })).toBeVisible();
 
   const lunediProssimo = piuGiorni(lunedi(oggi()), 7);
-  // Sul tablet le due settimane sono affiancate; sul telefono si passa alla prossima con la freccia.
+  // Sul tablet le due settimane sono affiancate; sul telefono si passa alla prossima scorrendo la striscia.
   await scegliGiorno(page, lunediProssimo);
   await page.getByRole('button', { name: `Aggiungi a cena di ${dataLunga(lunediProssimo)}` }).click();
   await page.getByRole('dialog').getByLabel('Cosa si mangia').fill('Pizza');

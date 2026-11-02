@@ -1606,12 +1606,6 @@ div.piatto-riquadro {
   font-family: var(--carattere-titoli);
   font-size: 1.2rem;
 }
-.striscia-giorni .puntini {
-  min-height: 1em;
-  font-size: 0.7rem;
-  letter-spacing: 1px;
-  color: var(--primario);
-}
 .striscia-giorni button.passato {
   opacity: 0.55;
 }
@@ -1624,8 +1618,7 @@ div.piatto-riquadro {
   color: var(--primario-testo);
   opacity: 1;
 }
-.striscia-giorni button[aria-pressed='true'] small,
-.striscia-giorni button[aria-pressed='true'] .puntini {
+.striscia-giorni button[aria-pressed='true'] small {
   color: inherit;
 }
 .bottone.fluttuante {
@@ -1651,20 +1644,6 @@ div.piatto-riquadro {
   }
 }
 
-/* Menu come nei disegni A e C: settimana in alto, striscia con un pallino per pasto, «+» tondi. */
-.testa-settimana {
-  align-items: center;
-  gap: 8px;
-  margin: 4px 0 8px;
-}
-.titolo-settimana {
-  text-align: center;
-  line-height: 1.15;
-}
-.titolo-settimana h2 {
-  margin: 0;
-  font-size: 1.25rem;
-}
 .sopratitolo {
   display: block;
   font-size: 0.72rem;
@@ -1673,7 +1652,6 @@ div.piatto-riquadro {
   text-transform: uppercase;
   color: var(--testo-tenue);
 }
-.bottone.freccia,
 .bottone.tondo {
   width: 44px;
   min-width: 44px;
@@ -1683,41 +1661,6 @@ div.piatto-riquadro {
   font-size: 1.3rem;
   display: grid;
   place-items: center;
-}
-.pallini-pasti {
-  display: flex;
-  gap: 3px;
-  margin-top: 4px;
-}
-.pallini-pasti i {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--primario);
-}
-.pallini-pasti i.t-colazione {
-  background: var(--senape);
-}
-.pallini-pasti i.t-merenda,
-.pallini-pasti i.t-spuntino {
-  background: #8fb0af;
-}
-.pallini-pasti i.t-pranzo {
-  background: var(--petrolio);
-}
-.pallini-pasti i.t-cena {
-  background: var(--rovere, #a8825a);
-}
-.pallini-pasti i.vuoto {
-  background: transparent;
-  box-shadow: inset 0 0 0 1.3px var(--testo-tenue);
-  opacity: 0.6;
-}
-.striscia-giorni button[aria-pressed='true'] .pallini-pasti i.pieno {
-  background: #fff;
-}
-.striscia-giorni button[aria-pressed='true'] .pallini-pasti i.vuoto {
-  box-shadow: inset 0 0 0 1.3px #fff;
 }
 .altro-riquadro.piu {
   width: 34px;
@@ -2617,10 +2560,6 @@ details > summary:has(.primo-presto) {
 }
 
 /* Menu (disegno A): nome del piatto e sigle sulla stessa riga; nel riquadro largo i piatti affiancati. */
-.titolo-settimana h2 {
-  white-space: nowrap;
-  font-size: 1.15rem;
-}
 .maiuscola {
   display: inline-block;
 }
@@ -2668,6 +2607,53 @@ details > summary:has(.primo-presto) {
 }
 .settimana-griglia .testa-giorno:not(.scelto) {
   background: transparent;
+}
+
+/* Menu senza titolo della settimana: si scorre col dito e i riquadri riempiono lo schermo (altezza da useFinoInFondo). */
+.area-scorrevole {
+  transition: transform 0.2s ease;
+}
+.striscia-giorni button {
+  min-height: 54px;
+}
+.striscia-giorni strong {
+  font-size: 1.3rem;
+}
+.giorno-riquadri .titolo-giorno {
+  margin: 4px 0 8px;
+}
+.giorno-riquadri .piatto-riquadro {
+  font-size: 1.05rem;
+}
+.giorno-riquadri .testa-riquadro :is(h3, h4) {
+  font-size: 1.15rem;
+}
+.giorno-riquadri .riquadro .aggiungi-riquadro {
+  font-size: 1rem;
+}
+.settimana-griglia.riempie {
+  grid-template-rows: auto repeat(var(--pasti, 3), minmax(72px, 1fr));
+}
+.settimana-griglia .riquadro.cella .piatto-riquadro {
+  font-size: 0.88rem;
+}
+@media (min-width: 900px),
+  (orientation: landscape) and (min-width: 560px) and (max-height: 600px) {
+  .giorno-riquadri .piatto-riquadro {
+    font-size: 1.15rem;
+  }
+  .giorno-riquadri .testa-riquadro :is(h3, h4) {
+    font-size: 1.25rem;
+  }
+  .giorno-riquadri .emoji-pasto {
+    font-size: 1.7rem;
+  }
+  .settimana-griglia .riquadro.cella .piatto-riquadro {
+    font-size: 0.92rem;
+  }
+  .settimana-griglia .testa-giorno {
+    font-size: 0.95rem;
+  }
 }
 /* Due gruppi di bottoni sulla stessa riga (⭐/💫 accanto alle categorie o ai modi di suggerire). */
 .gruppo-in-riga {
