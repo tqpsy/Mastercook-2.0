@@ -47,6 +47,25 @@ const DISEGNI = {
       <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
     </>
   ),
+  frigo: (
+    <>
+      <rect x="5" y="2" width="14" height="20" rx="2" />
+      <path d="M5 9h14M8.5 5v1.5M8.5 12v3.5" />
+    </>
+  ),
+  freezer: (
+    <>
+      <rect x="5" y="2" width="14" height="20" rx="2" />
+      <path d="M5 7.5h14M8.5 4.2v1" />
+      <path d="M12 11v8M8.6 13l6.8 4M8.6 17l6.8-4" />
+    </>
+  ),
+  dispensa: (
+    <>
+      <rect x="3" y="2" width="18" height="20" rx="2" />
+      <path d="M12 2v20M3 12h18M9.5 6.5v2M14.5 6.5v2M9.5 15.5v2M14.5 15.5v2" />
+    </>
+  ),
   spunta: <path d="M20 6 9 17l-5-5" />,
   avanti: <path d="m9 18 6-6-6-6" />,
   indietro: <path d="m15 18-6-6 6-6" />,
@@ -72,5 +91,14 @@ export function Icona({ nome, grandezza = 24 }: { nome: NomeIcona; grandezza?: n
     >
       {DISEGNI[nome]}
     </svg>
+  );
+}
+
+/** Dov'è un avanzo (o un cibo in casa): frigo, freezer o dispensa, in riga col testo. */
+export function IconaLuogo({ luogo, grandezza = 16 }: { luogo: 'frigo' | 'freezer' | 'dispensa'; grandezza?: number }) {
+  return (
+    <span className={`icona-luogo luogo-${luogo}`} aria-hidden="true">
+      <Icona nome={luogo} grandezza={grandezza} />
+    </span>
   );
 }

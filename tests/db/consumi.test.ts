@@ -183,6 +183,16 @@ describe('conferma del pasto', () => {
 });
 
 describe('piatti che durano più giorni', () => {
+  it('l’avanzo si mette in un altro pasto dello stesso giorno o dopo, mai prima né nello stesso pasto', async () => {
+    const { u, famiglia } = await famigliaCon();
+    const pranzo = randomUUID();
+    expect((await u.applica(comando('aggiungi_portata', famiglia, { id: pranzo, data: '2026-11-03', categoria: 'pranzo', ricetta_id: 'sys:carbonara', porzioni: 4 }))).esito).toBe('applicato');
+    const avanzo = (data: string, categoria: string) => u.applica(comando('aggiungi_avanzo', famiglia, { id: randomUUID(), avanzo_di: pranzo, data, categoria }));
+    expect((await avanzo('2026-11-02', 'cena')).dettaglio.motivo).toBe('dati_non_validi');
+    expect((await avanzo('2026-11-03', 'pranzo')).dettaglio.motivo).toBe('dati_non_validi');
+    expect((await avanzo('2026-11-03', 'cena')).esito).toBe('applicato');
+  });
+
   it('la spesa e il previsto contano tutto il primo giorno; la conferma mette in casa l’avanzo, che il giorno dopo si mangia', async () => {
     const { u, famiglia } = await famigliaCon();
     const portata = await piatto(u, famiglia);

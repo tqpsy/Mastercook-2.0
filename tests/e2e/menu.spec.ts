@@ -207,7 +207,7 @@ test('torta che dura più giorni: avanzo domani, la conferma la mette in casa', 
   const scheda = page.getByRole('dialog', { name: 'Torta di mele' });
   const domani = piuGiorni(oggi(), 1);
   await expect(scheda.getByLabel('Giorno dell’avanzo')).toHaveValue(domani);
-  await scheda.getByRole('button', { name: '🍰 Avanza anche qui' }).click();
+  await scheda.getByRole('button', { name: 'Avanza anche qui' }).click();
   await expect(scheda.getByRole('list', { name: 'Avanzi nei giorni dopo' })).toContainText(dataLunga(domani));
   await expect(scheda).toContainText('Si cucinano 2 porzioni');
   await page.getByRole('button', { name: 'Chiudi' }).click();
