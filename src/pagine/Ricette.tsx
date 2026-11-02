@@ -14,7 +14,9 @@ import { Foto } from '../ui/Foto';
 import { ModalitaCucina } from '../ui/ModalitaCucina';
 import { EditorRicetta, type Bozza, spostaPiatti } from './EditorRicetta';
 import { useLotti } from './Casa';
-import { useDatiMenu } from './Menu';
+import { type Senza, valutaFamigliaSenza } from '../dominio/senza';
+import { type DatiMenu, useDatiMenu } from './Menu';
+import { toltiDellaPortata } from './Senza';
 import { BottoniModo, BottoniSegno, CercaRicetta, type FiltroIngredienti, MODI, type Segno, SEGNI } from '../ui/FiltriRicetta';
 import { haPrincipale, usaIngrediente } from '../dominio/principale';
 import { daUsarePresto, oggi } from '../dominio/scadenze';
@@ -704,5 +706,45 @@ export function SchedaRicetta({
         </>
       )}
     </Foglio>
+  );
+}
+
+/** Un piatto in programma aperto per leggerne la ricetta: per chi e per quante porzioni. */
+export interface PiattoAperto {
+  ricetta: Ricetta;
+  porzioni: number;
+  /** Chi mangia questo piatto (id dei membri). */
+  chi: string[];
+  /** Ingredienti tolti dal piatto, per tutti o per qualcuno. */
+  senza?: Senza[];
+}
+
+/**
+ * La ricetta di un piatto in programma (da Oggi o dal Menu), solo da leggere:
+ * per le porzioni del pasto e valutata per chi lo mangia. `quando` va in cima, per esempio «Pranzo di oggi».
+ */
+export function RicettaDelPiatto({ indice, dati, aperta, quando, chiudi }: { indice: Indice; dati: DatiMenu; aperta: PiattoAperto; quando: string; chiudi: () => void }) {
+  const inCasa = useInCasa();
+  const { membri, vincoli, verifiche } = useCommensali();
+  const loro = membri.filter((m) => aperta.chi.includes(m.id));
+  const conVincoli = vincoli.some((v) => aperta.chi.includes(v.membro_id));
+  const nomi = loro.map((m) => m.nome).join(', ');
+  return (
+    <SchedaRicetta
+      key={`${aperta.ricetta.id}|${aperta.porzioni}`}
+      indice={indice}
+      ricetta={aperta.ricetta}
+      inCasa={inCasa}
+      porzioniIniziali={aperta.porzioni}
+      valutazione={conVincoli ? valutaFamigliaSenza(indice, aperta.ricetta, loro, vincoli, verifiche, aperta.senza) : null}
+      tolti={aperta.senza?.length ? toltiDellaPortata(aperta.senza, dati.persone, new Set(dati.persone.filter((x) => !aperta.chi.includes(x.id)).map((x) => x.id)), aperta.porzioni) : undefined}
+      chiudi={chiudi}
+      sopra={
+        <p className="tenue" style={{ marginTop: 0 }}>
+          {quando}
+          {nomi && dati.persone.length > 1 ? ` · per ${nomi}` : ''}
+        </p>
+      }
+    />
   );
 }

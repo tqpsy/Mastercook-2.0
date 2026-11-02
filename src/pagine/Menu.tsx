@@ -35,11 +35,11 @@ import { FacciaAntonino } from './Antonino';
 import { useConferme } from './ConfermaPasto';
 import { SegnaCucinato, usePronti } from './Cucinato';
 import { type Luogo, oggi, piuGiorni } from '../dominio/scadenze';
-import { IconaLuogo } from '../ui/Icona';
+import { Icona, IconaLuogo } from '../ui/Icona';
 import { avanziInCasa } from '../dominio/avanzi';
 import { Foglio } from '../ui/Foglio';
 import { formattaGiorno } from '../dominio/unita';
-import { AvvisoAdatto, ICONA_ESITO, MarchiSegni, motiviInBreve, useIcone, useSegni } from './Ricette';
+import { AvvisoAdatto, ICONA_ESITO, MarchiSegni, motiviInBreve, RicettaDelPiatto, useIcone, useSegni } from './Ricette';
 import { IconaCibo } from '../ui/IconaCibo';
 import { leggiSenza, type Rimedio, rimedio, type Senza } from '../dominio/senza';
 import { AvvisoNonSiToglie, EtichettaRimedio, FoglioSenza, testoSenza } from './Senza';
@@ -1261,9 +1261,37 @@ function SchedaPiatto({
       campi,
     });
   const automatiche = porzioniPortata({ ...p, porzioni: null }, dati.persone, dati.eccezioni, dati.ospiti);
+  // Il ricettario apre la ricetta da leggere; un avanzo apre quella del piatto da cui viene.
+  const [leggi, setLeggi] = useState(false);
+  const origine = p.avanzo_di ? dati.portate.find((x) => x.id === p.avanzo_di) : undefined;
+  const ricetta = d.ricetta ?? (origine?.ricetta_id ? indice.perId.get(origine.ricetta_id) : undefined);
 
   return (
-    <Foglio titolo={d.titolo} chiudi={chiudi}>
+    <Foglio
+      titolo={d.titolo}
+      chiudi={chiudi}
+      azione={
+        ricetta && (
+          <button className="bottone tondo apri-ricettario" onClick={() => setLeggi(true)} aria-label={`Apri la ricetta: ${ricetta.titolo}`} title="Apri la ricetta">
+            <Icona nome="ricette" grandezza={22} />
+          </button>
+        )
+      }
+    >
+      {leggi && ricetta && (
+        <RicettaDelPiatto
+          indice={indice}
+          dati={dati}
+          aperta={{
+            ricetta,
+            porzioni: Math.max(0.5, Math.round((d.porzioni + d.dopo) * 2) / 2),
+            chi: dati.persone.filter((x) => !d.eccezioni.some((e) => e.membro_id === x.id)).map((x) => x.id),
+            senza: p.avanzo_di ? origine?.senza : p.senza,
+          }}
+          quando={`${nomeCategoria(dati, p.categoria)} di ${dataLunga(p.data)}`}
+          chiudi={() => setLeggi(false)}
+        />
+      )}
       <p className="tenue" style={{ marginTop: 0, textTransform: 'capitalize' }}>
         {nomeCategoria(dati, p.categoria)} · {dataLunga(p.data)}
         {p.origine === 'ripetuta' && ' · ripetuto dalla settimana prima'}

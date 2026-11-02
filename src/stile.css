@@ -464,6 +464,18 @@ html.foglio-aperto body {
   background: var(--superficie-2);
   color: var(--testo-tenue);
 }
+.bottone.tondo.apri-ricettario {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  min-width: 44px;
+  margin-left: auto;
+  margin-right: -4px;
+  border: none;
+  background: var(--primario-tenue);
+  color: var(--primario);
+}
 @media (max-width: 699px) {
   .foglio::before {
     content: '';
@@ -640,6 +652,18 @@ details > summary {
 .aggiungi-piatto:focus-visible {
   outline: 2px solid var(--primario);
   outline-offset: 2px;
+}
+.piatto:has(.ricettario-piatto) {
+  position: relative;
+  padding-right: 40px;
+}
+.ricettario-piatto {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  display: flex;
+  color: var(--primario);
 }
 .piatto.adatta {
   border-left-color: var(--primario);
