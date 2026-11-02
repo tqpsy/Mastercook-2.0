@@ -33,6 +33,8 @@ describe('icona di una ricetta', () => {
     expect(icona('sys:risotto_parmigiano')).toBe('mc:risotto');
     expect(icona('sys:parmigiana')).toBe('mc:parmigiana');
     expect(icona('sys:tiramisu')).toBe('mc:tiramisu');
+    expect(icona('sys:cotolette_pollo')).toBe('mc:cotoletta_pollo');
+    expect(icona('sys:cotoletta_milanese')).toBe('mc:cotoletta');
     expect(icona('sys:tortellini_brodo')).toBe('mc:tortellini');
     expect(disegnoDalTitolo('Lasagne della nonna')).toBe('mc:lasagna');
     expect(disegnoDalTitolo('Risotto alla milanese')).toBe('mc:risotto');
