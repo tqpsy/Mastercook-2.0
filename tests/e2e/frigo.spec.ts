@@ -40,8 +40,10 @@ test('configuro il frigo e aggiungendo il pollo mi dice il ripiano in basso', as
   await expect(nuovo.getByLabel('Dove metterlo')).toContainText('contenitore ermetico');
   await nuovo.getByRole('button', { name: 'Senza data' }).click();
   await nuovo.getByRole('button', { name: 'Aggiungi', exact: true }).click();
-  await salvato(page);
   await expect(page.getByRole('region', { name: 'Frigo' }).getByText(/📍 Ripiano 5, in basso/)).toBeVisible();
-  const [r] = await sql<{ posto: string }>(`select posto from lotto where famiglia_id = (select famiglia_id from utente_famiglia where utente_id = $1)`, [luca.id]);
-  expect(r.posto).toBe('r5');
+  await salvato(page);
+  // Il lotto si vede subito (copia locale): sul server arriva appena il comando è inviato.
+  const posto = async () =>
+    (await sql<{ posto: string }>(`select posto from lotto where famiglia_id = (select famiglia_id from utente_famiglia where utente_id = $1)`, [luca.id]))[0]?.posto;
+  await expect.poll(posto).toBe('r5');
 });
