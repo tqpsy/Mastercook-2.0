@@ -58,7 +58,7 @@ export async function scorri(elemento: Locator, verso: 'avanti' | 'indietro') {
     const r = el.getBoundingClientRect();
     const y = r.top + Math.min(r.height / 2, 30);
     const x = r.left + r.width / 2;
-    const dx = verso === 'avanti' ? -120 : 120;
+    const dx = (verso === 'avanti' ? -1 : 1) * Math.max(120, r.width * 0.6);
     const tocco = (cx: number) => new Touch({ identifier: 1, target: el, clientX: cx, clientY: y });
     const evento = (tipo: string, cx: number, attivo: boolean) =>
       el.dispatchEvent(new TouchEvent(tipo, { touches: attivo ? [tocco(cx)] : [], changedTouches: [tocco(cx)], bubbles: true, cancelable: true }));

@@ -2619,10 +2619,22 @@ details > summary:has(.primo-presto) {
 @media (max-width: 899px) {
   .comandi-menu:not(.largo) {
     flex-wrap: nowrap;
+    gap: 6px;
   }
   .comandi-menu:not(.largo) .scelte.segmenti button {
     min-height: 40px;
-    padding: 0 12px;
+    padding: 0 9px;
+    font-size: 0.88rem;
+  }
+  .comandi-menu:not(.largo) .torna-oggi {
+    padding: 0 10px;
+    font-size: 0.88rem;
+  }
+  .comandi-menu:not(.largo) .bottone.tondo {
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+    min-height: 40px;
   }
   .comandi-menu:not(.largo) > .bottone {
     min-height: 40px;
@@ -2634,8 +2646,53 @@ details > summary:has(.primo-presto) {
 }
 
 /* Menu senza titolo della settimana: si scorre col dito e i riquadri riempiono lo schermo (altezza da useFinoInFondo). */
-.area-scorrevole {
-  transition: transform 0.2s ease;
+/* Riga dei comandi del Menu: ancorata in alto, una sola riga, sempre della stessa altezza. */
+.comandi-menu {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  flex-wrap: nowrap;
+  height: 60px;
+  margin: 0 -16px 8px;
+  padding: 0 16px;
+  background: var(--sfondo);
+}
+.comandi-menu .scelte.segmenti {
+  flex: 0 1 auto;
+  min-width: 0;
+  flex-wrap: nowrap;
+}
+.comandi-menu .torna-oggi {
+  flex-shrink: 0;
+}
+.comandi-menu .torna-oggi:disabled {
+  opacity: 0.4;
+}
+/* Giorni a carosello: ieri, oggi e domani affiancati a tutta larghezza; il binario lo muove il dito (useCarosello). */
+.carosello {
+  display: flex;
+  flex-direction: column;
+  margin: 0 -16px;
+  overflow: hidden;
+  touch-action: pan-y;
+}
+.binario {
+  flex: 1;
+  display: flex;
+  transform: translate3d(-100%, 0, 0);
+  will-change: transform;
+}
+.binario > .giorno-riquadri {
+  flex: 0 0 100%;
+  box-sizing: border-box;
+  min-width: 0;
+  padding: 0 16px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+.binario > .giorno-riquadri > .riquadri {
+  flex: 1;
 }
 .striscia-giorni button {
   min-height: 54px;
