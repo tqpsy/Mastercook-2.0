@@ -1634,9 +1634,6 @@ function SenzaNelPiatto({
       </span>
       <span className="cresce">
         <strong>{testo.charAt(0).toUpperCase() + testo.slice(1)}</strong>
-        <span className="tenue piccolo" style={{ display: 'block' }}>
-          {perTutti ? 'Nessuno lo mette: non va nella spesa' : 'La sua porzione si mette da parte prima di aggiungerlo'}
-        </span>
       </span>
       <span className="senza-bottoni">
         {x?.possibile && (

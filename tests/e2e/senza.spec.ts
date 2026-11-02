@@ -58,7 +58,7 @@ test('senza un ingrediente: solo per Sara, poi per tutti; il principale non si t
   const cambia = page.getByRole('dialog', { name: 'Pasta con le zucchine' }).last();
   await cambia.getByRole('radio', { name: /Per tutti/ }).click();
   await cambia.getByRole('button', { name: '✓ Salva' }).click();
-  await expect(scheda.getByText(/Nessuno lo mette/)).toBeVisible();
+  await expect(scheda.getByText(/Senza .*per Sara/)).toHaveCount(0);
   await expect.poll(async () => (await senza()).every((s) => s.membro_id === null)).toBe(true);
   await scheda.getByRole('button', { name: 'Chiudi' }).first().click();
 
