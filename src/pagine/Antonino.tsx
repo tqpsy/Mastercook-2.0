@@ -1,7 +1,22 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useFamiglia, useVista } from '../dati/contesto';
 import { useIndice } from '../dati/indice';
-import { GRUPPI, type Gruppo, memoriaDa, type MemoriaAntonino, type Obiettivo, REGOLE_BASE, regoleDa, regoleDaSalvare, type RegoleAntonino } from '../dominio/antonino';
+import {
+  GRUPPI,
+  type Gruppo,
+  memoriaDa,
+  type MemoriaAntonino,
+  type Obiettivo,
+  PIANO_VUOTO,
+  pianoAcceso,
+  REGOLE_BASE,
+  regoleDa,
+  regoleDaSalvare,
+  type RegoleAntonino,
+  type RegolePiano,
+} from '../dominio/antonino';
+import { comandoRicetta, leggiPiano, regoleConPiano, ricetteNuove } from '../dominio/piano';
+import type { Indice } from '../dominio/ricette';
 import { oggi } from '../dominio/scadenze';
 import faccia from '../ui/antonino.webp';
 
@@ -134,6 +149,7 @@ export function AntoninoImpostazioni() {
             )}
           </>
         )}
+        <PianoNutrizionista regole={regole} salva={salva} indice={indice} />
         {memoria.maiPiu.size > 0 && (
           <>
             <h3 className="titoletto" style={{ marginTop: 14 }}>
@@ -163,5 +179,106 @@ export function AntoninoImpostazioni() {
         )}
       </div>
     </>
+  );
+}
+
+const REGOLE_PIANO: { chiave: Exclude<keyof RegolePiano, 'preferiti' | 'nome' | 'caricato_il'>; testo: string }[] = [
+  { chiave: 'cenaSenzaCarboidrati', testo: '🌙 A cena niente pasta, pane, riso, patate e legumi' },
+  { chiave: 'pranzoConCarboidrati', testo: '☀️ A pranzo un carboidrato con poca proteina e le verdure' },
+  { chiave: 'legumiSenzaCereali', testo: '🫘 Legumi mai con pasta, pane o riso' },
+  { chiave: 'verdureAOgniPasto', testo: '🥗 Verdure a pranzo e a cena' },
+];
+
+/**
+ * Il piano del nutrizionista: si carica da un file preparato una volta (vale per tutta la famiglia) e porta le
+ * frequenze della settimana, le regole su pranzo e cena, gli alimenti da preferire e le ricette del piano.
+ */
+function PianoNutrizionista({ regole, salva, indice }: { regole: RegoleAntonino; salva: (r: RegoleAntonino) => void; indice: Indice | null | undefined }) {
+  const { esegui } = useFamiglia();
+  const file = useRef<HTMLInputElement>(null);
+  const [esito, setEsito] = useState<{ ok: boolean; testo: string } | null>(null);
+  const p = regole.piano;
+  const acceso = pianoAcceso(p);
+
+  async function carica(f: File) {
+    setEsito(null);
+    try {
+      const piano = leggiPiano(await f.text(), oggi());
+      const titoli = (indice?.ricette ?? []).filter((r) => !r.di_sistema && !r.archiviata).map((r) => r.titolo);
+      const nuove = ricetteNuove(piano, titoli);
+      const mancano = nuove.filter((r) => r.ingredienti.some((g) => !indice?.ingrediente(g.ingrediente_id)));
+      const daCreare = nuove.filter((r) => !mancano.includes(r));
+      const domanda = `Antonino seguirà «${piano.nome}» per tutta la famiglia: le frequenze della settimana e le regole di pranzo e cena cambiano.${
+        daCreare.length ? ` Aggiungo anche ${daCreare.length} ${daCreare.length === 1 ? 'ricetta' : 'ricette'} del piano.` : ''
+      }`;
+      if (!window.confirm(domanda)) return;
+      await esegui('antonino_regole', { regole: regoleDaSalvare(regoleConPiano(regole, piano)) });
+      for (const r of daCreare) await esegui('salva_ricetta', comandoRicetta(r, () => crypto.randomUUID()));
+      const giaCi = piano.ricette.length - nuove.length;
+      setEsito({
+        ok: true,
+        testo: [
+          'Piano caricato.',
+          daCreare.length ? (daCreare.length === 1 ? '1 ricetta aggiunta.' : `${daCreare.length} ricette aggiunte.`) : '',
+          giaCi ? (giaCi === 1 ? '1 ricetta c’era già.' : `${giaCi} ricette c’erano già.`) : '',
+          mancano.length ? `Non ho aggiunto ${mancano.map((r) => r.titolo).join(', ')}: manca un ingrediente.` : '',
+        ]
+          .filter(Boolean)
+          .join(' '),
+      });
+    } catch (e) {
+      setEsito({ ok: false, testo: e instanceof Error ? e.message : 'Non riesco a leggere il file.' });
+    } finally {
+      if (file.current) file.current.value = '';
+    }
+  }
+
+  return (
+    <section className="piano-nutrizionista" aria-label="Piano del nutrizionista">
+      <h3 className="titoletto" style={{ marginTop: 14 }}>
+        Piano del nutrizionista
+      </h3>
+      {acceso ? (
+        <>
+          <p className="tenue" style={{ marginTop: 0 }}>
+            📄 {p.nome ?? 'Piano del nutrizionista'}
+            {p.caricato_il ? ` · caricato il ${p.caricato_il.split('-').reverse().join('/')}` : ''} · vale per tutta la famiglia
+          </p>
+          {REGOLE_PIANO.map((x) => (
+            <label key={x.chiave} className="riga" style={{ margin: '6px 0' }}>
+              <input type="checkbox" checked={p[x.chiave]} onChange={(e) => salva({ ...regole, piano: { ...p, [x.chiave]: e.target.checked } })} />
+              <span>{x.testo}</span>
+            </label>
+          ))}
+          {p.preferiti.length > 0 && (
+            <p className="tenue piccolo">Da preferire: {p.preferiti.map((id) => indice?.nome(id).toLowerCase() ?? id).join(', ')}</p>
+          )}
+        </>
+      ) : (
+        <p className="tenue" style={{ marginTop: 0 }}>
+          Carica il file del piano: seguo le sue frequenze e le sue regole per pranzo e cena, per tutta la famiglia.
+        </p>
+      )}
+      <div className="riga" style={{ gap: 8, flexWrap: 'wrap' }}>
+        <button type="button" className="bottone piccolo" onClick={() => file.current?.click()}>
+          📄 {acceso ? 'Carica un piano nuovo' : 'Carica il piano'}
+        </button>
+        {acceso && (
+          <button
+            type="button"
+            className="bottone piccolo"
+            onClick={() => window.confirm('Antonino smette di seguire il piano. Le frequenze della settimana restano quelle di adesso.') && salva({ ...regole, piano: PIANO_VUOTO })}
+          >
+            Togli il piano
+          </button>
+        )}
+      </div>
+      <input ref={file} type="file" accept=".json,application/json" hidden aria-label="File del piano" onChange={(e) => e.target.files?.[0] && void carica(e.target.files[0])} />
+      {esito && (
+        <p className={`avviso ${esito.ok ? 'info' : 'errore'}`} role="status">
+          {esito.testo}
+        </p>
+      )}
+    </section>
   );
 }

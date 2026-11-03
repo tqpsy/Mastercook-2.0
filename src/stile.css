@@ -3622,3 +3622,11 @@ details > summary:has(.primo-presto) {
 .adatto-avviso .cresce::first-letter {
   text-transform: uppercase;
 }
+
+/* Impostazioni › Antonino: il piano del nutrizionista, caselle allineate alla prima riga del testo. */
+.piano-nutrizionista label.riga {
+  align-items: flex-start;
+}
+.piano-nutrizionista label.riga input {
+  margin-top: 4px;
+}

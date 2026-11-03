@@ -372,7 +372,8 @@ export function conBambini(persone: Persona[]): boolean {
 
 /** Sotto un piatto: come completare il pasto e, con i bambini, come adattarlo. */
 export function ConsigliDelDietista({ indice, ricetta, bambini }: { indice: Indice; ricetta: Ricetta; bambini: boolean }) {
-  const nota = notaComposizione(composizione(indice, ricetta), ricetta.categoria);
+  const { regole } = useAntonino();
+  const nota = notaComposizione(composizione(indice, ricetta), ricetta.categoria, regole.piano);
   const adatta = bambini ? adattamentiBambini(indice, ricetta) : [];
   if (!nota && !adatta.length) return null;
   return (

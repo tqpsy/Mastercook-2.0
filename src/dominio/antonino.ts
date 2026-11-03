@@ -66,7 +66,32 @@ export interface RegoleAntonino {
   /** Almeno un piatto con le verdure ogni giorno. */
   verdureOgniGiorno: boolean;
   pesi: Pesi;
+  /** Regole del piano del nutrizionista (spente nelle linee guida di base). */
+  piano: RegolePiano;
 }
+
+/**
+ * Le regole che vengono da un piano del nutrizionista e valgono per tutta la famiglia: come comporre pranzo e
+ * cena, quali abbinamenti evitare, quali alimenti preferire. Spostano il punteggio, non escludono: se non c'è
+ * altro, Antonino propone lo stesso un piatto e lo dice.
+ */
+export interface RegolePiano {
+  /** A cena niente cereali, pane o patate (e niente legumi, se contano come carboidrati). */
+  cenaSenzaCarboidrati: boolean;
+  /** I legumi non si abbinano a pasta, pane, riso e altri cereali: contano come carboidrato del pasto. */
+  legumiSenzaCereali: boolean;
+  /** A pranzo un carboidrato complesso (cereale, patate o legumi) con poca proteina e le verdure. */
+  pranzoConCarboidrati: boolean;
+  /** Le verdure sia a pranzo sia a cena. */
+  verdureAOgniPasto: boolean;
+  /** Gli alimenti da preferire (id del catalogo: farro, riso basmati, cous cous…). */
+  preferiti: string[];
+  /** Da dove vengono le regole, per mostrarlo (es. «Piano del nutrizionista»), e quando sono state caricate. */
+  nome?: string;
+  caricato_il?: string;
+}
+
+export const PIANO_VUOTO: RegolePiano = { cenaSenzaCarboidrati: false, legumiSenzaCereali: false, pranzoConCarboidrati: false, verdureAOgniPasto: false, preferiti: [] };
 
 export const PESI_BASE: Pesi = { scade: 5, casa: 3, preferita: 2, ospiti: 3, piace: 2, ripetuta: 4, scartata: 2, scelta: 1, equilibrio: 4, varieta: 1.5, integrali: 1, stagione: 2, mediterranea: 1.5 };
 
@@ -88,7 +113,44 @@ export const REGOLE_BASE: RegoleAntonino = {
   },
   verdureOgniGiorno: true,
   pesi: PESI_BASE,
+  piano: PIANO_VUOTO,
 };
+
+const CHIAVI_PIANO = [
+  ['cenaSenzaCarboidrati', 'cena_senza_carboidrati'],
+  ['legumiSenzaCereali', 'legumi_senza_cereali'],
+  ['pranzoConCarboidrati', 'pranzo_con_carboidrati'],
+  ['verdureAOgniPasto', 'verdure_a_ogni_pasto'],
+] as const;
+
+function testo(x: unknown, max: number): string | undefined {
+  return typeof x === 'string' && x.trim() && x.length <= max ? x.trim() : undefined;
+}
+
+/** Il piano salvato (chiavi con il trattino basso), con i valori strani ignorati. */
+function pianoDa(x: unknown): RegolePiano {
+  const p = (x && typeof x === 'object' && !Array.isArray(x) ? x : {}) as Record<string, unknown>;
+  const piano: RegolePiano = { ...PIANO_VUOTO, preferiti: [] };
+  for (const [k, salvata] of CHIAVI_PIANO) if (typeof p[salvata] === 'boolean') piano[k] = p[salvata] as boolean;
+  if (Array.isArray(p.preferiti)) piano.preferiti = [...new Set(p.preferiti.filter((v): v is string => typeof v === 'string' && /^ing:[a-z0-9_]{1,60}$/.test(v)))].slice(0, 30);
+  const nome = testo(p.nome, 80);
+  const quando = typeof p.caricato_il === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(p.caricato_il) ? p.caricato_il : undefined;
+  return { ...piano, ...(nome ? { nome } : {}), ...(quando ? { caricato_il: quando } : {}) };
+}
+
+/** Il piano come si salva: solo ciò che è acceso; `null` se è tutto spento. */
+function pianoDaSalvare(p: RegolePiano): Record<string, unknown> | null {
+  const o: Record<string, unknown> = {};
+  for (const [k, salvata] of CHIAVI_PIANO) if (p[k]) o[salvata] = true;
+  if (p.preferiti.length) o.preferiti = p.preferiti;
+  if (!Object.keys(o).length) return null;
+  return { ...o, ...(p.nome ? { nome: p.nome } : {}), ...(p.caricato_il ? { caricato_il: p.caricato_il } : {}) };
+}
+
+/** C'è almeno una regola del piano accesa. */
+export function pianoAcceso(p: RegolePiano): boolean {
+  return pianoDaSalvare(p) !== null;
+}
 
 /** Un numero intero tra 0 e 14 (due pasti al giorno per una settimana), altrimenti niente. */
 function volte(x: unknown): number | undefined {
@@ -118,6 +180,7 @@ export function regoleDa(impostazioni: unknown): RegoleAntonino {
     obiettivi,
     verdureOgniGiorno: typeof r.verdure_ogni_giorno === 'boolean' ? r.verdure_ogni_giorno : REGOLE_BASE.verdureOgniGiorno,
     pesi,
+    piano: pianoDa(r.piano),
   };
 }
 
@@ -131,7 +194,9 @@ export function regoleDaSalvare(r: RegoleAntonino): Record<string, unknown> {
   }
   const pesi: Partial<Pesi> = {};
   for (const k of Object.keys(PESI_BASE) as (keyof Pesi)[]) if (r.pesi[k] !== PESI_BASE[k]) pesi[k] = r.pesi[k];
+  const piano = pianoDaSalvare(r.piano);
   return {
+    ...(piano ? { piano } : {}),
     ...(Object.keys(obiettivi).length ? { obiettivi } : {}),
     ...(Object.keys(pesi).length ? { pesi } : {}),
     ...(r.verdureOgniGiorno !== REGOLE_BASE.verdureOgniGiorno ? { verdure_ogni_giorno: r.verdureOgniGiorno } : {}),
@@ -319,6 +384,8 @@ const CEREALI: { id: string; radici: string[] }[] = [
   { id: 'polenta', radici: ['ing:polenta'] },
   { id: 'avena', radici: ['ing:fiocchi_avena'] },
   { id: 'pane', radici: ['ing:pane', 'ing:pane_integrale', 'ing:pita', 'ing:piadina', 'ing:tortillas', 'ing:focaccia', 'ing:pasta_pizza', 'ing:farina', 'ing:farina_integrale', 'ing:semola'] },
+  // Impasti pronti e panatura: una torta salata o una cotoletta hanno già il loro carboidrato.
+  { id: 'impasto', radici: ['ing:pasta_sfoglia', 'ing:pasta_brisee', 'ing:pasta_frolla', 'ing:pasta_fillo', 'ing:pane_grattugiato'] },
 ];
 const INTEGRALI = ['ing:pasta_integrale', 'ing:riso_integrale', 'ing:farro', 'ing:orzo', 'ing:pane_integrale', 'ing:farina_integrale', 'ing:fiocchi_avena', 'ing:quinoa'];
 const PATATE = 'Patate e tuberi';
@@ -355,16 +422,60 @@ export function composizione(indice: Indice, r: Ricetta): Composizione {
   };
 }
 
-/** Come completare un pranzo o una cena con questa ricetta; `null` se non serve dirlo (dolci, colazioni…). */
-export function notaComposizione(c: Composizione, categoria: Ricetta['categoria']): string | null {
+/**
+ * Come completare un pranzo o una cena con questa ricetta; `null` se non serve dirlo (dolci, colazioni…).
+ * Con il piano del nutrizionista i consigli lo seguono: a cena niente pane, i legumi senza cereali.
+ */
+export function notaComposizione(c: Composizione, categoria: Ricetta['categoria'], piano: RegolePiano = PIANO_VUOTO): string | null {
   if (!['primo', 'secondo', 'piatto_unico'].includes(categoria)) return null;
+  const altreProteine = piano.legumiSenzaCereali ? 'uova, pesce, carne o formaggio' : 'legumi, uova, pesce o formaggio';
   if (c.carboidrati && c.proteine && c.verdure) return 'piatto unico: basta così';
   if (c.carboidrati && c.proteine) return 'da completare con un contorno di verdure';
-  if (c.proteine && c.verdure) return 'da completare con pane, patate o un cereale';
-  if (c.carboidrati && c.verdure) return 'da completare con legumi, uova, pesce o formaggio';
-  if (c.carboidrati) return 'da completare con un secondo e le verdure';
-  if (c.proteine) return 'da completare con verdure e pane';
+  if (c.proteine && c.verdure) return piano.cenaSenzaCarboidrati ? 'a cena basta così, a pranzo con un cereale o patate' : 'da completare con pane, patate o un cereale';
+  if (c.carboidrati && c.verdure) return `da completare con ${altreProteine}`;
+  if (c.carboidrati) return `da completare con ${altreProteine} e le verdure`;
+  if (c.proteine) return piano.cenaSenzaCarboidrati ? 'da completare con le verdure (a pranzo anche un cereale)' : 'da completare con verdure e pane';
   return null;
+}
+
+/**
+ * Quanto il piano del nutrizionista sposta una ricetta per un pasto (pranzo, cena…). Un piatto contro il piano
+ * (pasta a cena, pasta e fagioli) scende molto ma non sparisce: se non c'è altro si propone lo stesso.
+ */
+export function spintaPiano(indice: Indice, r: Ricetta, pasto: string, regole: RegoleAntonino): { punti: number; motivi: string[] } {
+  const p = regole.piano;
+  const motivi: string[] = [];
+  if (!pianoAcceso(p) || !['pranzo', 'cena'].includes(pasto)) return { punti: 0, motivi };
+  const forte = regole.pesi.equilibrio * 5;
+  const c = composizione(indice, r);
+  const legumi = gruppiDi(indice, r).has('legumi');
+  // Con il piano i legumi contano come carboidrato.
+  const carboidrati = c.carboidrati || (p.legumiSenzaCereali && legumi);
+  let punti = 0;
+  if (p.legumiSenzaCereali && legumi && c.cereale) {
+    punti -= forte;
+    motivi.push('⚠️ legumi con un cereale: il piano li vuole separati');
+  }
+  if (p.cenaSenzaCarboidrati && pasto === 'cena') {
+    if (carboidrati) {
+      punti -= forte;
+      motivi.push('⚠️ carboidrati a cena');
+    } else if (c.proteine) punti += regole.pesi.equilibrio * 0.5;
+  }
+  if (p.pranzoConCarboidrati && pasto === 'pranzo') punti += carboidrati ? regole.pesi.equilibrio * 0.5 : -forte / 2;
+  if (p.verdureAOgniPasto && c.verdure) punti += regole.pesi.equilibrio * 0.4;
+  if (p.preferiti.length) {
+    const nomi = new Set<string>();
+    for (const g of principali(indice, r)) {
+      const trovato = indice.antenati(g.ingrediente_id).find((x) => p.preferiti.includes(x));
+      if (trovato) nomi.add(indice.nome(trovato).toLowerCase());
+    }
+    if (nomi.size) {
+      punti += regole.pesi.integrali * 1.5;
+      motivi.push(`dal piano: ${[...nomi].join(', ')}`);
+    }
+  }
+  return { punti, motivi };
 }
 
 /** Le «basi» di una ricetta per la varietà: cereale, legume, tipo di pesce, verdure principali. */

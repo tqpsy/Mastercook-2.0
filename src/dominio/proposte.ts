@@ -13,7 +13,7 @@ import { haPrincipale, type Principale, usaIngrediente } from './principale';
 import { copertura, type Indice, mancanti, principali, type Ricetta } from './ricette';
 import { type Rimedio, rimedio, testoRimedio } from './senza';
 import { bastaLaCasa, MASSIMO_MANCANTI, type ModoSuggerimento, type Segni, testoMancanti } from './suggerimenti';
-import { basiDi, composizione, pesoRipetizione, stagione, type Gruppo, gruppiDi, type MemoriaAntonino, PESI_BASE, pesoMemoria, type RegoleAntonino, spintaEquilibrio } from './antonino';
+import { basiDi, composizione, pesoRipetizione, stagione, type Gruppo, gruppiDi, type MemoriaAntonino, PESI_BASE, pesoMemoria, type RegoleAntonino, spintaEquilibrio, spintaPiano } from './antonino';
 
 /** Le categorie di ricetta adatte a ogni pasto. Gli altri pasti (spuntino…) non si propongono. */
 export const RICETTE_PER_PASTO: Record<string, Ricetta['categoria'][]> = {
@@ -170,6 +170,9 @@ export function candidate(indice: Indice, pasto: string, c: ContestoProposte, fi
         punti += pesi.integrali;
         motivi.push('integrale');
       }
+      const piano = spintaPiano(indice, r, pasto, c.regole);
+      punti += piano.punti;
+      motivi.push(...piano.motivi);
     }
     if (rimedia) motivi.push(`✂️ ${testoRimedio(indice, rimedia).replace(/^Si/, 'si')}`);
     esito.push({ ricetta: r, punti, motivi, tipo: tipoPiatto(indice, r), ...(rimedia ? { rimedio: rimedia } : {}) });
