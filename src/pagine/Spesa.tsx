@@ -97,6 +97,12 @@ export function Spesa() {
     void esegui('ricalcola_spesa', periodoSpesa(finestra, scelti));
   }, [vista.pronta, esegui, finestra, scelti]);
 
+  // Ciò che una spesa o uno scontrino mette in casa esce subito dalla lista: si ricalcola dopo (ripeterlo non fa danni).
+  const chiudiDopo = (chiudi: (aperto: boolean) => void) => () => {
+    chiudi(false);
+    void ricalcola(scelti);
+  };
+
   if (!vista.pronta || !indice) return <p className="tenue">Sto caricando la spesa…</p>;
   const daComprare = voci.filter((v) => v.stato === 'da_acquistare');
   const carrello = voci.filter((v) => v.stato === 'nel_carrello');
@@ -203,8 +209,8 @@ export function Spesa() {
 
       {aggiungi && <NuovaVoce indice={indice} chiudi={() => setAggiungi(false)} />}
       {vocePerta && <SchedaVoce indice={indice} voce={vocePerta} prezzi={prezzi} chiudi={() => setAperta(null)} />}
-      {conferma && <ConfermaSpesa indice={indice} carrello={carrello} chiudi={() => setConferma(false)} />}
-      {scontrino && <Scontrino indice={indice} chiudi={() => setScontrino(false)} />}
+      {conferma && <ConfermaSpesa indice={indice} carrello={carrello} chiudi={chiudiDopo(setConferma)} />}
+      {scontrino && <Scontrino indice={indice} chiudi={chiudiDopo(setScontrino)} />}
       {scansiona && <NelCarrello indice={indice} voci={voci} chiudi={() => setScansiona(false)} messo={setUltimo} />}
       {ultimo && dettagli && <FoglioSchedaProdotto codice={ultimo.codice} nome={ultimo.nome} chiudi={() => setDettagli(false)} />}
       {acquisto && <SchedaAcquisto indice={indice} acquisto={acquisto} righe={righe.filter((r) => r.acquisto_id === acquisto.id)} chiudi={() => setAcquistoAperto(null)} />}
