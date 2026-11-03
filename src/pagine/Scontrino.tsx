@@ -5,7 +5,7 @@ import { LUOGHI, NOME_LUOGO } from '../catalogo/tipi';
 import { useFamiglia, useVista } from '../dati/contesto';
 import type { Indice, Ingrediente } from '../dominio/ricette';
 import { normalizza } from '../dominio/ricette';
-import { giorniTra, type Luogo, oggi, REPARTI_SFUSI, stima } from '../dominio/scadenze';
+import { eFresco, giorniTra, type Luogo, oggi, stima } from '../dominio/scadenze';
 import { abbinaRighe, leggiScontrino, quantitaProposta, type RigaDaAbbinare, suggerisciIngrediente } from '../dominio/scontrini';
 import { formattaEuro, formattaGiorno, leggiNumero, UNITA, type Unita, UNITA_BASE, unitaPer } from '../dominio/unita';
 import { CercaIngrediente } from '../ui/CercaIngrediente';
@@ -142,7 +142,7 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
         if (!r.ing) return setErrore(`Scegli cos’è «${r.descrizione}», oppure segnalo come «solo spesa».`);
         const q = quantitaDa(r.numero, r.unita, r.ing);
         if (typeof q === 'string') return setErrore(`${r.ing.nome}: ${q}`);
-        const s = REPARTI_SFUSI.has(r.ing.reparto) ? stima(r.ing, r.luogo, data) : null;
+        const s = eFresco(r.ing) ? stima(r.ing, r.luogo, data) : null;
         pronte.push({
           ...base,
           nuova: {

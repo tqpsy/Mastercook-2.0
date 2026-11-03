@@ -10,7 +10,7 @@ import { DisegnoFrigoMio } from '../ui/FrigoMio';
 import { useFrigo } from './MioFrigo';
 import { ricettePerUrgenti } from '../dominio/consumi';
 import type { Indice, Ingrediente } from '../dominio/ricette';
-import { daUsarePresto, descriviData, giorniTra, type Luogo, oggi, piuGiorni, REPARTI_SFUSI, spreco, statoData, stima, type TipoData } from '../dominio/scadenze';
+import { daUsarePresto, descriviData, descriviDurata, eFresco, giorniTra, type Luogo, oggi, piuGiorni, spreco, statoData, stima, type TipoData } from '../dominio/scadenze';
 import { formatta, inBase, leggiNumero, UNITA, type Unita, UNITA_BASE, type UnitaBase, unitaPer } from '../dominio/unita';
 import { CercaIngrediente } from '../ui/CercaIngrediente';
 import { type ProdottoScansionato, ScansionaProdotto } from '../ui/CodiceProdotto';
@@ -268,6 +268,12 @@ export function quantitaDa(testo: string, unita: Unita, ing: Ingrediente | undef
 
 type SceltaData = 'scadenza' | 'tmc' | 'nessuna';
 
+/** «5 novembre», con l'anno se non è quest'anno. */
+function dataBreve(data: string): string {
+  const d = new Date(`${data}T12:00:00`);
+  return d.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', ...(d.getFullYear() !== new Date().getFullYear() ? { year: 'numeric' } : {}) });
+}
+
 function NuovoLotto({ indice, luogo: luogoIniziale, chiudi }: { indice: Indice; luogo: Luogo; chiudi: () => void }) {
   const { esegui } = useFamiglia();
   const [ing, setIng] = useState<Ingrediente | null>(null);
@@ -284,11 +290,14 @@ function NuovoLotto({ indice, luogo: luogoIniziale, chiudi }: { indice: Indice; 
   const [dettagli, setDettagli] = useState(false);
   const giorno = oggi();
 
-  function scegli(i: Ingrediente) {
+  /** Carne, pesce, frutta, verdura e avanzi senza confezione: la data la calcola l'app. Un prodotto scansionato è confezionato. */
+  function scegli(i: Ingrediente, confezionato = false) {
     setIng(i);
     setUnita(UNITA_BASE[i.dimensione]);
     setLuogo(i.luogo);
-    setSfuso(REPARTI_SFUSI.has(i.reparto));
+    const fresco = !confezionato && eFresco(i);
+    setSfuso(fresco);
+    setSceltaData(fresco ? 'nessuna' : null);
   }
 
   const proposta = ing && sceltaData === 'nessuna' && sfuso ? stima(ing, luogo, giorno) : null;
@@ -338,7 +347,7 @@ function NuovoLotto({ indice, luogo: luogoIniziale, chiudi }: { indice: Indice; 
         trovato={(x) => {
           setScansiona(false);
           setCodice(x);
-          scegli(x.ingrediente);
+          scegli(x.ingrediente, true);
           const formato = x.prodotto?.quantita && x.prodotto.unita ? { quantita: x.prodotto.quantita, unita: x.prodotto.unita } : x.esterno?.formato;
           if (formato && formato.unita === UNITA_BASE[x.ingrediente.dimensione]) {
             setNumero(String(formato.quantita).replace('.', ','));
@@ -435,11 +444,11 @@ function NuovoLotto({ indice, luogo: luogoIniziale, chiudi }: { indice: Indice; 
             {sceltaData === 'nessuna' && (
               <>
                 <label className="riga">
-                  <input type="checkbox" checked={sfuso} onChange={(e) => setSfuso(e.target.checked)} /> È fresco o sfuso (frutta, verdura, pane, banco)
+                  <input type="checkbox" checked={sfuso} onChange={(e) => setSfuso(e.target.checked)} /> È fresco o sfuso (frutta, verdura, pane, carne e pesce del banco)
                 </label>
                 <p className="tenue">
                   {proposta
-                    ? `Stima indicativa: entro ${proposta.giorni} ${proposta.giorni === 1 ? 'giorno' : 'giorni'} in ${NOME_LUOGO[luogo].toLowerCase()}. Puoi cambiarla dopo.`
+                    ? `Scadenza automatica: ${dataBreve(proposta.data_limite)}, cioè ${descriviDurata(proposta.giorni)} in ${NOME_LUOGO[luogo].toLowerCase()}. Puoi cambiarla dopo.`
                     : 'La data resterà «sconosciuta»: comparirà tra le cose da controllare.'}
                 </p>
               </>

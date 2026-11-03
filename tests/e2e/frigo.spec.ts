@@ -38,6 +38,11 @@ test('configuro il frigo e aggiungendo il pollo mi dice il ripiano in basso', as
   await nuovo.getByLabel('Quantità').fill('400');
   await expect(nuovo.getByLabel('Dove metterlo')).toContainText('Ripiano 5, in basso');
   await expect(nuovo.getByLabel('Dove metterlo')).toContainText('contenitore ermetico');
+  // Carne fresca: la scadenza la calcola l'app, già scelta; in freezer diventa di mesi.
+  await expect(nuovo.getByText(/Scadenza automatica: .*, cioè 1 giorno in frigo/)).toBeVisible();
+  await nuovo.getByRole('button', { name: 'Freezer', exact: true }).click();
+  await expect(nuovo.getByText(/Scadenza automatica: .*, cioè 9 mesi in freezer/)).toBeVisible();
+  await nuovo.getByRole('button', { name: 'Frigo', exact: true }).click();
   await nuovo.getByRole('button', { name: 'Senza data' }).click();
   await nuovo.getByRole('button', { name: 'Aggiungi', exact: true }).click();
   await expect(page.getByRole('region', { name: 'Frigo' }).getByText(/📍 Ripiano 5, in basso/)).toBeVisible();
