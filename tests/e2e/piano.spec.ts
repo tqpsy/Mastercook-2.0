@@ -61,8 +61,8 @@ test('piano del nutrizionista: si carica dal file, cambia le regole per tutti e 
     );
   await expect.poll(async () => (await ricette())[0].n).toBe(1);
 
-  // Ricaricando lo stesso piano la ricetta non si ripete.
-  await sezione.getByLabel('File del piano').setInputFiles(file);
+  // Ricaricando lo stesso piano la ricetta non si ripete, anche se il telefono lo dà come testo senza estensione.
+  await sezione.getByLabel('File del piano').setInputFiles({ name: 'piano (1)', mimeType: 'text/plain', buffer: Buffer.from('\uFEFF' + JSON.stringify(piano)) });
   await expect(sezione.getByRole('status')).toHaveText(/1 ricetta c’era già/);
   await expect.poll(async () => (await ricette())[0].n).toBe(1);
 

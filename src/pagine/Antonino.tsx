@@ -218,9 +218,11 @@ function PianoNutrizionista({ regole, salva, indice }: { regole: RegoleAntonino;
   async function leggiFile(f: File): Promise<{ piano: Piano; avvisi: string[] } | null> {
     const nome = f.name.toLowerCase();
     const mime = f.type || (nome.endsWith('.pdf') ? 'application/pdf' : '');
-    const json = nome.endsWith('.json') || mime.includes('json');
-    const testo = json || (!mime && f.size < 500_000) ? await f.text() : null;
-    if (testo !== null && (json || testo.trimStart().startsWith('{'))) return { piano: leggiPiano(testo, oggi()), avvisi: [] };
+    // Il .json già pronto si riconosce dal contenuto: scaricato sul telefono può arrivare come testo o senza tipo.
+    const documento = mime === 'application/pdf' || mime.startsWith('image/');
+    const testo = !documento && f.size < 2_000_000 ? await f.text() : null;
+    if (testo !== null && (nome.endsWith('.json') || mime.includes('json') || testo.replace(/^\uFEFF/, '').trimStart().startsWith('{')))
+      return { piano: leggiPiano(testo, oggi()), avvisi: [] };
     if (!indice) return null;
     setLeggo(true);
     try {
