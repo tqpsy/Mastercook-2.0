@@ -58,6 +58,19 @@ async function statoCasa(famiglia: string) {
 }
 
 describe('fabbisogno e lista', () => {
+  it('meno di mezzo pezzo che manca non si compra se la casa copre il resto; senza niente in casa sì', async () => {
+    const { u, famiglia } = await famigliaCon();
+    await piatto(u, famiglia, 'sys:patate_forno', 4); // 1 kg di patate, 180 g l'una
+    await ricalcola(u, famiglia);
+    expect(await quanto(famiglia, 'ing:patata')).toBe(1000);
+    const l = await lotto(u, famiglia, 'ing:patata', 920);
+    await ricalcola(u, famiglia);
+    expect((await voci(famiglia)).some((v) => v.cosa === 'ing:patata')).toBe(false);
+    await u.applica(comando('correggi_lotto', famiglia, { lotto_id: l, quantita_vista: 920, quantita_nuova: 900 }));
+    await ricalcola(u, famiglia);
+    expect(await quanto(famiglia, 'ing:patata')).toBe(100);
+  });
+
   it('solo i giorni scelti: con il menu su tutta la settimana si compra per i primi tre giorni, e la scelta resta alla famiglia', async () => {
     const { u, famiglia } = await famigliaCon();
     await piatto(u, famiglia, 'sys:carbonara', 4, '2026-11-02'); // 320 g di spaghetti

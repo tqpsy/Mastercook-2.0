@@ -107,6 +107,18 @@ describe('spesa del giorno', () => {
   });
 });
 
+describe('spesa del giorno: avanzi piccoli', () => {
+  const portata = (id: string): PortataMenu => ({ id, data: '2026-11-03', categoria: 'cena', ricetta_id: 'sys:patate_forno', testo: null, porzioni: 4, origine: 'manuale', bloccata: false, ordine: 0, note: null });
+  const patate = (quantita: number) => [{ id: 'l1', ingrediente_id: 'ing:patata', unita: 'g', quantita, data_limite: null }];
+  const manca = (lotti: ReturnType<typeof patate>) => spesaDelGiorno(indice, [portata('p')], [], [], [], [], lotti).find((b) => b.ingrediente_id === 'ing:patata')?.manca;
+
+  it('se la casa copre quasi tutto, meno di mezza patata non si compra; senza patate sì', () => {
+    expect(manca(patate(920))).toBe(0);
+    expect(manca(patate(900))).toBe(100);
+    expect(manca([])).toBe(1000);
+  });
+});
+
 describe('giorni della spesa', () => {
   const finestra = ['2026-10-31', '2026-11-01', '2026-11-02', '2026-11-03'];
   it('tiene solo i giorni scelti ancora nella finestra, altrimenti tutti', () => {
