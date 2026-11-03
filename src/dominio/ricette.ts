@@ -25,6 +25,8 @@ export interface Ingrediente {
   /** Solo per il catalogo di Mastercook: il gruppo («Pesce azzurro», «Legumi»…) e i mesi di stagione. */
   sottocategoria?: string | null;
   mesi?: number[] | null;
+  /** Peso medio di un pezzo in grammi (una patata, una cipolla), se si compra a pezzi. */
+  peso_pz?: number | null;
   versione?: number;
   in_attesa?: boolean;
 }

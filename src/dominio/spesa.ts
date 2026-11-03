@@ -209,8 +209,11 @@ export function spesaDelGiorno(
         usato.set(l.id, (usato.get(l.id) ?? 0) + prendo);
         resta -= prendo;
       }
+      // Come `ricalcola_spesa`: se la casa copre quasi tutto, meno di mezzo pezzo che manca non si compra.
+      const peso = indice.ingrediente(b.ingrediente_id)?.peso_pz;
+      const poco = resta > 0 && resta < b.quantita && b.unita === 'g' && !!peso && resta < peso / 2;
       const tondo = (x: number) => Math.round(x * 10) / 10;
-      return { ingrediente_id: b.ingrediente_id, unita: b.unita, serve: tondo(b.quantita), inCasa: tondo(b.quantita - Math.max(resta, 0)), manca: tondo(Math.max(resta, 0)) };
+      return { ingrediente_id: b.ingrediente_id, unita: b.unita, serve: tondo(b.quantita), inCasa: tondo(b.quantita - Math.max(resta, 0)), manca: poco ? 0 : tondo(Math.max(resta, 0)) };
     })
     .sort((a, b) => indice.nome(a.ingrediente_id).localeCompare(indice.nome(b.ingrediente_id), 'it'));
 }
