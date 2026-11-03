@@ -205,7 +205,7 @@ test('casa: aggiunge, mostra cosa usare presto, scala la quantità usata e stima
   await nuovo.getByRole('button', { name: /Insalata$/ }).first().click();
   await nuovo.getByLabel('Quantità').fill('250');
   await nuovo.getByRole('button', { name: 'Senza data' }).click();
-  await expect(nuovo.getByText(/Stima indicativa: entro 5 giorni in frigo/)).toBeVisible();
+  await expect(nuovo.getByText(/Scadenza automatica: .*, cioè 5 giorni in frigo/)).toBeVisible();
   await nuovo.getByRole('button', { name: 'Aggiungi', exact: true }).click();
   await expect(page.getByText('Entro 5 giorni (stima)').first()).toBeVisible();
   await expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');

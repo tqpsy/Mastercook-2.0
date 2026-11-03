@@ -7,7 +7,9 @@
  * - nel luogo abituale vale la durata del catalogo (dal vecchio Mastercook);
  * - un alimento da frigo tenuto fuori frigo: 1 giorno; uno da freezer fuori dal freezer: 1 giorno
  *   (scongelato); uno da dispensa messo in frigo: stessa durata;
- * - in freezer un alimento fresco non ha una regola: data sconosciuta, da inserire.
+ * - carne, pesce e piatti cucinati hanno una tabella propria (DURATE_FRESCHI, da USDA/FoodSafety.gov,
+ *   sempre il valore più prudente): in frigo il più breve fra catalogo e tabella, in freezer i mesi della tabella;
+ * - in freezer un altro alimento fresco non ha una regola: data sconosciuta, da inserire.
  * Una stima è sempre marcata come tale, con la data del calcolo, e si può cambiare.
  * L'app non dice mai che un alimento è sicuro oltre la data.
  */
@@ -28,7 +30,61 @@ export interface Stima {
 /** I reparti che di solito si comprano sfusi: per questi la stima è proposta senza chiedere. */
 export const REPARTI_SFUSI = new Set(['frutta_verdura', 'pane_forno']);
 
-export function giorniStimati(ing: Pick<Ingrediente, 'luogo' | 'giorni'>, luogo: Luogo): number | null {
+export type TipoFresco = 'carne_pezzi' | 'carne_macinata' | 'pollame' | 'pesce_magro' | 'pesce_grasso' | 'frutti_di_mare' | 'cucinato';
+
+export interface DurataFresco {
+  nome: string;
+  /** Giorni al massimo in frigo (0–4 °C). */
+  frigo: number;
+  /** Giorni al massimo in freezer (−18 °C): oltre resta sicuro ma perde qualità. */
+  freezer: number;
+}
+
+/**
+ * Durate di carne, pesce e piatti cucinati (USDA/FoodSafety.gov «Cold food storage chart»),
+ * sempre il valore più prudente dell'intervallo.
+ */
+export const DURATE_FRESCHI: Record<TipoFresco, DurataFresco> = {
+  carne_pezzi: { nome: 'Carne cruda a pezzi', frigo: 3, freezer: 180 },
+  carne_macinata: { nome: 'Carne macinata, salsicce e frattaglie', frigo: 1, freezer: 90 },
+  pollame: { nome: 'Pollo e tacchino crudi', frigo: 1, freezer: 270 },
+  pesce_magro: { nome: 'Pesce magro crudo', frigo: 1, freezer: 180 },
+  pesce_grasso: { nome: 'Pesce grasso crudo', frigo: 1, freezer: 90 },
+  frutti_di_mare: { nome: 'Molluschi e crostacei crudi', frigo: 1, freezer: 90 },
+  cucinato: { nome: 'Piatti cucinati e avanzi', frigo: 3, freezer: 90 },
+};
+
+const MACINATI = new Set(['ing:carne_macinata', 'ing:hamburger', 'ing:macinato_pollo', 'ing:salsiccia', 'ing:fegato']);
+const PESCI_GRASSI = new Set(['ing:salmone', 'ing:tonno_fresco', 'ing:trota', 'ing:sgombro', 'ing:acciughe', 'ing:sardine', 'ing:aguglia']);
+
+/** Che tipo di carne, pesce o piatto cucinato è, oppure `null` (affettati, affumicati, surgelati, tutto il resto). */
+export function tipoFresco(ing: Pick<Ingrediente, 'id' | 'reparto' | 'sottocategoria'>): TipoFresco | null {
+  if (ing.id === 'ing:avanzo') return 'cucinato';
+  if (MACINATI.has(ing.id)) return 'carne_macinata';
+  if (PESCI_GRASSI.has(ing.id)) return 'pesce_grasso';
+  if (ing.reparto === 'carne') return ing.sottocategoria === 'Pollo e tacchino' ? 'pollame' : 'carne_pezzi';
+  if (ing.reparto === 'pesce') {
+    if (ing.sottocategoria === 'Pesce fresco') return 'pesce_magro';
+    if (ing.sottocategoria === 'Pesce azzurro') return 'pesce_grasso';
+    if (ing.sottocategoria === 'Molluschi' || ing.sottocategoria === 'Crostacei' || ing.sottocategoria === 'Polpi, calamari e seppie') return 'frutti_di_mare';
+  }
+  return null;
+}
+
+/** Fresco o sfuso, senza una data sulla confezione: frutta, verdura, pane, carne e pesce del banco, avanzi. */
+export function eFresco(ing: Pick<Ingrediente, 'id' | 'reparto' | 'sottocategoria'>): boolean {
+  return REPARTI_SFUSI.has(ing.reparto) || tipoFresco(ing) !== null;
+}
+
+type PerStima = Pick<Ingrediente, 'luogo' | 'giorni'> & Partial<Pick<Ingrediente, 'id' | 'reparto' | 'sottocategoria'>>;
+
+export function giorniStimati(ing: PerStima, luogo: Luogo): number | null {
+  const tipo = ing.id && ing.reparto ? tipoFresco({ id: ing.id, reparto: ing.reparto, sottocategoria: ing.sottocategoria }) : null;
+  if (tipo && ing.luogo === 'frigo') {
+    const d = DURATE_FRESCHI[tipo];
+    if (luogo === 'frigo') return Math.min(d.frigo, ing.giorni ?? d.frigo);
+    if (luogo === 'freezer') return d.freezer;
+  }
   if (!ing.giorni) return null;
   if (luogo === ing.luogo) return ing.giorni;
   if (ing.luogo === 'frigo' && luogo === 'dispensa') return 1;
@@ -50,12 +106,18 @@ export function oggi(adesso = new Date()): string {
   return d.toISOString().slice(0, 10);
 }
 
+/** «1 giorno», «3 giorni», «3 mesi»: oltre i 60 giorni si conta in mesi. */
+export function descriviDurata(giorni: number): string {
+  if (giorni > 60) return `${Math.round(giorni / 30)} mesi`;
+  return `${giorni} ${giorni === 1 ? 'giorno' : 'giorni'}`;
+}
+
 export function giorniTra(da: string, a: string): number {
   return Math.round((Date.parse(`${a}T00:00:00Z`) - Date.parse(`${da}T00:00:00Z`)) / 86_400_000);
 }
 
 /** La stima per un alimento sfuso, oppure `null` se non c'è una regola: la data resta sconosciuta. */
-export function stima(ing: Pick<Ingrediente, 'luogo' | 'giorni'>, luogo: Luogo, dal: string, adesso = new Date()): Stima | null {
+export function stima(ing: PerStima, luogo: Luogo, dal: string, adesso = new Date()): Stima | null {
   const giorni = giorniStimati(ing, luogo);
   if (giorni === null) return null;
   return { data_limite: piuGiorni(dal, giorni), tipo_data: 'stimata', fonte_data: 'app', calcolata_il: adesso.toISOString(), giorni };

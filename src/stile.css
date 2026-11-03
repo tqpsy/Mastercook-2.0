@@ -571,6 +571,14 @@ html.foglio-aperto body {
   width: 100%;
   min-height: 48px;
 }
+/* Il nome resta leggibile anche nelle colonne strette del tablet: l'etichetta della data va a capo, non lo schiaccia. */
+.voce > .cresce {
+  min-width: 45%;
+}
+.voce > .etichetta {
+  flex: 0 1 auto;
+  max-width: 50%;
+}
 .voce:focus-visible {
   outline: 2px solid var(--primario);
   outline-offset: 2px;

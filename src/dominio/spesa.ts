@@ -9,7 +9,7 @@
 import { type Consumo, previstoPortata } from './consumi';
 import type { Eccezione, OspitiPasto, Persona, PortataMenu } from './menu';
 import type { Indice, Ingrediente } from './ricette';
-import { giorniTra, type Luogo, REPARTI_SFUSI, stima } from './scadenze';
+import { eFresco, giorniTra, type Luogo, stima } from './scadenze';
 import type { UnitaBase } from './unita';
 
 export interface VoceSpesa {
@@ -143,7 +143,7 @@ export function righeDaConfermare(
   return voci.map((v) => {
     const ing = v.ingrediente_id ? ingrediente(v.ingrediente_id) : undefined;
     const luogo: Luogo = ing?.luogo ?? 'dispensa';
-    const s = ing && REPARTI_SFUSI.has(ing.reparto) ? stima(ing, luogo, oggi, adesso) : null;
+    const s = ing && eFresco(ing) ? stima(ing, luogo, oggi, adesso) : null;
     return {
       id: nuovoId(),
       voce_id: v.id,
