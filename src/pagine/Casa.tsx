@@ -99,6 +99,8 @@ export function Casa() {
         </div>
       </div>
 
+      <DaCompletare indice={indice} />
+
       {presto.length > 0 && (
         // Una tendina chiusa di base: si vede subito quanti prodotti stanno per scadere, l'elenco si apre al tocco.
         <section className="scheda" aria-label="Da usare presto">
@@ -172,6 +174,141 @@ export function Casa() {
       {aperto === 'nuovo' && <NuovoLotto indice={indice} luogo={luogo} chiudi={() => setAperto(null)} />}
       {lotto && <SchedaLotto indice={indice} lotto={lotto} giorno={giorno} chiudi={() => setAperto(null)} />}
     </>
+  );
+}
+
+interface RigaDaCompletare {
+  id: string;
+  ing: Ingrediente;
+  data: string;
+  negozio: string | null;
+}
+
+/**
+ * Le cose comprate con lo scontrino senza scriverne la quantità: in casa entrano quando si scrive quanto.
+ * Si vedono per 30 giorni dall'acquisto; dopo non servono più (ormai è stato mangiato o buttato).
+ */
+function DaCompletare({ indice }: { indice: Indice }) {
+  const vista = useVista();
+  const [aperta, setAperta] = useState<RigaDaCompletare | null>(null);
+  const giorno = oggi();
+  const acquisti = new Map((vista.righe.acquisto ?? []).filter((a) => !a.eliminato_il && a.stato !== 'annullato').map((a) => [a.id, a]));
+  const elenco: RigaDaCompletare[] = [];
+  for (const r of vista.righe.acquisto_riga ?? []) {
+    const a = acquisti.get(String(r.acquisto_id));
+    const ing = r.ingrediente_id ? indice.ingrediente(String(r.ingrediente_id)) : undefined;
+    if (r.eliminato_il || r.lotto_id || r.quantita != null || !a || !ing) continue;
+    const data = String(a.data).slice(0, 10);
+    if (giorniTra(data, giorno) > 30) continue;
+    elenco.push({ id: r.id, ing, data, negozio: (a.negozio as string | null) ?? null });
+  }
+  if (!elenco.length) return null;
+  elenco.sort((x, y) => y.data.localeCompare(x.data) || x.ing.nome.localeCompare(y.ing.nome, 'it'));
+  return (
+    <section className="scheda" aria-label="Da completare">
+      <h3 style={{ marginTop: 0 }}>
+        Da completare <span className="etichetta">{elenco.length}</span>
+      </h3>
+      <p className="tenue" style={{ margin: '0 0 8px' }}>
+        Comprati con lo scontrino senza la quantità: scrivila e li metto in casa.
+      </p>
+      <ul className="elenco">
+        {elenco.map((r) => (
+          <li key={r.id}>
+            <button className="voce" onClick={() => setAperta(r)} aria-label={`Scrivi la quantità di ${r.ing.nome}`}>
+              <span className="emoji" aria-hidden>
+                <IconaCibo valore={iconaIngrediente(r.ing)} />
+              </span>
+              <span className="cresce">
+                <strong>{r.ing.nome}</strong>
+                <span className="tenue" style={{ display: 'block' }}>
+                  {[`comprato ${dataBreve(r.data)}`, r.negozio].filter(Boolean).join(' · ')}
+                </span>
+              </span>
+              <span className="etichetta avviso-data">quantità?</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+      {aperta && <CompletaRiga riga={aperta} chiudi={() => setAperta(null)} />}
+    </section>
+  );
+}
+
+function CompletaRiga({ riga, chiudi }: { riga: RigaDaCompletare; chiudi: () => void }) {
+  const { esegui } = useFamiglia();
+  const { ing } = riga;
+  const [numero, setNumero] = useState('');
+  const [unita, setUnita] = useState<Unita>(UNITA_BASE[ing.dimensione]);
+  const [luogo, setLuogo] = useState<Luogo>(ing.luogo);
+  const [errore, setErrore] = useState<string | null>(null);
+  const consiglio = useConsiglioPosto(ing, luogo);
+  // Fresco o sfuso: la scadenza la calcola l'app dal giorno dell'acquisto, come nello scontrino.
+  const proposta = eFresco(ing) ? stima(ing, luogo, riga.data) : null;
+
+  async function salva(e: FormEvent) {
+    e.preventDefault();
+    const q = quantitaDa(numero, unita, ing);
+    if (typeof q === 'string') return setErrore(q);
+    await esegui('completa_riga_acquisto', {
+      id: riga.id,
+      lotto_id: crypto.randomUUID(),
+      quantita: q.valore,
+      unita: q.unita,
+      luogo,
+      posto: consiglio?.posto.id ?? null,
+      ...(proposta
+        ? { data_limite: proposta.data_limite, tipo_data: 'stimata', fonte_data: 'app', calcolata_il: proposta.calcolata_il, affidabilita: 'bassa' }
+        : { tipo_data: 'sconosciuta' }),
+    });
+    chiudi();
+  }
+
+  return (
+    <Foglio titolo={`Quanto ${ing.nome.toLowerCase()}?`} chiudi={chiudi}>
+      <form onSubmit={salva} noValidate>
+        <p className="tenue" style={{ marginTop: 0 }}>
+          Comprato {dataBreve(riga.data)}
+          {riga.negozio ? ` da ${riga.negozio}` : ''}. Scrivi quanto ne hai preso: entra in casa con la data dello scontrino.
+        </p>
+        <div className="riga" style={{ alignItems: 'flex-end' }}>
+          <label className="campo cresce">
+            <span>Quantità</span>
+            <input inputMode="decimal" value={numero} onChange={(e) => setNumero(e.target.value)} autoFocus />
+          </label>
+          <label className="campo">
+            <span>Unità</span>
+            <select value={unita} onChange={(e) => setUnita(e.target.value as Unita)}>
+              {unitaPer(ing.dimensione).map((u) => (
+                <option key={u} value={u}>
+                  {UNITA[u].nome}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <div className="campo">
+          <span>Dove</span>
+          <div className="scelte">
+            {LUOGHI.map((l) => (
+              <button type="button" key={l} aria-pressed={luogo === l} onClick={() => setLuogo(l)}>
+                {NOME_LUOGO[l]}
+              </button>
+            ))}
+          </div>
+        </div>
+        {consiglio && <p className="tenue">📍 Mettilo qui: {consiglio.posto.nome}{consiglio.inFondo ? ', in fondo' : ''}.</p>}
+        {proposta && <p className="tenue">Scadenza automatica: {dataBreve(proposta.data_limite)}. Puoi cambiarla dopo.</p>}
+        {errore && (
+          <div className="avviso errore" role="alert">
+            {errore}
+          </div>
+        )}
+        <button type="submit" className="bottone primario pieno">
+          Metti in casa
+        </button>
+      </form>
+    </Foglio>
   );
 }
 

@@ -733,18 +733,20 @@ function RigaComprata({ indice, riga: r, modificabile }: { indice: Indice; riga:
   const [euro, setEuro] = useState(r.prezzo == null ? '' : String(r.prezzo).replace('.', ','));
   const [errore, setErrore] = useState<string | null>(null);
   const nome = r.ingrediente_id ? indice.nome(r.ingrediente_id) : (r.nome ?? 'Voce');
-  const q = r.ingrediente_id ? leggiNumero(numero) : null;
+  // Dallo scontrino senza quantità: la quantità si scrive in Casa › Da completare, qui si corregge solo il prezzo.
+  const conQuantita = Boolean(r.ingrediente_id && r.quantita != null);
+  const q = conQuantita ? leggiNumero(numero) : null;
   const p = euro.trim() ? leggiNumero(euro) : null;
-  const cambiata = (r.ingrediente_id && q !== r.quantita) || p !== r.prezzo;
+  const cambiata = (conQuantita && q !== r.quantita) || p !== r.prezzo;
 
   async function salva(e: FormEvent) {
     e.preventDefault();
-    if (r.ingrediente_id && (q === null || q <= 0)) return setErrore('Scrivi una quantità.');
+    if (conQuantita && (q === null || q <= 0)) return setErrore('Scrivi una quantità.');
     if (euro.trim() && p === null) return setErrore('Il prezzo non è un numero.');
     setErrore(null);
     await esegui('correggi_riga_acquisto', {
       id: r.id,
-      ...(r.ingrediente_id && q !== r.quantita ? { quantita_vista: r.quantita, quantita_nuova: q } : {}),
+      ...(conQuantita && q !== r.quantita ? { quantita_vista: r.quantita, quantita_nuova: q } : {}),
       ...(p !== r.prezzo ? { prezzo: p } : {}),
     });
   }
@@ -753,7 +755,7 @@ function RigaComprata({ indice, riga: r, modificabile }: { indice: Indice; riga:
     <li>
       <form onSubmit={salva} className="riga" style={{ flexWrap: 'wrap' }}>
         <strong className="cresce">{nome}</strong>
-        {r.ingrediente_id && r.unita && (
+        {conQuantita && r.unita && (
           <label className="riga">
             <input className="dato" inputMode="decimal" aria-label={`Quantità di ${nome}`} value={numero} onChange={(e) => setNumero(e.target.value)} disabled={!modificabile} style={{ width: 90 }} />
             <span>{r.unita}</span>
@@ -766,6 +768,7 @@ function RigaComprata({ indice, riga: r, modificabile }: { indice: Indice; riga:
         {modificabile && cambiata && <button className="bottone primario piccolo">Correggi</button>}
       </form>
       {!r.ingrediente_id && <p className="tenue" style={{ margin: '4px 0 0' }}>Non è un alimento: non va in casa.</p>}
+      {r.ingrediente_id && !conQuantita && <p className="tenue" style={{ margin: '4px 0 0' }}>Quantità da scrivere in Casa, alla voce «Da completare».</p>}
       {errore && <div className="avviso errore">{errore}</div>}
     </li>
   );
