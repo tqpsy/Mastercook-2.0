@@ -97,14 +97,23 @@ export function testoFrigo(frigo: unknown): string | null {
   return typeof frigo === 'string' && frigo.trim() ? frigo.slice(0, 1500) : null;
 }
 
+/** Una parte della richiesta a Gemini: un file (in base64) o del testo. */
+export type Parte = { inline_data: { mime_type: string; data: string } } | { text: string };
+
 /**
- * Chiede a Gemini, passando al modello dopo quando la quota gratuita di uno è finita. Con il frigo descritto,
- * Gemini dice anche in quale parte vede ogni alimento.
+ * Chiede a Gemini una risposta JSON con lo schema dato, passando al modello dopo quando la quota gratuita di uno
+ * è finita o il modello non è disponibile per questa chiave.
  */
-export async function riconosci(immagine: string, chiave: string, chiama: typeof fetch = fetch, modelli = MODELLI, frigo: string | null = null): Promise<Esito> {
+export async function chiediGemini(
+  parti: Parte[],
+  schema: unknown,
+  chiave: string,
+  chiama: typeof fetch = fetch,
+  modelli = MODELLI,
+): Promise<{ testo: string; modello: string } | { errore: 'quota' | 'chiave' | 'gemini'; dettaglio?: string }> {
   const corpo = JSON.stringify({
-    contents: [{ parts: [{ inline_data: { mime_type: 'image/jpeg', data: immagine } }, { text: frigo ? `${ISTRUZIONI}\n\n${frigo}` : ISTRUZIONI }] }],
-    generationConfig: { responseMimeType: 'application/json', responseSchema: SCHEMA, temperature: 0.1 },
+    contents: [{ parts: parti }],
+    generationConfig: { responseMimeType: 'application/json', responseSchema: schema, temperature: 0.1 },
   });
   let quota = false;
   let ultimo = '';
@@ -126,8 +135,16 @@ export async function riconosci(immagine: string, chiave: string, chiama: typeof
       continue;
     }
     const json = (await r.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
-    const testo = json.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('') ?? '';
-    return { alimenti: leggiAlimenti(testo), modello };
+    return { testo: json.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('') ?? '', modello };
   }
   return quota ? { errore: 'quota', ...(ultimo ? { dettaglio: ultimo } : {}) } : { errore: 'gemini', dettaglio: ultimo };
+}
+
+/**
+ * Riconosce gli alimenti nella foto. Con il frigo descritto, Gemini dice anche in quale parte vede ogni alimento.
+ */
+export async function riconosci(immagine: string, chiave: string, chiama: typeof fetch = fetch, modelli = MODELLI, frigo: string | null = null): Promise<Esito> {
+  const parti: Parte[] = [{ inline_data: { mime_type: 'image/jpeg', data: immagine } }, { text: frigo ? `${ISTRUZIONI}\n\n${frigo}` : ISTRUZIONI }];
+  const r = await chiediGemini(parti, SCHEMA, chiave, chiama, modelli);
+  return 'errore' in r ? r : { alimenti: leggiAlimenti(r.testo), modello: r.modello };
 }

@@ -4,6 +4,7 @@
  * La foto non si salva da nessuna parte.
  */
 import { riconosci, testoFrigo } from '../../supabase/functions/foto-frigo/nucleo';
+import { leggiPianoDocumento, MIME_PIANO, type PianoLetto } from '../../supabase/functions/foto-frigo/piano';
 import type { Riconosciuto } from '../dominio/fotoFrigo';
 import { chiamaLocale, chiaveGeminiLocale } from './locale/motore';
 import { type Dove, supabase } from './supabase';
@@ -83,5 +84,39 @@ export async function impostaChiave(famiglia: string, chiave: string, luogo?: Lu
     return r.esito === 'applicato' ? { stato: r.dettaglio } : { motivo: r.dettaglio.motivo ?? 'dati_non_validi' };
   } catch {
     return { motivo: 'rete' };
+  }
+}
+
+export type ErrorePiano = ErroreFoto | 'illeggibile' | 'formato';
+
+/**
+ * Il piano del nutrizionista (PDF o foto) letto da Gemini con la chiave della famiglia, come la foto del frigo.
+ * Il file non si salva: passa a Google e basta.
+ */
+export async function leggiPianoConGemini(famiglia_id: string, file: Blob, mime: string, luogo?: Luogo): Promise<{ piano: PianoLetto } | { errore: ErrorePiano; dettaglio?: string }> {
+  if (!MIME_PIANO.includes(mime)) return { errore: 'formato' };
+  if (!navigator.onLine) return { errore: 'rete' };
+  if (luogo?.dove === 'locale') {
+    try {
+      const chiave = await chiaveGeminiLocale(luogo.utenteId, famiglia_id);
+      if (!chiave) return { errore: 'non_configurata' };
+      const esito = await leggiPianoDocumento(await base64(file), mime, chiave);
+      return 'errore' in esito ? { errore: esito.errore, dettaglio: esito.dettaglio } : { piano: esito.piano };
+    } catch {
+      return { errore: 'rete' };
+    }
+  }
+  try {
+    const { data, error } = await supabase().functions.invoke('foto-frigo', { body: { famiglia_id, tipo: 'piano', documento: await base64(file), mime } });
+    if (error) {
+      const risposta = (error as { context?: Response }).context;
+      const corpo = risposta && typeof risposta.json === 'function' ? await risposta.json().catch(() => null) : null;
+      const e = corpo?.errore as ErrorePiano | undefined;
+      const dettaglio = typeof corpo?.dettaglio === 'string' ? corpo.dettaglio.slice(0, 200) : undefined;
+      return { errore: e && ['quota', 'chiave', 'non_configurata', 'gemini', 'non_autorizzato', 'illeggibile'].includes(e) ? e : 'rete', dettaglio };
+    }
+    return data?.piano ? { piano: data.piano as PianoLetto } : { errore: 'illeggibile' };
+  } catch {
+    return { errore: 'rete' };
   }
 }

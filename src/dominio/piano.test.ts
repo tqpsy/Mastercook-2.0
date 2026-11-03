@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import catalogo from '../catalogo/catalogo.json';
 import type { Catalogo } from '../catalogo/tipi';
 import { composizione, gruppiDi, notaComposizione, PIANO_VUOTO, pianoAcceso, REGOLE_BASE, regoleDa, regoleDaSalvare } from './antonino';
-import { comandoRicetta, leggiPiano, regoleConPiano, ricetteNuove } from './piano';
+import { comandoRicetta, leggiPiano, pianoDaLettura, regoleConPiano, riassuntoPiano, ricetteNuove } from './piano';
 import { candidate, type ContestoProposte, proponi } from './proposte';
 import { Indice } from './ricette';
 
@@ -123,5 +123,54 @@ describe('Piano del nutrizionista: Antonino lo segue', () => {
     expect(notaComposizione(c, 'secondo')).toBe('da completare con pane, patate o un cereale');
     expect(notaComposizione(c, 'secondo', regole.piano)).toBe('a cena basta così, a pranzo con un cereale o patate');
     expect(notaComposizione({ ...c, proteine: false, carboidrati: true }, 'primo', regole.piano)).toBe('da completare con uova, pesce, carne o formaggio');
+  });
+});
+
+describe('Piano del nutrizionista: da un PDF letto da Gemini', () => {
+  const letto = {
+    nome: null,
+    frequenze: [{ gruppo: 'pesce' as const, min: 3, max: 4 }, { gruppo: 'salumi' as const, min: null, max: 2 }],
+    cena_senza_carboidrati: true,
+    legumi_senza_cereali: true,
+    pranzo_con_carboidrati: false,
+    verdure_a_ogni_pasto: false,
+    alimenti_preferiti: ['farro', 'riso basmati', 'pasta di kamut'],
+    ricette: [
+      {
+        titolo: 'Torta di mele',
+        categoria: 'dolce' as const,
+        porzioni: 8,
+        minuti_totali: 60,
+        ingredienti: [
+          { nome: 'mele', quantita: 4, unita: 'pz' as const, opzionale: false, testo: '4 mele' },
+          { nome: 'uova', quantita: 3, unita: 'pz' as const, opzionale: false, testo: null },
+          { nome: 'polvere magica', quantita: null, unita: null, opzionale: false, testo: null },
+        ],
+        passi: ['Inforna.'],
+      },
+    ],
+  };
+
+  it('abbina gli alimenti al catalogo e dice cosa non riconosce', () => {
+    const { piano, nonTrovati } = pianoDaLettura(letto, indice, '2026-11-03');
+    expect(piano.nome).toBe('Piano del nutrizionista');
+    expect(piano.regole.obiettivi.pesce).toEqual({ min: 3, max: 4 });
+    expect(piano.regole.obiettivi.salumi).toEqual({ max: 2 });
+    expect(piano.regole.piano.preferiti).toEqual(expect.arrayContaining(['ing:farro', 'ing:riso_basmati']));
+    expect(nonTrovati).toContain('polvere magica');
+    const torta = piano.ricette[0];
+    expect(torta.ingredienti).toHaveLength(2);
+    // Le mele si pesano: «4 pz» diventa q.b. con il testo del piano.
+    expect(torta.ingredienti[0]).toMatchObject({ ingrediente_id: 'ing:mela', qb: true, testo: '4 mele (4 pz)' });
+    expect(torta.ingredienti[1]).toMatchObject({ ingrediente_id: 'ing:uova', quantita: 3, unita: 'pz' });
+  });
+
+  it('riassume cosa ha capito prima di salvare', () => {
+    const { piano } = pianoDaLettura(letto, indice, '2026-11-03');
+    const r = riassuntoPiano(piano, indice);
+    expect(r[0]).toContain('pesce 3–4');
+    expect(r[0]).toContain('salumi e insaccati al massimo 2');
+    expect(r[1]).toBe('Regole: cena senza carboidrati, legumi mai con pasta, pane o riso.');
+    expect(r.at(-1)).toBe('Ricette: Torta di mele.');
   });
 });

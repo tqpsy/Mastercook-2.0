@@ -15,7 +15,9 @@ import {
   type RegoleAntonino,
   type RegolePiano,
 } from '../dominio/antonino';
-import { comandoRicetta, leggiPiano, regoleConPiano, ricetteNuove } from '../dominio/piano';
+import { comandoRicetta, leggiPiano, type Piano, pianoDaLettura, regoleConPiano, riassuntoPiano, ricetteNuove } from '../dominio/piano';
+import { type ErrorePiano, leggiPianoConGemini } from '../piattaforma/fotoFrigo';
+import { riduciFoto } from '../ui/Foto';
 import type { Indice } from '../dominio/ricette';
 import { oggi } from '../dominio/scadenze';
 import faccia from '../ui/antonino.webp';
@@ -182,6 +184,17 @@ export function AntoninoImpostazioni() {
   );
 }
 
+const SPIEGA_ERRORE_PIANO: Record<ErrorePiano, string> = {
+  quota: 'Per oggi le letture gratuite di Gemini sono finite. Riprova domani.',
+  chiave: 'La chiave Gemini della famiglia non è valida: chi amministra la controlla in Impostazioni › Foto del frigo.',
+  non_configurata: 'Per leggere un PDF o una foto serve la chiave Gemini della famiglia: chi amministra la inserisce in Impostazioni › Foto del frigo.',
+  rete: 'Serve la connessione a internet per leggere il piano. Riprova quando c’è rete.',
+  gemini: 'Gemini non è riuscito a leggere il piano. Riprova, oppure con una foto più nitida.',
+  non_autorizzato: 'Non risulti in questa famiglia: esci e rientra, poi riprova.',
+  illeggibile: 'Non ho trovato un piano alimentare in questo file.',
+  formato: 'Questo file non lo so leggere: usa un PDF o una foto (JPEG o PNG).',
+};
+
 const REGOLE_PIANO: { chiave: Exclude<keyof RegolePiano, 'preferiti' | 'nome' | 'caricato_il'>; testo: string }[] = [
   { chiave: 'cenaSenzaCarboidrati', testo: '🌙 A cena niente pasta, pane, riso, patate e legumi' },
   { chiave: 'pranzoConCarboidrati', testo: '☀️ A pranzo un carboidrato con poca proteina e le verdure' },
@@ -194,21 +207,46 @@ const REGOLE_PIANO: { chiave: Exclude<keyof RegolePiano, 'preferiti' | 'nome' | 
  * frequenze della settimana, le regole su pranzo e cena, gli alimenti da preferire e le ricette del piano.
  */
 function PianoNutrizionista({ regole, salva, indice }: { regole: RegoleAntonino; salva: (r: RegoleAntonino) => void; indice: Indice | null | undefined }) {
-  const { esegui } = useFamiglia();
+  const { esegui, famiglia, dove, utenteId } = useFamiglia();
   const file = useRef<HTMLInputElement>(null);
+  const [leggo, setLeggo] = useState(false);
   const [esito, setEsito] = useState<{ ok: boolean; testo: string } | null>(null);
   const p = regole.piano;
   const acceso = pianoAcceso(p);
 
+  /** Il file del piano: il .json già pronto (si legge qui, gratis) oppure un PDF o una foto, che legge Gemini. */
+  async function leggiFile(f: File): Promise<{ piano: Piano; avvisi: string[] } | null> {
+    const nome = f.name.toLowerCase();
+    const mime = f.type || (nome.endsWith('.pdf') ? 'application/pdf' : '');
+    const json = nome.endsWith('.json') || mime.includes('json');
+    const testo = json || (!mime && f.size < 500_000) ? await f.text() : null;
+    if (testo !== null && (json || testo.trimStart().startsWith('{'))) return { piano: leggiPiano(testo, oggi()), avvisi: [] };
+    if (!indice) return null;
+    setLeggo(true);
+    try {
+      const immagine = mime.startsWith('image/');
+      const dati = immagine ? await riduciFoto(f) : f;
+      const r = await leggiPianoConGemini(famiglia, dati, immagine ? 'image/jpeg' : mime, { dove, utenteId });
+      if ('errore' in r) throw new Error(SPIEGA_ERRORE_PIANO[r.errore] + (r.dettaglio ? ` (Risposta di Google: ${r.dettaglio})` : ''));
+      const { piano, nonTrovati } = pianoDaLettura(r.piano, indice, oggi());
+      const avvisi = [...riassuntoPiano(piano, indice), ...(nonTrovati.length ? [`Non riconosco: ${nonTrovati.join(', ')}.`] : [])];
+      return { piano, avvisi };
+    } finally {
+      setLeggo(false);
+    }
+  }
+
   async function carica(f: File) {
     setEsito(null);
     try {
-      const piano = leggiPiano(await f.text(), oggi());
+      const letto = await leggiFile(f);
+      if (!letto) return;
+      const { piano, avvisi } = letto;
       const titoli = (indice?.ricette ?? []).filter((r) => !r.di_sistema && !r.archiviata).map((r) => r.titolo);
       const nuove = ricetteNuove(piano, titoli);
       const mancano = nuove.filter((r) => r.ingredienti.some((g) => !indice?.ingrediente(g.ingrediente_id)));
       const daCreare = nuove.filter((r) => !mancano.includes(r));
-      const domanda = `Antonino seguirà «${piano.nome}» per tutta la famiglia: le frequenze della settimana e le regole di pranzo e cena cambiano.${
+      const domanda = `${avvisi.length ? `Ho letto il piano.\n\n${avvisi.join('\n')}\n\n` : ''}Antonino seguirà «${piano.nome}» per tutta la famiglia: le frequenze della settimana e le regole di pranzo e cena cambiano.${
         daCreare.length ? ` Aggiungo anche ${daCreare.length} ${daCreare.length === 1 ? 'ricetta' : 'ricette'} del piano.` : ''
       }`;
       if (!window.confirm(domanda)) return;
@@ -256,12 +294,12 @@ function PianoNutrizionista({ regole, salva, indice }: { regole: RegoleAntonino;
         </>
       ) : (
         <p className="tenue" style={{ marginTop: 0 }}>
-          Carica il file del piano: seguo le sue frequenze e le sue regole per pranzo e cena, per tutta la famiglia.
+          Carica il piano del nutrizionista (PDF o foto): seguo le sue frequenze e le sue regole per pranzo e cena, per tutta la famiglia.
         </p>
       )}
       <div className="riga" style={{ gap: 8, flexWrap: 'wrap' }}>
-        <button type="button" className="bottone piccolo" onClick={() => file.current?.click()}>
-          📄 {acceso ? 'Carica un piano nuovo' : 'Carica il piano'}
+        <button type="button" className="bottone piccolo" disabled={leggo} onClick={() => file.current?.click()}>
+          📄 {leggo ? 'Leggo il piano…' : acceso ? 'Carica un piano nuovo' : 'Carica il piano'}
         </button>
         {acceso && (
           <button
@@ -275,6 +313,7 @@ function PianoNutrizionista({ regole, salva, indice }: { regole: RegoleAntonino;
       </div>
       {/* Niente filtro sul tipo: alcuni telefoni non lasciano scegliere i .json scaricati; il file si controlla dopo. */}
       <input ref={file} type="file" hidden aria-label="File del piano" onChange={(e) => e.target.files?.[0] && void carica(e.target.files[0])} />
+      <p className="tenue piccolo">Un PDF o una foto li legge Gemini con la chiave della famiglia: passano a Google e non si salvano.</p>
       {esito && (
         <p className={`avviso ${esito.ok ? 'info' : 'errore'}`} role="status">
           {esito.testo}

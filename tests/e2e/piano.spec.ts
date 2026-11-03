@@ -76,3 +76,38 @@ test('piano del nutrizionista: si carica dal file, cambia le regole per tutti e 
   expect((await regole())[0].r?.obiettivi).toMatchObject({ pesce: { min: 3, max: 3 } });
   await expect(sezione.getByRole('button', { name: '📄 Carica il piano' })).toBeVisible();
 });
+
+test('piano del nutrizionista da un PDF: lo legge Gemini con la chiave della famiglia, si conferma e si salva', async ({ browser }, info) => {
+  const luca = await nuovoUtente('Luca');
+  const { page } = await apri(browser, luca, info.project.use);
+  await creaFamiglia(page, 'Casa Piano PDF');
+  await page.getByRole('button', { name: 'Impostazioni' }).click();
+  const sezione = page.getByRole('region', { name: 'Piano del nutrizionista' });
+  const pdf = { name: 'piano nutrizionale.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 prova') };
+  const domande: string[] = [];
+  page.on('dialog', (d) => {
+    domande.push(d.message());
+    void d.accept();
+  });
+
+  // Senza chiave Gemini l'app dice dove metterla.
+  await sezione.getByLabel('File del piano').setInputFiles(pdf);
+  await expect(sezione.getByRole('status')).toContainText('serve la chiave Gemini della famiglia');
+
+  await page.getByLabel('Chiave Gemini della famiglia').fill('AIzaProva_chiave-della-famiglia-1234');
+  await page.getByRole('button', { name: 'Salva la chiave' }).click();
+  await expect(page.getByLabel('Chiave Gemini', { exact: true })).toContainText('finisce con …1234');
+
+  await sezione.getByLabel('File del piano').setInputFiles(pdf);
+  await expect(sezione.getByRole('status')).toHaveText(/Piano caricato\. 1 ricetta aggiunta\./);
+  expect(domande.at(-1)).toContain('A settimana: pesce 3–4,');
+  expect(domande.at(-1)).toContain('Da preferire: farro.');
+  expect(domande.at(-1)).toContain('Non riconosco: cosa sconosciuta.');
+  await expect(sezione.getByText(/Piano dal PDF · caricato il/)).toBeVisible();
+  await expect(sezione.getByRole('checkbox', { name: /A cena niente pasta/ })).toBeChecked();
+  const regole = await sql<{ r: Record<string, unknown> }>(
+    `select impostazioni -> 'antonino' -> 'regole' as r from famiglia where id in (select famiglia_id from utente_famiglia where utente_id = $1)`,
+    [luca.id],
+  );
+  expect(regole[0].r.piano).toMatchObject({ cena_senza_carboidrati: true, verdure_a_ogni_pasto: true, preferiti: ['ing:farro'] });
+});

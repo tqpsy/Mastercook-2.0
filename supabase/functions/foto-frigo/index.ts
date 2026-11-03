@@ -2,7 +2,9 @@
 // gli alimenti che Gemini riconosce. La chiave Gemini è quella della famiglia (scritta nelle Impostazioni) oppure,
 // per le famiglie di chi gestisce l'app, il segreto del progetto (GEMINI_API_KEY): non arriva mai sui telefoni.
 // La foto non si salva: passa a Google e basta.
+// Con `tipo: 'piano'` legge invece il piano del nutrizionista (PDF o foto in `documento`, tipo in `mime`).
 import { riconosci, testoFrigo } from './nucleo.ts';
+import { leggiPianoDocumento, MIME_PIANO } from './piano.ts';
 
 const CORS = {
   'access-control-allow-origin': '*',
@@ -28,13 +30,17 @@ const rispondi = (stato: number, dati: unknown) => new Response(JSON.stringify(d
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
   if (req.method !== 'POST') return rispondi(405, { errore: 'metodo' });
-  let d: { famiglia_id?: string; immagine?: string; frigo?: unknown };
+  let d: { famiglia_id?: string; immagine?: string; frigo?: unknown; tipo?: string; documento?: string; mime?: string };
   try {
     d = await req.json();
   } catch {
     return rispondi(400, { errore: 'dati_non_validi' });
   }
-  if (!d.famiglia_id || !/^[0-9a-f-]{36}$/.test(d.famiglia_id) || typeof d.immagine !== 'string' || d.immagine.length > 2_000_000) {
+  const piano = d.tipo === 'piano';
+  const fileValido = piano
+    ? typeof d.documento === 'string' && d.documento.length <= 8_000_000 && MIME_PIANO.includes(d.mime ?? '')
+    : typeof d.immagine === 'string' && d.immagine.length <= 2_000_000;
+  if (!d.famiglia_id || !/^[0-9a-f-]{36}$/.test(d.famiglia_id) || !fileValido) {
     return rispondi(400, { errore: 'dati_non_validi' });
   }
 
@@ -58,6 +64,6 @@ Deno.serve(async (req) => {
   const chiave = scelta.chiave ?? (scelta.condivisa ? Deno.env.get('GEMINI_API_KEY') : undefined);
   if (!chiave) return rispondi(503, { errore: 'non_configurata' });
 
-  const esito = await riconosci(d.immagine, chiave, fetch, undefined, testoFrigo(d.frigo));
+  const esito = piano ? await leggiPianoDocumento(d.documento!, d.mime!, chiave) : await riconosci(d.immagine!, chiave, fetch, undefined, testoFrigo(d.frigo));
   return rispondi('errore' in esito ? (esito.errore === 'quota' ? 429 : 502) : 200, esito);
 });
