@@ -5,7 +5,7 @@ import { LUOGHI, NOME_LUOGO } from '../catalogo/tipi';
 import { useFamiglia } from '../dati/contesto';
 import { abbinaAlimenti, type PropostaFoto } from '../dominio/fotoFrigo';
 import type { Indice } from '../dominio/ricette';
-import { type Luogo, oggi, REPARTI_SFUSI, stima } from '../dominio/scadenze';
+import { eFresco, type Luogo, oggi, stima } from '../dominio/scadenze';
 import { leggiNumero } from '../dominio/unita';
 import { type ErroreFoto, riconosciFoto } from '../piattaforma/fotoFrigo';
 import { Foglio } from '../ui/Foglio';
@@ -81,7 +81,7 @@ export function FotoFrigo({ indice, luogo: luogoIniziale, chiudi }: { indice: In
     }
     for (const { p, i } of daMettere) {
       const ing = p.ingrediente!;
-      const s = REPARTI_SFUSI.has(ing.reparto) ? stima(ing, luogo, giorno) : null;
+      const s = eFresco(ing) ? stima(ing, luogo, giorno) : null;
       await esegui('aggiungi_lotto', {
         id: crypto.randomUUID(),
         ingrediente_id: ing.id,

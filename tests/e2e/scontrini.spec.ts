@@ -78,6 +78,42 @@ test('scontrino: la riga del carrello prende il prezzo, il resto entra in casa u
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
+test('scontrino scritto a mano: ciò che entra in casa esce subito dalla lista, il macinato di pollo resta pollo', async ({ browser }, info) => {
+  const luca = await nuovoUtente('Luca');
+  const { page } = await apri(browser, luca, info.project.use);
+  await creaFamiglia(page, 'Casa Macinato');
+  // Polpette al sugo oggi, per 4: servono 500 g di carne macinata.
+  await sql(
+    `insert into portata (id, famiglia_id, data, categoria, ricetta_id, porzioni) select gen_random_uuid(), famiglia_id, current_date, 'cena', 'sys:polpette_sugo', 4
+       from utente_famiglia where utente_id = $1`,
+    [luca.id],
+  );
+  await page.reload();
+  await page.getByRole('button', { name: 'Spesa', exact: true }).click();
+  await expect(page.getByRole('button', { name: /^Apri Carne macinata/ })).toBeVisible();
+  await salvato(page);
+
+  await page.getByRole('button', { name: 'Aggiungi uno scontrino' }).click();
+  await page.getByLabel('Oppure incolla il testo dello scontrino').fill('MACINATO TACCHINO E POLLO 400G 4,50\nMACINATO 500G 5,20\nTOTALE 9,70');
+  await page.getByRole('button', { name: 'Leggi le righe' }).click();
+  const foglio = page.getByRole('dialog', { name: 'Controlla lo scontrino' });
+  await expect(foglio.getByRole('button', { name: 'Cambia l’ingrediente di MACINATO TACCHINO E POLLO 400G' })).toContainText('Macinato di pollo o tacchino');
+  await expect(foglio.getByRole('button', { name: 'Cambia l’ingrediente di MACINATO 500G' })).toContainText('Carne macinata');
+  await foglio.getByRole('button', { name: 'Importa lo scontrino' }).click();
+
+  // Senza chiudere e riaprire la lista: il macinato comprato copre le polpette.
+  await expect(page.getByRole('button', { name: /^Apri Carne macinata/ })).toHaveCount(0);
+  await salvato(page);
+  const lotti = await sql<{ ing: string; q: string }>(
+    `select ingrediente_id as ing, quantita::text as q from lotto where famiglia_id = ${famigliaDi} order by ingrediente_id collate "C"`,
+    [luca.id],
+  );
+  expect(lotti).toEqual([
+    { ing: 'ing:carne_macinata', q: '500' },
+    { ing: 'ing:macinato_pollo', q: '400' },
+  ]);
+});
+
 test('codice a barre: la prima volta si sceglie (con Open Food Facts), poi si riconosce in casa e al supermercato', async ({ browser }, info) => {
   const luca = await nuovoUtente('Luca');
   const { page } = await apri(browser, luca, info.project.use);

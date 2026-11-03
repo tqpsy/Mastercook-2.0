@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import catalogo from '../catalogo/catalogo.json';
 import type { Catalogo } from '../catalogo/tipi';
 import { Indice } from './ricette';
-import { daUsarePresto, descriviData, piuGiorni, spreco, statoData, stima } from './scadenze';
+import { daUsarePresto, descriviData, descriviDurata, eFresco, piuGiorni, spreco, statoData, stima, tipoFresco } from './scadenze';
 
 const indice = new Indice(catalogo as Catalogo);
 const insalata = indice.ingrediente('ing:insalata')!;
@@ -59,5 +59,44 @@ describe('scadenze e stime (T-SCA)', () => {
       { lotto_id: 'b', variazione: -125, causale: 'spreco', creato_il: '2026-09-01T10:00:00Z' },
     ];
     expect(spreco(mov, lotti, '2026-10-01')).toEqual([{ ingrediente_id: 'ing:insalata', unita: 'g', quantita: 250, volte: 2 }]);
+  });
+});
+
+describe('carne, pesce e piatti cucinati (durate USDA, valore più prudente)', () => {
+  const ing = (id: string) => indice.ingrediente(id)!;
+  it('riconosce il tipo di ogni carne e pesce crudi e degli avanzi', () => {
+    expect(tipoFresco(ing('ing:bistecca'))).toBe('carne_pezzi');
+    expect(tipoFresco(ing('ing:carne_macinata'))).toBe('carne_macinata');
+    expect(tipoFresco(ing('ing:petto_pollo'))).toBe('pollame');
+    expect(tipoFresco(ing('ing:orata'))).toBe('pesce_magro');
+    expect(tipoFresco(ing('ing:salmone'))).toBe('pesce_grasso');
+    expect(tipoFresco(ing('ing:gamberi'))).toBe('frutti_di_mare');
+    expect(tipoFresco(ing('ing:avanzo'))).toBe('cucinato');
+    expect(tipoFresco(ing('ing:salmone_affumicato'))).toBeNull();
+    expect(tipoFresco(ing('ing:prosciutto_cotto'))).toBeNull();
+    expect(eFresco(ing('ing:orata'))).toBe(true);
+    expect(eFresco(ing('ing:surimi'))).toBe(false);
+  });
+
+  it('in frigo il più breve fra catalogo e tabella', () => {
+    expect(stima(ing('ing:bistecca'), 'frigo', OGGI)!.giorni).toBe(Math.min(3, ing('ing:bistecca').giorni!));
+    expect(stima(ing('ing:petto_pollo'), 'frigo', OGGI)!.giorni).toBe(1);
+    expect(stima(ing('ing:salsiccia'), 'frigo', OGGI)!.giorni).toBe(1);
+    expect(stima(ing('ing:orata'), 'frigo', OGGI)!.giorni).toBe(1);
+  });
+
+  it('in freezer la scadenza c’è sempre: mesi della tabella', () => {
+    expect(stima(ing('ing:bistecca'), 'freezer', OGGI)!.data_limite).toBe(piuGiorni(OGGI, 180));
+    expect(stima(ing('ing:carne_macinata'), 'freezer', OGGI)!.giorni).toBe(90);
+    expect(stima(ing('ing:pollo'), 'freezer', OGGI)!.giorni).toBe(270);
+    expect(stima(ing('ing:merluzzo'), 'freezer', OGGI)!.giorni).toBe(180);
+    expect(stima(ing('ing:sgombro'), 'freezer', OGGI)!.giorni).toBe(90);
+    expect(stima(ing('ing:avanzo'), 'freezer', OGGI)!.giorni).toBe(90);
+  });
+
+  it('durata in parole', () => {
+    expect(descriviDurata(1)).toBe('1 giorno');
+    expect(descriviDurata(3)).toBe('3 giorni');
+    expect(descriviDurata(180)).toBe('6 mesi');
   });
 });

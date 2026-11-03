@@ -257,13 +257,18 @@ function parole(descrizione: string): string[] {
 export function suggerisciIngrediente(descrizione: string, indice: Indice): Ingrediente | undefined {
   const p = parole(descrizione);
   const tentativi = [p.join(' '), ...p.slice(0, -1).map((x, i) => `${x} ${p[i + 1]}`), ...p, ...p.filter((x) => x.length >= 5).map((x) => x.slice(0, -1))];
+  // Quante parole della descrizione ha il nome (o sinonimo) che ne ha di più: «macinato tacchino pollo»
+  // è il macinato di pollo o tacchino, non la carne macinata, anche se «macinato» da solo è quella.
+  const comuni = (i: Ingrediente) => Math.max(...[i.nome, ...i.sinonimi].map((n) => normalizza(n).split(' ')).map((w) => p.filter((x) => w.includes(x)).length));
   for (const t of tentativi) {
     if (!t) continue;
-    const [primo] = indice.cercaIngredienti(t, 1);
-    if (!primo) continue;
-    const nomi = [primo.nome, ...primo.sinonimi].map(normalizza);
     // Solo se una parola del nome inizia con il testo cercato: «latte» sì, «atte» no.
-    if (nomi.some((n) => n.split(' ').some((w) => w.startsWith(t.split(' ')[0])))) return primo;
+    const buoni = indice
+      .cercaIngredienti(t)
+      .filter((i) => [i.nome, ...i.sinonimi].map(normalizza).some((n) => n.split(' ').some((w) => w.startsWith(t.split(' ')[0]))));
+    if (!buoni.length) continue;
+    // A parità di parole in comune resta il primo della ricerca (nome uguale prima di nome che inizia così).
+    return buoni.reduce((meglio, i) => (comuni(i) > comuni(meglio) ? i : meglio));
   }
   return undefined;
 }
