@@ -120,6 +120,51 @@ describe('scontrini', () => {
     expect((await u.applica(scontrino(famiglia, [], { totale: 12 }))).dettaglio).toEqual({ abbinate: 0, nuove: 0 });
   });
 
+  it('una riga senza quantità entra «da completare»: niente in casa finché non si scrive quanto, poi una volta sola', async () => {
+    const { u, famiglia } = await famigliaCon();
+    const riga = randomUUID();
+    const c = scontrino(famiglia, [
+      { descrizione: 'ZUCCHINE', prezzo: 1.8, nuova: { id: riga, lotto_id: randomUUID(), ingrediente_id: 'ing:zucchina', luogo: 'frigo' } },
+      { descrizione: 'LATTE INTERO 1L', prezzo: 1.29, nuova: nuova('ing:latte', 1000, 'ml') },
+    ]);
+    expect(await u.applica(c)).toMatchObject({ esito: 'applicato', dettaglio: { abbinate: 0, nuove: 2, da_completare: 1 } });
+    expect(await casa(famiglia)).toEqual([{ ingrediente_id: 'ing:latte', origine: 'scontrino', q: 1000 }]);
+    const [prima] = await banco.sql('select quantita, unita, lotto_id, prezzo::text from acquisto_riga where id = $1', [riga]);
+    expect(prima).toEqual({ quantita: null, unita: null, lotto_id: null, prezzo: '1.80' });
+
+    // Più tardi, da Casa: 600 g in frigo, con la data dello scontrino.
+    const lotto = randomUUID();
+    const completa = comando('completa_riga_acquisto', famiglia, { id: riga, lotto_id: lotto, quantita: 600, unita: 'g', luogo: 'frigo' });
+    expect((await u.applica(completa)).esito).toBe('applicato');
+    expect(await casa(famiglia)).toEqual([
+      { ingrediente_id: 'ing:latte', origine: 'scontrino', q: 1000 },
+      { ingrediente_id: 'ing:zucchina', origine: 'scontrino', q: 600 },
+    ]);
+    const [l] = await banco.sql('select data_acquisto::text, luogo from lotto where id = $1', [lotto]);
+    expect(l).toEqual({ data_acquisto: '2026-11-02', luogo: 'frigo' });
+    // Ripetere lo stesso comando non carica due volte; un altro telefono che completa la stessa riga trova un conflitto.
+    expect((await u.applica(completa)).esito).toBe('applicato');
+    const doppio = await u.applica(comando('completa_riga_acquisto', famiglia, { id: riga, lotto_id: randomUUID(), quantita: 500, unita: 'g', luogo: 'frigo' }));
+    expect(doppio.esito).toBe('conflitto');
+    expect((await casa(famiglia))[1].q).toBe(600);
+    // Annullare l'acquisto toglie anche la riga completata.
+    expect((await u.applica(comando('annulla_acquisto', famiglia, { id: c.dati.acquisto_id }))).esito).toBe('applicato');
+    expect((await casa(famiglia)).map((x) => x.q)).toEqual([0, 0]);
+  });
+
+  it('completare: quantità e unità devono essere giuste, e un acquisto annullato non si completa', async () => {
+    const { u, famiglia } = await famigliaCon();
+    const riga = randomUUID();
+    const c = scontrino(famiglia, [{ descrizione: 'ZUCCHINE', prezzo: 1.8, nuova: { id: riga, lotto_id: randomUUID(), ingrediente_id: 'ing:zucchina' } }]);
+    await u.applica(c);
+    const prova = (x: Record<string, unknown>) => u.applica(comando('completa_riga_acquisto', famiglia, { id: riga, lotto_id: randomUUID(), luogo: 'frigo', ...x }));
+    expect((await prova({ quantita: 0, unita: 'g' })).dettaglio.motivo).toBe('quantita_non_valida');
+    expect((await prova({ quantita: 500, unita: 'ml' })).esito).toBe('rifiutato');
+    await u.applica(comando('annulla_acquisto', famiglia, { id: c.dati.acquisto_id }));
+    expect((await prova({ quantita: 500, unita: 'g' })).dettaglio.motivo).toBe('acquisto_annullato');
+    expect(await casa(famiglia)).toEqual([]);
+  });
+
   it('dati non validi: quantità, data e unità sbagliate non scrivono nulla', async () => {
     const { u, famiglia } = await famigliaCon();
     const senzaQuantita = await u.applica(scontrino(famiglia, [{ descrizione: 'LATTE', prezzo: 1, nuova: { ...nuova('ing:latte', 0, 'ml') } }]));

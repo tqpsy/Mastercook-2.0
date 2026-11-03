@@ -114,6 +114,42 @@ test('scontrino scritto a mano: ciò che entra in casa esce subito dalla lista, 
   ]);
 });
 
+test('scontrino senza quantità: si salta, entra lo stesso e la quantità si scrive dopo in Casa', async ({ browser }, info) => {
+  const luca = await nuovoUtente('Luca');
+  const { page } = await apri(browser, luca, info.project.use);
+  await creaFamiglia(page, 'Casa Senza Quantità');
+  await page.getByRole('button', { name: 'Spesa', exact: true }).click();
+  await page.getByRole('button', { name: 'Aggiungi uno scontrino' }).click();
+  await page.getByLabel('Oppure incolla il testo dello scontrino').fill('SUPERMERCATO ROSSI\nZUCCHINE 1,80\nLATTE INTERO 1L 1,29\nTOTALE 3,09');
+  await page.getByRole('button', { name: 'Leggi le righe' }).click();
+  const foglio = page.getByRole('dialog', { name: 'Controlla lo scontrino' });
+  await expect(foglio.getByLabel('Quantità di ZUCCHINE')).toHaveValue('');
+  await foglio.getByRole('button', { name: 'Importa lo scontrino' }).click();
+  await expect(foglio.getByRole('alert')).toContainText('Manca la quantità di zucchine');
+  await foglio.getByRole('button', { name: 'Salta, la metto dopo' }).click();
+  await expect(page.getByRole('region', { name: 'Acquisti recenti' })).toContainText('Zucchine');
+  await salvato(page);
+  expect(await sql(`select ingrediente_id from lotto where famiglia_id = ${famigliaDi}`, [luca.id])).toEqual([{ ingrediente_id: 'ing:latte' }]);
+
+  await page.getByRole('button', { name: 'Casa', exact: true }).click();
+  const daCompletare = page.getByRole('region', { name: 'Da completare' });
+  await daCompletare.getByRole('button', { name: 'Scrivi la quantità di Zucchine' }).click();
+  const quanto = page.getByRole('dialog', { name: 'Quanto zucchine?' });
+  await quanto.getByLabel('Quantità').fill('600');
+  await quanto.getByRole('button', { name: 'Metti in casa' }).click();
+  await expect(daCompletare).toHaveCount(0);
+  await salvato(page);
+  const lotti = await sql<{ ing: string; q: string; origine: string }>(
+    `select ingrediente_id as ing, quantita::text as q, origine from lotto where famiglia_id = ${famigliaDi} order by ingrediente_id collate "C"`,
+    [luca.id],
+  );
+  expect(lotti).toEqual([
+    { ing: 'ing:latte', q: '1000', origine: 'scontrino' },
+    { ing: 'ing:zucchina', q: '600', origine: 'scontrino' },
+  ]);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
+
 test('codice a barre: la prima volta si sceglie (con Open Food Facts), poi si riconosce in casa e al supermercato', async ({ browser }, info) => {
   const luca = await nuovoUtente('Luca');
   const { page } = await apri(browser, luca, info.project.use);

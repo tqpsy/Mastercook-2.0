@@ -30,6 +30,12 @@ interface RigaInRevisione {
   cerca: boolean;
 }
 
+/** «pane», «pane e latte», «pane, latte e uova». */
+function elencoNomi(nomi: string[]): string {
+  const n = nomi.map((x) => x.toLowerCase());
+  return n.length < 2 ? n.join('') : `${n.slice(0, -1).join(', ')} e ${n[n.length - 1]}`;
+}
+
 const testoEuro = (n: number | null | undefined) => (n == null ? '' : n.toFixed(2).replace('.', ','));
 
 /** Le righe confermate dal carrello nei giorni vicini allo scontrino, ancora senza scontrino (lo scontrino ne aggiorna il prezzo). */
@@ -64,6 +70,8 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
   const [leggiQr, setLeggiQr] = useState(false);
   const [righe, setRighe] = useState<RigaInRevisione[]>([]);
   const [errore, setErrore] = useState<string | null>(null);
+  /** Le righe che vanno in casa senza quantità: si possono scrivere ora o saltare e completarle dopo in Casa. */
+  const [senzaQuantita, setSenzaQuantita] = useState<string[] | null>(null);
   const daAbbinare = useDaAbbinare(indice);
   const candidate = daAbbinare(data);
 
@@ -114,7 +122,10 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
     setRevisione(true);
   }
 
-  const cambia = (i: number, x: Partial<RigaInRevisione>) => setRighe(righe.map((r, j) => (j === i ? { ...r, ...x } : r)));
+  const cambia = (i: number, x: Partial<RigaInRevisione>) => {
+    setSenzaQuantita(null);
+    setRighe(righe.map((r, j) => (j === i ? { ...r, ...x } : r)));
+  };
   const somma = Math.round(righe.filter((r) => r.azione !== 'ignora').reduce((s, r) => s + (leggiNumero(r.euro) ?? 0), 0) * 100) / 100;
   const tot = totale.trim() ? leggiNumero(totale) : null;
   const giaImportato = (vista.righe.scontrino ?? []).find(
@@ -126,7 +137,9 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
       normalizza(String(s.negozio ?? '')).replace(/ /g, '') === normalizza(negozio).replace(/ /g, ''),
   );
 
-  async function importa() {
+  async function importa(saltaQuantita = false) {
+    setSenzaQuantita(null);
+    const mancanti: string[] = [];
     if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return setErrore('Scrivi la data dello scontrino.');
     if (ora && !/^[0-2]\d:[0-5]\d$/.test(ora)) return setErrore('L’ora si scrive come 18:30.');
     if (totale.trim() && tot === null) return setErrore('Il totale non è un numero.');
@@ -140,6 +153,12 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
       else if (r.azione === 'ignora') pronte.push(base);
       else {
         if (!r.ing) return setErrore(`Scegli cos’è «${r.descrizione}», oppure segnalo come «solo spesa».`);
+        if (!r.numero.trim()) {
+          // Senza quantità la riga entra nello scontrino «da completare»: in casa arriva quando si scrive quanto (Casa).
+          mancanti.push(r.ing.nome);
+          pronte.push({ ...base, nuova: { id: crypto.randomUUID(), ingrediente_id: r.ing.id, luogo: r.luogo } });
+          continue;
+        }
         const q = quantitaDa(r.numero, r.unita, r.ing);
         if (typeof q === 'string') return setErrore(`${r.ing.nome}: ${q}`);
         const s = eFresco(r.ing) ? stima(r.ing, r.luogo, data) : null;
@@ -158,6 +177,8 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
       }
     }
     if (!pronte.length) return setErrore('Non ci sono righe da importare.');
+    setErrore(null);
+    if (mancanti.length && !saltaQuantita) return setSenzaQuantita(mancanti);
     await esegui('importa_scontrino', {
       id: crypto.randomUUID(),
       acquisto_id: crypto.randomUUID(),
@@ -328,9 +349,25 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
           {errore}
         </div>
       )}
-      <button className="bottone primario pieno" onClick={importa}>
-        Importa lo scontrino
-      </button>
+      {senzaQuantita ? (
+        <div className="avviso attenzione" role="alert">
+          <p style={{ margin: 0 }}>
+            Manca la quantità di {elencoNomi(senzaQuantita)}. Scrivila qui sopra, oppure salta: lo scontrino entra lo stesso e la quantità la metti dopo in Casa, alla voce «Da completare».
+          </p>
+          <div className="riga" style={{ flexWrap: 'wrap', marginTop: 8 }}>
+            <button className="bottone primario" onClick={() => importa(true)}>
+              Salta, la metto dopo
+            </button>
+            <button className="bottone" onClick={() => setSenzaQuantita(null)}>
+              La scrivo ora
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button className="bottone primario pieno" onClick={() => importa()}>
+          Importa lo scontrino
+        </button>
+      )}
     </Foglio>
   );
 }

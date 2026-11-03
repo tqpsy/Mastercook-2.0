@@ -311,7 +311,8 @@ const EFFETTI: Record<string, Effetto> = {
     const data = d.data ?? null;
     aggiungi('acquisto', () => ({ fonte: d.fonte ?? 'carrello', data, negozio: d.negozio ?? null, stato: 'confermato', versione: 1 }))(righe, d, famiglia);
     for (const r of (d.righe ?? []) as Record<string, unknown>[]) {
-      const conIngrediente = r.ingrediente_id != null;
+      // Una riga dello scontrino senza quantità resta «da completare»: in casa entra dopo (completa_riga_acquisto).
+      const conIngrediente = r.ingrediente_id != null && r.quantita != null;
       if (conIngrediente) {
         aggiungi('lotto', (x) => ({
           ingrediente_id: x.ingrediente_id,
@@ -533,6 +534,29 @@ const EFFETTI: Record<string, Effetto> = {
     for (const r of (righe.acquisto_riga ?? []).filter((x) => x.acquisto_id === d.id && x.lotto_id)) {
       cambiaQuantita(righe, String(r.lotto_id), (q) => q - Math.min(q, Number(r.quantita)));
     }
+  },
+  completa_riga_acquisto: (righe, d, famiglia) => {
+    const riga = (righe.acquisto_riga ?? []).find((r) => r.id === d.id);
+    if (!riga || riga.lotto_id || !riga.ingrediente_id) return;
+    const acquisto = (righe.acquisto ?? []).find((a) => a.id === riga.acquisto_id);
+    aggiungi('lotto', (x) => ({
+      ingrediente_id: riga.ingrediente_id,
+      nome: null,
+      quantita: Number(x.quantita),
+      unita: x.unita,
+      luogo: x.luogo ?? 'dispensa',
+      data_acquisto: acquisto?.data ?? null,
+      data_limite: x.data_limite ?? null,
+      tipo_data: x.tipo_data ?? 'sconosciuta',
+      fonte_data: x.fonte_data ?? null,
+      calcolata_il: x.calcolata_il ?? null,
+      posto: x.luogo === 'dispensa' ? null : (x.posto ?? null),
+      origine: acquisto?.fonte === 'scontrino' ? 'scontrino' : 'acquisto',
+      versione: 1,
+    }))(righe, { ...d, id: d.lotto_id }, famiglia);
+    righe.acquisto_riga = (righe.acquisto_riga ?? []).map((r) =>
+      r === riga ? { ...r, quantita: Number(d.quantita), unita: d.unita, lotto_id: d.lotto_id, in_attesa: true } : r,
+    );
   },
   correggi_riga_acquisto: (righe, d) => {
     const riga = (righe.acquisto_riga ?? []).find((r) => r.id === d.id);
