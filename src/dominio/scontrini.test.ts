@@ -126,6 +126,15 @@ describe('ingredienti e abbinamenti', () => {
     expect(id('SHOPPER')).toBeUndefined();
   });
 
+  it('sceglie l’ingrediente con più parole in comune: il macinato di pollo non è carne macinata', () => {
+    const id = (d: string) => suggerisciIngrediente(d, indice)?.id;
+    expect(id('MACINATO DI TACCHINO E POLLO')).toBe('ing:macinato_pollo');
+    expect(id('MACINATO TACCHINO')).toBe('ing:macinato_pollo');
+    expect(id('Macinato di pollo')).toBe('ing:macinato_pollo');
+    expect(id('MACINATO')).toBe('ing:carne_macinata');
+    expect(id('MACINATO SCELTO BOVINO')).toBe('ing:carne_macinata');
+  });
+
   it('abbina alle righe del carrello senza prezzo, una per una; il resto è nuovo', () => {
     const s = leggiScontrino(SCONTRINO);
     const abbinate = abbinaRighe(

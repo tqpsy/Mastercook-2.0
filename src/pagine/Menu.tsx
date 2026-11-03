@@ -818,14 +818,17 @@ function SettimanaGriglia({
   const [pagina, setPagina] = useState(0);
   const pagine = 3;
   useFinoInFondo(scorre, riserva, true, `${largo}|${categorie.length}`);
-  // Sul telefono si parte dal giorno scelto (di solito oggi).
+  // Sul telefono si parte dal giorno scelto (di solito oggi). Solo quando cambiano settimana o giorno scelto:
+  // `giorni` è un elenco nuovo a ogni disegno, e riportare la griglia a oggi a ogni disegno impediva di scorrerla.
+  const elencoGiorni = giorni.join(',');
   useEffect(() => {
     const el = scorre.current;
     if (largo || !el) return;
-    const i = giorni.indexOf(scelto);
-    const colonna = el.querySelector<HTMLElement>(`[data-giorno="${giorni[Math.max(0, i)]}"]`);
+    const tutti = elencoGiorni.split(',');
+    const i = tutti.indexOf(scelto);
+    const colonna = el.querySelector<HTMLElement>(`[data-giorno="${tutti[Math.max(0, i)]}"]`);
     if (colonna && i > 0) el.scrollLeft = colonna.offsetLeft - 52;
-  }, [largo, giorni, scelto]);
+  }, [largo, elencoGiorni, scelto]);
   return (
     <>
       <div
