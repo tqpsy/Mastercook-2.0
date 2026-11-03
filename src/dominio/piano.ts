@@ -86,7 +86,7 @@ function ricetta(x: unknown): RicettaPiano | null {
 export function leggiPiano(testo: string, oggi: string): Piano {
   let dati: unknown;
   try {
-    dati = JSON.parse(testo);
+    dati = JSON.parse(testo.replace(/^\uFEFF/, ''));
   } catch {
     throw new Error('Il file non è un piano di Mastercook.');
   }
