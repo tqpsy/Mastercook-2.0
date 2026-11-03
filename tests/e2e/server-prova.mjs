@@ -115,12 +115,40 @@ createServer(async (req, res) => {
     // Foto del frigo: al posto di Gemini una risposta fissa; il controllo su chi fa parte della famiglia è vero.
     if (percorso === '/functions/v1/foto-frigo' && req.method === 'POST') {
       const sub = utenteDalToken(req);
-      const { famiglia_id, immagine } = await corpo(req);
-      const r = sub && typeof immagine === 'string' && immagine.length > 0 ? await comeUtente(sub, 'select 1 from famiglia where id = $1', [famiglia_id]) : { rowCount: 0 };
+      const { famiglia_id, immagine, tipo, documento } = await corpo(req);
+      const file = tipo === 'piano' ? documento : immagine;
+      const r = sub && typeof file === 'string' && file.length > 0 ? await comeUtente(sub, 'select 1 from famiglia where id = $1', [famiglia_id]) : { rowCount: 0 };
       if (!r.rowCount) return rispondi(res, 403, { errore: 'non_autorizzato' });
       // Come la funzione vera: serve la chiave della famiglia (o quella del progetto per chi gestisce l'app).
       const scelta = (await pool.query('select public.chiave_gemini_per_foto($1) as r', [famiglia_id])).rows[0].r;
       if (!scelta.chiave && !scelta.condivisa) return rispondi(res, 503, { errore: 'non_configurata' });
+      // Il piano del nutrizionista letto da un PDF: una risposta fissa nel formato di Gemini.
+      if (tipo === 'piano')
+        return rispondi(res, 200, {
+          modello: 'prova',
+          piano: {
+            nome: 'Piano dal PDF',
+            frequenze: [{ gruppo: 'pesce', min: 3, max: 4 }],
+            cena_senza_carboidrati: true,
+            legumi_senza_cereali: false,
+            pranzo_con_carboidrati: false,
+            verdure_a_ogni_pasto: true,
+            alimenti_preferiti: ['farro', 'cosa sconosciuta'],
+            ricette: [
+              {
+                titolo: 'Torta di mele di prova',
+                categoria: 'dolce',
+                porzioni: 8,
+                minuti_totali: 60,
+                ingredienti: [
+                  { nome: 'mele', quantita: 600, unita: 'g', opzionale: false, testo: '4 mele' },
+                  { nome: 'uova', quantita: 3, unita: 'pz', opzionale: false, testo: null },
+                ],
+                passi: ['Impasta e inforna a 170 gradi per 45 minuti.'],
+              },
+            ],
+          },
+        });
       return rispondi(res, 200, {
         modello: 'prova',
         alimenti: [

@@ -12,7 +12,10 @@
  *                    "passi": [ "…" ] } ] }
  */
 import type { Categoria } from '../catalogo/tipi';
-import { PESI_BASE, regoleDa, type RegoleAntonino } from './antonino';
+import type { PianoLetto } from '../../supabase/functions/foto-frigo/piano';
+import { GRUPPI, PESI_BASE, pianoAcceso, regoleDa, type RegoleAntonino } from './antonino';
+import type { Indice } from './ricette';
+import { UNITA_BASE } from './unita';
 
 export interface RigaPiano {
   ingrediente_id: string;
@@ -134,4 +137,74 @@ export function comandoRicetta(r: RicettaPiano, nuovoId: () => string): Record<s
     basi: { imposta: [], rimuovi: [] },
     passi: { aggiungi: r.passi.map((testo, ordine) => ({ id: nuovoId(), testo, ordine })), modifica: [], rimuovi: [] },
   };
+}
+
+/**
+ * Dal piano letto da Gemini (PDF o foto) allo stesso formato del file: ogni alimento si abbina a un ingrediente
+ * del catalogo. Ciò che non si riconosce resta fuori e si dice (`nonTrovati`); una quantità in un'unità che non va
+ * per l'ingrediente diventa «q.b.» con il testo del piano.
+ */
+export function pianoDaLettura(letto: PianoLetto, indice: Indice, oggi: string): { piano: Piano; nonTrovati: string[] } {
+  const nonTrovati = new Set<string>();
+  const abbina = (nome: string) => {
+    const i = indice.cercaIngredienti(nome, 1)[0];
+    if (!i) nonTrovati.add(nome);
+    return i;
+  };
+  const obiettivi: Record<string, { min?: number; max?: number }> = {};
+  for (const f of letto.frequenze) obiettivi[f.gruppo] = { ...(f.min !== null ? { min: f.min } : {}), ...(f.max !== null ? { max: f.max } : {}) };
+  const preferiti = letto.alimenti_preferiti.map(abbina).filter((i) => !!i).map((i) => i!.id);
+  const ricette = letto.ricette.flatMap((r) => {
+    const righe = r.ingredienti.flatMap((g): Record<string, unknown>[] => {
+      const i = abbina(g.nome);
+      if (!i) return [];
+      const unita = UNITA_BASE[i.dimensione];
+      const testo = g.testo ?? g.nome;
+      if (g.quantita !== null && g.unita === unita) return [{ ingrediente_id: i.id, quantita: g.quantita, unita, opzionale: g.opzionale, testo }];
+      const scritta = g.quantita !== null && g.unita ? `${testo} (${String(g.quantita).replace('.', ',')} ${g.unita})` : testo;
+      return [{ ingrediente_id: i.id, qb: true, opzionale: g.opzionale, testo: scritta }];
+    });
+    return righe.length ? [{ titolo: r.titolo, categoria: r.categoria, porzioni: r.porzioni, minuti_totali: r.minuti_totali, ingredienti: righe, passi: r.passi }] : [];
+  });
+  const file = {
+    formato: 'mastercook-piano',
+    versione: 1,
+    nome: letto.nome ?? 'Piano del nutrizionista',
+    regole: {
+      obiettivi,
+      piano: {
+        cena_senza_carboidrati: letto.cena_senza_carboidrati,
+        legumi_senza_cereali: letto.legumi_senza_cereali,
+        pranzo_con_carboidrati: letto.pranzo_con_carboidrati,
+        verdure_a_ogni_pasto: letto.verdure_a_ogni_pasto,
+        preferiti: [...new Set(preferiti)],
+      },
+    },
+    ricette,
+  };
+  return { piano: leggiPiano(JSON.stringify(file), oggi), nonTrovati: [...nonTrovati] };
+}
+
+/** Cosa Antonino ha capito del piano, in poche righe, da far confermare prima di salvarlo. */
+export function riassuntoPiano(piano: Piano, indice: Indice): string[] {
+  const righe: string[] = [];
+  const volte = (o: { min?: number; max?: number }) =>
+    o.min !== undefined && o.max !== undefined ? (o.min === o.max ? `${o.min}` : `${o.min}–${o.max}`) : o.min !== undefined ? `almeno ${o.min}` : `al massimo ${o.max}`;
+  const frequenze = GRUPPI.filter((g) => {
+    const o = piano.regole.obiettivi[g.id];
+    return o && (o.min !== undefined || o.max !== undefined);
+  }).map((g) => `${g.nome.toLowerCase()} ${volte(piano.regole.obiettivi[g.id]!)}`);
+  if (frequenze.length) righe.push(`A settimana: ${frequenze.join(', ')}.`);
+  const p = piano.regole.piano;
+  const regole = [
+    p.cenaSenzaCarboidrati && 'cena senza carboidrati',
+    p.pranzoConCarboidrati && 'a pranzo un carboidrato',
+    p.legumiSenzaCereali && 'legumi mai con pasta, pane o riso',
+    p.verdureAOgniPasto && 'verdure a pranzo e a cena',
+  ].filter(Boolean);
+  if (regole.length) righe.push(`Regole: ${regole.join(', ')}.`);
+  if (p.preferiti.length) righe.push(`Da preferire: ${p.preferiti.map((id) => indice.nome(id).toLowerCase()).join(', ')}.`);
+  if (piano.ricette.length) righe.push(`Ricette: ${piano.ricette.map((r) => r.titolo).join(', ')}.`);
+  if (!pianoAcceso(p) && !frequenze.length) righe.push('Non ho trovato regole per i pasti.');
+  return righe;
 }
