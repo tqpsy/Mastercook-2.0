@@ -273,7 +273,8 @@ function PianoNutrizionista({ regole, salva, indice }: { regole: RegoleAntonino;
           </button>
         )}
       </div>
-      <input ref={file} type="file" accept=".json,application/json" hidden aria-label="File del piano" onChange={(e) => e.target.files?.[0] && void carica(e.target.files[0])} />
+      {/* Niente filtro sul tipo: alcuni telefoni non lasciano scegliere i .json scaricati; il file si controlla dopo. */}
+      <input ref={file} type="file" hidden aria-label="File del piano" onChange={(e) => e.target.files?.[0] && void carica(e.target.files[0])} />
       {esito && (
         <p className={`avviso ${esito.ok ? 'info' : 'errore'}`} role="status">
           {esito.testo}
