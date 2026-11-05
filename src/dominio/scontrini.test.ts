@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import catalogo from '../catalogo/catalogo.json';
 import type { Catalogo } from '../catalogo/tipi';
 import { Indice } from './ricette';
-import { abbinaRighe, daOpenFoodFacts, formatoDaDescrizione, leggiScontrino, pulisciLinea, quantitaProposta, suggerisciIngrediente } from './scontrini';
+import { abbinaRighe, daOpenFoodFacts, formatoDaDescrizione, leggiScontrino, pulisciLinea, quantitaProposta, suggerisciIngrediente, unisciDescrizioni } from './scontrini';
 
 const indice = new Indice(catalogo as Catalogo);
 
@@ -82,7 +82,7 @@ describe('scontrini veri, letti da Tesseract', () => {
   // Screenshot dello scontrino digitale Iper: pesi «0,386 * 4,90Kg» sotto la descrizione, lettera IVA dopo il
   // prezzo, l'ora del telefono in alto, «4,90K8g» e «13,89%g» letti male.
   it('Iper (screenshot): sei righe, pesi, negozio, data e ora dello scontrino', () => {
-    const s = leggiScontrino(esempio('iper-screenshot.txt'));
+    const s = leggiScontrino(readFileSync(new URL('./scontrini-esempi/iper-screenshot.txt', import.meta.url), 'utf8'));
     expect(s.righe.map(({ descrizione, prezzo, grammi }) => ({ descrizione, prezzo, ...(grammi ? { grammi } : {}) }))).toEqual(IPER);
     expect(s).toMatchObject({ negozio: 'Iper Montebello S.P.A', data: '2026-11-02', ora: '18:41', totale: 19.88, quadra: true });
   });
@@ -148,6 +148,33 @@ describe('ingredienti e abbinamenti', () => {
     );
     // Gli spaghetti valgono come pasta; lo shopper si abbina per nome.
     expect(abbinate).toEqual(['r-latte', null, 'r-pasta', null, null, 'r-det']);
+  });
+
+  it('spesa fatta con le spunte: lo scontrino Iper dà solo il prezzo, anche alle righe ripetute', () => {
+    const s = leggiScontrino(readFileSync(new URL('./scontrini-esempi/iper-screenshot.txt', import.meta.url), 'utf8'));
+    const carrello = [
+      { id: 'r-pane', ingrediente_id: 'ing:pane_grattugiato', nome: 'Pane grattugiato' },
+      { id: 'r-mozz', ingrediente_id: 'ing:mozzarella_bufala', nome: 'Mozzarella di bufala' },
+      { id: 'r-olive', ingrediente_id: 'ing:olive', nome: 'Olive' },
+      { id: 'r-pollo', ingrediente_id: 'ing:petto_pollo', nome: 'Petto di pollo' },
+    ];
+    expect(s.righe.map((r) => r.descrizione)).toEqual(['PANE GRATTUG.BARAT.I', 'BOCCONCINO IPER', 'SFIZIOSO OLIVE', 'PETTO POLLO FETTE', 'PETTO POLLO FETTE', 'SHOPPER 30X55 INATEC']);
+    // Il bocconcino (mozzarella) va sulla mozzarella di bufala spuntata; le due confezioni di pollo sulla stessa riga.
+    expect(abbinaRighe(s.righe, carrello, indice)).toEqual(['r-pane', 'r-mozz', 'r-olive', 'r-pollo', 'r-pollo', null]);
+  });
+
+  it('la stessa riga ripetuta si unisce in una', () => {
+    expect(unisciDescrizioni('PETTO POLLO', 'PETTO POLLO')).toBe('PETTO POLLO ×2');
+    expect(unisciDescrizioni('PETTO POLLO ×2', 'PETTO POLLO')).toBe('PETTO POLLO ×3');
+    expect(unisciDescrizioni('BOCCONCINO', 'MOZZ.BUFALA')).toBe('BOCCONCINO + MOZZ.BUFALA');
+  });
+
+  it('abbreviazioni corte e sinonimi; pane non è panna', () => {
+    const lette = [
+      { descrizione: 'YOG BIANCO', prezzo: 1 },
+      { descrizione: 'PANNA CUCINA', prezzo: 1 },
+    ];
+    expect(abbinaRighe(lette, [{ id: 'r-yog', ingrediente_id: null, nome: 'Yogurt' }, { id: 'r-pane', ingrediente_id: null, nome: 'Pane' }], indice)).toEqual(['r-yog', null]);
   });
 
   it('quantità proposta nell’unità dell’ingrediente, o niente', () => {

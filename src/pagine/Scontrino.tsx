@@ -6,7 +6,7 @@ import { useFamiglia, useVista } from '../dati/contesto';
 import type { Indice, Ingrediente } from '../dominio/ricette';
 import { normalizza } from '../dominio/ricette';
 import { eFresco, giorniTra, type Luogo, oggi, stima } from '../dominio/scadenze';
-import { abbinaRighe, leggiScontrino, quantitaProposta, type RigaDaAbbinare, suggerisciIngrediente } from '../dominio/scontrini';
+import { abbinaRighe, leggiScontrino, quantitaProposta, type RigaDaAbbinare, type RigaLetta, suggerisciIngrediente, unisciDescrizioni } from '../dominio/scontrini';
 import { formattaEuro, formattaGiorno, leggiNumero, UNITA, type Unita, UNITA_BASE, unitaPer } from '../dominio/unita';
 import { CercaIngrediente } from '../ui/CercaIngrediente';
 import { Foglio } from '../ui/Foglio';
@@ -28,6 +28,8 @@ interface RigaInRevisione {
   unita: Unita;
   luogo: Luogo;
   cerca: boolean;
+  /** Scelta dall'app e non toccata: se cambia la data si riabbina con la spesa di quel giorno. */
+  auto?: boolean;
 }
 
 /** «pane», «pane e latte», «pane, latte e uova». */
@@ -101,31 +103,60 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
     setData(giorno);
     setOra(s.ora ?? '');
     setTotale(testoEuro(s.totale));
-    const abbinate = abbinaRighe(s.righe, daAbbinare(giorno), indice);
-    setRighe(
-      s.righe.map((r, i) => {
-        const ing = abbinate[i] ? null : (suggerisciIngrediente(r.descrizione, indice) ?? null);
-        const q = ing ? quantitaProposta(r, ing) : null;
-        return {
-          id: crypto.randomUUID(),
-          descrizione: r.descrizione,
-          euro: testoEuro(r.prezzo),
-          azione: abbinate[i] ? `abbina:${abbinate[i]}` : ing ? 'casa' : 'altro',
-          ing,
-          numero: q ? String(q.quantita).replace('.', ',') : '',
-          unita: q?.unita ?? (ing ? UNITA_BASE[ing.dimensione] : 'g'),
-          luogo: ing?.luogo ?? 'dispensa',
-          cerca: false,
-        };
-      }),
-    );
+    setRighe(proposte(s.righe.map((r) => ({ id: crypto.randomUUID(), riga: r })), giorno));
     setRevisione(true);
+  }
+
+  /** Per ogni riga: il prezzo a una riga già spuntata o confermata (niente doppioni in casa), oppure in casa. */
+  function proposte(lette: { id: string; riga: RigaLetta }[], giorno: string): RigaInRevisione[] {
+    const abbinate = abbinaRighe(
+      lette.map((x) => x.riga),
+      daAbbinare(giorno),
+      indice,
+    );
+    return lette.map(({ id, riga: r }, i) => {
+      const ing = suggerisciIngrediente(r.descrizione, indice) ?? null;
+      const q = ing ? quantitaProposta(r, ing) : null;
+      return {
+        id,
+        descrizione: r.descrizione,
+        euro: testoEuro(r.prezzo),
+        azione: abbinate[i] ? `abbina:${abbinate[i]}` : ing ? 'casa' : 'altro',
+        ing,
+        numero: q ? String(q.quantita).replace('.', ',') : '',
+        unita: q?.unita ?? (ing ? UNITA_BASE[ing.dimensione] : 'g'),
+        luogo: ing?.luogo ?? 'dispensa',
+        cerca: false,
+        auto: true,
+      };
+    });
+  }
+
+  /** Cambiata la data, le righe non toccate si riabbinano con la spesa confermata in quei giorni. */
+  function cambiaData(giorno: string) {
+    setData(giorno);
+    const auto = righe.filter((r) => r.auto);
+    if (!auto.length) return;
+    const nuove = new Map(
+      proposte(
+        auto.map((r) => ({ id: r.id, riga: { descrizione: r.descrizione, prezzo: leggiNumero(r.euro) ?? 0 } })),
+        giorno,
+      ).map((r) => [r.id, r]),
+    );
+    setRighe(righe.map((r) => {
+      const n = nuove.get(r.id);
+      // Quantità, unità e posto restano quelli già proposti o scritti; cambia solo dove va la riga.
+      return n ? { ...r, azione: n.azione, ing: r.ing ?? n.ing } : r;
+    }));
   }
 
   const cambia = (i: number, x: Partial<RigaInRevisione>) => {
     setSenzaQuantita(null);
-    setRighe(righe.map((r, j) => (j === i ? { ...r, ...x } : r)));
+    setRighe(righe.map((r, j) => (j === i ? { ...r, ...x, auto: r.auto && !('azione' in x || 'ing' in x) } : r)));
   };
+  /** Righe già spuntate o confermate a mano che nessuna riga dello scontrino ha preso. */
+  const giaInCasa = candidate.filter((c) => !righe.some((r) => r.azione === `abbina:${c.id}`));
+  const nuoveInCasa = righe.filter((r) => r.azione === 'casa');
   const somma = Math.round(righe.filter((r) => r.azione !== 'ignora').reduce((s, r) => s + (leggiNumero(r.euro) ?? 0), 0) * 100) / 100;
   const tot = totale.trim() ? leggiNumero(totale) : null;
   const giaImportato = (vista.righe.scontrino ?? []).find(
@@ -148,7 +179,14 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
       const prezzo = r.euro.trim() ? leggiNumero(r.euro) : null;
       if (r.euro.trim() && prezzo === null) return setErrore(`Il prezzo di «${r.descrizione}» non è un numero.`);
       const base = { id: r.id, descrizione: r.descrizione.trim() || 'Riga', prezzo };
-      if (r.azione.startsWith('abbina:')) pronte.push({ ...base, abbina: r.azione.slice(7) });
+      if (r.azione.startsWith('abbina:')) {
+        // Due righe sulla stessa riga già comprata (due confezioni passate una alla volta): una sola, con i prezzi sommati.
+        const stessa = pronte.find((p) => p.abbina === r.azione.slice(7));
+        if (stessa) {
+          stessa.prezzo = prezzo == null ? stessa.prezzo : Math.round(((stessa.prezzo as number | null) ?? 0) * 100 + prezzo * 100) / 100;
+          stessa.descrizione = unisciDescrizioni(String(stessa.descrizione), base.descrizione);
+        } else pronte.push({ ...base, abbina: r.azione.slice(7) });
+      }
       else if (r.azione === 'altro') pronte.push({ ...base, nuova: { id: crypto.randomUUID() } });
       else if (r.azione === 'ignora') pronte.push(base);
       else {
@@ -255,7 +293,7 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
         </label>
         <label className="campo">
           <span>Data</span>
-          <input type="date" value={data} onChange={(e) => setData(e.target.value)} />
+          <input type="date" value={data} onChange={(e) => cambiaData(e.target.value)} />
         </label>
         <label className="campo">
           <span>Ora</span>
@@ -275,6 +313,11 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
       {tot !== null && Math.abs(somma - tot) > 0.01 && (
         <div className="avviso attenzione">
           Le righe fanno {formattaEuro(somma)}, il totale è {formattaEuro(tot)}: controlla che non manchi niente.
+        </div>
+      )}
+      {giaInCasa.length > 0 && nuoveInCasa.length > 0 && (
+        <div className="avviso attenzione">
+          Hai già messo in casa con le spunte {elencoNomi(giaInCasa.map((c) => c.nome))}. Se sono su questo scontrino, scegli «Prezzo a … già comprato» sulla riga giusta, così non entrano in casa due volte.
         </div>
       )}
       {giaImportato && <div className="avviso attenzione">Sembra uno scontrino già importato il {formattaGiorno(String(giaImportato.data))}: importarlo di nuovo non cambierà niente.</div>}
