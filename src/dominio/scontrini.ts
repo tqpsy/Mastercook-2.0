@@ -280,33 +280,68 @@ export interface RigaDaAbbinare {
   nome: string;
 }
 
+/** Due parole si somigliano se iniziano uguali: «mozz» è mozzarella, «yog» è yogurt, «pane» non è «panna». */
+function parolaSimile(dalloScontrino: string, nota: string): boolean {
+  if (dalloScontrino.length === 3) return nota.startsWith(dalloScontrino);
+  return dalloScontrino.slice(0, 4) === nota.slice(0, 4);
+}
+
+/** Descrizione senza spazi e punteggiatura, per riconoscere la stessa riga ripetuta sullo scontrino. */
+const chiaveRiga = (descrizione: string) => normalizza(descrizione).replace(/[^a-z0-9]/g, '');
+
 /**
- * Abbina ogni riga letta al più a una riga confermata (e ogni riga confermata al più a una letta):
- * prima per ingrediente suggerito, poi per parole in comune. Quelle senza abbinamento sono nuove.
+ * Abbina ogni riga letta a una riga già confermata (dal carrello o a mano), così non entra in casa due volte:
+ * 1. per ingrediente suggerito, in tutte e due le direzioni (spaghetti ↔ pasta, mozzarella ↔ mozzarella di bufala);
+ * 2. per parole in comune con il nome o i sinonimi;
+ * 3. la stessa riga ripetuta (due confezioni passate una alla volta) va sulla stessa riga confermata della prima.
+ * Ogni riga confermata prende al più una riga diversa; quelle senza abbinamento sono nuove.
  */
 export function abbinaRighe(lette: RigaLetta[], candidate: RigaDaAbbinare[], indice: Indice): (string | null)[] {
   const usate = new Set<string>();
   const risultato: (string | null)[] = lette.map(() => null);
+  const chiavi = lette.map((r) => chiaveRiga(r.descrizione));
   const suggeriti = lette.map((r) => suggerisciIngrediente(r.descrizione, indice));
+  /** Una riga uguale a una già abbinata la segue, invece di prendere un'altra riga confermata. */
+  const ripetuta = (i: number) => chiavi.slice(0, i).includes(chiavi[i]);
+  const prendi = (i: number, c: RigaDaAbbinare | undefined) => {
+    if (!c) return;
+    usate.add(c.id);
+    risultato[i] = c.id;
+  };
+  const libere = () => candidate.filter((x) => !usate.has(x.id));
   for (const [i] of lette.entries()) {
     const ing = suggeriti[i];
-    if (!ing) continue;
-    const c = candidate.find((x) => !usate.has(x.id) && x.ingrediente_id && indice.antenati(ing.id).includes(x.ingrediente_id));
-    if (c) {
-      usate.add(c.id);
-      risultato[i] = c.id;
-    }
+    if (!ing || ripetuta(i)) continue;
+    const suoi = indice.antenati(ing.id);
+    const conIngrediente = libere().filter((x) => x.ingrediente_id);
+    prendi(i, conIngrediente.find((x) => suoi.includes(x.ingrediente_id!)) ?? conIngrediente.find((x) => indice.antenati(x.ingrediente_id!).includes(ing.id)));
   }
   for (const [i, r] of lette.entries()) {
-    if (risultato[i]) continue;
+    if (risultato[i] || ripetuta(i)) continue;
     const mie = parole(r.descrizione);
-    const c = candidate.find((x) => !usate.has(x.id) && parole(x.nome).some((w) => mie.some((m) => m.slice(0, 4) === w.slice(0, 4))));
-    if (c) {
-      usate.add(c.id);
-      risultato[i] = c.id;
-    }
+    if (!mie.length) continue;
+    prendi(
+      i,
+      libere().find((x) => {
+        const ing = x.ingrediente_id ? indice.ingrediente(x.ingrediente_id) : undefined;
+        const note = [x.nome, ...(ing ? [ing.nome, ...ing.sinonimi] : [])].flatMap(parole);
+        return note.some((w) => mie.some((m) => parolaSimile(m, w)));
+      }),
+    );
+  }
+  for (const [i] of lette.entries()) {
+    if (risultato[i]) continue;
+    const prima = chiavi.findIndex((k, j) => j < i && k === chiavi[i] && risultato[j]);
+    if (prima >= 0) risultato[i] = risultato[prima];
   }
   return risultato;
+}
+
+/** «PETTO POLLO» + «PETTO POLLO» = «PETTO POLLO ×2»; righe diverse si mettono una dopo l'altra. */
+export function unisciDescrizioni(prima: string, altra: string): string {
+  const m = /^(.*) ×(\d+)$/.exec(prima);
+  const [testo, volte] = m ? [m[1], Number(m[2])] : [prima, 1];
+  return (testo === altra ? `${testo} ×${volte + 1}` : `${prima} + ${altra}`).slice(0, 120);
 }
 
 /** La quantità da caricare in casa per una riga, nell'unità base dell'ingrediente, o null se non si sa. */

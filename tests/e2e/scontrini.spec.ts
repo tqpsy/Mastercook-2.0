@@ -78,6 +78,43 @@ test('scontrino: la riga del carrello prende il prezzo, il resto entra in casa u
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
+test('spesa con le spunte e poi lo scontrino: due confezioni uguali, niente doppioni in casa', async ({ browser }, info) => {
+  const luca = await nuovoUtente('Luca');
+  const { page } = await apri(browser, luca, info.project.use);
+  await creaFamiglia(page, 'Casa Spunte');
+  await page.getByRole('button', { name: 'Spesa', exact: true }).click();
+
+  // Al supermercato: petto di pollo spuntato e confermato, senza prezzo.
+  await page.getByRole('button', { name: '+ Aggiungi' }).click();
+  await page.getByLabel('Cosa serve?').fill('petto di pollo');
+  await page.getByRole('dialog').getByRole('button', { name: 'Petto di pollo', exact: true }).click();
+  await page.getByLabel('Quantità (facoltativa)').fill('500');
+  await page.getByRole('dialog').getByRole('button', { name: 'Aggiungi', exact: true }).click();
+  await page.getByRole('checkbox', { name: 'Metti Petto di pollo nel carrello' }).click();
+  await page.getByRole('button', { name: 'Conferma la spesa' }).click();
+  await page.getByRole('dialog', { name: 'Conferma la spesa' }).getByRole('button', { name: 'Conferma', exact: true }).click();
+  await salvato(page);
+
+  // A casa lo scontrino: due confezioni passate una alla volta.
+  await page.getByRole('button', { name: 'Aggiungi uno scontrino' }).click();
+  await page.getByLabel('Oppure incolla il testo dello scontrino').fill('IPER\nPETTO POLLO FETTE   3,10\nPETTO POLLO FETTE   3,20\nTOTALE   6,30');
+  await page.getByRole('button', { name: 'Leggi le righe' }).click();
+  const foglio = page.getByRole('dialog', { name: 'Controlla lo scontrino' });
+  await expect(foglio.getByLabel('Cosa fare di PETTO POLLO FETTE').first()).toHaveValue(/^abbina:/);
+  await expect(foglio.getByLabel('Cosa fare di PETTO POLLO FETTE').last()).toHaveValue(/^abbina:/);
+  await expect(foglio.getByText(/Hai già messo in casa con le spunte/)).toHaveCount(0);
+  await foglio.getByRole('button', { name: 'Importa lo scontrino' }).click();
+  await expect(foglio).toHaveCount(0);
+  await salvato(page);
+
+  const righe = await sql<{ cosa: string; prezzo: string }>(
+    `select r.ingrediente_id as cosa, r.prezzo::text as prezzo from acquisto_riga r where r.famiglia_id = ${famigliaDi}`,
+    [luca.id],
+  );
+  expect(righe).toEqual([{ cosa: 'ing:petto_pollo', prezzo: '6.30' }]);
+  expect((await sql<{ n: number }>(`select count(*)::int as n from lotto where famiglia_id = ${famigliaDi}`, [luca.id]))[0].n).toBe(1);
+});
+
 test('scontrino scritto a mano: ciò che entra in casa esce subito dalla lista, il macinato di pollo resta pollo', async ({ browser }, info) => {
   const luca = await nuovoUtente('Luca');
   const { page } = await apri(browser, luca, info.project.use);
