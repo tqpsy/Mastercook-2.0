@@ -1219,6 +1219,101 @@
     "Continua a cuocere a fuoco basso, sempre mescolando, finché la besciamella si addensa.",
     "Verso la fine aggiungi il sale e una grattata di noce moscata."
    ]
+  },
+  {
+   "id": "sys:fagioli_cannellini_patate",
+   "titolo": "Fagioli cannellini e patate",
+   "categoria": "piatto_unico",
+   "cucina": "italiana",
+   "provenienza": null,
+   "porzioni": 4,
+   "minuti_totali": 45,
+   "difficolta": 1,
+   "conservazione": "legumi_zuppe",
+   "mesi": null,
+   "allergeni_dichiarati": [],
+   "ingredienti": [
+    {
+     "ingrediente_id": "ing:fagioli_cannellini",
+     "quantita": 480,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Fagioli cannellini già lessati (2 barattoli, scolati)"
+    },
+    {
+     "ingrediente_id": "ing:patata",
+     "quantita": 600,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Patate"
+    },
+    {
+     "ingrediente_id": "ing:passata",
+     "quantita": 200,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Passata di pomodoro"
+    },
+    {
+     "ingrediente_id": "ing:cipolla",
+     "quantita": 80,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Cipolle"
+    },
+    {
+     "ingrediente_id": "ing:aglio",
+     "quantita": 3,
+     "unita": "g",
+     "qb": false,
+     "opzionale": true,
+     "testo": "Aglio"
+    },
+    {
+     "ingrediente_id": "ing:rosmarino",
+     "quantita": 2,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Rosmarino"
+    },
+    {
+     "ingrediente_id": "ing:olio_evo",
+     "quantita": 40,
+     "unita": "ml",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Olio extravergine d'oliva"
+    },
+    {
+     "ingrediente_id": "ing:sale",
+     "quantita": 8,
+     "unita": "g",
+     "qb": false,
+     "opzionale": false,
+     "testo": "Sale"
+    },
+    {
+     "ingrediente_id": "ing:pepe",
+     "quantita": 1,
+     "unita": "g",
+     "qb": false,
+     "opzionale": true,
+     "testo": "Pepe nero"
+    }
+   ],
+   "passi": [
+    "Sbuccia le patate e tagliale a cubetti di circa 2 cm; scola e sciacqua i fagioli.",
+    "In una pentola larga fai appassire la cipolla tritata e l'aglio nell'olio per 5 minuti a fuoco dolce, con il rosmarino.",
+    "Aggiungi le patate e falle insaporire per 2–3 minuti, mescolando.",
+    "Unisci la passata e due bicchieri d'acqua calda, sala, copri e cuoci per 15 minuti.",
+    "Aggiungi i fagioli e cuoci ancora 10–15 minuti, finché le patate sono morbide e il sugo si è ristretto; se serve aggiungi un po' d'acqua.",
+    "Schiaccia qualche fagiolo con la forchetta per rendere il sugo più cremoso, togli il rosmarino, aggiungi pepe e un filo d'olio a crudo."
+   ]
   }
  ]
 }
