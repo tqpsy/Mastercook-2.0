@@ -184,6 +184,8 @@ describe('ingredienti e abbinamenti', () => {
     expect(quantitaProposta(s.righe[3], { dimensione: 'massa' })).toEqual({ quantita: 500, unita: 'g' });
     expect(quantitaProposta(s.righe[4], { dimensione: 'pezzi' })).toEqual({ quantita: 6, unita: 'pz' });
     expect(quantitaProposta({ descrizione: 'PROSCIUTTO', prezzo: 3 }, { dimensione: 'massa' })).toBeNull();
+    expect(quantitaProposta({ descrizione: 'ZUCCHINE', prezzo: 1.8, pezzi: 3 }, { dimensione: 'massa', peso_pz: 200 })).toEqual({ quantita: 3, unita: 'pz' });
+    expect(quantitaProposta({ descrizione: 'PROSCIUTTO', prezzo: 3, pezzi: 2 }, { dimensione: 'massa' })).toBeNull();
   });
 });
 

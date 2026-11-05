@@ -18,7 +18,7 @@ import {
   totaleStimato,
   type VoceSpesa,
 } from '../dominio/spesa';
-import { formatta, formattaEuro, formattaGiorno, leggiNumero, type PerNegozio, quantitaDaNegozio, UNITA, type Unita, UNITA_BASE, unitaPer } from '../dominio/unita';
+import { formatta, formattaEuro, formattaGiorno, leggiNumero, type PerNegozio, pesoDeiPezzi, quantitaDaNegozio, UNITA, type Unita, UNITA_BASE, unitaPer } from '../dominio/unita';
 import { CercaIngrediente } from '../ui/CercaIngrediente';
 import { Foglio } from '../ui/Foglio';
 import { ScansionaProdotto } from '../ui/CodiceProdotto';
@@ -438,7 +438,7 @@ function NuovaVoce({ indice, chiudi }: { indice: Indice; chiudi: () => void }) {
                 <label className="campo">
                   <span>Unità</span>
                   <select value={unita} onChange={(e) => setUnita(e.target.value as Unita)}>
-                    {unitaPer(ing.dimensione).map((u) => (
+                    {unitaPer(ing.dimensione, ing.peso_pz).map((u) => (
                       <option key={u} value={u}>
                         {UNITA[u].nome}
                       </option>
@@ -523,7 +523,7 @@ function SchedaVoce({ indice, voce: v, prezzi, chiudi }: { indice: Indice; voce:
 function ConfermaSpesa({ indice, carrello, chiudi }: { indice: Indice; carrello: VoceSpesa[]; chiudi: () => void }) {
   const { esegui } = useFamiglia();
   const giorno = oggi();
-  const [righe, setRighe] = useState<(RigaDaConfermare & { numero: string; euro: string })[]>(() =>
+  const [righe, setRighe] = useState<(RigaDaConfermare & { numero: string; euro: string; scelta?: Unita })[]>(() =>
     righeDaConfermare(carrello, (id) => indice.ingrediente(id), giorno, () => crypto.randomUUID()).map((r) => ({
       ...r,
       numero: r.quantita == null ? '' : String(r.quantita).replace('.', ','),
@@ -552,13 +552,25 @@ function ConfermaSpesa({ indice, carrello, chiudi }: { indice: Indice; carrello:
     const pronte: Record<string, unknown>[] = [];
     for (const r of righe) {
       const nome = r.ingrediente_id ? indice.nome(r.ingrediente_id) : r.nome;
-      const q = r.ingrediente_id ? leggiNumero(r.numero) : null;
-      if (r.ingrediente_id && (q === null || q <= 0)) return setErrore(`Scrivi quanto ${nome} hai comprato.`);
+      const ing = r.ingrediente_id ? indice.ingrediente(r.ingrediente_id) : undefined;
+      let quantita: number | null = null;
+      let unita = r.unita;
+      if (ing && r.unita) {
+        // Scritta in kg o in pezzi: si salva in unità base (i pezzi di un ingrediente che si pesa diventano grammi).
+        const q = quantitaDa(r.numero, r.scelta ?? r.unita, ing);
+        if (typeof q === 'string') return setErrore(`Scrivi quanto ${nome} hai comprato.`);
+        quantita = q.valore;
+        unita = q.unita;
+      } else if (r.ingrediente_id) {
+        quantita = leggiNumero(r.numero);
+        if (quantita === null || quantita <= 0) return setErrore(`Scrivi quanto ${nome} hai comprato.`);
+      }
       const prezzo = r.euro.trim() ? leggiNumero(r.euro) : null;
       if (r.euro.trim() && prezzo === null) return setErrore(`Il prezzo di ${nome} non è un numero.`);
-      const riga: Record<string, unknown> = { ...r, quantita: q, prezzo };
+      const riga: Record<string, unknown> = { ...r, quantita, unita, prezzo };
       delete riga.numero;
       delete riga.euro;
+      delete riga.scelta;
       pronte.push(riga);
     }
     if (!pronte.length) return setErrore('Non c’è niente da confermare.');
@@ -597,10 +609,19 @@ function ConfermaSpesa({ indice, carrello, chiudi }: { indice: Indice; carrello:
               </div>
               <div className="riga" style={{ flexWrap: 'wrap', marginTop: 6 }}>
                 {ing && r.unita && (
-                  <label className="riga">
+                  <span className="riga">
                     <input className="dato" inputMode="decimal" aria-label={`Quantità di ${nome}`} value={r.numero} onChange={(e) => cambia(i, { numero: e.target.value })} style={{ width: 90 }} />
-                    <span>{r.unita}</span>
-                  </label>
+                    <select className="dato" aria-label={`Unità di ${nome}`} value={r.scelta ?? r.unita} onChange={(e) => cambia(i, { scelta: e.target.value as Unita })} style={{ width: 'auto' }}>
+                      {unitaPer(ing.dimensione, ing.peso_pz).map((u) => (
+                        <option key={u} value={u}>
+                          {UNITA[u].nome}
+                        </option>
+                      ))}
+                    </select>
+                    {pesoDeiPezzi(r.numero, r.scelta ?? r.unita, ing.dimensione, ing.peso_pz) && (
+                      <span className="tenue">{pesoDeiPezzi(r.numero, r.scelta ?? r.unita, ing.dimensione, ing.peso_pz)}</span>
+                    )}
+                  </span>
                 )}
                 <label className="riga">
                   <input className="dato" inputMode="decimal" aria-label={`Prezzo di ${nome}`} value={r.euro} onChange={(e) => cambia(i, { euro: e.target.value })} placeholder="€" style={{ width: 80 }} />

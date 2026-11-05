@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatta, formattaEuro, formattaGiorno, inBase, leggiNumero, type PerNegozio, quantitaDaNegozio, scala, somma } from './unita';
+import { formatta, formattaEuro, formattaGiorno, inBase, leggiNumero, type PerNegozio, pesoDeiPezzi, quantitaDaNegozio, scala, somma, unitaPer } from './unita';
 
 describe('unità e quantità (T-UNI)', () => {
   it('T-UNI-1 1,5 kg diventa 1.500 g; 0,75 l diventa 750 ml', () => {
@@ -74,5 +74,29 @@ describe('quantitaDaNegozio', () => {
     expect(quantitaDaNegozio({ valore: 1250, unita: 'g' }, ing('ing:farina'))).toBe('1,3 kg');
     expect(quantitaDaNegozio({ valore: 500, unita: 'ml' })).toBe('500 ml');
     expect(quantitaDaNegozio({ valore: 2100, unita: 'ml' })).toBe('2,25 l');
+  });
+});
+
+describe('pezzi per ciò che si pesa', () => {
+  it('offre i pezzi solo se si sa quanto pesa un pezzo', () => {
+    expect(unitaPer('massa')).toEqual(['g', 'kg']);
+    expect(unitaPer('massa', 200)).toEqual(['g', 'kg', 'pz']);
+    expect(unitaPer('pezzi', 50)).toEqual(['pz']);
+  });
+
+  it('3 zucchine da 200 g diventano 600 g', () => {
+    expect(inBase(3, 'pz', 'massa', 200)).toEqual({ ok: true, quantita: { valore: 600, unita: 'g' } });
+    expect(inBase(1.5, 'pz', 'massa', 150)).toEqual({ ok: true, quantita: { valore: 225, unita: 'g' } });
+    expect(inBase(3, 'pz', 'massa')).toEqual({ ok: false, motivo: 'unita_incompatibile' });
+    expect(inBase(0, 'pz', 'massa', 200)).toEqual({ ok: false, motivo: 'quantita_non_valida' });
+    expect(inBase(6, 'pz', 'pezzi', 60)).toEqual({ ok: true, quantita: { valore: 6, unita: 'pz' } });
+  });
+
+  it('accanto ai pezzi dice quanto pesano', () => {
+    expect(pesoDeiPezzi('3', 'pz', 'massa', 200)).toBe('≈ 600 g');
+    expect(pesoDeiPezzi('8', 'pz', 'massa', 150)).toBe('≈ 1,2 kg');
+    expect(pesoDeiPezzi('', 'pz', 'massa', 200)).toBeNull();
+    expect(pesoDeiPezzi('3', 'g', 'massa', 200)).toBeNull();
+    expect(pesoDeiPezzi('6', 'pz', 'pezzi', 60)).toBeNull();
   });
 });

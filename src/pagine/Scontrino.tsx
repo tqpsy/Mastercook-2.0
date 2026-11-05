@@ -7,7 +7,7 @@ import type { Indice, Ingrediente } from '../dominio/ricette';
 import { normalizza } from '../dominio/ricette';
 import { eFresco, giorniTra, type Luogo, oggi, stima } from '../dominio/scadenze';
 import { abbinaRighe, leggiScontrino, quantitaProposta, type RigaDaAbbinare, type RigaLetta, suggerisciIngrediente, unisciDescrizioni } from '../dominio/scontrini';
-import { formattaEuro, formattaGiorno, leggiNumero, UNITA, type Unita, UNITA_BASE, unitaPer } from '../dominio/unita';
+import { formattaEuro, formattaGiorno, leggiNumero, pesoDeiPezzi, UNITA, type Unita, UNITA_BASE, unitaPer } from '../dominio/unita';
 import { CercaIngrediente } from '../ui/CercaIngrediente';
 import { Foglio } from '../ui/Foglio';
 import { leggiTestoDaFoto } from '../ui/ocr';
@@ -124,7 +124,8 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
         azione: abbinate[i] ? `abbina:${abbinate[i]}` : ing ? 'casa' : 'altro',
         ing,
         numero: q ? String(q.quantita).replace('.', ',') : '',
-        unita: q?.unita ?? (ing ? UNITA_BASE[ing.dimensione] : 'g'),
+        // Senza quantità sullo scontrino, ciò che si conta (zucchine, mele) si propone a pezzi.
+        unita: q?.unita ?? (ing ? (ing.dimensione !== 'pezzi' && ing.peso_pz ? 'pz' : UNITA_BASE[ing.dimensione]) : 'g'),
         luogo: ing?.luogo ?? 'dispensa',
         cerca: false,
         auto: true,
@@ -356,12 +357,13 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
                   </button>
                   <input className="dato" inputMode="decimal" aria-label={`Quantità di ${r.descrizione}`} value={r.numero} onChange={(e) => cambia(i, { numero: e.target.value })} style={{ width: 80 }} />
                   <select className="dato" aria-label={`Unità di ${r.descrizione}`} value={r.unita} onChange={(e) => cambia(i, { unita: e.target.value as Unita })} style={{ width: 'auto' }}>
-                    {unitaPer(r.ing.dimensione).map((u) => (
+                    {unitaPer(r.ing.dimensione, r.ing.peso_pz).map((u) => (
                       <option key={u} value={u}>
                         {UNITA[u].nome}
                       </option>
                     ))}
                   </select>
+                  {pesoDeiPezzi(r.numero, r.unita, r.ing.dimensione, r.ing.peso_pz) && <span className="tenue">{pesoDeiPezzi(r.numero, r.unita, r.ing.dimensione, r.ing.peso_pz)}</span>}
                   <select className="dato" aria-label={`Dove va ${r.descrizione}`} value={r.luogo} onChange={(e) => cambia(i, { luogo: e.target.value as Luogo })} style={{ width: 'auto' }}>
                     {LUOGHI.map((l) => (
                       <option key={l} value={l}>

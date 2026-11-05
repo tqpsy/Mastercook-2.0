@@ -345,11 +345,13 @@ export function unisciDescrizioni(prima: string, altra: string): string {
 }
 
 /** La quantità da caricare in casa per una riga, nell'unità base dell'ingrediente, o null se non si sa. */
-export function quantitaProposta(riga: RigaLetta, ingrediente: Pick<Ingrediente, 'dimensione'>): { quantita: number; unita: UnitaBase } | null {
+export function quantitaProposta(riga: RigaLetta, ingrediente: Pick<Ingrediente, 'dimensione' | 'peso_pz'>): { quantita: number; unita: UnitaBase } | null {
   if (ingrediente.dimensione === 'massa' && riga.grammi) return { quantita: riga.grammi, unita: 'g' };
   const base: UnitaBase = ingrediente.dimensione === 'massa' ? 'g' : ingrediente.dimensione === 'volume' ? 'ml' : 'pz';
   if (riga.formato && riga.formato.unita === base) return { quantita: riga.formato.quantita * (riga.pezzi ?? 1), unita: base };
   if (base === 'pz') return { quantita: riga.pezzi ?? 1, unita: 'pz' };
+  // «ZUCCHINE 3 x 0,60»: si conta a pezzi, se si sa quanto pesa un pezzo (diventano grammi all'importazione).
+  if (ingrediente.peso_pz && riga.pezzi) return { quantita: riga.pezzi, unita: 'pz' };
   return null;
 }
 

@@ -97,6 +97,28 @@ test('spesa: voci a mano, spesa senza lista e annullo con la cronologia', async 
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
+test('spesa: ciò che si conta si conferma a pezzi, senza pesarlo', async ({ browser }, info) => {
+  const luca = await nuovoUtente('Luca');
+  const { page } = await apri(browser, luca, info.project.use);
+  await creaFamiglia(page, 'Casa Pezzi');
+  await page.getByRole('button', { name: 'Spesa', exact: true }).click();
+  await page.getByRole('button', { name: '+ Aggiungi' }).click();
+  await page.getByLabel('Cosa serve?').fill('zucchine');
+  await page.getByRole('dialog').getByRole('button', { name: 'Zucchine', exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Aggiungi', exact: true }).click();
+  await page.getByRole('checkbox', { name: 'Metti Zucchine nel carrello' }).click();
+  await page.getByRole('button', { name: 'Conferma la spesa' }).click();
+  const conferma = page.getByRole('dialog', { name: 'Conferma la spesa' });
+  await conferma.getByLabel('Unità di Zucchine').selectOption('pz');
+  await conferma.getByLabel('Quantità di Zucchine').fill('3');
+  await expect(conferma).toContainText('≈ 600 g');
+  await conferma.getByRole('button', { name: 'Conferma', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Acquisti recenti' })).toContainText('Zucchine');
+  await expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
+  expect(await sql(`select quantita::text as q, unita from lotto where famiglia_id = ${famigliaDi}`, [luca.id])).toEqual([{ q: '600', unita: 'g' }]);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
+
 test('spesa per giorni scelti: con il menu su più giorni si compra solo per i prossimi tre', async ({ browser }, info) => {
   const luca = await nuovoUtente('Luca');
   const { page } = await apri(browser, luca, info.project.use);

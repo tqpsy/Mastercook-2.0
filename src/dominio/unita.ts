@@ -19,9 +19,13 @@ export const UNITA: Record<Unita, { base: UnitaBase; fattore: number; dimensione
 
 export const UNITA_BASE: Record<Dimensione, UnitaBase> = { massa: 'g', volume: 'ml', pezzi: 'pz' };
 
-/** Le unità che si possono scegliere per un ingrediente di quella dimensione. */
-export function unitaPer(dimensione: Dimensione): Unita[] {
-  return (Object.keys(UNITA) as Unita[]).filter((u) => UNITA[u].dimensione === dimensione);
+/**
+ * Le unità che si possono scegliere per un ingrediente di quella dimensione. Se si sa quanto pesa un pezzo
+ * (una zucchina, una mela) si può scrivere anche in pezzi: diventano grammi con `inBase`.
+ */
+export function unitaPer(dimensione: Dimensione, pesoPz?: number | null): Unita[] {
+  const unita = (Object.keys(UNITA) as Unita[]).filter((u) => UNITA[u].dimensione === dimensione);
+  return dimensione !== 'pezzi' && pesoPz ? [...unita, 'pz'] : unita;
 }
 
 export function eUnita(x: unknown): x is Unita {
@@ -37,13 +41,23 @@ export type EsitoQuantita = { ok: true; quantita: Quantita } | { ok: false; moti
 
 /**
  * Porta una quantità all'unità base, controllando che l'unità sia della dimensione dell'ingrediente.
+ * I pezzi di un ingrediente che si pesa diventano grammi col suo peso di un pezzo (3 zucchine da 200 g → 600 g).
  * Arrotonda a tre decimali per evitare 1.4999999.
  */
-export function inBase(valore: number, unita: Unita, dimensione: Dimensione): EsitoQuantita {
-  const u = UNITA[unita];
-  if (!u || u.dimensione !== dimensione) return { ok: false, motivo: 'unita_incompatibile' };
+export function inBase(valore: number, unita: Unita, dimensione: Dimensione, pesoPz?: number | null): EsitoQuantita {
+  const daPezzi = unita === 'pz' && dimensione !== 'pezzi' && !!pesoPz;
+  const u = daPezzi ? { base: UNITA_BASE[dimensione], fattore: pesoPz! } : UNITA[unita];
+  if (!u || (!daPezzi && UNITA[unita].dimensione !== dimensione)) return { ok: false, motivo: 'unita_incompatibile' };
   if (!Number.isFinite(valore) || valore <= 0) return { ok: false, motivo: 'quantita_non_valida' };
   return { ok: true, quantita: { valore: Math.round(valore * u.fattore * 1000) / 1000, unita: u.base } };
+}
+
+/** «≈ 600 g» accanto a «3 pz» di un ingrediente che si pesa; null se non serve dirlo. */
+export function pesoDeiPezzi(testo: string, unita: Unita, dimensione: Dimensione, pesoPz?: number | null): string | null {
+  if (unita !== 'pz' || dimensione === 'pezzi' || !pesoPz) return null;
+  const n = leggiNumero(testo);
+  const e = n === null ? null : inBase(n, 'pz', dimensione, pesoPz);
+  return e?.ok ? `≈ ${formatta(e.quantita)}` : null;
 }
 
 /** Somma per unità: g con g, ml con ml. Unità diverse restano voci separate. */
