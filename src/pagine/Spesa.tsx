@@ -25,6 +25,7 @@ import { ScansionaProdotto } from '../ui/CodiceProdotto';
 import { FoglioSchedaProdotto } from '../ui/SchedaProdotto';
 import { quantitaDa } from './Casa';
 import { Scontrino } from './Scontrino';
+import { Speso } from './Speso';
 
 /** Quanti giorni di menu guarda la lista. */
 export const GIORNI_SPESA = 7;
@@ -205,6 +206,7 @@ export function Spesa() {
         <span aria-hidden>🧾</span> Aggiungi uno scontrino
       </button>
 
+      <Speso vista={vista} indice={indice} acquisti={acquisti} righe={righe} />
       <Acquisti indice={indice} acquisti={acquisti} righe={righe} apri={setAcquistoAperto} />
 
       {aggiungi && <NuovaVoce indice={indice} chiudi={() => setAggiungi(false)} />}

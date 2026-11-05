@@ -66,6 +66,22 @@ test('scontrino: la riga del carrello prende il prezzo, il resto entra in casa u
     { cosa: 'ing:latte', prezzo: '1.29', fonte: 'carrello', origine: 'acquisto', q: '1000' },
   ]);
 
+  // Quanto ho speso: vale il totale dello scontrino (lo shopper lasciato fuori va a parte), una volta sola.
+  const speso = page.getByRole('region', { name: 'Quanto ho speso' });
+  await expect(speso).toContainText('3,09 €');
+  await speso.getByRole('button').click();
+  const dettaglio = page.getByRole('dialog', { name: 'Quanto ho speso' });
+  await expect(dettaglio.getByRole('list', { name: 'Per tipo di cibo' })).toContainText('Frutta e verdura');
+  await expect(dettaglio.getByRole('list', { name: 'Per tipo di cibo' })).toContainText('1,70 €');
+  await expect(dettaglio.getByRole('list', { name: 'Per tipo di cibo' })).toContainText('0,10 €');
+  await expect(dettaglio).toContainText('1 spesa');
+  if (process.env.MC_SCHERMATE) await page.screenshot({ path: `${process.env.MC_SCHERMATE}/${info.project.name}-dettaglio.png` });
+  await dettaglio.getByRole('button', { name: 'Chiudi' }).click();
+  if (process.env.MC_SCHERMATE) {
+    await speso.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: `${process.env.MC_SCHERMATE}/${info.project.name}-riquadro.png` });
+  }
+
   // Lo stesso scontrino una seconda volta: l'app avvisa e il server non carica di nuovo.
   await page.getByRole('button', { name: 'Aggiungi uno scontrino' }).click();
   await page.getByLabel('Oppure incolla il testo dello scontrino').fill(scontrino(oggi));

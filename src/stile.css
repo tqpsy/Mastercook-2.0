@@ -3638,3 +3638,109 @@ details > summary:has(.primo-presto) {
 .piano-nutrizionista label.riga input {
   margin-top: 4px;
 }
+
+/* Quanto ho speso (Spesa): totale del mese, barre degli ultimi mesi, dettaglio per tipo di cibo. */
+.speso-riquadro {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  display: flex;
+  gap: 16px;
+  align-items: flex-end;
+  width: 100%;
+}
+.speso-riquadro:focus-visible {
+  outline: 2px solid var(--primario);
+  outline-offset: 4px;
+  border-radius: var(--raggio);
+}
+.speso-riquadro > .cresce {
+  flex: 1;
+  min-width: 0;
+}
+.speso-riquadro .speso-barre {
+  width: 132px;
+  height: 64px;
+  flex: none;
+}
+.speso-titolo {
+  display: block;
+  font-family: var(--carattere-titoli);
+  font-size: 1.05rem;
+}
+.speso-totale {
+  display: inline-block;
+  font-family: var(--carattere-titoli);
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: var(--primario);
+  line-height: 1.2;
+}
+.speso-barre {
+  display: flex;
+  gap: 6px;
+  height: 140px;
+  align-items: stretch;
+}
+.speso-voce {
+  all: unset;
+  box-sizing: border-box;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+button.speso-voce {
+  cursor: pointer;
+}
+button.speso-voce:focus-visible {
+  outline: 2px solid var(--primario);
+  border-radius: 6px;
+}
+.speso-colonna {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+}
+.speso-barra {
+  display: block;
+  width: 100%;
+  border-radius: 4px 4px 0 0;
+  background: var(--salvia);
+}
+.speso-voce.attiva .speso-barra {
+  background: var(--primario);
+}
+.speso-mese {
+  font-size: 0.75rem;
+  color: var(--testo-tenue);
+}
+.speso-voce.attiva .speso-mese {
+  color: var(--testo);
+  font-weight: 600;
+}
+.speso-reparti > li {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.speso-reparti .cresce {
+  flex: 1;
+  min-width: 0;
+}
+.speso-linea {
+  display: block;
+  height: 6px;
+  margin-top: 6px;
+  border-radius: 3px;
+  background: var(--superficie-2);
+  overflow: hidden;
+}
+.speso-linea > span {
+  display: block;
+  height: 100%;
+  background: var(--primario);
+}
