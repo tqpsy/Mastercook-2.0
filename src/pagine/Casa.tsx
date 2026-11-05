@@ -11,7 +11,7 @@ import { useFrigo } from './MioFrigo';
 import { ricettePerUrgenti } from '../dominio/consumi';
 import type { Indice, Ingrediente } from '../dominio/ricette';
 import { daUsarePresto, descriviData, descriviDurata, eFresco, giorniTra, type Luogo, oggi, piuGiorni, spreco, statoData, stima, type TipoData } from '../dominio/scadenze';
-import { formatta, inBase, leggiNumero, UNITA, type Unita, UNITA_BASE, type UnitaBase, unitaPer } from '../dominio/unita';
+import { formatta, inBase, leggiNumero, pesoDeiPezzi, UNITA, type Unita, UNITA_BASE, type UnitaBase, unitaPer } from '../dominio/unita';
 import { CercaIngrediente } from '../ui/CercaIngrediente';
 import { type ProdottoScansionato, ScansionaProdotto } from '../ui/CodiceProdotto';
 import { FoglioSchedaProdotto } from '../ui/SchedaProdotto';
@@ -239,7 +239,7 @@ function CompletaRiga({ riga, chiudi }: { riga: RigaDaCompletare; chiudi: () => 
   const { esegui } = useFamiglia();
   const { ing } = riga;
   const [numero, setNumero] = useState('');
-  const [unita, setUnita] = useState<Unita>(UNITA_BASE[ing.dimensione]);
+  const [unita, setUnita] = useState<Unita>(ing.dimensione !== 'pezzi' && ing.peso_pz ? 'pz' : UNITA_BASE[ing.dimensione]);
   const [luogo, setLuogo] = useState<Luogo>(ing.luogo);
   const [errore, setErrore] = useState<string | null>(null);
   const consiglio = useConsiglioPosto(ing, luogo);
@@ -279,7 +279,7 @@ function CompletaRiga({ riga, chiudi }: { riga: RigaDaCompletare; chiudi: () => 
           <label className="campo">
             <span>Unità</span>
             <select value={unita} onChange={(e) => setUnita(e.target.value as Unita)}>
-              {unitaPer(ing.dimensione).map((u) => (
+              {unitaPer(ing.dimensione, ing.peso_pz).map((u) => (
                 <option key={u} value={u}>
                   {UNITA[u].nome}
                 </option>
@@ -287,6 +287,7 @@ function CompletaRiga({ riga, chiudi }: { riga: RigaDaCompletare; chiudi: () => 
             </select>
           </label>
         </div>
+        {pesoDeiPezzi(numero, unita, ing.dimensione, ing.peso_pz) && <p className="tenue">{pesoDeiPezzi(numero, unita, ing.dimensione, ing.peso_pz)}</p>}
         <div className="campo">
           <span>Dove</span>
           <div className="scelte">
@@ -398,7 +399,7 @@ function ElencoLotti({ indice, lotti, giorno, apri, conLuogo }: { indice: Indice
 export function quantitaDa(testo: string, unita: Unita, ing: Ingrediente | undefined): { valore: number; unita: UnitaBase } | string {
   const n = leggiNumero(testo);
   if (n === null) return 'Scrivi una quantità, per esempio 500 o 1,5.';
-  const e = inBase(n, unita, ing?.dimensione ?? 'massa');
+  const e = inBase(n, unita, ing?.dimensione ?? 'massa', ing?.peso_pz);
   if (!e.ok) return e.motivo === 'unita_incompatibile' ? 'Unità non adatta a questo ingrediente.' : 'La quantità deve essere più di zero.';
   return e.quantita;
 }
@@ -532,7 +533,7 @@ function NuovoLotto({ indice, luogo: luogoIniziale, chiudi }: { indice: Indice; 
             <label className="campo">
               <span>Unità</span>
               <select value={unita} onChange={(e) => setUnita(e.target.value as Unita)}>
-                {unitaPer(ing.dimensione).map((u) => (
+                {unitaPer(ing.dimensione, ing.peso_pz).map((u) => (
                   <option key={u} value={u}>
                     {UNITA[u].nome}
                   </option>
@@ -789,7 +790,7 @@ function SchedaLotto({ indice, lotto: l, giorno, chiudi }: { indice: Indice; lot
               <label className="campo">
                 <span>Unità</span>
                 <select value={unita} onChange={(e) => setUnita(e.target.value as Unita)}>
-                  {unitaPer(ing?.dimensione ?? 'massa').map((u) => (
+                  {unitaPer(ing?.dimensione ?? 'massa', ing?.peso_pz).map((u) => (
                     <option key={u} value={u}>
                       {UNITA[u].nome}
                     </option>
