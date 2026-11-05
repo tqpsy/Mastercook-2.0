@@ -8,8 +8,8 @@ Stack: TypeScript, React 19 + Vite (nessun router), CSS a mano, Dexie (copia loc
 ## Cartelle e file principali
 - `src/App.tsx`: guscio con le schede Oggi, Menu, Spesa, Casa, Ricette e Impostazioni. `src/config.ts`: solo chiavi pubbliche. `src/stile.css`: tutto lo stile, con le variabili del design «La cucina di Luca».
 - `src/dati/`: motore dei dati. `sincronizzatore.ts` (coda comandi ed esiti), `archivio.ts` (Dexie), `anteprima.ts` (vista locale con i comandi in attesa), `contesto.tsx` (`useFamiglia`, `useVista`), `indice.ts` (catalogo), `esportazione.ts`, `migrazione.ts` (import dal vecchio), `tipi.ts`.
-- `src/dominio/`: logica pura, test accanto a ogni file. Per esempio `menu.ts`, `proposte.ts`, `antonino.ts`, `piano.ts` (file del piano del nutrizionista), `spesa.ts`, `scontrini.ts`, `vincoli.ts`/`interpreta.ts`/`crudi.ts` (sicurezza alimentare), `iconeCibo.ts`.
-- `src/pagine/`: un file per schermata (`Oggi`, `Menu`, `Spesa`, `Casa`, `Ricette`, `Antonino`, `Impostazioni`…).
+- `src/dominio/`: logica pura, test accanto a ogni file. Per esempio `menu.ts`, `proposte.ts`, `antonino.ts`, `piano.ts` (file del piano del nutrizionista), `spesa.ts`, `speso.ts` (quanto si è speso), `scontrini.ts`, `vincoli.ts`/`interpreta.ts`/`crudi.ts` (sicurezza alimentare), `iconeCibo.ts`.
+- `src/pagine/`: un file per schermata (`Oggi`, `Menu`, `Spesa` (con `Speso`), `Casa`, `Ricette`, `Antonino`, `Impostazioni`…).
 - `src/ui/`: componenti riusabili (`Icona`, `IconaCibo` + `disegniCibo.ts`, `Foglio`, `Scanner`, `ocr.ts`…).
 - `src/piattaforma/`: `supabase.ts`, `drive.ts` (solo `drive.file`), `fotoFrigo.ts`, `locale/` (PGlite in un worker).
 - `src/catalogo/`: `catalogo.json` (ricette e ingredienti di sistema), `ricette-nuove.json`.
