@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto';
-import { liveQuery } from 'dexie';
+import Dexie, { liveQuery } from 'dexie';
 import { afterEach, describe, expect, it } from 'vitest';
-import { Archivio, type VoceCoda } from './archivio';
+import { Archivio, VERSIONE_ARCHIVIO, type VoceCoda } from './archivio';
 import { type Letta, lettoreVista } from './lettura';
 import type { Riga, Tabella } from './tipi';
 
@@ -130,5 +130,46 @@ describe('lettura della vista', () => {
       ['Sara', false],
     ]);
     s.unsubscribe();
+  });
+  it('dopo uno scarico le righe nuove entrano al loro posto (ordine per id) e quelle cambiate si aggiornano', async () => {
+    const a = nuovo();
+    await scarica(a, [
+      { tabella: 'membro', riga: membro('m1', 1, 'Luca') },
+      { tabella: 'membro', riga: membro('m3', 2, 'Zoe') },
+    ]);
+    const leggi = lettoreVista(a, F, TABELLE);
+    await leggi();
+    await scarica(a, [
+      { tabella: 'membro', riga: membro('m2', 3, 'Sara') },
+      { tabella: 'membro', riga: membro('m3', 4, 'Zoe B.') },
+      { tabella: 'membro', riga: membro('m0', 5, 'Ada') },
+    ]);
+    const dopo = await leggi();
+    expect(dopo.righe.membro?.map((m) => [m.id, m.nome])).toEqual([
+      ['m0', 'Ada'],
+      ['m1', 'Luca'],
+      ['m2', 'Sara'],
+      ['m3', 'Zoe B.'],
+    ]);
+    // Uguale a una lettura da zero.
+    expect((await lettoreVista(a, F, TABELLE)()).righe.membro).toEqual(dopo.righe.membro);
+  });
+});
+
+describe('archivio versione 3', () => {
+  it("aggiornando dalla versione 2 le righe restano, quelle dei comandi vanno via", async () => {
+    const nome = `prova-v2-${n++}`;
+    const vecchio = new Dexie(nome);
+    vecchio.version(2).stores({ righe: '[tabella+id], tabella, famiglia_id, [famiglia_id+tabella]', coda: '++ordine, &id, famiglia_id, stato', cursori: 'famiglia_id', foto: 'percorso, famiglia_id' });
+    await vecchio.table('righe').bulkPut([
+      { tabella: 'membro', id: 'm1', famiglia_id: F, seq: 1, riga: membro('m1', 1, 'Luca') },
+      { tabella: 'comando', id: 'c1', famiglia_id: F, seq: 2, riga: { id: 'c1', famiglia_id: F, seq: 2 } },
+    ]);
+    vecchio.close();
+    const a = new Archivio(nome);
+    aperti.push(a);
+    expect(VERSIONE_ARCHIVIO).toBe(3);
+    expect((await a.righe.toArray()).map((r) => r.id)).toEqual(['m1']);
+    expect(await a.righe.where('[famiglia_id+seq]').between([F, 0], [F, 10]).count()).toBe(1);
   });
 });

@@ -34,7 +34,9 @@ describe('scarica_modifiche', () => {
     expect(seq).toEqual([...seq].sort((a, b) => a - b));
     expect(new Set(seq).size).toBe(seq.length);
     expect(righe.filter((r) => r.tabella === 'membro')).toHaveLength(8);
-    expect(righe.filter((r) => r.tabella === 'comando').length).toBeGreaterThanOrEqual(8);
+    // I comandi restano sul server (20261115001800_scarico_veloce): al telefono non servono.
+    expect(righe.filter((r) => r.tabella === 'comando')).toEqual([]);
+    expect((await banco.sql<{ n: number }>('select count(*)::int as n from comando where famiglia_id = $1', [famiglia]))[0].n).toBeGreaterThanOrEqual(8);
   });
 
   it('dopo un cursore arrivano solo le righe nuove, comprese le cancellazioni logiche', async () => {
