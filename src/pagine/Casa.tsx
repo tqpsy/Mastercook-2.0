@@ -64,6 +64,16 @@ export function useLotti(): Lotto[] {
   return useMemo(() => (righe ?? []).filter((r) => !r.eliminato_il).map(aLotto).filter((l) => !l.chiuso_il && l.quantita > 0), [righe]);
 }
 
+/** Lo spreco degli ultimi 30 giorni: guarda tutti i movimenti della storia, quindi si rifà solo quando cambiano. */
+function useSprecati(giorno: string) {
+  const { lotto, movimento } = useVista().righe;
+  return useMemo(() => {
+    const perId = new Map((lotto ?? []).map((l) => [l.id, { ingrediente_id: String(l.ingrediente_id), unita: String(l.unita) }]));
+    const movimenti = (movimento ?? []).map((m) => ({ lotto_id: String(m.lotto_id), variazione: Number(m.variazione), causale: String(m.causale), creato_il: String(m.creato_il ?? new Date().toISOString()) }));
+    return spreco(movimenti, perId, piuGiorni(giorno, -30));
+  }, [lotto, movimento, giorno]);
+}
+
 export function EtichettaData({ lotto, giorno }: { lotto: Pick<Lotto, 'data_limite' | 'tipo_data'>; giorno: string }) {
   const s = statoData(lotto, giorno);
   const classe = s === 'scaduto' ? 'scaduto' : s === 'ok' ? '' : 'avviso-data';
@@ -78,9 +88,7 @@ export function Casa() {
   const [aperto, setAperto] = useState<string | 'nuovo' | 'foto' | null>(null);
   const giorno = oggi();
   const presto = daUsarePresto(lotti, giorno);
-  const perId = new Map((vista.righe.lotto ?? []).map((l) => [l.id, { ingrediente_id: String(l.ingrediente_id), unita: String(l.unita) }]));
-  const movimenti = (vista.righe.movimento ?? []).map((m) => ({ lotto_id: String(m.lotto_id), variazione: Number(m.variazione), causale: String(m.causale), creato_il: String(m.creato_il ?? new Date().toISOString()) }));
-  const sprecati = spreco(movimenti, perId, piuGiorni(giorno, -30));
+  const sprecati = useSprecati(giorno);
 
   if (!vista.pronta || !indice) return <p className="tenue">Sto caricando la casa…</p>;
   const lotto = aperto && aperto !== 'nuovo' && aperto !== 'foto' ? lotti.find((l) => l.id === aperto) : undefined;
