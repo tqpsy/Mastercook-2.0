@@ -63,12 +63,25 @@ function TimerInCorso({ fine, ferma }: { fine: number; ferma: () => void }) {
  * (si usa con le mani sporche), ciò che serve per quel passaggio, un timer se il passaggio dice i minuti
  * e lo schermo che resta acceso. Indietro del telefono la chiude.
  */
-export function ModalitaCucina({ titolo, passi, ingredienti, chiudi }: { titolo: string; passi: string[]; ingredienti: DaServire[]; chiudi: () => void }) {
+export function ModalitaCucina({
+  titolo,
+  passi,
+  ingredienti,
+  chiudi,
+  fine,
+}: {
+  titolo: string;
+  passi: string[];
+  ingredienti: DaServire[];
+  chiudi: () => void;
+  /** «Fine» all'ultimo passaggio (se manca, chiude e basta). */
+  fine?: () => void;
+}) {
   const [n, setN] = useState(0);
   const [timer, setTimer] = useState<number | null>(null);
   const schermo = useSchermoAcceso();
   const ultimo = n === passi.length - 1;
-  const avanti = useCallback(() => (ultimo ? chiudi() : setN((x) => x + 1)), [ultimo, chiudi]);
+  const avanti = useCallback(() => (ultimo ? (fine ?? chiudi)() : setN((x) => x + 1)), [ultimo, chiudi, fine]);
   const indietro = useCallback(() => setN((x) => Math.max(0, x - 1)), []);
 
   useEffect(() => {

@@ -12,6 +12,7 @@ import { formatta, scala } from '../dominio/unita';
 import { Foglio } from '../ui/Foglio';
 import { Foto } from '../ui/Foto';
 import { ModalitaCucina } from '../ui/ModalitaCucina';
+import { FineCucina } from './Cucinato';
 import { EditorRicetta, type Bozza, spostaPiatti } from './EditorRicetta';
 import { useLotti } from './Casa';
 import { type Senza, valutaFamigliaSenza } from '../dominio/senza';
@@ -455,6 +456,12 @@ export function SchedaRicetta({
   const segni = useSegni();
   const segnata = (s: Segno) => (s === 'preferita' ? segni.preferite : segni.perOspiti).has(r.id);
   const chiudiCucina = useCallback(() => setCucina(false), [setCucina]);
+  /** Dopo «Fine» in «Cucina passo passo»: si tolgono dalla casa gli ingredienti usati. */
+  const [finito, setFinito] = useState(false);
+  const fineCucina = useCallback(() => {
+    setCucina(false);
+    setFinito(true);
+  }, []);
 
   /** ✅ «va bene» o ❌ «non va bene» chiudono il dubbio per quella persona; «togli» lo riapre. */
   async function segna(membro_id: string, nome: string, scelta: 'va_bene' | 'non_va_bene' | 'togli', escluso: boolean) {
@@ -642,8 +649,10 @@ export function SchedaRicetta({
             };
           })}
           chiudi={chiudiCucina}
+          fine={fineCucina}
         />
       )}
+      {finito && <FineCucina indice={indice} ricetta={r} porzioni={porzioni} chiudi={() => setFinito(false)} />}
       {collegate.basi.map((b) => (
         <details key={b.ricetta_id} style={{ marginBottom: 8 }}>
           <summary>🥣 Come si fa: {titoloBase(indice, b.ricetta_id)}</summary>
