@@ -17,6 +17,7 @@ import { type ProdottoScansionato, ScansionaProdotto } from '../ui/CodiceProdott
 import { FoglioSchedaProdotto } from '../ui/SchedaProdotto';
 import { Foglio } from '../ui/Foglio';
 import { FotoFrigo } from './FotoFrigo';
+import { Verifica, VoceVerifica } from './Verifica';
 import { useDatiMenu } from './Menu';
 
 export interface Lotto {
@@ -85,13 +86,13 @@ export function Casa() {
   const indice = useIndice(vista);
   const lotti = useLotti();
   const [luogo, setLuogo] = useState<Luogo>('frigo');
-  const [aperto, setAperto] = useState<string | 'nuovo' | 'foto' | null>(null);
+  const [aperto, setAperto] = useState<string | 'nuovo' | 'foto' | 'verifica' | null>(null);
   const giorno = oggi();
   const presto = daUsarePresto(lotti, giorno);
   const sprecati = useSprecati(giorno);
 
   if (!vista.pronta || !indice) return <p className="tenue">Sto caricando la casa…</p>;
-  const lotto = aperto && aperto !== 'nuovo' && aperto !== 'foto' ? lotti.find((l) => l.id === aperto) : undefined;
+  const lotto = aperto && aperto !== 'nuovo' && aperto !== 'foto' && aperto !== 'verifica' ? lotti.find((l) => l.id === aperto) : undefined;
 
   return (
     <>
@@ -106,6 +107,8 @@ export function Casa() {
           </button>
         </div>
       </div>
+
+      {lotti.some((l) => l.luogo !== 'dispensa') && <VoceVerifica apri={() => setAperto('verifica')} />}
 
       <DaCompletare indice={indice} />
 
@@ -179,6 +182,7 @@ export function Casa() {
       <p className="tenue">Le date stimate sono indicative: controlla sempre l’alimento. L’app non dice mai che qualcosa è sicuro oltre la data.</p>
 
       {aperto === 'foto' && <FotoFrigo indice={indice} luogo={luogo} chiudi={() => setAperto(null)} />}
+      {aperto === 'verifica' && <Verifica indice={indice} chiudi={() => setAperto(null)} />}
       {aperto === 'nuovo' && <NuovoLotto indice={indice} luogo={luogo} chiudi={() => setAperto(null)} />}
       {lotto && <SchedaLotto indice={indice} lotto={lotto} giorno={giorno} chiudi={() => setAperto(null)} />}
     </>
@@ -851,6 +855,7 @@ function SchedaLotto({ indice, lotto: l, giorno, chiudi }: { indice: Indice; lot
                 <span>
                   {NOME_CAUSALE[String(m.causale)] ?? String(m.causale)}
                   {m.in_attesa && <span className="etichetta attesa" style={{ marginLeft: 8 }}>in invio</span>}
+                  {typeof m.nota === 'string' && m.nota && <span className="tenue piccolo nota-movimento">{m.nota}</span>}
                 </span>
                 <span className="tenue">
                   {Number(m.variazione) > 0 ? '+' : '−'}

@@ -299,7 +299,8 @@ export function confronta({
 
   for (const v of visti) {
     const ing = ingredienteDi(indice, v, memoria, correzioni);
-    const certezza = certezzaDi(v, memoria);
+    // Corretto adesso dalla persona: sa lei cos'è.
+    const certezza: Certezza = correzioni[v.nome] ? 'sicuro' : certezzaDi(v, memoria);
     const chiave = ing?.id ?? `?${v.nome}`;
     const unita = ing ? UNITA_BASE[ing.dimensione] : null;
     let q: number | null = null;
