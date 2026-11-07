@@ -18,12 +18,12 @@ const numero = (x: unknown) => (x === null || x === undefined ? null : Number(x)
 
 /** Le conferme dei pasti e le righe di consumo, come le vede l'app. */
 export function useConferme(vista: Vista) {
-  const r = vista.righe;
+  const { conferma_pasto, consumo_riga } = vista.righe;
   return useMemo(() => {
-    const conferme = (r.conferma_pasto ?? [])
+    const conferme = (conferma_pasto ?? [])
       .filter((c) => !c.eliminato_il)
       .map((c) => ({ ...(c as unknown as Conferma), porzioni: numero(c.porzioni), revisione: Number(c.revisione) }));
-    const righe = (r.consumo_riga ?? [])
+    const righe = (consumo_riga ?? [])
       .filter((c) => !c.eliminato_il)
       .map((c) => ({
         conferma_id: String(c.conferma_id),
@@ -33,7 +33,7 @@ export function useConferme(vista: Vista) {
         usata: Number(c.quantita_usata),
       }));
     return { conferme, righe, attive: new Map(conferme.filter((c) => c.attiva).map((c) => [c.portata_id, c])) };
-  }, [r]);
+  }, [conferma_pasto, consumo_riga]);
 }
 
 /**

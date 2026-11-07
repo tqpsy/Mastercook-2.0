@@ -277,8 +277,10 @@ export interface DatiMenu {
 const numero = (x: unknown) => (x === null || x === undefined ? null : Number(x));
 
 export function useDatiMenu(vista: Vista): DatiMenu {
-  const r = vista.righe;
+  // Solo le tabelle del menu: un cambio in casa o nella spesa non rifà questi calcoli.
+  const { membro, vincolo_alimentare, ricetta_verificata, gusto, categoria_pasto, portata, eccezione_membro, ospiti_pasto } = vista.righe;
   return useMemo(() => {
+    const r = { membro, vincolo_alimentare, ricetta_verificata, gusto, categoria_pasto, portata, eccezione_membro, ospiti_pasto };
     const attive = (t: keyof typeof r) => (r[t] ?? []).filter((x) => !x.eliminato_il);
     return {
       persone: attive('membro')
@@ -319,7 +321,7 @@ export function useDatiMenu(vista: Vista): DatiMenu {
         oggetti: (o.oggetti as string[] | null) ?? [],
       })),
     };
-  }, [r]);
+  }, [membro, vincolo_alimentare, ricetta_verificata, gusto, categoria_pasto, portata, eccezione_membro, ospiti_pasto]);
 }
 
 /** I dati del menu visti da un pasto: gli ospiti di quel pasto contano come una persona in più, con le loro esigenze. */
