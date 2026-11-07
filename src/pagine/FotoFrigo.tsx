@@ -14,9 +14,9 @@ import { descriviPerFoto, posto as postoFrigo, postiDi } from '../dominio/frigo'
 import { useFrigo } from './MioFrigo';
 import { riduciFoto } from '../ui/Foto';
 
-const CHIAVE_AVVISO = 'mc-foto-frigo-avviso';
+export const CHIAVE_AVVISO = 'mc-foto-frigo-avviso';
 
-const SPIEGA_ERRORE: Record<ErroreFoto, string> = {
+export const SPIEGA_ERRORE: Record<ErroreFoto, string> = {
   quota: 'Per oggi le foto gratuite di Gemini sono finite. Riprova domani, oppure aggiungi a mano.',
   chiave: 'La chiave Gemini della famiglia non è valida: chi amministra la controlla in Impostazioni.',
   non_configurata: 'Per usare la foto del frigo serve la chiave Gemini della famiglia: chi amministra la inserisce in Impostazioni.',
@@ -25,7 +25,7 @@ const SPIEGA_ERRORE: Record<ErroreFoto, string> = {
   non_autorizzato: 'Non risulti in questa famiglia: esci e rientra, poi riprova.',
 };
 
-function avvisoLetto(): boolean {
+export function avvisoLetto(): boolean {
   try {
     return localStorage.getItem(CHIAVE_AVVISO) === 'si';
   } catch {
