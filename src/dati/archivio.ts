@@ -47,8 +47,12 @@ export interface Cursore {
   aggiornato_il: string;
 }
 
-/** Aumentare quando cambia la forma della copia locale: si riscarica tutto, la coda resta. */
-export const VERSIONE_ARCHIVIO = 2;
+/**
+ * Versione dello schema Dexie. Un indice in più si aggiunge alzandola: Dexie lo costruisce all'apertura e i dati restano.
+ * 3: indice [famiglia_id+seq] per leggere solo le righe portate dall'ultimo scarico; via le righe `comando`, che il
+ * server non manda più e l'app non ha mai letto.
+ */
+export const VERSIONE_ARCHIVIO = 3;
 
 export class Archivio extends Dexie {
   righe!: Table<RigaLocale, [Tabella, string]>;
@@ -58,12 +62,14 @@ export class Archivio extends Dexie {
 
   constructor(nome: string) {
     super(nome);
-    this.version(VERSIONE_ARCHIVIO).stores({
-      righe: '[tabella+id], tabella, famiglia_id, [famiglia_id+tabella]',
-      coda: '++ordine, &id, famiglia_id, stato',
-      cursori: 'famiglia_id',
-      foto: 'percorso, famiglia_id',
-    });
+    this.version(VERSIONE_ARCHIVIO)
+      .stores({
+        righe: '[tabella+id], tabella, famiglia_id, [famiglia_id+tabella], [famiglia_id+seq]',
+        coda: '++ordine, &id, famiglia_id, stato',
+        cursori: 'famiglia_id',
+        foto: 'percorso, famiglia_id',
+      })
+      .upgrade((tx) => tx.table('righe').where('tabella').equals('comando').delete());
   }
 
   async cursore(famiglia: string): Promise<number> {

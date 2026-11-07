@@ -6,8 +6,10 @@
  *   si rileggono: mettere un comando in coda o segnarlo «inviato» costa solo la lettura della coda.
  * - Le righe si leggono per chiave primaria ([tabella+id]): Dexie osserva l'intervallo e non ogni singola chiave,
  *   che con decine di migliaia di righe costava secondi sul tablet a ogni modifica.
- * - Una tabella che dopo lo scarico ha le stesse righe (stessi id e stesse versioni) resta lo stesso array: i calcoli
- *   delle schermate che dipendono solo da quella tabella non si rifanno.
+ * - Dopo uno scarico si leggono solo le righe arrivate (seq tra il cursore di prima e quello nuovo, indice
+ *   [famiglia_id+seq]) e si mettono al loro posto; la prima volta, o se il cursore torna indietro, si legge tutto.
+ * - Una tabella senza righe nuove resta lo stesso array: i calcoli delle schermate che dipendono solo da quella
+ *   tabella non si rifanno.
  */
 import Dexie from 'dexie';
 import { type RigaInVista, type Righe, vistaConAnteprima } from './anteprima';
@@ -46,6 +48,13 @@ export function lettoreVista(archivio: Archivio, famiglia: string, tabelle: read
       let base: Righe;
       if (copia && copia.cursore === cursore) {
         base = ultima!.base;
+      } else if (copia && cursore > copia.cursore) {
+        const arrivate = await archivio.righe.where('[famiglia_id+seq]').between([famiglia, copia.cursore], [famiglia, cursore], false, true).toArray();
+        const aggiornate = aggiorna(copia.tabelle, arrivate);
+        const cambiate = [...aggiornate].filter(([t, voce]) => voce !== copia!.tabelle.get(t));
+        base = cambiate.length ? { ...ultima!.base } : ultima!.base;
+        for (const [t, voce] of cambiate) base[t] = voce.righe as RigaInVista[];
+        copia = { cursore, tabelle: aggiornate };
       } else {
         const nuove: Copia = { cursore, tabelle: new Map() };
         base = {};
@@ -66,6 +75,42 @@ export function lettoreVista(archivio: Archivio, famiglia: string, tabelle: read
       ultima = { base, coda, vista };
       return { righe: vista, coda };
     });
+}
+
+/** Le tabelle con dentro le righe appena arrivate: nuove in ordine di id (come la chiave primaria), le altre al loro posto. */
+function aggiorna(prima: Copia['tabelle'], arrivate: RigaLocale[]): Copia['tabelle'] {
+  const perTabella = new Map<Tabella, RigaLocale[]>();
+  for (const r of arrivate) {
+    if (!prima.has(r.tabella)) continue;
+    const elenco = perTabella.get(r.tabella);
+    if (elenco) elenco.push(r);
+    else perTabella.set(r.tabella, [r]);
+  }
+  const dopo = new Map(prima);
+  for (const [t, nuove] of perTabella) {
+    const { righe, seq } = prima.get(t)!;
+    const posto = new Map(righe.map((r, i) => [r.id, i]));
+    const r2 = [...righe];
+    const s2 = [...seq];
+    const aggiunte: RigaLocale[] = [];
+    for (const n of nuove) {
+      const i = posto.get(n.id);
+      if (i === undefined) aggiunte.push(n);
+      else {
+        r2[i] = n.riga;
+        s2[i] = n.seq;
+      }
+    }
+    if (!aggiunte.length) {
+      dopo.set(t, { righe: r2, seq: s2 });
+      continue;
+    }
+    const tutte = [...r2.map((riga, i) => ({ riga, seq: s2[i] })), ...aggiunte.map((n) => ({ riga: n.riga, seq: n.seq }))].sort((a, b) =>
+      a.riga.id < b.riga.id ? -1 : a.riga.id > b.riga.id ? 1 : 0,
+    );
+    dopo.set(t, { righe: tutte.map((x) => x.riga), seq: tutte.map((x) => x.seq) });
+  }
+  return dopo;
 }
 
 /**
