@@ -56,6 +56,26 @@ describe('anteprima della coda', () => {
     expect(v2.lotto?.[0]).toMatchObject({ quantita: 0, chiuso_il: 'in_attesa' });
   });
 
+  it('verifica con le foto: quantità confermate, alimenti nuovi e zone si vedono subito', () => {
+    const lotto = { id: 'l1', famiglia_id: F, seq: 3, quantita: 6, unita: 'pz', luogo: 'frigo' };
+    const famiglia = { id: F, famiglia_id: F, seq: 1, impostazioni: { frigo: { ripiani: 3 } } };
+    const v = vistaConAnteprima({ lotto: [lotto], famiglia: [famiglia] }, [
+      voce('verifica_inventario', {
+        operazioni: [
+          { azione: 'quantita', lotto_id: 'l1', quantita: 0 },
+          { azione: 'presente', lotto_id: 'l9' },
+          { azione: 'aggiungi', id: 'l2', ingrediente_id: 'ing:zucchina', quantita: 600, unita: 'g', luogo: 'frigo', posto: 'c1', tipo_data: 'sconosciuta' },
+        ],
+      }),
+      voce('imposta_zone_verifica', { zone: [{ id: 'r1', nome: 'Su', luogo: 'frigo' }] }),
+    ]);
+    expect(v.lotto?.map((l) => [l.id, l.quantita, l.chiuso_il, l.origine ?? null, l.posto ?? null])).toEqual([
+      ['l1', 0, 'in_attesa', null, null],
+      ['l2', 600, null, 'foto', 'c1'],
+    ]);
+    expect(v.famiglia?.[0].impostazioni).toEqual({ frigo: { ripiani: 3 }, verifica: { zone: [{ id: 'r1', nome: 'Su', luogo: 'frigo' }] } });
+  });
+
   it('casa: spostare una parte crea il lotto nuovo con le stesse date', () => {
     const lotto = { id: 'l1', famiglia_id: F, seq: 3, quantita: 800, luogo: 'frigo', data_limite: '2026-11-01', tipo_data: 'scadenza' };
     const v = vistaConAnteprima({ lotto: [lotto] }, [voce('sposta_lotto', { lotto_id: 'l1', luogo: 'freezer', quantita: 300, nuovo_id: 'l2' })]);
