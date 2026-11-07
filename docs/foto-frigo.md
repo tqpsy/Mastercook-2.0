@@ -43,3 +43,24 @@ catalogo e in casa entra solo ciò che la persona spunta e conferma, con le quan
 
 Il workflow «Pubblica» (job `funzioni`) pubblica la funzione e, se il segreto GitHub `GEMINI_API_KEY` c'è, lo copia
 nei segreti di Supabase. Le chiavi delle famiglie invece stanno nel database e non servono nuove pubblicazioni.
+
+## Verifica dell'inventario con le foto
+
+Casa › «Verifica con le foto»: non serve a riempire la casa da zero ma a controllarla.
+
+1. Si scelgono le zone (ripiani, cassetto, porta… modificabili: `imposta_zone_verifica`) e si scattano una o più
+   foto per zona (al più 4, anche da angolazioni diverse), in modo guidato (una zona dopo l'altra) o libero.
+2. Per ogni zona l'app manda alla funzione (`tipo: 'verifica'`) le foto e un contesto testuale
+   (`contestoPerGemini` in `src/dominio/verifica.ts`): prodotti registrati con un codice, dove stanno di solito,
+   ingredienti del menu dei prossimi giorni (detti esplicitamente «non è una prova»), correzioni ed errori ricorrenti
+   della famiglia. Gemini risponde `{nome, codice, quantita, unita, certezza}` con certezza sicuro/probabile/incerto.
+3. `confronta` mette insieme le zone: non visti (solo per le zone fotografate: un alimento non visto non è per forza
+   finito), quantità diverse, nuovi, incerti, coerenti. La verifica rapida mostra solo le anomalie, la completa tutto.
+4. Per ogni riga la persona decide (presente, terminato, quantità, prodotto giusto, non verificabile, non c'è) e vede
+   un riepilogo. Solo dopo «Conferma» parte il comando `verifica_inventario`: correzioni con nota
+   «Verifica con foto: da X a Y» nella cronologia del lotto, alimenti nuovi con origine `foto`.
+
+Cosa impara (in `famiglia.impostazioni.verifica.memoria`, uguale su tutti i dispositivi): il prodotto giusto per un
+nome visto (alias), i nomi visti per errore (dopo due volte la certezza scende), dove sta di solito ogni alimento.
+**Non c'è nessun addestramento del modello**: le foto non si salvano e non si usano per addestrare niente. Migliorare
+il modello con immagini verificate richiederebbe di conservarle e il consenso esplicito della famiglia: non è fatto.

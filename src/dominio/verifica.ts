@@ -545,3 +545,19 @@ export function ingredientiDelMenu(
   }
   return esito;
 }
+
+/** Dalla risposta di Gemini per una zona ai `Visto`: il codice del prodotto registrato diventa il suo ingrediente. */
+export function vistiDaGemini(
+  zona: string,
+  risposta: { nome: string; codice: string | null; quantita: number | null; unita: 'g' | 'ml' | 'pz' | null; certezza: Certezza }[],
+  noti: ProdottoNoto[],
+): Visto[] {
+  return risposta.map((r) => ({
+    nome: r.nome,
+    zona,
+    quantita: r.quantita,
+    unita: r.unita,
+    certezza: r.certezza,
+    ingrediente_id: (r.codice && noti.find((p) => p.codice === r.codice)?.ingrediente_id) || null,
+  }));
+}

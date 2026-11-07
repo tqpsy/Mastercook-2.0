@@ -148,3 +148,82 @@ export async function riconosci(immagine: string, chiave: string, chiama: typeof
   const r = await chiediGemini(parti, SCHEMA, chiave, chiama, modelli);
   return 'errore' in r ? r : { alimenti: leggiAlimenti(r.testo), modello: r.modello };
 }
+
+// ───────────────────────── Verifica dell'inventario ─────────────────────────
+
+export const MAX_FOTO_VERIFICA = 4;
+
+export const ISTRUZIONI_VERIFICA = `Sei l'aiuto di un'app di cucina italiana. La famiglia controlla se ciò che ha registrato in casa corrisponde a ciò che c'è davvero.
+Nelle foto c'è una zona del frigo, del freezer o della dispensa. Elenca gli alimenti che vedi. Per ognuno:
+- nome: nome generico in italiano, al singolare e minuscolo (es. "latte", "uova", "zucchina"); niente marche;
+- codice: se è uno dei prodotti registrati elencati sotto, il suo codice (es. "p3"); altrimenti null. Non dare un codice solo perché il prodotto è nell'elenco o nel menu: deve vedersi nella foto;
+- quantita e unita: quanto se ne vede, solo se si capisce ("pz" per ciò che si conta, "g" o "ml" per confezioni con peso o volume tipico); altrimenti null;
+- certezza: "sicuro" se lo riconosci senza dubbi, "probabile" se è molto verosimile, "incerto" se è solo un'ipotesi (confezione chiusa, coperta, poco visibile).
+Non inventare. Ignora persone, documenti e oggetti che non sono cibo.`;
+
+const SCHEMA_VERIFICA = {
+  type: 'ARRAY',
+  items: {
+    type: 'OBJECT',
+    properties: {
+      nome: { type: 'STRING' },
+      codice: { type: 'STRING', nullable: true },
+      quantita: { type: 'NUMBER', nullable: true },
+      unita: { type: 'STRING', enum: ['g', 'ml', 'pz'], nullable: true },
+      certezza: { type: 'STRING', enum: ['sicuro', 'probabile', 'incerto'] },
+    },
+    required: ['nome', 'certezza'],
+  },
+};
+
+export interface VistoInZona {
+  nome: string;
+  codice: string | null;
+  quantita: number | null;
+  unita: 'g' | 'ml' | 'pz' | null;
+  certezza: 'sicuro' | 'probabile' | 'incerto';
+}
+
+/** Legge la risposta della verifica: righe sensate, al più 60; certezza sconosciuta = incerto. */
+export function leggiVisti(testo: string): VistoInZona[] {
+  const base = leggiAlimenti(testo);
+  let dati: unknown[] = [];
+  try {
+    const j = JSON.parse(testo);
+    if (Array.isArray(j)) dati = j;
+  } catch {
+    return [];
+  }
+  const perNome = new Map<string, Record<string, unknown>>();
+  for (const x of dati) if (x && typeof x === 'object' && typeof (x as { nome?: unknown }).nome === 'string') {
+    const k = ((x as { nome: string }).nome).trim().toLowerCase().slice(0, 60);
+    if (!perNome.has(k)) perNome.set(k, x as Record<string, unknown>);
+  }
+  return base.map((a) => {
+    const r = perNome.get(a.nome) ?? {};
+    const certezza = r.certezza === 'sicuro' || r.certezza === 'probabile' ? r.certezza : 'incerto';
+    const codice = typeof r.codice === 'string' && /^p\d{1,3}$/.test(r.codice) ? r.codice : null;
+    return { nome: a.nome, codice, quantita: a.quantita, unita: a.unita, certezza };
+  });
+}
+
+/** Il testo che l'app manda con le foto (src/dominio/verifica.ts, contestoPerGemini): solo testo, breve. */
+export function testoContesto(x: unknown): string | null {
+  return typeof x === 'string' && x.trim() ? x.slice(0, 6000) : null;
+}
+
+/** Riconosce gli alimenti in una zona: più foto della stessa zona insieme, con il contesto della famiglia. */
+export async function riconosciZona(
+  immagini: string[],
+  chiave: string,
+  contesto: string | null,
+  chiama: typeof fetch = fetch,
+  modelli = MODELLI,
+): Promise<{ visti: VistoInZona[]; modello: string } | { errore: 'quota' | 'chiave' | 'gemini'; dettaglio?: string }> {
+  const parti: Parte[] = [
+    ...immagini.slice(0, MAX_FOTO_VERIFICA).map((data) => ({ inline_data: { mime_type: 'image/jpeg', data } })),
+    { text: contesto ? `${ISTRUZIONI_VERIFICA}\n\n${contesto}` : ISTRUZIONI_VERIFICA },
+  ];
+  const r = await chiediGemini(parti, SCHEMA_VERIFICA, chiave, chiama, modelli);
+  return 'errore' in r ? r : { visti: leggiVisti(r.testo), modello: r.modello };
+}
