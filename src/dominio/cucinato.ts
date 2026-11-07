@@ -60,3 +60,23 @@ export function consiglioCucinato(regola: Pick<RegolaCotti, 'id' | 'consigliati'
     ripiano: ripianoPer(regola),
   };
 }
+
+/**
+ * Alla fine di «Cucina passo passo»: il piatto del menu che si è appena cucinato, se c'è. Lo stesso piatto (o
+ * l'alternativa di qualcuno) da oggi a `giorni` giorni dopo, non ancora segnato «mangiato» né «cucinato»; il più vicino.
+ * Senza un piatto del menu la ricetta si è cucinata fuori dal menu.
+ */
+export function piattoCucinato<P extends { id: string; data: string; ricetta_id: string | null; avanzo_di?: string | null }>(
+  ricettaId: string,
+  portate: P[],
+  alternative: { portata_id: string; ricetta_id: string | null }[],
+  fatti: (portataId: string) => boolean,
+  oggi: string,
+  giorni = 2,
+): P | undefined {
+  const fino = piuGiorni(oggi, giorni);
+  const conAlternativa = new Set(alternative.filter((e) => e.ricetta_id === ricettaId).map((e) => e.portata_id));
+  return portate
+    .filter((p) => !p.avanzo_di && p.data >= oggi && p.data <= fino && (p.ricetta_id === ricettaId || conAlternativa.has(p.id)) && !fatti(p.id))
+    .sort((a, b) => (a.data < b.data ? -1 : a.data > b.data ? 1 : 0))[0];
+}

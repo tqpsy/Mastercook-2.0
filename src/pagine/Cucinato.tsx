@@ -1,17 +1,17 @@
 import { useMemo, useState } from 'react';
-import { useFamiglia } from '../dati/contesto';
+import { useFamiglia, useVista } from '../dati/contesto';
 import { avanziDi, porzioniPortata } from '../dominio/consumi';
-import { consiglioCucinato } from '../dominio/cucinato';
+import { consiglioCucinato, piattoCucinato } from '../dominio/cucinato';
 import type { PortataMenu } from '../dominio/menu';
-import { iconaRicetta, type Indice } from '../dominio/ricette';
+import { iconaRicetta, type Indice, type Ricetta } from '../dominio/ricette';
 import { giorniTra, oggi } from '../dominio/scadenze';
 import { formattaGiorno, leggiNumero } from '../dominio/unita';
 import { Foglio } from '../ui/Foglio';
 import { ConsiglioRipiano } from '../ui/Frigo';
 import { type Lotto, useLotti } from './Casa';
-import { PorzioniAvanzate, SceltaLuogo, TestaPiatto, testoNumero } from './ConfermaPasto';
-import { useIcone } from './Ricette';
-import type { DatiMenu } from './Menu';
+import { PorzioniAvanzate, SceltaLuogo, SegnaMangiato, TestaPiatto, testoNumero, useConferme } from './ConfermaPasto';
+import { useIcone, useInCasa } from './Ricette';
+import { type DatiMenu, useDatiMenu } from './Menu';
 
 /** Il piatto pronto in casa di una portata cucinata in anticipo (anche già finito), se c'è. */
 export function usePronti(): Map<string, Lotto> {
@@ -174,3 +174,102 @@ export function SegnaCucinato({
   );
 }
 
+
+/**
+ * Alla fine di «Cucina passo passo»: cucinare toglie gli ingredienti dalla casa. Se la ricetta è un piatto del menu
+ * (da oggi a dopodomani, non ancora segnato) si segna «mangiato» o «cucinato» come dal menu; altrimenti si tolgono
+ * gli ingredienti per le porzioni cucinate. Si può sempre dire di non togliere niente.
+ */
+export function FineCucina({ indice, ricetta: r, porzioni, chiudi }: { indice: Indice; ricetta: Ricetta; porzioni: number; chiudi: () => void }) {
+  const { esegui } = useFamiglia();
+  const vista = useVista();
+  const dati = useDatiMenu(vista);
+  const { attive } = useConferme(vista);
+  const pronti = usePronti();
+  const icone = useIcone();
+  const inCasa = useInCasa();
+  const giorno = oggi();
+  // Scelto all'apertura: dopo «mangiato» il piatto risulta segnato e non deve sparire mentre il foglio è aperto.
+  const [portata] = useState(() =>
+    piattoCucinato(
+      r.id,
+      dati.portate,
+      dati.eccezioni.filter((e) => e.tipo === 'alternativa'),
+      (id) => attive.has(id) || pronti.has(id),
+      giorno,
+    ),
+  );
+  const [passo, setPasso] = useState<'domanda' | 'mangiato' | 'cucinato' | 'fuori'>(portata ? 'domanda' : 'fuori');
+  const [quante, setQuante] = useState(testoNumero(Math.round(porzioni * 2) / 2));
+  const [errore, setErrore] = useState<string | null>(null);
+  const icona = iconaRicetta(indice, r, icone.get(r.id));
+  const titolo = portata ? (portata.ricetta_id ? (indice.perId.get(portata.ricetta_id)?.titolo ?? r.titolo) : r.titolo) : r.titolo;
+
+  if (portata && passo === 'mangiato') {
+    return <SegnaMangiato indice={indice} dati={dati} portate={[portata]} titolo={() => titolo} chiudi={chiudi} />;
+  }
+  if (portata && passo === 'cucinato') {
+    return <SegnaCucinato indice={indice} dati={dati} portata={portata} titolo={titolo} chiudi={chiudi} />;
+  }
+  if (portata && passo === 'domanda') {
+    const pasto = dati.categorie.find((c) => c.valore === portata.categoria)?.nome ?? 'Pasto';
+    const quando = portata.data === giorno ? `${pasto} di oggi` : `${pasto} di ${formattaGiorno(portata.data)}`;
+    return (
+      <Foglio titolo="Hai finito di cucinare" chiudi={chiudi}>
+        <TestaPiatto icona={icona} titolo={titolo} sotto={`Nel menu: ${quando.toLowerCase()}`} />
+        <p style={{ marginTop: 0 }}>Segnalo, così tolgo dalla casa gli ingredienti che hai usato e frigo e dispensa restano veri.</p>
+        {portata.data === giorno && (
+          <button className="bottone primario pieno grande" onClick={() => setPasso('mangiato')}>
+            ✓ Lo mangiamo adesso
+          </button>
+        )}
+        <button className={`bottone pieno${portata.data === giorno ? '' : ' primario grande'}`} style={{ marginTop: 8 }} onClick={() => setPasso('cucinato')}>
+          🍳 È per dopo: lo metto via
+        </button>
+        <button className="link" style={{ marginTop: 12 }} onClick={() => setPasso('fuori')}>
+          Non è il piatto del menu
+        </button>
+        <button className="link" style={{ marginTop: 8, display: 'block' }} onClick={chiudi}>
+          Non togliere niente
+        </button>
+      </Foglio>
+    );
+  }
+
+  // Fuori dal menu: si tolgono gli ingredienti della ricetta per le porzioni cucinate.
+  const casa = indice.estendi(inCasa);
+  const nonInCasa = [
+    ...new Set(
+      r.ingredienti
+        .filter((g) => !g.qb && !g.opzionale && g.quantita !== null && !indice.ingrediente(g.ingrediente_id)?.base && !casa.has(g.ingrediente_id))
+        .map((g) => indice.nome(g.ingrediente_id).toLowerCase()),
+    ),
+  ];
+  async function togli() {
+    const q = leggiNumero(quante);
+    if (q === null || q <= 0) return setErrore('Scrivi quante porzioni hai cucinato.');
+    await esegui('usa_ricetta', { id: crypto.randomUUID(), ricetta_id: r.id, porzioni: q });
+    chiudi();
+  }
+  return (
+    <Foglio titolo="Hai finito di cucinare" chiudi={chiudi}>
+      <TestaPiatto icona={icona} titolo={r.titolo} sotto="Tolgo dalla casa gli ingredienti che hai usato" />
+      <div className="riquadro-porzioni">
+        <span>Porzioni cucinate</span>
+        <PorzioniAvanzate nome="Porzioni cucinate" valore={quante} cambia={setQuante} />
+      </div>
+      {nonInCasa.length > 0 && <p className="tenue piccolo">Non risultano in casa, quindi non li tolgo: {nonInCasa.join(', ')}.</p>}
+      {errore && (
+        <div className="avviso errore" role="alert">
+          {errore}
+        </div>
+      )}
+      <button className="bottone primario pieno grande" onClick={togli}>
+        Togli gli ingredienti dalla casa
+      </button>
+      <button className="link" style={{ marginTop: 12 }} onClick={chiudi}>
+        Non togliere niente
+      </button>
+    </Foglio>
+  );
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { consiglioCucinato } from './cucinato';
+import { consiglioCucinato, piattoCucinato } from './cucinato';
 
 describe('piatto cucinato in anticipo', () => {
   it('entro 2 giorni resta in frigo, con il ripiano consigliato', () => {
@@ -20,5 +20,31 @@ describe('piatto cucinato in anticipo', () => {
 
   it('senza regola: 2 giorni', () => {
     expect(consiglioCucinato(undefined, '2026-11-01', '2026-11-01')).toMatchObject({ giorniAlPasto: 0, congela: false, entroFrigo: '2026-11-03' });
+  });
+});
+
+describe('piatto appena cucinato con «Cucina passo passo»', () => {
+  const portate = [
+    { id: 'ieri', data: '2026-11-06', ricetta_id: 'r:lasagna' },
+    { id: 'domani', data: '2026-11-08', ricetta_id: 'r:lasagna' },
+    { id: 'oggi', data: '2026-11-07', ricetta_id: 'r:lasagna' },
+    { id: 'avanzo', data: '2026-11-07', ricetta_id: 'r:lasagna', avanzo_di: 'oggi' },
+    { id: 'pasta', data: '2026-11-07', ricetta_id: 'r:pasta' },
+    { id: 'lontano', data: '2026-11-12', ricetta_id: 'r:zuppa' },
+  ];
+  const nessuno = () => false;
+
+  it('sceglie il piatto del menu più vicino da oggi in poi, non gli avanzi né i giorni passati', () => {
+    expect(piattoCucinato('r:lasagna', portate, [], nessuno, '2026-11-07')?.id).toBe('oggi');
+  });
+
+  it('salta i piatti già segnati e vale anche per le alternative di qualcuno', () => {
+    expect(piattoCucinato('r:lasagna', portate, [], (id) => id === 'oggi', '2026-11-07')?.id).toBe('domani');
+    expect(piattoCucinato('r:minestra', portate, [{ portata_id: 'pasta', ricetta_id: 'r:minestra' }], nessuno, '2026-11-07')?.id).toBe('pasta');
+  });
+
+  it('fuori dal menu (o troppo in là) non trova niente', () => {
+    expect(piattoCucinato('r:risotto', portate, [], nessuno, '2026-11-07')).toBeUndefined();
+    expect(piattoCucinato('r:zuppa', portate, [], nessuno, '2026-11-07')).toBeUndefined();
   });
 });
