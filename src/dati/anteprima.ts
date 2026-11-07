@@ -169,7 +169,7 @@ const EFFETTI: Record<string, Effetto> = {
     tipo_data: d.tipo_data,
     fonte_data: d.fonte_data ?? null,
     calcolata_il: d.calcolata_il ?? null,
-    origine: 'manuale',
+    origine: d.origine === 'foto' ? 'foto' : 'manuale',
     note: d.note ?? null,
     posto: d.luogo === 'dispensa' ? null : (d.posto ?? null),
     chiuso_il: null,
@@ -192,6 +192,24 @@ const EFFETTI: Record<string, Effetto> = {
     aggiungi('lotto', () => ({ ...copia, quantita: parte, luogo: d.luogo, ...stima, versione: 1 }))(righe, { id: d.nuovo_id }, famiglia);
   },
   modifica_lotto: modifica('lotto'),
+  // Verifica con le foto: le quantità confermate e i nuovi alimenti si vedono subito; la memoria la scrive il server.
+  verifica_inventario: (righe, d, famiglia) => {
+    for (const o of (Array.isArray(d.operazioni) ? d.operazioni : []) as Record<string, unknown>[]) {
+      if (o.azione === 'quantita') cambiaQuantita(righe, String(o.lotto_id), () => Number(o.quantita));
+      else if (o.azione === 'aggiungi') EFFETTI.aggiungi_lotto(righe, { ...o, origine: 'foto' }, famiglia);
+    }
+  },
+  imposta_zone_verifica: (righe, d, famiglia) => {
+    righe.famiglia = (righe.famiglia ?? []).map((r) => {
+      if (r.id !== famiglia) return r;
+      const impostazioni = { ...((r.impostazioni as Record<string, unknown> | undefined) ?? {}) };
+      const v = { ...((impostazioni.verifica as Record<string, unknown> | undefined) ?? {}) };
+      if (Array.isArray(d.zone)) v.zone = d.zone;
+      else delete v.zone;
+      impostazioni.verifica = v;
+      return { ...r, impostazioni, in_attesa: true };
+    });
+  },
 
   imposta_categoria: (righe, d, famiglia) => {
     const elenco = righe.categoria_pasto ?? [];
