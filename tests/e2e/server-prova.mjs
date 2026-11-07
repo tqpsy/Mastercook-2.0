@@ -115,13 +115,25 @@ createServer(async (req, res) => {
     // Foto del frigo: al posto di Gemini una risposta fissa; il controllo su chi fa parte della famiglia è vero.
     if (percorso === '/functions/v1/foto-frigo' && req.method === 'POST') {
       const sub = utenteDalToken(req);
-      const { famiglia_id, immagine, tipo, documento } = await corpo(req);
-      const file = tipo === 'piano' ? documento : immagine;
+      const { famiglia_id, immagine, tipo, documento, immagini, contesto } = await corpo(req);
+      const file = tipo === 'piano' ? documento : tipo === 'verifica' ? immagini?.[0] : immagine;
       const r = sub && typeof file === 'string' && file.length > 0 ? await comeUtente(sub, 'select 1 from famiglia where id = $1', [famiglia_id]) : { rowCount: 0 };
       if (!r.rowCount) return rispondi(res, 403, { errore: 'non_autorizzato' });
       // Come la funzione vera: serve la chiave della famiglia (o quella del progetto per chi gestisce l'app).
       const scelta = (await pool.query('select public.chiave_gemini_per_foto($1) as r', [famiglia_id])).rows[0].r;
       if (!scelta.chiave && !scelta.condivisa) return rispondi(res, 503, { errore: 'non_configurata' });
+      // Verifica con le foto: risposta fissa. Le uova si riconoscono dal codice del contesto (se ci sono in casa).
+      if (tipo === 'verifica') {
+        const codiceUova = /- (p\d+): uova/.exec(String(contesto ?? ''))?.[1] ?? null;
+        return rispondi(res, 200, {
+          modello: 'prova',
+          visti: [
+            { nome: 'uova', codice: codiceUova, quantita: 2, unita: 'pz', certezza: 'sicuro' },
+            { nome: 'zucchina', codice: null, quantita: 3, unita: 'pz', certezza: 'probabile' },
+            { nome: 'barattolo scuro', codice: null, quantita: null, unita: null, certezza: 'incerto' },
+          ],
+        });
+      }
       // Il piano del nutrizionista letto da un PDF: una risposta fissa nel formato di Gemini.
       if (tipo === 'piano')
         return rispondi(res, 200, {

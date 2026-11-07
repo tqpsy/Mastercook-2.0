@@ -3,7 +3,7 @@
  * Per una famiglia tenuta solo sul telefono la chiave resta sul telefono e la foto va da qui a Gemini.
  * La foto non si salva da nessuna parte.
  */
-import { riconosci, testoFrigo } from '../../supabase/functions/foto-frigo/nucleo';
+import { riconosci, riconosciZona as riconosciZonaGemini, testoFrigo, type VistoInZona } from '../../supabase/functions/foto-frigo/nucleo';
 import { leggiPianoDocumento, MIME_PIANO, type PianoLetto } from '../../supabase/functions/foto-frigo/piano';
 import type { Riconosciuto } from '../dominio/fotoFrigo';
 import { chiamaLocale, chiaveGeminiLocale } from './locale/motore';
@@ -47,6 +47,43 @@ export async function riconosciFoto(famiglia_id: string, foto: Blob, luogo?: Luo
       return { errore: e && ['quota', 'chiave', 'non_configurata', 'gemini', 'non_autorizzato'].includes(e) ? e : 'rete', dettaglio };
     }
     return { alimenti: (data?.alimenti ?? []) as Riconosciuto[] };
+  } catch {
+    return { errore: 'rete' };
+  }
+}
+
+/**
+ * Verifica dell'inventario: le foto di una zona (fino a 4, la stessa zona da più lati) e il contesto della famiglia
+ * (src/dominio/verifica.ts). Le foto non si salvano: passano a Google e basta.
+ */
+export async function riconosciZona(
+  famiglia_id: string,
+  foto: Blob[],
+  contesto: string,
+  luogo?: Luogo,
+): Promise<{ visti: VistoInZona[] } | { errore: ErroreFoto; dettaglio?: string }> {
+  if (!navigator.onLine) return { errore: 'rete' };
+  const immagini = await Promise.all(foto.slice(0, 4).map(base64));
+  if (luogo?.dove === 'locale') {
+    try {
+      const chiave = await chiaveGeminiLocale(luogo.utenteId, famiglia_id);
+      if (!chiave) return { errore: 'non_configurata' };
+      const esito = await riconosciZonaGemini(immagini, chiave, contesto);
+      return 'errore' in esito ? { errore: esito.errore, dettaglio: esito.dettaglio } : { visti: esito.visti };
+    } catch {
+      return { errore: 'rete' };
+    }
+  }
+  try {
+    const { data, error } = await supabase().functions.invoke('foto-frigo', { body: { famiglia_id, tipo: 'verifica', immagini, contesto } });
+    if (error) {
+      const risposta = (error as { context?: Response }).context;
+      const corpo = risposta && typeof risposta.json === 'function' ? await risposta.json().catch(() => null) : null;
+      const e = corpo?.errore as ErroreFoto | undefined;
+      const dettaglio = typeof corpo?.dettaglio === 'string' ? corpo.dettaglio.slice(0, 200) : undefined;
+      return { errore: e && ['quota', 'chiave', 'non_configurata', 'gemini', 'non_autorizzato'].includes(e) ? e : 'rete', dettaglio };
+    }
+    return { visti: (data?.visti ?? []) as VistoInZona[] };
   } catch {
     return { errore: 'rete' };
   }

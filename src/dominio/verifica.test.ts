@@ -19,6 +19,7 @@ import {
   type Visto,
   zoneBase,
   zoneDa,
+  vistiDaGemini,
 } from './verifica';
 
 const indice = new Indice(catalogo as Catalogo);
@@ -211,5 +212,18 @@ describe('menu', () => {
       '2026-11-14',
     );
     expect(m.get('ing:uova')).toBe('2026-11-08');
+  });
+});
+
+describe('risposta di Gemini', () => {
+  it('il codice del prodotto registrato diventa il suo ingrediente; un codice sconosciuto no', () => {
+    const noti = prodottiNoti(indice, [lotto('ing:burro', 250, 'g', 'r1')], zone, MEMORIA_VUOTA, 'frigo');
+    const v = vistiDaGemini('r1', [
+      { nome: 'panetto', codice: 'p1', quantita: null, unita: null, certezza: 'probabile' },
+      { nome: 'uova', codice: 'p9', quantita: 2, unita: 'pz', certezza: 'sicuro' },
+    ], noti);
+    expect(v.map((x) => x.ingrediente_id)).toEqual(['ing:burro', null]);
+    const righe = confronta({ indice, lotti: [lotto('ing:burro', 250, 'g', 'r1')], zone, fotografate: ['r1'], visti: v.slice(0, 1), memoria: MEMORIA_VUOTA });
+    expect(righe[0]).toMatchObject({ chiave: 'ing:burro', tipo: 'coerente' });
   });
 });
