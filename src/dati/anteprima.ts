@@ -584,10 +584,13 @@ function cambiaQuantita(righe: Righe, id: string, nuova: (q: number) => number) 
   });
 }
 
-/** Righe del server con sopra l'effetto previsto dei comandi in attesa (o applicati ma non ancora scaricati), nell'ordine della coda. */
+/**
+ * Righe del server con sopra l'effetto previsto dei comandi in attesa (o applicati ma non ancora scaricati), nell'ordine della coda.
+ * Gli effetti non toccano mai gli array e le righe ricevuti, ne fanno di nuovi: una tabella senza comandi in coda resta
+ * lo stesso array (e i calcoli che dipendono solo da lei non si rifanno).
+ */
 export function vistaConAnteprima(righe: Righe, coda: VoceCoda[]): Righe {
-  const vista: Righe = {};
-  for (const [t, elenco] of Object.entries(righe)) vista[t as Tabella] = [...(elenco ?? [])];
+  const vista: Righe = { ...righe };
   for (const voce of coda) {
     if (voce.stato === 'da_sistemare') continue;
     EFFETTI[voce.comando.tipo]?.(vista, voce.comando.dati, voce.famiglia_id);

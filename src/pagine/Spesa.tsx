@@ -33,8 +33,9 @@ export const GIORNI_SPESA = 7;
 const numero = (x: unknown) => (x === null || x === undefined ? null : Number(x));
 
 export function useDatiSpesa(vista: Vista) {
-  const r = vista.righe;
+  const { voce_spesa, acquisto, acquisto_riga } = vista.righe;
   return useMemo(() => {
+    const r = { voce_spesa, acquisto, acquisto_riga };
     const vive = <T,>(t: keyof typeof r) => (r[t] ?? []).filter((x) => !x.eliminato_il) as unknown as T[];
     const voci = vive<VoceSpesa>('voce_spesa').map((v) => ({
       ...v,
@@ -44,7 +45,7 @@ export function useDatiSpesa(vista: Vista) {
     const acquisti = vive<Acquisto>('acquisto').sort((a, b) => b.data.localeCompare(a.data) || String(b.id).localeCompare(String(a.id)));
     const righe = vive<RigaAcquisto>('acquisto_riga').map((x) => ({ ...x, quantita: numero(x.quantita), prezzo: numero(x.prezzo) }));
     return { voci, acquisti, righe, prezzi: prezziOsservati(acquisti, righe) };
-  }, [r]);
+  }, [voce_spesa, acquisto, acquisto_riga]);
 }
 
 function nomeVoce(indice: Indice, v: Pick<VoceSpesa, 'ingrediente_id' | 'testo'>) {

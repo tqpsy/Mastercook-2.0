@@ -6,7 +6,8 @@ import { createContext, type ReactNode, useContext, useEffect, useMemo, useRef, 
 import { trasportoLocale } from '../piattaforma/locale/motore';
 import { ascoltaFamiglia, type Dove, supabase, trasportoSupabase } from '../piattaforma/supabase';
 import { Archivio, type VoceCoda } from './archivio';
-import { attive, type RigaInVista, type Righe, vistaConAnteprima } from './anteprima';
+import { attive, type RigaInVista, type Righe } from './anteprima';
+import { lettoreVista } from './lettura';
 import { pianifica, type Pianificatore } from './pianificatore';
 import { Sincronizzatore, type StatoSincronizzazione } from './sincronizzatore';
 import type { Tabella, Trasporto } from './tipi';
@@ -158,19 +159,14 @@ export interface Vista {
 /**
  * Copia locale con sopra l'anteprima della coda, aggiornata a ogni cambiamento dell'archivio.
  * Una sola osservazione per tutta l'app, letta in una transazione: righe e coda sono sempre dello stesso
- * istante, e due parti dello schermo non possono vedere due versioni diverse.
+ * istante, e due parti dello schermo non possono vedere due versioni diverse. Le righe si rileggono solo dopo
+ * uno scarico, e le tabelle che non cambiano restano gli stessi array (vedi lettura.ts).
  */
 function VistaCondivisa({ archivio, famiglia, children }: { archivio: Archivio; famiglia: string; children: ReactNode }) {
   const [vista, setVista] = useState<Vista>({ righe: {}, coda: [], pronta: false });
   useEffect(() => {
-    const osservata = liveQuery(() =>
-      archivio.transaction('r', archivio.righe, archivio.coda, async () => {
-        const righe: Righe = {};
-        for (const t of TABELLE) righe[t] = await archivio.righeDi(famiglia, t);
-        const coda = await archivio.coda.where('famiglia_id').equals(famiglia).sortBy('ordine');
-        return { righe: vistaConAnteprima(righe, coda), coda, pronta: true };
-      }),
-    );
+    const leggi = lettoreVista(archivio, famiglia, TABELLE);
+    const osservata = liveQuery(async () => ({ ...(await leggi()), pronta: true }));
     const s = osservata.subscribe({ next: setVista, error: () => undefined });
     return () => s.unsubscribe();
   }, [archivio, famiglia]);

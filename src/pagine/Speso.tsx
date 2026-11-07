@@ -11,8 +11,9 @@ const numero = (x: unknown) => (x === null || x === undefined ? null : Number(x)
 
 /** Il resoconto dai dati della vista (scontrini compresi). */
 function useResoconto(vista: Vista, indice: Indice, acquisti: AcquistoConScontrino[], righe: RigaAcquisto[]) {
-  const r = vista.righe;
+  const { scontrino, scontrino_riga } = vista.righe;
   return useMemo(() => {
+    const r = { scontrino, scontrino_riga };
     const vive = (t: 'scontrino' | 'scontrino_riga') => (r[t] ?? []).filter((x) => !x.eliminato_il);
     const scontrini = vive('scontrino').map((s) => ({ id: String(s.id), data: String(s.data), totale: numero(s.totale), acquisto_id: (s.acquisto_id as string | null) ?? null })) as Scontrino[];
     const righeScontrino = vive('scontrino_riga').map((s) => ({
@@ -22,7 +23,7 @@ function useResoconto(vista: Vista, indice: Indice, acquisti: AcquistoConScontri
       acquisto_riga_id: (s.acquisto_riga_id as string | null) ?? null,
     })) as RigaScontrino[];
     return resocontoSpesa({ acquisti, righe, scontrini, righeScontrino, repartoDi: (id) => indice.ingrediente(id)?.reparto, oggi: oggi() });
-  }, [r, indice, acquisti, righe]);
+  }, [scontrino, scontrino_riga, indice, acquisti, righe]);
 }
 
 /** Confronto col mese prima, solo se quel mese ha spese registrate (prima dell'app non c'era niente). */

@@ -80,4 +80,18 @@ describe('anteprima della coda', () => {
     expect(v.ricetta_ingrediente?.[0]).toMatchObject({ ricetta_id: 'r1', quantita: 400 });
     expect(attive(v.ricetta_passo)).toEqual([]);
   });
+
+  it('non tocca gli array ricevuti, e una tabella senza comandi resta lo stesso array', () => {
+    const lotto = Object.freeze({ id: 'l1', famiglia_id: F, seq: 6, ingrediente_id: 'ing:pasta', quantita: 500, unita: 'g' });
+    const righe = { membro: Object.freeze([Object.freeze(membro)]), lotto: Object.freeze([lotto]), portata: Object.freeze([]) };
+    const v = vistaConAnteprima(righe as never, [
+      voce('aggiungi_membro', { id: 'm2', nome: 'Sara' }),
+      voce('modifica_membro', { id: 'm1', versione_attesa: 1, campi: { porzione: 0.6 } }),
+      voce('scarica_lotto', { lotto_id: 'l1', quantita: 200 }),
+    ]);
+    expect(v.membro?.map((m) => m.nome)).toEqual(['Luca', 'Sara']);
+    expect(v.lotto?.[0]).toMatchObject({ quantita: 300, in_attesa: true });
+    expect(righe.lotto[0].quantita).toBe(500);
+    expect(v.portata).toBe(righe.portata);
+  });
 });
