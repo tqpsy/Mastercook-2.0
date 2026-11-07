@@ -23,14 +23,18 @@ export default defineConfig({
         lang: 'it',
         // Colore della barra di sistema in basso su Android (app installata): antracite come la barra delle schede.
         theme_color: '#2b2c2e',
-        background_color: '#2b2c2e',
+        // Sfondo petrolio come l'icona: se il telefono mette l'icona su un fondo, il fondo è dello stesso colore.
+        background_color: '#12656f',
         display: 'standalone',
         start_url: '/Mastercook-2.0/',
         scope: '/Mastercook-2.0/',
         icons: [
-          { src: 'icona-192.png?v=2', sizes: '192x192', type: 'image/png' },
-          { src: 'icona-512.png?v=2', sizes: '512x512', type: 'image/png' },
-          { src: 'icona-maschera-512.png?v=2', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          // Icone piene fino ai bordi (niente angoli trasparenti): Android le ritaglia nella sua forma
+          // invece di rimpicciolirle su un fondo bianco o nero.
+          { src: 'icona-192.png?v=3', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: 'icona-512.png?v=3', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: 'icona-maschera-192.png?v=3', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+          { src: 'icona-maschera-512.png?v=3', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
       workbox: {
