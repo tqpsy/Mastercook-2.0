@@ -116,6 +116,44 @@ body {
   font: 1.0625rem/1.45 var(--carattere-testo);
   font-variant-numeric: tabular-nums;
   -webkit-text-size-adjust: 100%;
+  /* Al tocco niente lampo azzurro di Android né testo selezionato (Luca: «sembra un errore»): è un'app, non una pagina. */
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+/* Nei campi da scrivere il testo resta selezionabile e copiabile. */
+input,
+textarea,
+select,
+[contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+/* Al posto del lampo: quello che premi si abbassa e scurisce appena, come un tasto vero. */
+button,
+a[href],
+summary,
+[role='button'] {
+  transition:
+    transform 0.08s ease-out,
+    filter 0.08s ease-out;
+}
+button:not(:disabled):active,
+a[href]:active,
+summary:active,
+[role='button']:active {
+  transform: scale(0.97);
+  filter: brightness(0.93);
+}
+@media (prefers-reduced-motion: reduce) {
+  button:not(:disabled):active,
+  a[href]:active,
+  summary:active,
+  [role='button']:active {
+    transform: none;
+  }
 }
 
 #radice {
