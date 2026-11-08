@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import catalogo from '../catalogo/catalogo.json';
 import type { Catalogo } from '../catalogo/tipi';
-import { FRIGO_BASE } from './frigo';
+import { FRIGO_BASE, posto } from './frigo';
 import { Indice } from './ricette';
 import {
   confronta,
+  controllaPosto,
   contestoPerGemini,
   daGuardare,
   distribuisci,
@@ -99,10 +100,11 @@ describe('confronto', () => {
       memoria: MEMORIA_VUOTA,
     });
     const tipo = Object.fromEntries(righe.map((r) => [r.chiave, r.tipo]));
-    expect(tipo).toEqual({ 'ing:uova': 'quantita', 'ing:latte': 'coerente', 'ing:burro': 'non_visto', 'ing:zucchina': 'nuovo', '?oggetto misterioso': 'incerto' });
+    // Il latte nello sportello è al posto sbagliato (igiene), anche se la quantità torna.
+    expect(tipo).toEqual({ 'ing:uova': 'quantita', 'ing:latte': 'posto', 'ing:burro': 'non_visto', 'ing:zucchina': 'nuovo', '?oggetto misterioso': 'incerto' });
     // Lo yogurt è su un ripiano non fotografato: nessuno lo dà per finito.
     expect(righe.some((r) => r.chiave === 'ing:yogurt')).toBe(false);
-    expect(daGuardare(righe).map((r) => r.tipo)).toEqual(['non_visto', 'quantita', 'nuovo', 'incerto']);
+    expect(daGuardare(righe).map((r) => r.tipo)).toEqual(['posto', 'non_visto', 'quantita', 'nuovo', 'incerto']);
     const z = righe.find((r) => r.chiave === 'ing:zucchina')!;
     expect(z.visto).toBe(3 * (indice.ingrediente('ing:zucchina')!.peso_pz ?? 0));
   });
@@ -192,7 +194,8 @@ describe('dalle decisioni al comando', () => {
     expect(dati.impara).toEqual({
       alias: { 'zucchine verdi': 'ing:zucchina' },
       errori: ['mozzarella'],
-      posizioni: { 'ing:uova': 'r2', 'ing:zucchina': 'r2', 'ing:latte': 'porta' },
+      // Il latte nello sportello non diventa il suo posto abituale: è al posto sbagliato.
+      posizioni: { 'ing:uova': 'r2', 'ing:zucchina': 'r2' },
     });
     expect(dati.zone).toEqual(['r2', 'porta']);
   });
@@ -225,5 +228,39 @@ describe('risposta di Gemini', () => {
     expect(v.map((x) => x.ingrediente_id)).toEqual(['ing:burro', null]);
     const righe = confronta({ indice, lotti: [lotto('ing:burro', 250, 'g', 'r1')], zone, fotografate: ['r1'], visti: v.slice(0, 1), memoria: MEMORIA_VUOTA });
     expect(righe[0]).toMatchObject({ chiave: 'ing:burro', tipo: 'coerente' });
+  });
+});
+
+describe('posto sbagliato (igiene del frigo)', () => {
+  it('carne cruda non sul ripiano basso e latte nello sportello sono gravi; frutta fuori dal cassetto è un consiglio', () => {
+    const p = (id: string) => posto(FRIGO_BASE, id)!;
+    const ing = (id: string) => indice.ingrediente(id)!;
+    expect(controllaPosto(FRIGO_BASE, ing('ing:petto_pollo'), p('r1'))).toMatchObject({ grave: true, dove: { id: 'r4' } });
+    expect(controllaPosto(FRIGO_BASE, ing('ing:petto_pollo'), p('c1'))?.perche).toContain('frutta e verdura');
+    expect(controllaPosto(FRIGO_BASE, ing('ing:petto_pollo'), p('r4'))).toBeNull();
+    expect(controllaPosto(FRIGO_BASE, ing('ing:latte'), p('s2'))).toMatchObject({ grave: true });
+    expect(controllaPosto(FRIGO_BASE, ing('ing:latte'), p('r1'))).toBeNull();
+    expect(controllaPosto(FRIGO_BASE, ing('ing:burro'), p('r2'))).toMatchObject({ grave: false });
+    expect(controllaPosto(FRIGO_BASE, ing('ing:zucchina'), p('r2'))).toMatchObject({ grave: false, dove: { id: 'c1' } });
+  });
+
+  it('nel confronto: il pollo sul ripiano alto è «al posto sbagliato» anche in rapida; spostandolo cambia il posto del lotto', () => {
+    const pollo = lotto('ing:petto_pollo', 500, 'g', 'r1');
+    const righe = confronta({ indice, lotti: [pollo], zone, fotografate: ['r1'], visti: [visto('petto di pollo', 'r1', 500, 'g')], memoria: MEMORIA_VUOTA });
+    expect(righe[0]).toMatchObject({ tipo: 'posto', avvisoPosto: { grave: true, dove: { id: 'r4' } } });
+    expect(daGuardare(righe)).toHaveLength(1);
+    const { dati, modifiche } = preparaVerifica({
+      righe,
+      decisioni: {},
+      zone,
+      fotografate: ['r1'],
+      correzioni: {},
+      nuovoId: () => 'x',
+      stima: () => null,
+      spostati: { 'ing:petto_pollo': 'r4' },
+    });
+    expect(dati.operazioni).toEqual([{ azione: 'presente', lotto_id: pollo.id, posto: 'r4' }]);
+    expect(dati.impara.posizioni['ing:petto_pollo']).toBe('r4');
+    expect(modifiche).toEqual([expect.objectContaining({ nome: 'Petto di pollo', prima: 'Ripiano 1', dopo: expect.stringContaining('Ripiano 4') })]);
   });
 });

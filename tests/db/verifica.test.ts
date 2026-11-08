@@ -165,4 +165,31 @@ describe('verifica_inventario', () => {
     expect(Number(q)).toBe(6);
     expect(await verifica(famiglia)).toBeNull();
   });
+
+  it('spostato nel posto giusto: cambia il posto del lotto (anche insieme alla quantità), mai in dispensa', async () => {
+    const { u, famiglia } = await famigliaCon();
+    const pollo = await nuovoLotto(u, famiglia, { ingrediente_id: 'ing:petto_pollo', quantita: 500, unita: 'g', posto: 'r1' });
+    const latte = await nuovoLotto(u, famiglia, { ingrediente_id: 'ing:latte', quantita: 1000, unita: 'ml', posto: 's1' });
+    const pasta = await nuovoLotto(u, famiglia, { ingrediente_id: 'ing:latte', quantita: 500, unita: 'ml', luogo: 'dispensa', posto: null });
+    const e = await u.applica(
+      comando('verifica_inventario', famiglia, {
+        operazioni: [
+          { azione: 'presente', lotto_id: pollo, posto: 'r4' },
+          { azione: 'quantita', lotto_id: latte, quantita: 500, posto: 'r2' },
+          { azione: 'presente', lotto_id: pasta, posto: 'r2' },
+        ],
+      }),
+    );
+    expect(e.esito).toBe('applicato');
+    expect(e.dettaglio).toMatchObject({ modifiche: 3 });
+    const righe = await banco.sql<{ id: string; posto: string | null; q: string }>(`select id, posto, quantita as q from lotto where famiglia_id = $1`, [famiglia]);
+    const per = Object.fromEntries(righe.map((r) => [r.id, r]));
+    expect(per[pollo]).toMatchObject({ posto: 'r4' });
+    expect(Number(per[pollo].q)).toBe(500);
+    expect(per[latte]).toMatchObject({ posto: 'r2' });
+    expect(Number(per[latte].q)).toBe(500);
+    expect(per[pasta].posto).toBeNull();
+    const sbagliato = await u.applica(comando('verifica_inventario', famiglia, { operazioni: [{ azione: 'presente', lotto_id: pollo, posto: 'sul tavolo' }] }));
+    expect(sbagliato.esito).toBe('rifiutato');
+  });
 });

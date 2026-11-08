@@ -72,7 +72,7 @@ I comandi sono registrati in `interno.tipo_comando` (tipo → funzione); tutti r
 | `modifica_lotto` | `id`, `versione_attesa`, `campi` (nome, note, date, posto) |
 | `imposta_frigo` | `frigo` (oggetto di src/dominio/frigo.ts, al più 1000 caratteri) o `null` per toglierlo: va in `famiglia.impostazioni.frigo` |
 | `imposta_zone_verifica` | `zone` (1–20 `{id, nome, luogo, posti?}`) o `null` per tornare a quelle del frigo: va in `famiglia.impostazioni.verifica.zone` |
-| `verifica_inventario` | `data?`, `zone` (fotografate), `operazioni` (`quantita` {lotto_id, quantita} · `aggiungi` {id, ingrediente_id, quantita, unita, luogo, posto, date} con origine `foto` · `presente`/`non_verificabile` {lotto_id}), `impara` {alias, errori, posizioni}: solo ciò che la persona ha confermato; nota in cronologia «Verifica con foto: da X a Y». Vedi docs/foto-frigo.md |
+| `verifica_inventario` | `data?`, `zone` (fotografate), `operazioni` (`quantita` {lotto_id, quantita} · `aggiungi` {id, ingrediente_id, quantita, unita, luogo, posto, date} con origine `foto` · `presente`/`non_verificabile` {lotto_id}; `quantita` e `presente` anche con `posto` se spostato), `impara` {alias, errori, posizioni}: solo ciò che la persona ha confermato; nota in cronologia «Verifica con foto: da X a Y». Vedi docs/foto-frigo.md |
 
 Regole principali, tutte nel database e coperte da test (`tests/db/ricette.test.ts`, `tests/db/casa.test.ts`):
 

@@ -58,12 +58,14 @@ describe('anteprima della coda', () => {
 
   it('verifica con le foto: quantità confermate, alimenti nuovi e zone si vedono subito', () => {
     const lotto = { id: 'l1', famiglia_id: F, seq: 3, quantita: 6, unita: 'pz', luogo: 'frigo' };
+    const pollo = { id: 'l3', famiglia_id: F, seq: 4, quantita: 500, unita: 'g', luogo: 'frigo', posto: 'r1' };
     const famiglia = { id: F, famiglia_id: F, seq: 1, impostazioni: { frigo: { ripiani: 3 } } };
-    const v = vistaConAnteprima({ lotto: [lotto], famiglia: [famiglia] }, [
+    const v = vistaConAnteprima({ lotto: [lotto, pollo], famiglia: [famiglia] }, [
       voce('verifica_inventario', {
         operazioni: [
           { azione: 'quantita', lotto_id: 'l1', quantita: 0 },
           { azione: 'presente', lotto_id: 'l9' },
+          { azione: 'presente', lotto_id: 'l3', posto: 'r4' },
           { azione: 'aggiungi', id: 'l2', ingrediente_id: 'ing:zucchina', quantita: 600, unita: 'g', luogo: 'frigo', posto: 'c1', tipo_data: 'sconosciuta' },
         ],
       }),
@@ -71,6 +73,7 @@ describe('anteprima della coda', () => {
     ]);
     expect(v.lotto?.map((l) => [l.id, l.quantita, l.chiuso_il, l.origine ?? null, l.posto ?? null])).toEqual([
       ['l1', 0, 'in_attesa', null, null],
+      ['l3', 500, undefined, null, 'r4'],
       ['l2', 600, null, 'foto', 'c1'],
     ]);
     expect(v.famiglia?.[0].impostazioni).toEqual({ frigo: { ripiani: 3 }, verifica: { zone: [{ id: 'r1', nome: 'Su', luogo: 'frigo' }] } });
