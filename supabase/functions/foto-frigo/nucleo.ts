@@ -100,6 +100,60 @@ export function testoFrigo(frigo: unknown): string | null {
 /** Una parte della richiesta a Gemini: un file (in base64) o del testo. */
 export type Parte = { inline_data: { mime_type: string; data: string } } | { text: string };
 
+/** Opzioni di una richiesta: `veloce` riduce il ragionamento del modello, `suTesto` riceve la risposta man mano. */
+export interface OpzioniGemini {
+  /** Per riconoscere cibo in una foto basta poco ragionamento: la risposta arriva molto prima. */
+  veloce?: boolean;
+  /** Con questa funzione la risposta arriva a pezzi (streaming): riceve tutto il testo arrivato finora. */
+  suTesto?: (finora: string) => void;
+}
+
+/** Ragionamento ridotto: i modelli 2.5 vogliono un budget, i 3.x un livello. */
+function ragionamentoBreve(modello: string): Record<string, unknown> {
+  return modello.startsWith('gemini-2.5') ? { thinkingBudget: 0 } : { thinkingLevel: 'low' };
+}
+
+/** Il testo di un pezzo della risposta di Gemini. */
+function testoDi(json: unknown): string {
+  const j = json as { candidates?: { content?: { parts?: { text?: string; thought?: boolean }[] } }[] };
+  return j.candidates?.[0]?.content?.parts?.filter((p) => !p.thought).map((p) => p.text ?? '').join('') ?? '';
+}
+
+/** Legge una risposta in streaming (righe «data: {…}») e passa il testo man mano. */
+async function leggiFlusso(r: Response, suTesto: (finora: string) => void): Promise<string> {
+  let testo = '';
+  let resto = '';
+  const riga = (l: string) => {
+    const t = l.trim();
+    if (!t.startsWith('data:')) return;
+    try {
+      const pezzo = testoDi(JSON.parse(t.slice(5)));
+      if (pezzo) {
+        testo += pezzo;
+        suTesto(testo);
+      }
+    } catch {
+      // riga incompleta o non JSON: si ignora
+    }
+  };
+  if (!r.body) {
+    for (const l of (await r.text()).split('\n')) riga(l);
+    return testo;
+  }
+  const lettore = r.body.getReader();
+  const dec = new TextDecoder();
+  for (;;) {
+    const { value, done } = await lettore.read();
+    if (done) break;
+    resto += dec.decode(value, { stream: true });
+    const righe = resto.split('\n');
+    resto = righe.pop() ?? '';
+    righe.forEach(riga);
+  }
+  riga(resto);
+  return testo;
+}
+
 /**
  * Chiede a Gemini una risposta JSON con lo schema dato, passando al modello dopo quando la quota gratuita di uno
  * è finita o il modello non è disponibile per questa chiave.
@@ -110,19 +164,34 @@ export async function chiediGemini(
   chiave: string,
   chiama: typeof fetch = fetch,
   modelli = MODELLI,
+  opzioni: OpzioniGemini = {},
 ): Promise<{ testo: string; modello: string } | { errore: 'quota' | 'chiave' | 'gemini'; dettaglio?: string }> {
-  const corpo = JSON.stringify({
-    contents: [{ parts: parti }],
-    generationConfig: { responseMimeType: 'application/json', responseSchema: schema, temperature: 0.1 },
-  });
+  const corpo = (modello: string, breve: boolean) =>
+    JSON.stringify({
+      contents: [{ parts: parti }],
+      generationConfig: {
+        responseMimeType: 'application/json',
+        responseSchema: schema,
+        temperature: 0.1,
+        ...(breve ? { thinkingConfig: ragionamentoBreve(modello) } : {}),
+      },
+    });
+  const metodo = opzioni.suTesto ? 'streamGenerateContent?alt=sse' : 'generateContent';
   let quota = false;
   let ultimo = '';
   for (const modello of modelli) {
-    const r = await chiama(`https://generativelanguage.googleapis.com/v1beta/models/${modello}:generateContent`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-goog-api-key': chiave },
-      body: corpo,
-    });
+    const manda = (breve: boolean) =>
+      chiama(`https://generativelanguage.googleapis.com/v1beta/models/${modello}:${metodo}`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-goog-api-key': chiave },
+        body: corpo(modello, breve),
+      });
+    let r = await manda(!!opzioni.veloce);
+    if (r.status === 400 && opzioni.veloce) {
+      // Un modello che non accetta il ragionamento ridotto: si riprova com'era prima.
+      const testo = await r.clone().text().catch(() => '');
+      if (/think/i.test(testo)) r = await manda(false);
+    }
     if (r.status === 429) {
       quota = true; // quota di questo modello finita: il prossimo
       continue;
@@ -134,10 +203,47 @@ export async function chiediGemini(
       ultimo = `${modello}: ${r.status} ${messaggioGoogle(testo)}`;
       continue;
     }
-    const json = (await r.json()) as { candidates?: { content?: { parts?: { text?: string }[] } }[] };
-    return { testo: json.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('') ?? '', modello };
+    if (opzioni.suTesto) return { testo: await leggiFlusso(r, opzioni.suTesto), modello };
+    return { testo: testoDi(await r.json()), modello };
   }
   return quota ? { errore: 'quota', ...(ultimo ? { dettaglio: ultimo } : {}) } : { errore: 'gemini', dettaglio: ultimo };
+}
+
+/**
+ * Gli oggetti già completi di un array JSON che sta ancora arrivando (`[{…}, {…}, {…` → i primi due).
+ * Serve a mostrare gli alimenti riconosciuti man mano, prima che Gemini abbia finito.
+ */
+export function oggettiCompleti(testo: string): unknown[] {
+  const esito: unknown[] = [];
+  let profondita = 0;
+  let inStringa = false;
+  let escape = false;
+  let inizio = -1;
+  for (let i = 0; i < testo.length; i++) {
+    const c = testo[i];
+    if (inStringa) {
+      if (escape) escape = false;
+      else if (c === '\\') escape = true;
+      else if (c === '"') inStringa = false;
+      continue;
+    }
+    if (c === '"') inStringa = true;
+    else if (c === '{' || c === '[') {
+      if (c === '{' && profondita === 1) inizio = i;
+      profondita++;
+    } else if (c === '}' || c === ']') {
+      profondita--;
+      if (c === '}' && profondita === 1 && inizio >= 0) {
+        try {
+          esito.push(JSON.parse(testo.slice(inizio, i + 1)));
+        } catch {
+          // oggetto rotto: si salta
+        }
+        inizio = -1;
+      }
+    }
+  }
+  return esito;
 }
 
 /**
@@ -145,7 +251,7 @@ export async function chiediGemini(
  */
 export async function riconosci(immagine: string, chiave: string, chiama: typeof fetch = fetch, modelli = MODELLI, frigo: string | null = null): Promise<Esito> {
   const parti: Parte[] = [{ inline_data: { mime_type: 'image/jpeg', data: immagine } }, { text: frigo ? `${ISTRUZIONI}\n\n${frigo}` : ISTRUZIONI }];
-  const r = await chiediGemini(parti, SCHEMA, chiave, chiama, modelli);
+  const r = await chiediGemini(parti, SCHEMA, chiave, chiama, modelli, { veloce: true });
   return 'errore' in r ? r : { alimenti: leggiAlimenti(r.testo), modello: r.modello };
 }
 
@@ -158,8 +264,9 @@ Nelle foto c'è una zona del frigo, del freezer o della dispensa. Elenca gli ali
 - nome: nome generico in italiano, al singolare e minuscolo (es. "latte", "uova", "zucchina"); niente marche;
 - codice: se è uno dei prodotti registrati elencati sotto, il suo codice (es. "p3"); altrimenti null. Non dare un codice solo perché il prodotto è nell'elenco o nel menu: deve vedersi nella foto;
 - quantita e unita: quanto se ne vede, solo se si capisce ("pz" per ciò che si conta, "g" o "ml" per confezioni con peso o volume tipico); altrimenti null;
-- certezza: "sicuro" se lo riconosci senza dubbi, "probabile" se è molto verosimile, "incerto" se è solo un'ipotesi (confezione chiusa, coperta, poco visibile).
-Non inventare. Ignora persone, documenti e oggetti che non sono cibo.`;
+- certezza: "sicuro" se lo riconosci senza dubbi, "probabile" se è molto verosimile, "incerto" se è solo un'ipotesi (confezione chiusa, coperta, poco visibile);
+- foto e riquadro: in quale foto lo vedi meglio (1 = la prima) e dove, come [ymin, xmin, ymax, xmax] da 0 a 1000.
+Elenca gli alimenti nell'ordine in cui li trovi, da sinistra a destra e dall'alto in basso. Non inventare. Ignora persone, documenti e oggetti che non sono cibo.`;
 
 const SCHEMA_VERIFICA = {
   type: 'ARRAY',
@@ -171,6 +278,8 @@ const SCHEMA_VERIFICA = {
       quantita: { type: 'NUMBER', nullable: true },
       unita: { type: 'STRING', enum: ['g', 'ml', 'pz'], nullable: true },
       certezza: { type: 'STRING', enum: ['sicuro', 'probabile', 'incerto'] },
+      foto: { type: 'INTEGER', nullable: true },
+      riquadro: { type: 'ARRAY', items: { type: 'NUMBER' }, nullable: true },
     },
     required: ['nome', 'certezza'],
   },
@@ -182,18 +291,29 @@ export interface VistoInZona {
   quantita: number | null;
   unita: 'g' | 'ml' | 'pz' | null;
   certezza: 'sicuro' | 'probabile' | 'incerto';
+  /** Solo per mostrare dove l'ha visto mentre guarda: la foto (da 0) e il riquadro [ymin, xmin, ymax, xmax] da 0 a 1000. */
+  foto?: number;
+  riquadro?: [number, number, number, number];
 }
 
-/** Legge la risposta della verifica: righe sensate, al più 60; certezza sconosciuta = incerto. */
-export function leggiVisti(testo: string): VistoInZona[] {
-  const base = leggiAlimenti(testo);
+/** Il riquadro di Gemini, se ha senso: quattro numeri tra 0 e 1000, con l'alto sopra il basso e la sinistra prima della destra. */
+function riquadroValido(x: unknown): [number, number, number, number] | null {
+  if (!Array.isArray(x) || x.length !== 4 || !x.every((n) => typeof n === 'number' && Number.isFinite(n) && n >= 0 && n <= 1000)) return null;
+  const [y0, x0, y1, x1] = x as number[];
+  return y1 > y0 && x1 > x0 ? [y0, x0, y1, x1] : null;
+}
+
+/** Legge la risposta della verifica: righe sensate, al più 60; certezza sconosciuta = incerto. Accetta anche una risposta a metà. */
+export function leggiVisti(testo: string, aMeta = false): VistoInZona[] {
   let dati: unknown[] = [];
   try {
     const j = JSON.parse(testo);
     if (Array.isArray(j)) dati = j;
   } catch {
-    return [];
+    if (!aMeta) return [];
+    dati = oggettiCompleti(testo);
   }
+  const base = leggiAlimenti(JSON.stringify(dati));
   const perNome = new Map<string, Record<string, unknown>>();
   for (const x of dati) if (x && typeof x === 'object' && typeof (x as { nome?: unknown }).nome === 'string') {
     const k = ((x as { nome: string }).nome).trim().toLowerCase().slice(0, 60);
@@ -203,7 +323,9 @@ export function leggiVisti(testo: string): VistoInZona[] {
     const r = perNome.get(a.nome) ?? {};
     const certezza = r.certezza === 'sicuro' || r.certezza === 'probabile' ? r.certezza : 'incerto';
     const codice = typeof r.codice === 'string' && /^p\d{1,3}$/.test(r.codice) ? r.codice : null;
-    return { nome: a.nome, codice, quantita: a.quantita, unita: a.unita, certezza };
+    const riquadro = riquadroValido(r.riquadro);
+    const foto = typeof r.foto === 'number' && Number.isInteger(r.foto) && r.foto >= 1 && r.foto <= MAX_FOTO_VERIFICA ? r.foto - 1 : 0;
+    return { nome: a.nome, codice, quantita: a.quantita, unita: a.unita, certezza, ...(riquadro ? { foto, riquadro } : {}) };
   });
 }
 
@@ -212,18 +334,31 @@ export function testoContesto(x: unknown): string | null {
   return typeof x === 'string' && x.trim() ? x.slice(0, 6000) : null;
 }
 
-/** Riconosce gli alimenti in una zona: più foto della stessa zona insieme, con il contesto della famiglia. */
+/**
+ * Riconosce gli alimenti in una zona: più foto della stessa zona insieme, con il contesto della famiglia.
+ * Con `suVisti` la risposta arriva man mano e riceve ogni volta tutti gli alimenti trovati finora.
+ */
 export async function riconosciZona(
   immagini: string[],
   chiave: string,
   contesto: string | null,
   chiama: typeof fetch = fetch,
   modelli = MODELLI,
+  suVisti?: (finora: VistoInZona[]) => void,
 ): Promise<{ visti: VistoInZona[]; modello: string } | { errore: 'quota' | 'chiave' | 'gemini'; dettaglio?: string }> {
   const parti: Parte[] = [
     ...immagini.slice(0, MAX_FOTO_VERIFICA).map((data) => ({ inline_data: { mime_type: 'image/jpeg', data } })),
     { text: contesto ? `${ISTRUZIONI_VERIFICA}\n\n${contesto}` : ISTRUZIONI_VERIFICA },
   ];
-  const r = await chiediGemini(parti, SCHEMA_VERIFICA, chiave, chiama, modelli);
-  return 'errore' in r ? r : { visti: leggiVisti(r.testo), modello: r.modello };
+  let quanti = 0;
+  const suTesto = suVisti
+    ? (finora: string) => {
+        const visti = leggiVisti(finora, true);
+        if (visti.length === quanti) return;
+        quanti = visti.length;
+        suVisti(visti);
+      }
+    : undefined;
+  const r = await chiediGemini(parti, SCHEMA_VERIFICA, chiave, chiama, modelli, { veloce: true, suTesto });
+  return 'errore' in r ? r : { visti: leggiVisti(r.testo, true), modello: r.modello };
 }
