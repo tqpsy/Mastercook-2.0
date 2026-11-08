@@ -7,7 +7,8 @@ import type { Indice, Ingrediente } from '../dominio/ricette';
 import { normalizza } from '../dominio/ricette';
 import { eFresco, giorniTra, type Luogo, oggi, stima } from '../dominio/scadenze';
 import { abbinaRighe, leggiScontrino, quantitaProposta, type RigaDaAbbinare, type RigaLetta, suggerisciIngrediente, unisciDescrizioni } from '../dominio/scontrini';
-import { formattaEuro, formattaGiorno, leggiNumero, pesoDeiPezzi, UNITA, type Unita, UNITA_BASE, unitaPer } from '../dominio/unita';
+import { formattaEuro, formattaGiorno, leggiNumero, type Unita, UNITA_BASE } from '../dominio/unita';
+import { CampoQuantita } from '../ui/CampoQuantita';
 import { CercaIngrediente } from '../ui/CercaIngrediente';
 import { Foglio } from '../ui/Foglio';
 import { leggiTestoDaFoto } from '../ui/ocr';
@@ -26,6 +27,8 @@ interface RigaInRevisione {
   ing: Ingrediente | null;
   numero: string;
   unita: Unita;
+  /** Quante confezioni (3 vasetti di yogurt): vuoto o «1» per una sola. */
+  quante?: string;
   luogo: Luogo;
   cerca: boolean;
   /** Scelta dall'app e non toccata: se cambia la data si riabbina con la spesa di quel giorno. */
@@ -198,7 +201,7 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
           pronte.push({ ...base, nuova: { id: crypto.randomUUID(), ingrediente_id: r.ing.id, luogo: r.luogo } });
           continue;
         }
-        const q = quantitaDa(r.numero, r.unita, r.ing);
+        const q = quantitaDa({ numero: r.numero, unita: r.unita, quante: r.quante ?? '1' }, r.ing);
         if (typeof q === 'string') return setErrore(`${r.ing.nome}: ${q}`);
         const s = eFresco(r.ing) ? stima(r.ing, r.luogo, data) : null;
         pronte.push({
@@ -355,15 +358,14 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
                   <button className="bottone piccolo" onClick={() => cambia(i, { cerca: true })} aria-label={`Cambia l’ingrediente di ${r.descrizione}`}>
                     <IconaCibo valore={iconaIngrediente(r.ing)} /> {r.ing.nome}
                   </button>
-                  <input className="dato" inputMode="decimal" aria-label={`Quantità di ${r.descrizione}`} value={r.numero} onChange={(e) => cambia(i, { numero: e.target.value })} style={{ width: 80 }} />
-                  <select className="dato" aria-label={`Unità di ${r.descrizione}`} value={r.unita} onChange={(e) => cambia(i, { unita: e.target.value as Unita })} style={{ width: 'auto' }}>
-                    {unitaPer(r.ing.dimensione, r.ing.peso_pz).map((u) => (
-                      <option key={u} value={u}>
-                        {UNITA[u].nome}
-                      </option>
-                    ))}
-                  </select>
-                  {pesoDeiPezzi(r.numero, r.unita, r.ing.dimensione, r.ing.peso_pz) && <span className="tenue">{pesoDeiPezzi(r.numero, r.unita, r.ing.dimensione, r.ing.peso_pz)}</span>}
+                  <CampoQuantita
+                    compatto
+                    nome={r.descrizione}
+                    scritta={{ numero: r.numero, unita: r.unita, quante: r.quante ?? '1' }}
+                    cambia={(x) => cambia(i, x)}
+                    dimensione={r.ing.dimensione}
+                    pesoPz={r.ing.peso_pz}
+                  />
                   <select className="dato" aria-label={`Dove va ${r.descrizione}`} value={r.luogo} onChange={(e) => cambia(i, { luogo: e.target.value as Luogo })} style={{ width: 'auto' }}>
                     {LUOGHI.map((l) => (
                       <option key={l} value={l}>

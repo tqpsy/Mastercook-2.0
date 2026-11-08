@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatta, formattaEuro, formattaGiorno, inBase, leggiNumero, type PerNegozio, pesoDeiPezzi, quantitaDaNegozio, scala, somma, unitaPer } from './unita';
+import { eCirca, formatta, formattaEuro, formattaGiorno, inBase, leggiNumero, type PerNegozio, quantitaDaNegozio, scala, somma, unitaPer, leggiQuante, riepilogoScritta, scrittaVuota, totaleScritta } from './unita';
 
 describe('unità e quantità (T-UNI)', () => {
   it('T-UNI-1 1,5 kg diventa 1.500 g; 0,75 l diventa 750 ml', () => {
@@ -23,7 +23,7 @@ describe('unità e quantità (T-UNI)', () => {
 
   it('T-UNI-3 unità incompatibile con la dimensione: rifiutata', () => {
     expect(inBase(10, 'g', 'pezzi')).toEqual({ ok: false, motivo: 'unita_incompatibile' });
-    expect(inBase(1, 'l', 'massa')).toEqual({ ok: false, motivo: 'unita_incompatibile' });
+    expect(inBase(1, 'pz', 'volume')).toEqual({ ok: false, motivo: 'unita_incompatibile' });
   });
 
   it('T-UNI-4 una quantità mancante resta mancante, mai un numero inventato', () => {
@@ -78,9 +78,10 @@ describe('quantitaDaNegozio', () => {
 });
 
 describe('pezzi per ciò che si pesa', () => {
-  it('offre i pezzi solo se si sa quanto pesa un pezzo', () => {
-    expect(unitaPer('massa')).toEqual(['g', 'kg']);
-    expect(unitaPer('massa', 200)).toEqual(['g', 'kg', 'pz']);
+  it('offre g, kg, ml e l a ciò che si pesa o si versa, i pezzi solo se si sa quanto pesa un pezzo', () => {
+    expect(unitaPer('massa')).toEqual(['g', 'kg', 'ml', 'l']);
+    expect(unitaPer('volume')).toEqual(['ml', 'l', 'g', 'kg']);
+    expect(unitaPer('massa', 200)).toEqual(['g', 'kg', 'ml', 'l', 'pz']);
     expect(unitaPer('pezzi', 50)).toEqual(['pz']);
   });
 
@@ -93,10 +94,52 @@ describe('pezzi per ciò che si pesa', () => {
   });
 
   it('accanto ai pezzi dice quanto pesano', () => {
-    expect(pesoDeiPezzi('3', 'pz', 'massa', 200)).toBe('≈ 600 g');
-    expect(pesoDeiPezzi('8', 'pz', 'massa', 150)).toBe('≈ 1,2 kg');
-    expect(pesoDeiPezzi('', 'pz', 'massa', 200)).toBeNull();
-    expect(pesoDeiPezzi('3', 'g', 'massa', 200)).toBeNull();
-    expect(pesoDeiPezzi('6', 'pz', 'pezzi', 60)).toBeNull();
+    expect(riepilogoScritta(scrittaVuota('pz', '3'), 'massa', 200)).toBe('≈ 600 g');
+    expect(riepilogoScritta(scrittaVuota('pz', '8'), 'massa', 150)).toBe('≈ 1,2 kg');
+    expect(riepilogoScritta(scrittaVuota('pz', ''), 'massa', 200)).toBeNull();
+    expect(riepilogoScritta(scrittaVuota('g', '3'), 'massa', 200)).toBeNull();
+    expect(riepilogoScritta(scrittaVuota('pz', '6'), 'pezzi', 60)).toBeNull();
+  });
+});
+
+describe('ml per ciò che si pesa e g per ciò che si versa (1 ml ≈ 1 g)', () => {
+  it('500 ml di yogurt sono circa 500 g, 1 kg di latte circa 1 l', () => {
+    expect(inBase(500, 'ml', 'massa')).toEqual({ ok: true, quantita: { valore: 500, unita: 'g' } });
+    expect(inBase(1, 'l', 'massa')).toEqual({ ok: true, quantita: { valore: 1000, unita: 'g' } });
+    expect(inBase(1, 'kg', 'volume')).toEqual({ ok: true, quantita: { valore: 1000, unita: 'ml' } });
+    expect(eCirca('ml', 'massa')).toBe(true);
+    expect(eCirca('kg', 'massa')).toBe(false);
+    expect(riepilogoScritta(scrittaVuota('ml', '500'), 'massa')).toBe('≈ 500 g');
+  });
+
+  it('le uova restano in pezzi: quanto pesa un uovo non si inventa', () => {
+    expect(inBase(100, 'ml', 'pezzi')).toEqual({ ok: false, motivo: 'unita_incompatibile' });
+  });
+});
+
+describe('quante confezioni', () => {
+  it('3 vasetti di yogurt da 125 ml fanno 375 g', () => {
+    const yogurt = { numero: '125', unita: 'ml' as const, quante: '3' };
+    expect(totaleScritta(yogurt, 'massa')).toEqual({ ok: true, quantita: { valore: 375, unita: 'g' } });
+    expect(riepilogoScritta(yogurt, 'massa')).toBe('≈ 375 g');
+  });
+
+  it('2 bottiglie di latte da 1 l fanno 2 l; 2 confezioni da 6 uova fanno 12 uova', () => {
+    expect(totaleScritta({ numero: '1', unita: 'l', quante: '2' }, 'volume')).toEqual({ ok: true, quantita: { valore: 2000, unita: 'ml' } });
+    expect(riepilogoScritta({ numero: '1', unita: 'l', quante: '2' }, 'volume')).toBe('= 2 l');
+    expect(totaleScritta({ numero: '6', unita: 'pz', quante: '2' }, 'pezzi')).toEqual({ ok: true, quantita: { valore: 12, unita: 'pz' } });
+  });
+
+  it('una confezione sola (o il campo vuoto) non cambia niente e non serve dirlo', () => {
+    expect(totaleScritta(scrittaVuota('g', '500'), 'massa')).toEqual({ ok: true, quantita: { valore: 500, unita: 'g' } });
+    expect(totaleScritta({ numero: '500', unita: 'g', quante: '' }, 'massa')).toEqual({ ok: true, quantita: { valore: 500, unita: 'g' } });
+    expect(riepilogoScritta(scrittaVuota('g', '500'), 'massa')).toBeNull();
+  });
+
+  it('confezioni zero o scritte male: si chiede di correggerle', () => {
+    expect(leggiQuante('0')).toBeNull();
+    expect(leggiQuante('tre')).toBeNull();
+    expect(totaleScritta({ numero: '125', unita: 'g', quante: '0' }, 'massa')).toEqual({ ok: false, motivo: 'confezioni_non_valide' });
+    expect(totaleScritta({ numero: '', unita: 'g', quante: '3' }, 'massa')).toEqual({ ok: false, motivo: 'quantita_non_valida' });
   });
 });

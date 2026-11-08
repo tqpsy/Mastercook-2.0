@@ -20,12 +20,20 @@ export const UNITA: Record<Unita, { base: UnitaBase; fattore: number; dimensione
 export const UNITA_BASE: Record<Dimensione, UnitaBase> = { massa: 'g', volume: 'ml', pezzi: 'pz' };
 
 /**
- * Le unità che si possono scegliere per un ingrediente di quella dimensione. Se si sa quanto pesa un pezzo
- * (una zucchina, una mela) si può scrivere anche in pezzi: diventano grammi con `inBase`.
+ * Le unità che si possono scegliere per un ingrediente. Ciò che si pesa si può scrivere anche in ml e l, e
+ * ciò che si versa anche in g e kg (1 ml ≈ 1 g: lo yogurt in vasetti da 125 ml, il latte da 1 kg). Se si sa
+ * quanto pesa un pezzo (una zucchina, una mela) si può scrivere anche in pezzi. Tutto diventa unità base con
+ * `inBase`. Gli ingredienti che si contano (uova) restano in pezzi: quanto pesa un uovo non si inventa.
  */
 export function unitaPer(dimensione: Dimensione, pesoPz?: number | null): Unita[] {
-  const unita = (Object.keys(UNITA) as Unita[]).filter((u) => UNITA[u].dimensione === dimensione);
-  return dimensione !== 'pezzi' && pesoPz ? [...unita, 'pz'] : unita;
+  if (dimensione === 'pezzi') return ['pz'];
+  const prima: Unita[] = dimensione === 'massa' ? ['g', 'kg', 'ml', 'l'] : ['ml', 'l', 'g', 'kg'];
+  return pesoPz ? [...prima, 'pz'] : prima;
+}
+
+/** Vero se l'unità scritta non è della dimensione dell'ingrediente e la conversione è circa (ml di yogurt, g di latte). */
+export function eCirca(unita: Unita, dimensione: Dimensione): boolean {
+  return dimensione !== 'pezzi' && unita !== 'pz' && UNITA[unita].dimensione !== dimensione;
 }
 
 export function eUnita(x: unknown): x is Unita {
@@ -45,19 +53,57 @@ export type EsitoQuantita = { ok: true; quantita: Quantita } | { ok: false; moti
  * Arrotonda a tre decimali per evitare 1.4999999.
  */
 export function inBase(valore: number, unita: Unita, dimensione: Dimensione, pesoPz?: number | null): EsitoQuantita {
+  if (!UNITA[unita]) return { ok: false, motivo: 'unita_incompatibile' };
   const daPezzi = unita === 'pz' && dimensione !== 'pezzi' && !!pesoPz;
-  const u = daPezzi ? { base: UNITA_BASE[dimensione], fattore: pesoPz! } : UNITA[unita];
-  if (!u || (!daPezzi && UNITA[unita].dimensione !== dimensione)) return { ok: false, motivo: 'unita_incompatibile' };
+  const circa = eCirca(unita, dimensione);
+  const u = daPezzi || circa ? { base: UNITA_BASE[dimensione], fattore: daPezzi ? pesoPz! : UNITA[unita].fattore } : UNITA[unita];
+  if (!daPezzi && !circa && UNITA[unita].dimensione !== dimensione) return { ok: false, motivo: 'unita_incompatibile' };
   if (!Number.isFinite(valore) || valore <= 0) return { ok: false, motivo: 'quantita_non_valida' };
   return { ok: true, quantita: { valore: Math.round(valore * u.fattore * 1000) / 1000, unita: u.base } };
 }
 
-/** «≈ 600 g» accanto a «3 pz» di un ingrediente che si pesa; null se non serve dirlo. */
-export function pesoDeiPezzi(testo: string, unita: Unita, dimensione: Dimensione, pesoPz?: number | null): string | null {
-  if (unita !== 'pz' || dimensione === 'pezzi' || !pesoPz) return null;
+/**
+ * Una quantità come la si scrive: quanto ne contiene una confezione (o quanto in tutto) e quante confezioni.
+ * «3 vasetti da 125 ml» = { numero: '125', unita: 'ml', quante: '3' }. `quante` vuoto vale 1.
+ */
+export interface Scritta {
+  numero: string;
+  unita: Unita;
+  quante: string;
+}
+
+export type EsitoScritta = EsitoQuantita | { ok: false; motivo: 'confezioni_non_valide' };
+
+/** Una scritta da riempire, con una confezione sola. */
+export const scrittaVuota = (unita: Unita, numero = ''): Scritta => ({ numero, unita, quante: '1' });
+
+/** Quante confezioni: un numero intero o mezzo (1,5 confezioni), almeno uno; vuoto vale 1. */
+export function leggiQuante(testo: string): number | null {
+  if (!testo.trim()) return 1;
   const n = leggiNumero(testo);
-  const e = n === null ? null : inBase(n, 'pz', dimensione, pesoPz);
-  return e?.ok ? `≈ ${formatta(e.quantita)}` : null;
+  return n === null || n <= 0 ? null : n;
+}
+
+/** Il totale in unità base: quante × quanto ne contiene una (3 × 125 ml di yogurt → 375 g). */
+export function totaleScritta(s: Scritta, dimensione: Dimensione, pesoPz?: number | null): EsitoScritta {
+  const quante = leggiQuante(s.quante);
+  if (quante === null) return { ok: false, motivo: 'confezioni_non_valide' };
+  const n = leggiNumero(s.numero);
+  if (n === null) return { ok: false, motivo: 'quantita_non_valida' };
+  return inBase(n * quante, s.unita, dimensione, pesoPz);
+}
+
+/**
+ * Cosa diventa quello che si è scritto, solo quando non si vede già: «= 375 ml» per 3 confezioni,
+ * «≈ 600 g» per 3 pezzi di un ingrediente che si pesa o per 500 ml di yogurt. Null se non serve dirlo.
+ */
+export function riepilogoScritta(s: Scritta, dimensione: Dimensione, pesoPz?: number | null): string | null {
+  const quante = leggiQuante(s.quante);
+  const e = totaleScritta(s, dimensione, pesoPz);
+  if (!e.ok || quante === null) return null;
+  const converte = (s.unita === 'pz' && dimensione !== 'pezzi') || eCirca(s.unita, dimensione);
+  if (quante === 1 && !converte) return null;
+  return `${converte ? '≈' : '='} ${formatta(e.quantita)}`;
 }
 
 /** Somma per unità: g con g, ml con ml. Unità diverse restano voci separate. */

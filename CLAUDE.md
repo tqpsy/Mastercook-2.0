@@ -10,7 +10,7 @@ Stack: TypeScript, React 19 + Vite (nessun router), CSS a mano, Dexie (copia loc
 - `src/dati/`: motore dei dati. `sincronizzatore.ts` (coda comandi ed esiti), `archivio.ts` (Dexie), `anteprima.ts` (vista locale con i comandi in attesa), `lettura.ts` (dopo uno scarico legge solo le righe nuove; tabelle invariate restano gli stessi array), `contesto.tsx` (`useFamiglia`, `useVista`), `indice.ts` (catalogo), `esportazione.ts`, `migrazione.ts` (import dal vecchio), `tipi.ts`.
 - `src/dominio/`: logica pura, test accanto a ogni file. Per esempio `menu.ts`, `proposte.ts`, `antonino.ts`, `piano.ts` (file del piano del nutrizionista), `spesa.ts`, `speso.ts` (quanto si è speso), `verifica.ts` (verifica dell'inventario con le foto), `scontrini.ts`, `vincoli.ts`/`interpreta.ts`/`crudi.ts` (sicurezza alimentare), `iconeCibo.ts`.
 - `src/pagine/`: un file per schermata (`Oggi`, `Menu`, `Spesa` (con `Speso`), `Casa` (con `Verifica`, verifica con le foto), `Ricette`, `Antonino`, `Impostazioni`…).
-- `src/ui/`: componenti riusabili (`Icona`, `IconaCibo` + `disegniCibo.ts`, `Foglio`, `Scanner`, `ocr.ts`…).
+- `src/ui/`: componenti riusabili (`Icona`, `IconaCibo` + `disegniCibo.ts`, `Foglio`, `Scanner`, `CampoQuantita` (unità + quante confezioni), `ocr.ts`…).
 - `src/piattaforma/`: `supabase.ts`, `drive.ts` (solo `drive.file`), `fotoFrigo.ts`, `locale/` (PGlite in un worker).
 - `src/catalogo/`: `catalogo.json` (ricette e ingredienti di sistema), `ricette-nuove.json`.
 - `supabase/migrations/`: tutta la logica che vale per ogni dispositivo. `supabase/functions/foto-frigo/`: unica Edge Function (foto del frigo e lettura del piano del nutrizionista con Gemini, `piano.ts`).

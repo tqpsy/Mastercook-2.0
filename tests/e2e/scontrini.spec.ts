@@ -191,7 +191,7 @@ test('scontrino senza quantità: si salta, entra lo stesso e la quantità si scr
   // Le zucchine si contano: si propongono a pezzi (200 g l'una) e non serve pesarle.
   await expect(quanto.getByLabel('Unità')).toHaveValue('pz');
   await quanto.getByLabel('Quantità').fill('3');
-  await expect(quanto).toContainText('≈ 600 g');
+  await expect(quanto).toContainText('In tutto circa 600 g');
   await quanto.getByRole('button', { name: 'Metti in casa' }).click();
   await expect(daCompletare).toHaveCount(0);
   await salvato(page);
