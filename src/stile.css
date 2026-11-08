@@ -3842,6 +3842,135 @@ button.speso-voce:focus-visible {
   background: var(--superficie);
   color: var(--testo);
 }
+/* Lettura delle foto: barra, fasi, foto con i riquadri degli alimenti trovati */
+.barra-lettura {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--salvia-tenue);
+  overflow: hidden;
+  margin-top: 8px;
+}
+.barra-lettura span {
+  display: block;
+  height: 100%;
+  background: var(--primario);
+  border-radius: inherit;
+  transition: width 0.4s ease;
+}
+.zona-lettura {
+  padding: 12px 0;
+  border-top: 1px solid var(--bordo);
+}
+.fase-lettura {
+  font-size: 0.9em;
+  color: var(--testo-tenue);
+}
+.fase-lettura.fatto {
+  color: var(--primario);
+  font-weight: 600;
+}
+.foto-lettura-elenco {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+.foto-lettura-elenco.piu {
+  grid-template-columns: 1fr 1fr;
+}
+.foto-lettura {
+  position: relative;
+  overflow: hidden;
+  border-radius: 10px;
+  border: 1px solid var(--bordo);
+  line-height: 0;
+}
+.foto-lettura img {
+  width: 100%;
+  max-height: 46vh;
+  object-fit: contain;
+  background: var(--barra);
+}
+.foto-lettura.cerca::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 18%;
+  top: -18%;
+  background: linear-gradient(to bottom, transparent, rgb(227 165 48 / 0.35), transparent);
+  animation: scorri-lettura 2.4s linear infinite;
+  pointer-events: none;
+}
+@keyframes scorri-lettura {
+  to {
+    top: 100%;
+  }
+}
+.riquadro-visto {
+  position: absolute;
+  border: 2px solid var(--salvia);
+  border-radius: 6px;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.35);
+  line-height: 1.2;
+}
+.riquadro-visto span {
+  position: absolute;
+  left: -2px;
+  top: -2px;
+  transform: translateY(-100%);
+  max-width: 160px;
+  padding: 1px 6px;
+  border-radius: 6px 6px 6px 0;
+  background: var(--salvia);
+  color: var(--senape-testo);
+  font-size: 0.72rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.riquadro-visto.ultimo {
+  border-color: var(--senape);
+  animation: pulsa-riquadro 1.2s ease-in-out infinite;
+}
+.riquadro-visto.ultimo span {
+  background: var(--senape);
+}
+@keyframes pulsa-riquadro {
+  50% {
+    box-shadow: 0 0 0 4px rgb(227 165 48 / 0.45);
+  }
+}
+.visti-lettura {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+}
+.visti-lettura li {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--salvia-tenue);
+  font-size: 0.85rem;
+  animation: compare-visto 0.3s ease;
+}
+.visti-lettura li.ultimo {
+  background: var(--senape-tenue);
+}
+@keyframes compare-visto {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .foto-lettura.cerca::after,
+  .riquadro-visto.ultimo,
+  .visti-lettura li {
+    animation: none;
+  }
+}
 .riga-verifica {
   padding: 12px 0;
   border-bottom: 1px solid var(--bordo);

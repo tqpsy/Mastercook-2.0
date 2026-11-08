@@ -4,6 +4,8 @@
 // La foto non si salva: passa a Google e basta.
 // Con `tipo: 'piano'` legge invece il piano del nutrizionista (PDF o foto in `documento`, tipo in `mime`).
 // Con `tipo: 'verifica'` guarda una zona (fino a 4 foto in `immagini`) e la confronta con il `contesto` mandato dall'app.
+// Con anche `flusso: true` risponde una riga JSON alla volta: {"visti": [...]} man mano, poi {"fine": true, "visti", "modello"}
+// oppure {"errore"}: l'app mostra gli alimenti mentre Gemini li trova.
 import { MAX_FOTO_VERIFICA, riconosci, riconosciZona, testoContesto, testoFrigo } from './nucleo.ts';
 import { leggiPianoDocumento, MIME_PIANO } from './piano.ts';
 
@@ -31,7 +33,7 @@ const rispondi = (stato: number, dati: unknown) => new Response(JSON.stringify(d
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
   if (req.method !== 'POST') return rispondi(405, { errore: 'metodo' });
-  let d: { famiglia_id?: string; immagine?: string; frigo?: unknown; tipo?: string; documento?: string; mime?: string; immagini?: unknown; contesto?: unknown };
+  let d: { famiglia_id?: string; immagine?: string; frigo?: unknown; tipo?: string; documento?: string; mime?: string; immagini?: unknown; contesto?: unknown; flusso?: unknown };
   try {
     d = await req.json();
   } catch {
@@ -68,6 +70,23 @@ Deno.serve(async (req) => {
   const scelta = r.ok ? ((await r.json()) as { chiave: string | null; condivisa: boolean }) : { chiave: null, condivisa: false };
   const chiave = scelta.chiave ?? (scelta.condivisa ? Deno.env.get('GEMINI_API_KEY') : undefined);
   if (!chiave) return rispondi(503, { errore: 'non_configurata' });
+
+  if (verifica && d.flusso === true) {
+    const cod = new TextEncoder();
+    const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
+    const scrivi = writable.getWriter();
+    const riga = (x: unknown) => scrivi.write(cod.encode(`${JSON.stringify(x)}\n`)).catch(() => {});
+    (async () => {
+      try {
+        const esito = await riconosciZona(immagini as string[], chiave, testoContesto(d.contesto), fetch, undefined, (visti) => void riga({ visti }));
+        await riga('errore' in esito ? esito : { fine: true, ...esito });
+      } catch {
+        await riga({ errore: 'gemini', dettaglio: 'risposta interrotta' });
+      }
+      await scrivi.close().catch(() => {});
+    })();
+    return new Response(readable, { headers: { ...CORS, 'content-type': 'application/x-ndjson', 'cache-control': 'no-cache' } });
+  }
 
   const esito = piano
     ? await leggiPianoDocumento(d.documento!, d.mime!, chiave)

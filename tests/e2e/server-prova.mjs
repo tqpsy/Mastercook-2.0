@@ -115,7 +115,7 @@ createServer(async (req, res) => {
     // Foto del frigo: al posto di Gemini una risposta fissa; il controllo su chi fa parte della famiglia è vero.
     if (percorso === '/functions/v1/foto-frigo' && req.method === 'POST') {
       const sub = utenteDalToken(req);
-      const { famiglia_id, immagine, tipo, documento, immagini, contesto } = await corpo(req);
+      const { famiglia_id, immagine, tipo, documento, immagini, contesto, flusso } = await corpo(req);
       const file = tipo === 'piano' ? documento : tipo === 'verifica' ? immagini?.[0] : immagine;
       const r = sub && typeof file === 'string' && file.length > 0 ? await comeUtente(sub, 'select 1 from famiglia where id = $1', [famiglia_id]) : { rowCount: 0 };
       if (!r.rowCount) return rispondi(res, 403, { errore: 'non_autorizzato' });
@@ -125,18 +125,23 @@ createServer(async (req, res) => {
       // Verifica con le foto: risposta fissa. Le uova si riconoscono dal codice del contesto (se ci sono in casa).
       if (tipo === 'verifica') {
         const codiceUova = /- (p\d+): uova/.exec(String(contesto ?? ''))?.[1] ?? null;
-        return rispondi(res, 200, {
-          modello: 'prova',
-          visti: [
-            { nome: 'uova', codice: codiceUova, quantita: 2, unita: 'pz', certezza: 'sicuro' },
-            { nome: 'zucchina', codice: null, quantita: 3, unita: 'pz', certezza: 'probabile' },
-            { nome: 'barattolo scuro', codice: null, quantita: null, unita: null, certezza: 'incerto' },
-            // Il pollo si vede solo se è registrato in casa (prova del posto sbagliato).
-            ...(/- (p\d+): petto di pollo/.test(String(contesto ?? ''))
-              ? [{ nome: 'petto di pollo', codice: /- (p\d+): petto di pollo/.exec(String(contesto))[1], quantita: 500, unita: 'g', certezza: 'sicuro' }]
-              : []),
-          ],
-        });
+        const visti = [
+          { nome: 'uova', codice: codiceUova, quantita: 2, unita: 'pz', certezza: 'sicuro', foto: 0, riquadro: [100, 80, 300, 400] },
+          { nome: 'zucchina', codice: null, quantita: 3, unita: 'pz', certezza: 'probabile', foto: 0, riquadro: [450, 500, 700, 900] },
+          { nome: 'barattolo scuro', codice: null, quantita: null, unita: null, certezza: 'incerto' },
+          // Il pollo si vede solo se è registrato in casa (prova del posto sbagliato).
+          ...(/- (p\d+): petto di pollo/.test(String(contesto ?? ''))
+            ? [{ nome: 'petto di pollo', codice: /- (p\d+): petto di pollo/.exec(String(contesto))[1], quantita: 500, unita: 'g', certezza: 'sicuro' }]
+            : []),
+        ];
+        if (!flusso) return rispondi(res, 200, { modello: 'prova', visti });
+        // Come la funzione vera con `flusso`: una riga alla volta, con una pausa, così si vede l'avanzamento.
+        res.writeHead(200, { 'content-type': 'application/x-ndjson', 'access-control-allow-origin': '*' });
+        for (let i = 1; i <= visti.length; i++) {
+          res.write(`${JSON.stringify({ visti: visti.slice(0, i) })}\n`);
+          await new Promise((ok) => setTimeout(ok, 400));
+        }
+        return res.end(`${JSON.stringify({ fine: true, modello: 'prova', visti })}\n`);
       }
       // Il piano del nutrizionista letto da un PDF: una risposta fissa nel formato di Gemini.
       if (tipo === 'piano')
