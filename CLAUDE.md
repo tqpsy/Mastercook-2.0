@@ -6,7 +6,7 @@ PWA in italiano per organizzare i pasti di famiglia attorno al **menu della sett
 Stack: TypeScript, React 19 + Vite (nessun router), CSS a mano, Dexie (copia locale + coda comandi), PGlite (famiglia «solo su questo telefono»), Supabase gratuito UE (Postgres, login solo Google), tesseract.js (scontrini), Gemini con chiave gratuita della famiglia (foto del frigo).
 
 ## Cartelle e file principali
-- `src/App.tsx`: guscio con le schede Oggi, Menu, Spesa, Casa, Ricette e Impostazioni. `src/config.ts`: solo chiavi pubbliche. `src/stile.css`: tutto lo stile, con le variabili del design «La cucina di Luca».
+- `src/App.tsx`: guscio con le schede Oggi, Menu, Spesa, Casa, Ricette (restano montate con `Activity`: una scheda nascosta non ha effetti attivi) e Impostazioni. `src/config.ts`: solo chiavi pubbliche. `src/stile.css`: tutto lo stile, con le variabili del design «La cucina di Luca».
 - `src/dati/`: motore dei dati. `sincronizzatore.ts` (coda comandi ed esiti), `archivio.ts` (Dexie), `anteprima.ts` (vista locale con i comandi in attesa), `lettura.ts` (dopo uno scarico legge solo le righe nuove; tabelle invariate restano gli stessi array), `contesto.tsx` (`useFamiglia`, `useVista`), `indice.ts` (catalogo), `esportazione.ts`, `migrazione.ts` (import dal vecchio), `tipi.ts`.
 - `src/dominio/`: logica pura, test accanto a ogni file. Per esempio `menu.ts`, `proposte.ts`, `antonino.ts`, `piano.ts` (file del piano del nutrizionista), `spesa.ts`, `speso.ts` (quanto si è speso), `verifica.ts` (verifica dell'inventario con le foto), `scontrini.ts`, `vincoli.ts`/`interpreta.ts`/`crudi.ts` (sicurezza alimentare), `iconeCibo.ts`.
 - `src/pagine/`: un file per schermata (`Oggi`, `Menu`, `Spesa` (con `Speso`), `Casa` (con `Verifica`, verifica con le foto), `Ricette`, `Antonino`, `Impostazioni`…).
@@ -35,4 +35,5 @@ npm run test:db     # migrazioni + SQL su Postgres 16 (MC_DATABASE_URL, vedi doc
 npm run test:e2e    # Playwright, server di prova sulla porta 14400
 npm run build
 ```
+Velocità: `scripts/velocita/` (semina una famiglia sul server di prova, serve una build, misura su un telefono simulato lento; istruzioni in testa ai file).
 La CI (`.github/workflows/ci.yml`) esegue gli stessi passi. A ogni push su `main`, `pubblica.yml` applica le migrazioni (Supabase CLI fissata a 2.122.1) e pubblica su GitHub Pages.

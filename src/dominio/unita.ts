@@ -113,7 +113,15 @@ export function somma(quantita: Quantita[]): Quantita[] {
   return [...totali].map(([unita, valore]) => ({ valore, unita }));
 }
 
-const numero = (cifre: number) => new Intl.NumberFormat('it-IT', { maximumFractionDigits: cifre });
+// Creare un formato Intl costa molto (decine di microsecondi, molto di più su un telefono lento): uno per tipo, riusato.
+const NUMERI = new Map<number, Intl.NumberFormat>();
+const numero = (cifre: number) => {
+  let f = NUMERI.get(cifre);
+  if (!f) NUMERI.set(cifre, (f = new Intl.NumberFormat('it-IT', { maximumFractionDigits: cifre })));
+  return f;
+};
+const EURO = new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' });
+const GIORNO = new Intl.DateTimeFormat('it-IT', { weekday: 'short', day: 'numeric', month: 'short' });
 
 /** Testo leggibile: 1500 g → «1,5 kg», 750 ml → «750 ml», 1250 g → «1,25 kg», 2 pz → «2 pz». */
 export function formatta(q: Quantita | null | undefined): string {
@@ -144,13 +152,13 @@ export function scala(q: Quantita, porzioniBase: number, porzioni: number): Quan
 
 /** Prezzo all'italiana: 2.3 → «2,30 €». */
 export function formattaEuro(valore: number): string {
-  return new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(valore);
+  return EURO.format(valore);
 }
 
 /** Data breve all'italiana: «lun 27 ott». */
 export function formattaGiorno(data: Date | string): string {
   const d = typeof data === 'string' ? new Date(`${data.slice(0, 10)}T12:00:00`) : data;
-  return new Intl.DateTimeFormat('it-IT', { weekday: 'short', day: 'numeric', month: 'short' }).format(d).replace(/\./g, '');
+  return GIORNO.format(d).replace(/\./g, '');
 }
 
 /** Ciò che serve sapere di un ingrediente per dire quanto comprarne. */
