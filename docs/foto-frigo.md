@@ -60,6 +60,13 @@ Casa › «Verifica con le foto»: non serve a riempire la casa da zero ma a con
    un riepilogo. Solo dopo «Conferma» parte il comando `verifica_inventario`: correzioni con nota
    «Verifica con foto: da X a Y» nella cronologia del lotto, alimenti nuovi con origine `foto`.
 
+**Posto sbagliato (igiene)**: per ciò che si vede in una zona legata a una parte del frigo, `controllaPosto`
+(`src/dominio/verifica.ts`) usa le regole del configuratore (`postoIngrediente` in `src/dominio/frigo.ts`). Gravi, anche
+nella verifica rapida («Al posto sbagliato»): carne e pesce crudi fuori dal ripiano più basso (gocciolando contaminano
+cibi pronti, frutta e verdura), latte, uova e latticini nello sportello (sbalzi di temperatura). Gli altri sono consigli,
+solo nella completa. «L'ho spostato» manda `posto` con l'operazione (migrazione `20261115002100_verifica_posto.sql`);
+nessuno spostamento è automatico.
+
 Cosa impara (in `famiglia.impostazioni.verifica.memoria`, uguale su tutti i dispositivi): il prodotto giusto per un
 nome visto (alias), i nomi visti per errore (dopo due volte la certezza scende), dove sta di solito ogni alimento.
 **Non c'è nessun addestramento del modello**: le foto non si salvano e non si usano per addestrare niente. Migliorare

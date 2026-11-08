@@ -155,6 +155,8 @@ export function Verifica({ indice, chiudi }: { indice: Indice; chiudi: () => voi
   const [completa, setCompleta] = useState(false);
   const [decisioni, setDecisioni] = useState<Record<string, Decisione>>({});
   const [correzioni, setCorrezioni] = useState<Record<string, string>>({});
+  /** Righe spostate nel posto giusto (chiave → parte del frigo). */
+  const [spostati, setSpostati] = useState<Record<string, string>>({});
   const [errore, setErrore] = useState<string | null>(null);
   const [progresso, setProgresso] = useState('');
   const [esito, setEsito] = useState(0);
@@ -165,8 +167,8 @@ export function Verifica({ indice, chiudi }: { indice: Indice; chiudi: () => voi
   );
   const menu = useMemo(() => ingredientiDelMenu(indice, portate, giorno, piuGiorni(giorno, 7)), [indice, portate, giorno]);
   const righe = useMemo(
-    () => (passo === 'risultato' || passo === 'riepilogo' ? confronta({ indice, lotti, zone, fotografate, visti, memoria, menu, correzioni }) : []),
-    [passo, indice, lotti, zone, fotografate, visti, memoria, menu, correzioni],
+    () => (passo === 'risultato' || passo === 'riepilogo' ? confronta({ indice, lotti, zone, fotografate, visti, memoria, menu, correzioni, frigo }) : []),
+    [passo, indice, lotti, zone, fotografate, visti, memoria, menu, correzioni, frigo],
   );
   const zoneScelte = zone.filter((z) => scelte.includes(z.id));
 
@@ -197,6 +199,7 @@ export function Verifica({ indice, chiudi }: { indice: Indice; chiudi: () => voi
     setVisti(tutti);
     setFotografate(daLeggere.map((z) => z.id));
     setDecisioni({});
+    setSpostati({});
     setPasso('risultato');
   }
 
@@ -211,9 +214,10 @@ export function Verifica({ indice, chiudi }: { indice: Indice; chiudi: () => voi
             correzioni,
             nuovoId: () => crypto.randomUUID(),
             stima: (ing, luogo) => stima(ing, luogo, giorno),
+            spostati,
           })
         : null,
-    [passo, righe, decisioni, zone, fotografate, correzioni, giorno],
+    [passo, righe, decisioni, zone, fotografate, correzioni, giorno, spostati],
   );
 
   async function conferma() {
@@ -374,6 +378,15 @@ export function Verifica({ indice, chiudi }: { indice: Indice; chiudi: () => voi
             })
           }
           correggi={(nomi, ing) => setCorrezioni((c) => ({ ...c, ...Object.fromEntries(nomi.map((n) => [n, ing.id])) }))}
+          spostati={spostati}
+          sposta={(chiave, posto) =>
+            setSpostati((x) => {
+              const n = { ...x };
+              if (posto) n[chiave] = posto;
+              else delete n[chiave];
+              return n;
+            })
+          }
           avanti={() => setPasso('riepilogo')}
           rifai={() => setPasso('scatta')}
         />
@@ -440,6 +453,8 @@ function Risultato({
   decisioni,
   decidi,
   correggi,
+  spostati,
+  sposta,
   avanti,
   rifai,
 }: {
@@ -451,13 +466,15 @@ function Risultato({
   decisioni: Record<string, Decisione>;
   decidi: (chiave: string, d: Decisione | null) => void;
   correggi: (nomi: string[], ing: Ingrediente) => void;
+  spostati: Record<string, string>;
+  sposta: (chiave: string, posto: string | null) => void;
   avanti: () => void;
   rifai: () => void;
 }) {
   const anomalie = daGuardare(righe);
   const mostrate = completa ? righe : anomalie;
   const gruppi = (Object.keys(NOME_TIPO) as TipoRiga[]).map((t) => ({ t, righe: mostrate.filter((r) => r.tipo === t) })).filter((g) => g.righe.length);
-  const decise = Object.keys(decisioni).filter((k) => righe.some((r) => r.chiave === k)).length;
+  const decise = new Set([...Object.keys(decisioni), ...Object.keys(spostati)].filter((k) => righe.some((r) => r.chiave === k))).size;
   return (
     <>
       <div className="scelte" role="radiogroup" aria-label="Verifica">
@@ -475,9 +492,20 @@ function Risultato({
             {NOME_TIPO[g.t]} <span className="etichetta">{g.righe.length}</span>
           </h3>
           {g.t === 'non_visto' && <p className="tenue piccolo">Non visti nelle foto: potrebbero essere dietro ad altro. Dimmi tu.</p>}
+          {g.t === 'posto' && <p className="tenue piccolo">Per l’igiene del frigo: spostali e dimmelo, aggiorno il posto in Casa.</p>}
           <ul className="elenco">
             {g.righe.map((r) => (
-              <RigaVista key={r.chiave} indice={indice} r={r} zone={zone} decisione={decisioni[r.chiave] ?? null} decidi={(d) => decidi(r.chiave, d)} correggi={correggi} />
+              <RigaVista
+                key={r.chiave}
+                indice={indice}
+                r={r}
+                zone={zone}
+                decisione={decisioni[r.chiave] ?? null}
+                decidi={(d) => decidi(r.chiave, d)}
+                correggi={correggi}
+                spostato={!!spostati[r.chiave]}
+                sposta={(x) => sposta(r.chiave, x ? (r.avvisoPosto?.dove.id ?? null) : null)}
+              />
             ))}
           </ul>
         </section>
@@ -501,6 +529,8 @@ function RigaVista({
   decisione,
   decidi,
   correggi,
+  spostato,
+  sposta,
 }: {
   indice: Indice;
   r: RigaVerifica;
@@ -508,6 +538,8 @@ function RigaVista({
   decisione: Decisione | null;
   decidi: (d: Decisione | null) => void;
   correggi: (nomi: string[], ing: Ingrediente) => void;
+  spostato: boolean;
+  sposta: (si: boolean) => void;
 }) {
   const [apri, setApri] = useState<'quantita' | 'prodotto' | null>(null);
   const q = (v: number | null) => (v === null || !r.unita ? null : formatta({ valore: v, unita: r.unita }));
@@ -543,6 +575,20 @@ function RigaVista({
         {descrizione}
         {r.tipo === 'incerto' && r.nomi.length > 0 && r.ingrediente && ` · visto come «${r.nomi.join('», «')}»`}
       </p>
+      {r.avvisoPosto && (
+        <div className={`avviso-posto${r.avvisoPosto.grave ? ' grave' : ''}`} role="note" aria-label={`Posto di ${nome}`}>
+          <strong>
+            {r.avvisoPosto.grave ? '⚠️ ' : ''}Va {r.avvisoPosto.dove.zona === 'cassetto' ? 'nel' : r.avvisoPosto.dove.zona === 'sportello' ? 'nel' : 'sul'} {r.avvisoPosto.dove.nome.toLowerCase()}.
+          </strong>{' '}
+          <span>{r.avvisoPosto.perche}</span>
+          <div className="scelte piccole" style={{ marginTop: 8 }}>
+            <button type="button" aria-pressed={spostato} onClick={() => sposta(!spostato)}>
+              L’ho spostato
+            </button>
+            {r.tipo === 'posto' && tasto('Va bene così', { azione: 'presente' })}
+          </div>
+        </div>
+      )}
       <div className="scelte piccole" role="group" aria-label={`Cosa fare con ${nome}`}>
         {r.tipo === 'non_visto' && (
           <>
@@ -600,6 +646,7 @@ function RigaVista({
         />
       )}
       {decisione && <p className="piccolo decisione-verifica">✓ {testoDecisione(decisione, q)}</p>}
+      {spostato && r.avvisoPosto && <p className="piccolo decisione-verifica">✓ Spostato: in Casa lo segno {r.avvisoPosto.dove.zona === 'ripiano' ? 'sul' : 'nel'} {r.avvisoPosto.dove.nome.toLowerCase()}</p>}
     </li>
   );
 }

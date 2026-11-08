@@ -197,6 +197,8 @@ const EFFETTI: Record<string, Effetto> = {
     for (const o of (Array.isArray(d.operazioni) ? d.operazioni : []) as Record<string, unknown>[]) {
       if (o.azione === 'quantita') cambiaQuantita(righe, String(o.lotto_id), () => Number(o.quantita));
       else if (o.azione === 'aggiungi') EFFETTI.aggiungi_lotto(righe, { ...o, origine: 'foto' }, famiglia);
+      if ((o.azione === 'quantita' || o.azione === 'presente') && typeof o.posto === 'string')
+        righe.lotto = (righe.lotto ?? []).map((r) => (r.id === o.lotto_id && r.luogo !== 'dispensa' ? { ...r, posto: o.posto, in_attesa: true } : r));
     }
   },
   imposta_zone_verifica: (righe, d, famiglia) => {

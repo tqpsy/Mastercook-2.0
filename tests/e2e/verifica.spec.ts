@@ -126,3 +126,41 @@ test('verifica con le foto: solo le anomalie, decido io, riepilogo e poi la casa
   await expect(page.getByRole('dialog', { name: /Uova/ })).toContainText('Verifica con foto: da 6 pz a 2 pz');
   await expect(page.getByRole('button', { name: /Verifica con le foto/ })).toContainText('verificata oggi');
 });
+
+test('verifica con le foto: il pollo crudo sul ripiano alto è al posto sbagliato, spostandolo cambia il posto in Casa', async ({ browser }, info) => {
+  test.setTimeout(90_000);
+  const luca = await nuovoUtente('Luca');
+  const { page } = await apri(browser, luca, info.project.use);
+  await creaFamiglia(page, 'Casa Igiene');
+  await page.getByRole('button', { name: 'Impostazioni' }).click();
+  await page.getByLabel('Chiave Gemini della famiglia').fill('AIzaProva_chiave-della-famiglia-1234');
+  await page.getByRole('button', { name: 'Salva la chiave' }).click();
+  await expect(page.getByLabel('Chiave Gemini', { exact: true })).toContainText('…1234');
+  await page.getByRole('button', { name: 'Casa', exact: true }).click();
+  await aggiungi(page, 'petto di pollo', /^Petto di pollo$/, '500');
+  await expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
+  const famiglia = `famiglia_id in (select famiglia_id from utente_famiglia where utente_id = $1)`;
+  await sql(`update lotto set posto = 'r1' where ${famiglia}`, [luca.id]);
+  await page.reload();
+  await page.getByRole('button', { name: 'Casa', exact: true }).click();
+
+  await page.getByRole('button', { name: /Verifica con le foto/ }).click();
+  const foglio = page.getByRole('dialog', { name: 'Verifica con le foto' });
+  await foglio.getByRole('button', { name: 'Ho capito, continua' }).click();
+  await foglio.getByRole('button', { name: /Ripiano 1/ }).click();
+  await foglio.getByRole('button', { name: 'Libera' }).click();
+  await foglio.getByRole('button', { name: 'Inizia (1 zona)' }).click();
+  await foglio.getByLabel('Foto di Ripiano 1').setInputFiles(foto);
+  await foglio.getByRole('button', { name: 'Confronta con la casa' }).click();
+
+  const gruppo = foglio.getByRole('region', { name: 'Al posto sbagliato' });
+  await expect(gruppo).toContainText('Petto di pollo');
+  await expect(gruppo.getByRole('note', { name: 'Posto di Petto di pollo' })).toContainText('Va sul ripiano 4');
+  await foglio.screenshot({ path: `test-results/verifica-posto-${info.project.name}.png` });
+  await gruppo.getByRole('button', { name: 'L’ho spostato' }).click();
+  await foglio.getByRole('button', { name: /Rivedi e conferma/ }).click();
+  await expect(foglio.getByRole('list', { name: 'Modifiche' })).toContainText('Ripiano 1');
+  await foglio.getByRole('button', { name: /Conferma e aggiorna/ }).click();
+  await expect(foglio.getByRole('status')).toContainText('1 modifica');
+  await expect.poll(async () => (await sql<{ posto: string }>(`select posto from lotto where ${famiglia}`, [luca.id]))[0].posto).toBe('r4');
+});

@@ -6,7 +6,7 @@
  * Un alimento non visto in foto non è per forza finito (può essere dietro a un altro): si chiede, non si decide.
  * Il menu aiuta a dare un contesto (sappiamo cosa serve nei prossimi giorni) ma non è una prova che ci sia.
  */
-import { type Frigo, posti } from './frigo';
+import { FRIGO_BASE, type Frigo, type Posto, posto as postoFrigo, postoIngrediente, posti } from './frigo';
 import type { Indice, Ingrediente } from './ricette';
 import type { Luogo } from './scadenze';
 import { formatta, inBase, type Unita, UNITA_BASE, type UnitaBase } from './unita';
@@ -227,9 +227,10 @@ export function ingredienteDi(indice: Indice, v: Visto, memoria: Memoria, correz
 
 // ───────────────────────── Confronto ─────────────────────────
 
-export type TipoRiga = 'non_visto' | 'quantita' | 'nuovo' | 'incerto' | 'coerente';
+export type TipoRiga = 'posto' | 'non_visto' | 'quantita' | 'nuovo' | 'incerto' | 'coerente';
 
 export const NOME_TIPO: Record<TipoRiga, string> = {
+  posto: 'Al posto sbagliato',
   non_visto: 'In casa ma non visti',
   quantita: 'Quantità diverse',
   nuovo: 'Nuovi',
@@ -258,6 +259,43 @@ export interface RigaVerifica {
   altrove: string | null;
   /** Il primo giorno del menu che lo usa: aiuta a dare la precedenza, non è una prova. */
   menu: string | null;
+  /** Visto in un posto che non va bene secondo le regole del frigo (src/dominio/frigo.ts). */
+  avvisoPosto?: AvvisoPosto | null;
+}
+
+export interface AvvisoPosto {
+  /** Sicurezza (contaminazione o temperatura): si vede anche nella verifica rapida. Altrimenti è un consiglio. */
+  grave: boolean;
+  /** Dove va. */
+  dove: Posto;
+  perche: string;
+}
+
+const genere = (p: Posto) => (p.zona === 'cassetto' ? 'cassetto' : p.zona === 'sportello' ? 'sportello' : p.zona === 'freezer' ? 'freezer' : 'ripiano');
+
+/**
+ * Il posto dove si è visto un alimento va bene? Regole di igiene (HACCP domestico) del configuratore del frigo:
+ * - carne e pesce crudi solo sul ripiano più basso: se gocciolano non contaminano cibi pronti, frutta e verdura;
+ * - latte, uova, yogurt e formaggi mai nello sportello: la temperatura cambia a ogni apertura.
+ * Il resto (frutta nel cassetto, salse nello sportello…) è un consiglio: cambia la durata, non la sicurezza.
+ */
+export function controllaPosto(frigo: Frigo, ing: Pick<Ingrediente, 'id' | 'reparto' | 'sottocategoria'>, visto: Posto): AvvisoPosto | null {
+  if (visto.zona === 'freezer') return null;
+  const c = postoIngrediente(frigo, ing, 'frigo');
+  if (!c || c.posto.id === visto.id) return null;
+  if (ing.reparto === 'carne' || ing.reparto === 'pesce')
+    return {
+      grave: true,
+      dove: c.posto,
+      perche:
+        visto.zona === 'cassetto'
+          ? 'Crudo sopra o accanto a frutta e verdura: se gocciola le contamina. Va sul ripiano più basso, in un contenitore chiuso.'
+          : 'Carne e pesce crudi vanno sul ripiano più basso (il più freddo): se gocciolano non contaminano i cibi sotto.',
+    };
+  if (ing.reparto === 'latticini' && ing.sottocategoria !== 'Burro e panna' && visto.zona === 'sportello')
+    return { grave: true, dove: c.posto, perche: 'Latte, uova e latticini mai nello sportello: la temperatura cambia a ogni apertura.' };
+  if (genere(c.posto) === genere(visto)) return null;
+  return { grave: false, dove: c.posto, perche: c.perche };
 }
 
 /** Due quantità sono diverse se per i pezzi manca almeno uno, per pesi e volumi più di un quarto (e più di 50). */
@@ -266,7 +304,7 @@ export function diverse(a: number, b: number, unita: UnitaBase): boolean {
   return Math.abs(a - b) > Math.max(50, 0.25 * Math.max(a, b));
 }
 
-const ORDINE: Record<TipoRiga, number> = { non_visto: 0, quantita: 1, nuovo: 2, incerto: 3, coerente: 4 };
+const ORDINE: Record<TipoRiga, number> = { posto: 0, non_visto: 1, quantita: 2, nuovo: 3, incerto: 4, coerente: 5 };
 
 /**
  * Confronta ciò che si vede con ciò che c'è: una riga per alimento. In verifica rapida si mostrano solo le righe
@@ -281,6 +319,7 @@ export function confronta({
   memoria,
   menu = new Map(),
   correzioni = {},
+  frigo = null,
 }: {
   indice: Indice;
   lotti: LottoInCasa[];
@@ -292,6 +331,8 @@ export function confronta({
   menu?: Map<string, string>;
   /** Correzioni fatte adesso: nome visto → ingrediente. */
   correzioni?: Record<string, string>;
+  /** Il frigo configurato, per controllare il posto (senza: quello di base, come le zone di partenza). */
+  frigo?: Frigo | null;
 }): RigaVerifica[] {
   const attesi = lottiAttesi(lotti, zone, fotografate, memoria);
   const nomeZona = (id: string | null | undefined) => zone.find((z) => z.id === id)?.nome ?? null;
@@ -368,6 +409,17 @@ export function confronta({
     r.tipo = 'nuovo';
   }
 
+  // Il posto dove l'abbiamo visto: solo se visto davvero, in una zona del frigo legata a una sua parte.
+  const f = frigo ?? FRIGO_BASE;
+  for (const r of righe.values()) {
+    if (!r.ingrediente || !r.nomi.length || r.tipo === 'incerto' || !r.zona || !fotografate.includes(r.zona)) continue;
+    const z = zone.find((x) => x.id === r.zona);
+    const qui = z && z.luogo === 'frigo' && z.posti?.length ? postoFrigo(f, z.posti[0]) : null;
+    if (!qui) continue;
+    r.avvisoPosto = controllaPosto(f, r.ingrediente, qui);
+    if (r.tipo === 'coerente' && r.avvisoPosto?.grave) r.tipo = 'posto';
+  }
+
   return [...righe.values()].sort(
     (a, b) =>
       ORDINE[a.tipo] - ORDINE[b.tipo] ||
@@ -392,8 +444,9 @@ export type Decisione =
   | { azione: 'non_c_e' };
 
 export type Operazione =
-  | { azione: 'quantita'; lotto_id: string; quantita: number }
-  | { azione: 'presente' | 'non_verificabile'; lotto_id: string }
+  | { azione: 'quantita'; lotto_id: string; quantita: number; posto?: string }
+  | { azione: 'presente'; lotto_id: string; posto?: string }
+  | { azione: 'non_verificabile'; lotto_id: string }
   | {
       azione: 'aggiungi';
       id: string;
@@ -455,6 +508,7 @@ export function preparaVerifica({
   correzioni,
   nuovoId,
   stima,
+  spostati = {},
 }: {
   righe: RigaVerifica[];
   decisioni: Record<string, Decisione>;
@@ -464,6 +518,8 @@ export function preparaVerifica({
   nuovoId: () => string;
   /** La data stimata per un fresco nuovo nel suo luogo (src/dominio/scadenze.ts), o null. */
   stima: (ing: Ingrediente, luogo: Luogo) => { data_limite: string; calcolata_il: string } | null;
+  /** Righe spostate dalla persona nel posto giusto: chiave → parte del frigo (r4, c1…). */
+  spostati?: Record<string, string>;
 }): {
   dati: { zone: string[]; operazioni: Operazione[]; impara: { alias: Record<string, string>; errori: string[]; posizioni: Record<string, string> } };
   modifiche: Modifica[];
@@ -524,6 +580,26 @@ export function preparaVerifica({
     visti.add(o.lotto_id);
     return true;
   });
+
+  // Spostato nel posto giusto: il posto va sui lotti (insieme alla quantità, se cambia anche quella).
+  for (const r of righe) {
+    const nuovo = spostati[r.chiave];
+    if (!nuovo || !/^[rcsf][1-9]$/.test(nuovo)) continue;
+    let mossi = 0;
+    for (const l of r.lotti.filter((x) => x.luogo !== 'dispensa' && x.posto !== nuovo)) {
+      const o = uniche.find((x) => 'lotto_id' in x && x.lotto_id === l.id);
+      if (o && (o.azione === 'quantita' || o.azione === 'presente')) {
+        if (o.azione === 'quantita' && o.quantita === 0) continue;
+        o.posto = nuovo;
+      } else if (o) continue;
+      else uniche.push({ azione: 'presente', lotto_id: l.id, posto: nuovo });
+      mossi++;
+    }
+    for (const o of uniche) if (o.azione === 'aggiungi' && o.ingrediente_id === r.ingrediente?.id) o.posto = nuovo;
+    const z = zone.find((x) => x.posti?.includes(nuovo));
+    if (r.ingrediente && z) posizioni[r.ingrediente.id] = z.id;
+    if (mossi) modifiche.push({ chiave: `${r.chiave}:posto`, nome: r.ingrediente?.nome ?? r.nomi[0] ?? 'Alimento', prima: zone.find((x) => x.id === r.zona)?.nome ?? '—', dopo: r.avvisoPosto?.dove.nome ?? nuovo });
+  }
 
   return {
     dati: { zone: fotografate, operazioni: uniche, impara: { alias: correzioni, errori: [...new Set(errori)], posizioni } },

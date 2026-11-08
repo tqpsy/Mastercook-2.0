@@ -3884,3 +3884,14 @@ button.speso-voce:focus-visible {
 .nota-movimento {
   display: block;
 }
+.avviso-posto {
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border-radius: var(--raggio);
+  background: var(--superficie-2);
+  font-size: 0.9rem;
+}
+.avviso-posto.grave {
+  background: var(--attenzione-tenue);
+  color: var(--attenzione);
+}

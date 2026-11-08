@@ -131,6 +131,10 @@ createServer(async (req, res) => {
             { nome: 'uova', codice: codiceUova, quantita: 2, unita: 'pz', certezza: 'sicuro' },
             { nome: 'zucchina', codice: null, quantita: 3, unita: 'pz', certezza: 'probabile' },
             { nome: 'barattolo scuro', codice: null, quantita: null, unita: null, certezza: 'incerto' },
+            // Il pollo si vede solo se è registrato in casa (prova del posto sbagliato).
+            ...(/- (p\d+): petto di pollo/.test(String(contesto ?? ''))
+              ? [{ nome: 'petto di pollo', codice: /- (p\d+): petto di pollo/.exec(String(contesto))[1], quantita: 500, unita: 'g', certezza: 'sicuro' }]
+              : []),
           ],
         });
       }
