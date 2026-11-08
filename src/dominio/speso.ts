@@ -149,8 +149,11 @@ export function resocontoSpesa({
   return { mesi: elenco.map((m) => mesi.get(m)!), reparti, senzaPrezzo };
 }
 
+const MESE_BREVE = new Intl.DateTimeFormat('it-IT', { month: 'short' });
+const MESE = new Intl.DateTimeFormat('it-IT', { month: 'long', year: 'numeric' });
+
 /** «novembre 2026» o, con `breve`, «nov». */
 export function nomeMese(mese: string, breve = false): string {
   const d = new Date(`${mese}-15T12:00:00`);
-  return new Intl.DateTimeFormat('it-IT', breve ? { month: 'short' } : { month: 'long', year: 'numeric' }).format(d).replace(/\./g, '');
+  return (breve ? MESE_BREVE : MESE).format(d).replace(/\./g, '');
 }

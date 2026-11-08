@@ -233,6 +233,18 @@ export class Indice {
     return tutti;
   }
 
+  private estesi = new WeakMap<Set<string>, Set<string>>();
+
+  /**
+   * Come `estendi`, ricordato per lo stesso insieme: copertura e mancanti si chiamano per ogni ricetta con la stessa
+   * casa, e rifare l'estensione ogni volta costava molto con centinaia di ricette. L'insieme non va cambiato dopo.
+   */
+  estendiCasa(inCasa: Set<string>): Set<string> {
+    let e = this.estesi.get(inCasa);
+    if (!e) this.estesi.set(inCasa, (e = this.estendi(inCasa)));
+    return e;
+  }
+
   /** Ricerca per nome e sinonimi, senza accenti; prima chi inizia con il testo. */
   cercaIngredienti(testo: string, limite = 12): Ingrediente[] {
     const t = normalizza(testo);
@@ -298,14 +310,14 @@ export function principali(indice: Indice, r: Ricetta): RigaRicetta[] {
 
 /** Quanti ingredienti principali della ricetta ci sono in casa (gli spaghetti in casa valgono per «pasta»). */
 export function copertura(indice: Indice, r: Ricetta, inCasa: Set<string>): { presenti: number; totali: number } {
-  const casa = indice.estendi(inCasa);
+  const casa = indice.estendiCasa(inCasa);
   const p = principali(indice, r);
   return { presenti: p.filter((g) => casa.has(g.ingrediente_id)).length, totali: p.length };
 }
 
 /** Gli ingredienti principali che mancano in casa (gli spaghetti in casa valgono per «pasta»). */
 export function mancanti(indice: Indice, r: Ricetta, inCasa: Set<string>): RigaRicetta[] {
-  const casa = indice.estendi(inCasa);
+  const casa = indice.estendiCasa(inCasa);
   return principali(indice, r).filter((g) => !casa.has(g.ingrediente_id));
 }
 

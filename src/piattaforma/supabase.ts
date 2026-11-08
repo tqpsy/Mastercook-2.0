@@ -1,7 +1,7 @@
 /**
  * Collegamento con Supabase: accesso con Google e trasporto dei comandi.
  */
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { createClient, type Session, type SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CHIAVE, SUPABASE_URL } from '../config';
 import { type Comando, ErroreRete, type Esito, type Pagina, type Trasporto } from '../dati/tipi';
 
@@ -12,6 +12,21 @@ export function supabase(): SupabaseClient {
     auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'pkce' },
   });
   return client;
+}
+
+/**
+ * La sessione salvata su questo dispositivo, letta subito senza rete. All'apertura Supabase prima di rispondere
+ * rinnova l'accesso scaduto (dopo un'ora) chiedendolo al server: con la rete del telefono lo schermo restava vuoto
+ * per secondi. Con questa l'app si apre subito; se il rinnovo poi fallisce, Supabase avvisa e si torna all'accesso.
+ */
+export function sessioneSulDispositivo(): Session | null {
+  try {
+    const chiave = (supabase().auth as unknown as { storageKey: string }).storageKey;
+    const s = JSON.parse(localStorage.getItem(chiave) ?? 'null') as Session | null;
+    return s?.user?.id && s.access_token ? s : null;
+  } catch {
+    return null;
+  }
 }
 
 /** Indirizzo a cui Google riporta dopo l'accesso: la pagina attuale, compreso un eventuale invito. */

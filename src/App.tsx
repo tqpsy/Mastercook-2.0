@@ -1,6 +1,6 @@
 import type { Session } from '@supabase/supabase-js';
 import Dexie from 'dexie';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Activity, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { configurato } from './config';
 import { Archivio } from './dati/archivio';
 import { FamigliaAperta, nomeArchivio, type Sessione, useFamiglia, useVista } from './dati/contesto';
@@ -17,7 +17,7 @@ import { Oggi } from './pagine/Oggi';
 import { Ricette } from './pagine/Ricette';
 import { Spesa } from './pagine/Spesa';
 import { famiglieLocali } from './piattaforma/locale/motore';
-import { esci, type FamigliaMia, mieFamiglie, mioConsenso, supabase } from './piattaforma/supabase';
+import { esci, type FamigliaMia, mieFamiglie, mioConsenso, sessioneSulDispositivo, supabase } from './piattaforma/supabase';
 import { oggi, piuGiorni, statoData } from './dominio/scadenze';
 import { CopiaAutomatica } from './ui/CopiaAutomatica';
 import { Icona } from './ui/Icona';
@@ -76,7 +76,8 @@ type Fase =
   | { tipo: 'pronta'; sessione: Sessione };
 
 function ConAccesso() {
-  const [auth, setAuth] = useState<Session | null | undefined>(undefined);
+  // Se il dispositivo ricorda la sessione si parte da quella, senza aspettare il server (vedi sessioneSulDispositivo).
+  const [auth, setAuth] = useState<Session | null | undefined>(() => sessioneSulDispositivo() ?? undefined);
   const [invito, setInvito] = useState<string | null>(() => codiceInvitoDalLink());
   const [famiglie, setFamiglie] = useState<{ utente: string; elenco: FamigliaMia[]; consenso: number | null } | { utente: string; errore: string } | null>(null);
   const [riprova, setRiprova] = useState(0);
@@ -199,42 +200,71 @@ function ConAccesso() {
 }
 
 type Scheda = 'oggi' | 'menu' | 'spesa' | 'ricette' | 'casa' | 'famiglia' | 'impostazioni';
+type SchedaPrincipale = 'oggi' | 'menu' | 'spesa' | 'ricette' | 'casa';
+
+/**
+ * Le cinque schede della barra restano montate (React `Activity`): quella nascosta non si vede, non ha effetti attivi
+ * e si aggiorna solo quando il telefono è libero. Tornarci costa solo mostrarla, invece di ridisegnarla da zero (prima
+ * 150–300 ms a ogni tocco sulla barra di un telefono lento). Dopo l'apertura, quando il telefono è libero, si
+ * preparano anche quelle non ancora aperte, così anche il primo passaggio è immediato.
+ */
+function useSchedePreparate(attuale: Scheda): Set<SchedaPrincipale> {
+  const vista = useVista();
+  const [preparate, setPreparate] = useState<Set<SchedaPrincipale>>(() => new Set(['oggi']));
+  if (attuale !== 'famiglia' && attuale !== 'impostazioni' && !preparate.has(attuale)) setPreparate(new Set([...preparate, attuale]));
+  const pronta = vista.pronta;
+  useEffect(() => {
+    if (!pronta) return;
+    const tutte = () => setPreparate(new Set(['oggi', 'menu', 'spesa', 'casa', 'ricette']));
+    if ('requestIdleCallback' in window) {
+      const id = requestIdleCallback(tutte, { timeout: 4000 });
+      return () => cancelIdleCallback(id);
+    }
+    const id = setTimeout(tutte, 1500);
+    return () => clearTimeout(id);
+  }, [pronta]);
+  return preparate;
+}
 
 /**
  * Gli avvisi dentro l'app (non notifiche): in Casa i prodotti scaduti o da usare oggi secondo la data
  * registrata; in Oggi i pasti dei giorni prima ancora da confermare.
  */
 function useAvvisi(): Partial<Record<Scheda, { n: number; testo: string }>> {
-  const vista = useVista();
+  const { conferma_pasto, portata } = useVista().righe;
   const lotti = useLotti();
   const giorno = oggi();
-  const casa = lotti.filter((l) => ['scaduto', 'oggi'].includes(statoData(l, giorno))).length;
-  const attive = new Set((vista.righe.conferma_pasto ?? []).filter((c) => c.attiva && !c.eliminato_il).map((c) => c.portata_id));
-  const dal = piuGiorni(giorno, -3);
-  const pasti = (vista.righe.portata ?? []).filter((p) => !p.eliminato_il && String(p.data) >= dal && String(p.data) < giorno && !attive.has(p.id)).length;
-  return {
-    ...(casa ? { casa: { n: casa, testo: casa === 1 ? '1 prodotto scaduto o da usare oggi' : `${casa} prodotti scaduti o da usare oggi` } } : {}),
-    ...(pasti ? { oggi: { n: pasti, testo: pasti === 1 ? '1 pasto da confermare' : `${pasti} pasti da confermare` } } : {}),
-  };
+  // La barra si ridisegna a ogni cambiamento: i conti si rifanno solo quando cambiano lotti, conferme o piatti.
+  return useMemo(() => {
+    const casa = lotti.filter((l) => ['scaduto', 'oggi'].includes(statoData(l, giorno))).length;
+    const attive = new Set((conferma_pasto ?? []).filter((c) => c.attiva && !c.eliminato_il).map((c) => c.portata_id));
+    const dal = piuGiorni(giorno, -3);
+    const pasti = (portata ?? []).filter((p) => !p.eliminato_il && String(p.data) >= dal && String(p.data) < giorno && !attive.has(p.id)).length;
+    return {
+      ...(casa ? { casa: { n: casa, testo: casa === 1 ? '1 prodotto scaduto o da usare oggi' : `${casa} prodotti scaduti o da usare oggi` } } : {}),
+      ...(pasti ? { oggi: { n: pasti, testo: pasti === 1 ? '1 pasto da confermare' : `${pasti} pasti da confermare` } } : {}),
+    };
+  }, [lotti, conferma_pasto, portata, giorno]);
 }
 
 function Guscio({ email, apriFamiglia }: { email: string; apriFamiglia: (famiglia: string) => void }) {
   const [scheda, setScheda] = useState<Scheda>('oggi');
   // Ogni cambio di scheda è un passo: il tasto Indietro torna alla scheda di prima, nell'ordine visitato.
   const passiSchede = useRef<number[]>([]);
-  const vai = useCallback(
-    (nuova: Scheda) => {
-      if (nuova === scheda) return;
-      const prima = scheda;
-      const id = aggiungiPasso(() => {
-        passiSchede.current = passiSchede.current.filter((p) => p !== id);
-        setScheda(prima);
-      });
-      passiSchede.current.push(id);
-      setScheda(nuova);
-    },
-    [scheda],
-  );
+  // `vai` resta la stessa funzione: le schede montate non si ridisegnano solo perché è cambiata la scheda attiva.
+  const attuale = useRef<Scheda>('oggi');
+  const vai = useCallback((nuova: Scheda) => {
+    const prima = attuale.current;
+    if (nuova === prima) return;
+    const id = aggiungiPasso(() => {
+      passiSchede.current = passiSchede.current.filter((p) => p !== id);
+      attuale.current = prima;
+      setScheda(prima);
+    });
+    passiSchede.current.push(id);
+    attuale.current = nuova;
+    setScheda(nuova);
+  }, []);
   useEffect(
     () => () => {
       for (const p of passiSchede.current) togliPasso(p);
@@ -257,6 +287,15 @@ function Guscio({ email, apriFamiglia }: { email: string; apriFamiglia: (famigli
   );
 
   const statoBreve = useStatoBreve();
+  const preparate = useSchedePreparate(scheda);
+  // Sempre gli stessi elementi: React ridisegna una scheda solo quando cambiano i dati che legge.
+  const pagine = useMemo(() => ({ oggi: <Oggi vai={vai} />, menu: <Menu />, spesa: <Spesa />, ricette: <Ricette />, casa: <Casa /> }), [vai]);
+  const pagina = (id: SchedaPrincipale, contenuto: ReactNode) =>
+    preparate.has(id) && (
+      <Activity key={id} mode={scheda === id ? 'visible' : 'hidden'}>
+        {contenuto}
+      </Activity>
+    );
   const titoloScheda = scheda === 'impostazioni' ? 'Impostazioni' : scheda === 'famiglia' ? 'Famiglia' : schede.find((x) => x.id === scheda)?.nome;
 
   /** Dopo l'eliminazione dell'account: via la copia locale e la famiglia ricordata. */
@@ -289,11 +328,11 @@ function Guscio({ email, apriFamiglia }: { email: string; apriFamiglia: (famigli
         <h1 className="solo-lettore">{titoloScheda}</h1>
         <AvvisoSync />
         <CopiaAutomatica apriFamiglia={apriFamiglia} />
-        {scheda === 'oggi' && <Oggi vai={vai} />}
-        {scheda === 'menu' && <Menu />}
-        {scheda === 'spesa' && <Spesa />}
-        {scheda === 'ricette' && <Ricette />}
-        {scheda === 'casa' && <Casa />}
+        {pagina('oggi', pagine.oggi)}
+        {pagina('menu', pagine.menu)}
+        {pagina('spesa', pagine.spesa)}
+        {pagina('ricette', pagine.ricette)}
+        {pagina('casa', pagine.casa)}
         {scheda === 'famiglia' && (
           <>
             {/* Famiglia sta dentro Impostazioni: anche senza tasto Indietro (iPhone) si torna su. */}

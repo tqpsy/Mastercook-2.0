@@ -99,6 +99,13 @@ export function Spesa() {
     ricalcolata.current = true;
     void esegui('ricalcola_spesa', periodoSpesa(finestra, scelti));
   }, [vista.pronta, esegui, finestra, scelti]);
+  // La scheda resta montata anche quando non si vede (App.tsx): ogni volta che torna visibile la lista si riallinea.
+  useEffect(
+    () => () => {
+      ricalcolata.current = false;
+    },
+    [],
+  );
 
   // Ciò che una spesa o uno scontrino mette in casa esce subito dalla lista: si ricalcola dopo (ripeterlo non fa danni).
   const chiudiDopo = (chiudi: (aperto: boolean) => void) => () => {

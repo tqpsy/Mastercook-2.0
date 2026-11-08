@@ -88,6 +88,8 @@ export function Casa() {
   const lotti = useLotti();
   const [luogo, setLuogo] = useState<Luogo>('frigo');
   const [aperto, setAperto] = useState<string | 'nuovo' | 'foto' | 'verifica' | null>(null);
+  // «Da usare presto» è chiusa di base: l'elenco e le ricette (calcolo pesante) si preparano solo quando si apre.
+  const [prestoAperto, setPrestoAperto] = useState(false);
   const giorno = oggi();
   const presto = daUsarePresto(lotti, giorno);
   const sprecati = useSprecati(giorno);
@@ -116,7 +118,7 @@ export function Casa() {
       {presto.length > 0 && (
         // Una tendina chiusa di base: si vede subito quanti prodotti stanno per scadere, l'elenco si apre al tocco.
         <section className="scheda" aria-label="Da usare presto">
-          <details>
+          <details open={prestoAperto} onToggle={(e) => setPrestoAperto(e.currentTarget.open)}>
             <summary>
               <h3 style={{ display: 'inline', margin: 0 }}>
                 Da usare presto <span className="etichetta">{presto.length}</span>
@@ -127,9 +129,13 @@ export function Casa() {
                 {presto.length > 1 && ` e altri ${presto.length - 1}`}
               </span>
             </summary>
-            <ElencoLotti indice={indice} lotti={presto.slice(0, 8)} giorno={giorno} apri={setAperto} conLuogo />
-            {presto.length > 8 && <p className="tenue">E altri {presto.length - 8}.</p>}
-            <RicettePerUrgenti indice={indice} presto={presto} lotti={lotti} giorno={giorno} />
+            {prestoAperto && (
+              <>
+                <ElencoLotti indice={indice} lotti={presto.slice(0, 8)} giorno={giorno} apri={setAperto} conLuogo />
+                {presto.length > 8 && <p className="tenue">E altri {presto.length - 8}.</p>}
+                <RicettePerUrgenti indice={indice} presto={presto} lotti={lotti} giorno={giorno} />
+              </>
+            )}
           </details>
         </section>
       )}
@@ -403,10 +409,15 @@ export function quantitaDa(scritta: Scritta, ing: Ingrediente | undefined): { va
 
 type SceltaData = 'scadenza' | 'tmc' | 'nessuna';
 
+// Formati creati una volta: crearli a ogni riga dell'elenco costava molto sul telefono.
+const DATA_BREVE = new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'long' });
+const DATA_CON_ANNO = new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
+const DATA_MOVIMENTO = new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short' });
+
 /** «5 novembre», con l'anno se non è quest'anno. */
 function dataBreve(data: string): string {
   const d = new Date(`${data}T12:00:00`);
-  return d.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', ...(d.getFullYear() !== new Date().getFullYear() ? { year: 'numeric' } : {}) });
+  return (d.getFullYear() !== new Date().getFullYear() ? DATA_CON_ANNO : DATA_BREVE).format(d);
 }
 
 function NuovoLotto({ indice, luogo: luogoIniziale, chiudi }: { indice: Indice; luogo: Luogo; chiudi: () => void }) {
@@ -816,7 +827,7 @@ function SchedaLotto({ indice, lotto: l, giorno, chiudi }: { indice: Indice; lot
                 <span className="tenue">
                   {Number(m.variazione) > 0 ? '+' : '−'}
                   {formatta({ valore: Math.abs(Number(m.variazione)), unita: l.unita })}
-                  {m.creato_il ? ` · ${new Date(String(m.creato_il)).toLocaleDateString('it-IT', { day: 'numeric', month: 'short' })}` : ''}
+                  {m.creato_il ? ` · ${DATA_MOVIMENTO.format(new Date(String(m.creato_il)))}` : ''}
                 </span>
               </li>
             ))}
