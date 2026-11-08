@@ -11,7 +11,8 @@ import { useFrigo } from './MioFrigo';
 import { ricettePerUrgenti } from '../dominio/consumi';
 import type { Indice, Ingrediente } from '../dominio/ricette';
 import { daUsarePresto, descriviData, descriviDurata, eFresco, giorniTra, type Luogo, oggi, piuGiorni, spreco, statoData, stima, type TipoData } from '../dominio/scadenze';
-import { formatta, inBase, leggiNumero, pesoDeiPezzi, UNITA, type Unita, UNITA_BASE, type UnitaBase, unitaPer } from '../dominio/unita';
+import { formatta, leggiNumero, type Scritta, scrittaVuota, totaleScritta, UNITA_BASE, type UnitaBase } from '../dominio/unita';
+import { CampoQuantita } from '../ui/CampoQuantita';
 import { CercaIngrediente } from '../ui/CercaIngrediente';
 import { type ProdottoScansionato, ScansionaProdotto } from '../ui/CodiceProdotto';
 import { FoglioSchedaProdotto } from '../ui/SchedaProdotto';
@@ -250,8 +251,8 @@ function DaCompletare({ indice }: { indice: Indice }) {
 function CompletaRiga({ riga, chiudi }: { riga: RigaDaCompletare; chiudi: () => void }) {
   const { esegui } = useFamiglia();
   const { ing } = riga;
-  const [numero, setNumero] = useState('');
-  const [unita, setUnita] = useState<Unita>(ing.dimensione !== 'pezzi' && ing.peso_pz ? 'pz' : UNITA_BASE[ing.dimensione]);
+  const [scritta, setScritta] = useState<Scritta>(() => scrittaVuota(ing.dimensione !== 'pezzi' && ing.peso_pz ? 'pz' : UNITA_BASE[ing.dimensione]));
+  const cambiaScritta = (x: Partial<Scritta>) => setScritta((s) => ({ ...s, ...x }));
   const [luogo, setLuogo] = useState<Luogo>(ing.luogo);
   const [errore, setErrore] = useState<string | null>(null);
   const consiglio = useConsiglioPosto(ing, luogo);
@@ -260,7 +261,7 @@ function CompletaRiga({ riga, chiudi }: { riga: RigaDaCompletare; chiudi: () => 
 
   async function salva(e: FormEvent) {
     e.preventDefault();
-    const q = quantitaDa(numero, unita, ing);
+    const q = quantitaDa(scritta, ing);
     if (typeof q === 'string') return setErrore(q);
     await esegui('completa_riga_acquisto', {
       id: riga.id,
@@ -283,23 +284,7 @@ function CompletaRiga({ riga, chiudi }: { riga: RigaDaCompletare; chiudi: () => 
           Comprato {dataBreve(riga.data)}
           {riga.negozio ? ` da ${riga.negozio}` : ''}. Scrivi quanto ne hai preso: entra in casa con la data dello scontrino.
         </p>
-        <div className="riga" style={{ alignItems: 'flex-end' }}>
-          <label className="campo cresce">
-            <span>Quantità</span>
-            <input inputMode="decimal" value={numero} onChange={(e) => setNumero(e.target.value)} autoFocus />
-          </label>
-          <label className="campo">
-            <span>Unità</span>
-            <select value={unita} onChange={(e) => setUnita(e.target.value as Unita)}>
-              {unitaPer(ing.dimensione, ing.peso_pz).map((u) => (
-                <option key={u} value={u}>
-                  {UNITA[u].nome}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        {pesoDeiPezzi(numero, unita, ing.dimensione, ing.peso_pz) && <p className="tenue">{pesoDeiPezzi(numero, unita, ing.dimensione, ing.peso_pz)}</p>}
+        <CampoQuantita scritta={scritta} cambia={cambiaScritta} dimensione={ing.dimensione} pesoPz={ing.peso_pz} autoFocus />
         <div className="campo">
           <span>Dove</span>
           <div className="scelte">
@@ -407,13 +392,13 @@ function ElencoLotti({ indice, lotti, giorno, apri, conLuogo }: { indice: Indice
   );
 }
 
-/** Legge «1,5» + «kg» per l'ingrediente e lo porta in unità base, o dice cosa non va. */
-export function quantitaDa(testo: string, unita: Unita, ing: Ingrediente | undefined): { valore: number; unita: UnitaBase } | string {
-  const n = leggiNumero(testo);
-  if (n === null) return 'Scrivi una quantità, per esempio 500 o 1,5.';
-  const e = inBase(n, unita, ing?.dimensione ?? 'massa', ing?.peso_pz);
-  if (!e.ok) return e.motivo === 'unita_incompatibile' ? 'Unità non adatta a questo ingrediente.' : 'La quantità deve essere più di zero.';
-  return e.quantita;
+/** Legge «1,5» + «kg» × quante confezioni per l'ingrediente e lo porta in unità base, o dice cosa non va. */
+export function quantitaDa(scritta: Scritta, ing: Ingrediente | undefined): { valore: number; unita: UnitaBase } | string {
+  if (leggiNumero(scritta.numero) === null) return 'Scrivi una quantità, per esempio 500 o 1,5.';
+  const e = totaleScritta(scritta, ing?.dimensione ?? 'massa', ing?.peso_pz);
+  if (e.ok) return e.quantita;
+  if (e.motivo === 'confezioni_non_valide') return 'Scrivi quante confezioni, per esempio 1 o 3.';
+  return e.motivo === 'unita_incompatibile' ? 'Unità non adatta a questo ingrediente.' : 'La quantità deve essere più di zero.';
 }
 
 type SceltaData = 'scadenza' | 'tmc' | 'nessuna';
@@ -427,8 +412,8 @@ function dataBreve(data: string): string {
 function NuovoLotto({ indice, luogo: luogoIniziale, chiudi }: { indice: Indice; luogo: Luogo; chiudi: () => void }) {
   const { esegui } = useFamiglia();
   const [ing, setIng] = useState<Ingrediente | null>(null);
-  const [numero, setNumero] = useState('');
-  const [unita, setUnita] = useState<Unita>('g');
+  const [scritta, setScritta] = useState<Scritta>(() => scrittaVuota('g'));
+  const cambiaScritta = (x: Partial<Scritta>) => setScritta((s) => ({ ...s, ...x }));
   const [luogo, setLuogo] = useState<Luogo>(luogoIniziale);
   const [nome, setNome] = useState('');
   const [sceltaData, setSceltaData] = useState<SceltaData | null>(null);
@@ -443,7 +428,7 @@ function NuovoLotto({ indice, luogo: luogoIniziale, chiudi }: { indice: Indice; 
   /** Carne, pesce, frutta, verdura e avanzi senza confezione: la data la calcola l'app. Un prodotto scansionato è confezionato. */
   function scegli(i: Ingrediente, confezionato = false) {
     setIng(i);
-    setUnita(UNITA_BASE[i.dimensione]);
+    cambiaScritta({ unita: UNITA_BASE[i.dimensione] });
     setLuogo(i.luogo);
     const fresco = !confezionato && eFresco(i);
     setSfuso(fresco);
@@ -457,7 +442,7 @@ function NuovoLotto({ indice, luogo: luogoIniziale, chiudi }: { indice: Indice; 
   async function salva(e: FormEvent) {
     e.preventDefault();
     if (!ing) return;
-    const q = quantitaDa(numero, unita, ing);
+    const q = quantitaDa(scritta, ing);
     if (typeof q === 'string') return setErrore(q);
     if (!sceltaData) return setErrore('Indica la data: scadenza, «preferibilmente entro» o senza data.');
     if (sceltaData !== 'nessuna' && !/^\d{4}-\d{2}-\d{2}$/.test(data)) return setErrore('Scrivi la data che c’è sulla confezione.');
@@ -500,8 +485,7 @@ function NuovoLotto({ indice, luogo: luogoIniziale, chiudi }: { indice: Indice; 
           scegli(x.ingrediente, true);
           const formato = x.prodotto?.quantita && x.prodotto.unita ? { quantita: x.prodotto.quantita, unita: x.prodotto.unita } : x.esterno?.formato;
           if (formato && formato.unita === UNITA_BASE[x.ingrediente.dimensione]) {
-            setNumero(String(formato.quantita).replace('.', ','));
-            setUnita(formato.unita);
+            cambiaScritta({ numero: String(formato.quantita).replace('.', ','), unita: formato.unita, quante: '1' });
           }
           setNome(x.prodotto?.nome ?? x.esterno?.nome ?? '');
         }}
@@ -537,21 +521,8 @@ function NuovoLotto({ indice, luogo: luogoIniziale, chiudi }: { indice: Indice; 
             </p>
           )}
           {codice && dettagli && <FoglioSchedaProdotto codice={codice.codice} nome={nome.trim() || ing.nome} chiudi={() => setDettagli(false)} />}
-          <div className="riga" style={{ alignItems: 'flex-end', marginTop: 12 }}>
-            <label className="campo cresce">
-              <span>Quantità</span>
-              <input inputMode="decimal" value={numero} onChange={(e) => setNumero(e.target.value)} autoFocus />
-            </label>
-            <label className="campo">
-              <span>Unità</span>
-              <select value={unita} onChange={(e) => setUnita(e.target.value as Unita)}>
-                {unitaPer(ing.dimensione, ing.peso_pz).map((u) => (
-                  <option key={u} value={u}>
-                    {UNITA[u].nome}
-                  </option>
-                ))}
-              </select>
-            </label>
+          <div style={{ marginTop: 12 }}>
+            <CampoQuantita scritta={scritta} cambia={cambiaScritta} dimensione={ing.dimensione} pesoPz={ing.peso_pz} autoFocus />
           </div>
           <div className="campo">
             <span>Dove</span>
@@ -648,8 +619,8 @@ function SchedaLotto({ indice, lotto: l, giorno, chiudi }: { indice: Indice; lot
   const vista = useVista();
   const ing = indice.ingrediente(l.ingrediente_id);
   const [azione, setAzione] = useState<Azione>(null);
-  const [numero, setNumero] = useState('');
-  const [unita, setUnita] = useState<Unita>(l.unita);
+  const [scritta, setScritta] = useState<Scritta>(() => scrittaVuota(l.unita));
+  const cambiaScritta = (x: Partial<Scritta>) => setScritta((s) => ({ ...s, ...x }));
   const [tutto, setTutto] = useState(true);
   const [dove, setDove] = useState<Luogo>(l.luogo === 'frigo' ? 'freezer' : 'frigo');
   const [tipo, setTipo] = useState<TipoData>(l.tipo_data);
@@ -664,7 +635,7 @@ function SchedaLotto({ indice, lotto: l, giorno, chiudi }: { indice: Indice; lot
   function apri(a: Azione) {
     setAzione(a);
     setErrore(null);
-    setNumero('');
+    cambiaScritta({ numero: '', quante: '1' });
     setTutto(a !== 'correggi');
   }
 
@@ -674,7 +645,7 @@ function SchedaLotto({ indice, lotto: l, giorno, chiudi }: { indice: Indice; lot
     if (azione === 'consumo' || azione === 'spreco' || azione === 'scaduto') {
       let quantita = l.quantita;
       if (!tutto) {
-        const q = quantitaDa(numero, unita, ing);
+        const q = quantitaDa(scritta, ing);
         if (typeof q === 'string') return setErrore(q);
         if (q.valore > l.quantita) return setErrore(`Ce n’è solo ${formatta({ valore: l.quantita, unita: l.unita })}. Se ce n’era di più, usa «Correggi».`);
         quantita = q.valore;
@@ -682,15 +653,15 @@ function SchedaLotto({ indice, lotto: l, giorno, chiudi }: { indice: Indice; lot
       await esegui('scarica_lotto', { lotto_id: l.id, causale: azione, quantita });
       if (quantita >= l.quantita) return chiudi();
     } else if (azione === 'correggi') {
-      const n = leggiNumero(numero);
-      const q = n === 0 ? { valore: 0, unita: l.unita } : quantitaDa(numero, unita, ing);
+      const n = leggiNumero(scritta.numero);
+      const q = n === 0 ? { valore: 0, unita: l.unita } : quantitaDa(scritta, ing);
       if (typeof q === 'string') return setErrore(q);
       await esegui('correggi_lotto', { lotto_id: l.id, quantita_vista: l.quantita, quantita_nuova: q.valore });
       if (q.valore === 0) return chiudi();
     } else if (azione === 'sposta') {
       let quantita: number | null = null;
       if (!tutto) {
-        const q = quantitaDa(numero, unita, ing);
+        const q = quantitaDa(scritta, ing);
         if (typeof q === 'string') return setErrore(q);
         quantita = q.valore < l.quantita ? q.valore : null;
       }
@@ -794,22 +765,7 @@ function SchedaLotto({ indice, lotto: l, giorno, chiudi }: { indice: Indice; lot
             </div>
           )}
           {((chiedeQuantita && !tutto) || azione === 'correggi') && (
-            <div className="riga" style={{ alignItems: 'flex-end' }}>
-              <label className="campo cresce">
-                <span>Quantità</span>
-                <input inputMode="decimal" value={numero} onChange={(e) => setNumero(e.target.value)} autoFocus />
-              </label>
-              <label className="campo">
-                <span>Unità</span>
-                <select value={unita} onChange={(e) => setUnita(e.target.value as Unita)}>
-                  {unitaPer(ing?.dimensione ?? 'massa', ing?.peso_pz).map((u) => (
-                    <option key={u} value={u}>
-                      {UNITA[u].nome}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
+            <CampoQuantita scritta={scritta} cambia={cambiaScritta} dimensione={ing?.dimensione ?? 'massa'} pesoPz={ing?.peso_pz} autoFocus />
           )}
           {azione === 'correggi' && <p className="tenue">Scrivi 0 se è finito. Se nel frattempo qualcuno l’ha cambiato da un altro telefono, te lo faremo vedere.</p>}
           {azione === 'data' && (

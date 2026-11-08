@@ -5,7 +5,8 @@ import { CATEGORIE, type Categoria } from '../catalogo/tipi';
 import { righeAttive, useFamiglia, useVista, type Vista } from '../dati/contesto';
 import { basiDisponibili, DOSI, righeEBasi, testoDosi, titoloBase } from '../dominio/basi';
 import type { Indice, Ingrediente, Ricetta, RigaRicetta } from '../dominio/ricette';
-import { inBase, leggiNumero, UNITA, type Unita, UNITA_BASE, unitaPer } from '../dominio/unita';
+import { leggiNumero, totaleScritta, type Unita, UNITA_BASE } from '../dominio/unita';
+import { CampoQuantita } from '../ui/CampoQuantita';
 import { CercaIngrediente } from '../ui/CercaIngrediente';
 import { Foglio } from '../ui/Foglio';
 import { Foto, riduciFoto } from '../ui/Foto';
@@ -45,6 +46,8 @@ interface RigaBozza {
   ingrediente_id: string;
   numero: string;
   unita: Unita;
+  /** Quante confezioni (2 vasetti di yogurt da 125 g): vuoto o «1» per una sola. */
+  quante?: string;
   qb: boolean;
   opzionale: boolean;
   testo: string;
@@ -144,11 +147,13 @@ export function EditorRicetta({ indice, bozza, chiudi }: { indice: Indice; bozza
       const ing = indice.ingrediente(r.ingrediente_id);
       const nome = ing?.nome ?? 'ingrediente';
       let quantita: number | null = null;
-      let unita = UNITA[r.unita].base;
+      let unita = UNITA_BASE[ing?.dimensione ?? 'massa'];
       if (!r.qb) {
-        const n = leggiNumero(r.numero);
-        const esito = n === null ? null : inBase(n, r.unita, ing?.dimensione ?? 'massa');
-        if (!esito || !esito.ok) problemi.push(esito && esito.motivo === 'unita_incompatibile' ? `${nome}: unità non adatta.` : `${nome}: scrivi la quantità oppure scegli «q.b.».`);
+        const esito = totaleScritta({ numero: r.numero, unita: r.unita, quante: r.quante ?? '1' }, ing?.dimensione ?? 'massa', ing?.peso_pz);
+        if (!esito.ok)
+          problemi.push(
+            esito.motivo === 'unita_incompatibile' ? `${nome}: unità non adatta.` : esito.motivo === 'confezioni_non_valide' ? `${nome}: scrivi quante confezioni.` : `${nome}: scrivi la quantità oppure scegli «q.b.».`,
+          );
         else ({ valore: quantita, unita } = esito.quantita);
       }
       return { r, campi: { ingrediente_id: r.ingrediente_id, quantita, unita, qb: r.qb, opzionale: r.opzionale, testo: r.testo.trim() || null, ordine } };
@@ -292,23 +297,16 @@ export function EditorRicetta({ indice, bozza, chiudi }: { indice: Indice; bozza
                     </button>
                   </span>
                 </div>
-                <div className="riga" style={{ marginTop: 6 }}>
-                  <input
-                    aria-label={`Quantità di ${ing?.nome}`}
-                    inputMode="decimal"
-                    value={r.qb ? '' : r.numero}
-                    disabled={r.qb}
-                    placeholder={r.qb ? 'q.b.' : 'quantità'}
-                    onChange={(e) => cambiaRiga(r.chiave, { numero: e.target.value })}
-                    style={{ width: 110 }}
+                <div className="riga" style={{ marginTop: 6, flexWrap: 'wrap' }}>
+                  <CampoQuantita
+                    compatto
+                    nome={ing?.nome}
+                    scritta={{ numero: r.qb ? '' : r.numero, unita: r.unita, quante: r.quante ?? '1' }}
+                    cambia={(x) => cambiaRiga(r.chiave, x)}
+                    dimensione={ing?.dimensione ?? 'massa'}
+                    pesoPz={ing?.peso_pz}
+                    disabilitato={r.qb}
                   />
-                  <select aria-label={`Unità di ${ing?.nome}`} value={r.unita} disabled={r.qb} onChange={(e) => cambiaRiga(r.chiave, { unita: e.target.value as Unita })}>
-                    {unitaPer(ing?.dimensione ?? 'massa').map((u) => (
-                      <option key={u} value={u}>
-                        {UNITA[u].nome}
-                      </option>
-                    ))}
-                  </select>
                   <label className="riga">
                     <input type="checkbox" checked={r.qb} onChange={(e) => cambiaRiga(r.chiave, { qb: e.target.checked })} /> q.b.
                   </label>

@@ -179,7 +179,13 @@ test('casa: aggiunge, mostra cosa usare presto, scala la quantità usata e stima
   const nuovo = page.getByRole('dialog', { name: 'Aggiungi in casa' });
   await nuovo.getByLabel('Cosa aggiungi?').fill('yogurt');
   await nuovo.getByRole('button', { name: /Yogurt$/ }).first().click();
-  await nuovo.getByLabel('Quantità').fill('500');
+  // 4 vasetti da 125 ml: l'unità si sceglie (ml anche per ciò che si pesa) e i vasetti si contano con il +.
+  await nuovo.getByLabel('Quantità').fill('125');
+  await nuovo.getByLabel('Unità').selectOption('ml');
+  for (let i = 0; i < 3; i++) await nuovo.getByRole('button', { name: 'Una confezione in più' }).click();
+  await expect(nuovo.getByLabel('Quante confezioni')).toHaveValue('4');
+  await expect(nuovo).toContainText('Ognuna da');
+  await expect(nuovo).toContainText('In tutto circa 500 g');
   await nuovo.getByRole('button', { name: 'Da consumarsi entro' }).click();
   await nuovo.getByLabel('Data').fill(domani());
   await nuovo.getByRole('button', { name: 'Aggiungi', exact: true }).click();

@@ -18,7 +18,8 @@ import {
   totaleStimato,
   type VoceSpesa,
 } from '../dominio/spesa';
-import { formatta, formattaEuro, formattaGiorno, leggiNumero, type PerNegozio, pesoDeiPezzi, quantitaDaNegozio, UNITA, type Unita, UNITA_BASE, unitaPer } from '../dominio/unita';
+import { formatta, formattaEuro, formattaGiorno, leggiNumero, type PerNegozio, quantitaDaNegozio, type Scritta, scrittaVuota, type Unita, UNITA_BASE } from '../dominio/unita';
+import { CampoQuantita } from '../ui/CampoQuantita';
 import { CercaIngrediente } from '../ui/CercaIngrediente';
 import { Foglio } from '../ui/Foglio';
 import { ScansionaProdotto } from '../ui/CodiceProdotto';
@@ -380,15 +381,15 @@ function NuovaVoce({ indice, chiudi }: { indice: Indice; chiudi: () => void }) {
   const { esegui } = useFamiglia();
   const [ing, setIng] = useState<Ingrediente | null>(null);
   const [testo, setTesto] = useState<string | null>(null);
-  const [numero, setNumero] = useState('');
-  const [unita, setUnita] = useState<Unita>('g');
+  const [scritta, setScritta] = useState<Scritta>(() => scrittaVuota('g'));
+  const cambiaScritta = (x: Partial<Scritta>) => setScritta((s) => ({ ...s, ...x }));
   const [errore, setErrore] = useState<string | null>(null);
 
   async function salva(e: FormEvent) {
     e.preventDefault();
     let q: { valore: number; unita: string } | null = null;
-    if (numero.trim()) {
-      const x = quantitaDa(numero, unita, ing ?? undefined);
+    if (scritta.numero.trim()) {
+      const x = quantitaDa(scritta, ing ?? undefined);
       if (typeof x === 'string') return setErrore(x);
       q = x;
     }
@@ -412,7 +413,7 @@ function NuovaVoce({ indice, chiudi }: { indice: Indice; chiudi: () => void }) {
             autoFocus
             scegli={(i) => {
               setIng(i);
-              setUnita(UNITA_BASE[i.dimensione]);
+              cambiaScritta({ unita: UNITA_BASE[i.dimensione] });
             }}
           />
           <button className="bottone piccolo" onClick={() => setTesto('')}>
@@ -431,21 +432,8 @@ function NuovaVoce({ indice, chiudi }: { indice: Indice; chiudi: () => void }) {
                   Cambia
                 </button>
               </div>
-              <div className="riga" style={{ alignItems: 'flex-end', marginTop: 12 }}>
-                <label className="campo cresce">
-                  <span>Quantità (facoltativa)</span>
-                  <input inputMode="decimal" value={numero} onChange={(e) => setNumero(e.target.value)} autoFocus />
-                </label>
-                <label className="campo">
-                  <span>Unità</span>
-                  <select value={unita} onChange={(e) => setUnita(e.target.value as Unita)}>
-                    {unitaPer(ing.dimensione, ing.peso_pz).map((u) => (
-                      <option key={u} value={u}>
-                        {UNITA[u].nome}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+              <div style={{ marginTop: 12 }}>
+                <CampoQuantita scritta={scritta} cambia={cambiaScritta} dimensione={ing.dimensione} pesoPz={ing.peso_pz} etichetta="Quantità (facoltativa)" autoFocus />
               </div>
             </>
           ) : (
@@ -467,7 +455,8 @@ function NuovaVoce({ indice, chiudi }: { indice: Indice; chiudi: () => void }) {
 function SchedaVoce({ indice, voce: v, prezzi, chiudi }: { indice: Indice; voce: VoceSpesa; prezzi: Map<string, Osservazione[]>; chiudi: () => void }) {
   const { esegui } = useFamiglia();
   const ing = v.ingrediente_id ? indice.ingrediente(v.ingrediente_id) : undefined;
-  const [numero, setNumero] = useState(() => String(quantitaVoce(v) ?? '').replace('.', ','));
+  const [scritta, setScritta] = useState<Scritta>(() => scrittaVuota(v.unita ?? 'g', String(quantitaVoce(v) ?? '').replace('.', ',')));
+  const cambiaScritta = (x: Partial<Scritta>) => setScritta((s) => ({ ...s, ...x }));
   const [nota, setNota] = useState(v.nota ?? '');
   const [errore, setErrore] = useState<string | null>(null);
   const prezzo = v.ingrediente_id ? stimaPrezzo(prezzi.get(v.ingrediente_id), quantitaVoce(v)) : null;
@@ -476,8 +465,12 @@ function SchedaVoce({ indice, voce: v, prezzi, chiudi }: { indice: Indice; voce:
     e.preventDefault();
     const campi: Record<string, unknown> = {};
     if (ing && v.unita) {
-      const n = numero.trim() ? leggiNumero(numero) : null;
-      if (numero.trim() && (n === null || n <= 0)) return setErrore('Scrivi una quantità, per esempio 500 o 1,5.');
+      let n: number | null = null;
+      if (scritta.numero.trim()) {
+        const q = quantitaDa(scritta, ing);
+        if (typeof q === 'string') return setErrore(q);
+        n = q.valore;
+      }
       if (n !== quantitaVoce(v)) campi[v.tipo === 'derivata' ? 'quantita_scelta' : 'quantita_richiesta'] = n;
     }
     if ((nota.trim() || null) !== v.nota) campi.nota = nota.trim() || null;
@@ -493,12 +486,7 @@ function SchedaVoce({ indice, voce: v, prezzi, chiudi }: { indice: Indice; voce:
       </p>
       {v.non_piu_necessaria && <div className="avviso info">Il menu è cambiato e questa voce non serve più. Puoi toglierla o tenerla.</div>}
       <form onSubmit={salva} noValidate>
-        {ing && v.unita && (
-          <label className="campo">
-            <span>Quantità ({UNITA[v.unita].nome})</span>
-            <input inputMode="decimal" value={numero} onChange={(e) => setNumero(e.target.value)} />
-          </label>
-        )}
+        {ing && v.unita && <CampoQuantita scritta={scritta} cambia={cambiaScritta} dimensione={ing.dimensione} pesoPz={ing.peso_pz} />}
         <label className="campo">
           <span>Nota</span>
           <input value={nota} onChange={(e) => setNota(e.target.value)} maxLength={300} placeholder="Marca, formato…" />
@@ -524,7 +512,7 @@ function SchedaVoce({ indice, voce: v, prezzi, chiudi }: { indice: Indice; voce:
 function ConfermaSpesa({ indice, carrello, chiudi }: { indice: Indice; carrello: VoceSpesa[]; chiudi: () => void }) {
   const { esegui } = useFamiglia();
   const giorno = oggi();
-  const [righe, setRighe] = useState<(RigaDaConfermare & { numero: string; euro: string; scelta?: Unita })[]>(() =>
+  const [righe, setRighe] = useState<(RigaDaConfermare & { numero: string; euro: string; scelta?: Unita; quante?: string })[]>(() =>
     righeDaConfermare(carrello, (id) => indice.ingrediente(id), giorno, () => crypto.randomUUID()).map((r) => ({
       ...r,
       numero: r.quantita == null ? '' : String(r.quantita).replace('.', ','),
@@ -558,7 +546,7 @@ function ConfermaSpesa({ indice, carrello, chiudi }: { indice: Indice; carrello:
       let unita = r.unita;
       if (ing && r.unita) {
         // Scritta in kg o in pezzi: si salva in unità base (i pezzi di un ingrediente che si pesa diventano grammi).
-        const q = quantitaDa(r.numero, r.scelta ?? r.unita, ing);
+        const q = quantitaDa({ numero: r.numero, unita: r.scelta ?? r.unita, quante: r.quante ?? '1' }, ing);
         if (typeof q === 'string') return setErrore(`Scrivi quanto ${nome} hai comprato.`);
         quantita = q.valore;
         unita = q.unita;
@@ -572,6 +560,7 @@ function ConfermaSpesa({ indice, carrello, chiudi }: { indice: Indice; carrello:
       delete riga.numero;
       delete riga.euro;
       delete riga.scelta;
+      delete riga.quante;
       pronte.push(riga);
     }
     if (!pronte.length) return setErrore('Non c’è niente da confermare.');
@@ -610,19 +599,14 @@ function ConfermaSpesa({ indice, carrello, chiudi }: { indice: Indice; carrello:
               </div>
               <div className="riga" style={{ flexWrap: 'wrap', marginTop: 6 }}>
                 {ing && r.unita && (
-                  <span className="riga">
-                    <input className="dato" inputMode="decimal" aria-label={`Quantità di ${nome}`} value={r.numero} onChange={(e) => cambia(i, { numero: e.target.value })} style={{ width: 90 }} />
-                    <select className="dato" aria-label={`Unità di ${nome}`} value={r.scelta ?? r.unita} onChange={(e) => cambia(i, { scelta: e.target.value as Unita })} style={{ width: 'auto' }}>
-                      {unitaPer(ing.dimensione, ing.peso_pz).map((u) => (
-                        <option key={u} value={u}>
-                          {UNITA[u].nome}
-                        </option>
-                      ))}
-                    </select>
-                    {pesoDeiPezzi(r.numero, r.scelta ?? r.unita, ing.dimensione, ing.peso_pz) && (
-                      <span className="tenue">{pesoDeiPezzi(r.numero, r.scelta ?? r.unita, ing.dimensione, ing.peso_pz)}</span>
-                    )}
-                  </span>
+                  <CampoQuantita
+                    compatto
+                    nome={nome}
+                    scritta={{ numero: r.numero, unita: r.scelta ?? r.unita, quante: r.quante ?? '1' }}
+                    cambia={({ unita, ...x }) => cambia(i, unita ? { ...x, scelta: unita } : x)}
+                    dimensione={ing.dimensione}
+                    pesoPz={ing.peso_pz}
+                  />
                 )}
                 <label className="riga">
                   <input className="dato" inputMode="decimal" aria-label={`Prezzo di ${nome}`} value={r.euro} onChange={(e) => cambia(i, { euro: e.target.value })} placeholder="€" style={{ width: 80 }} />

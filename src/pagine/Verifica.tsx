@@ -4,7 +4,8 @@ import { NOME_LUOGO, LUOGHI } from '../catalogo/tipi';
 import { iconaIngrediente } from '../dominio/iconeCibo';
 import type { Indice, Ingrediente } from '../dominio/ricette';
 import { giorniTra, type Luogo, oggi, piuGiorni, stima } from '../dominio/scadenze';
-import { formatta, inBase, leggiNumero, UNITA, type Unita, UNITA_BASE, unitaPer } from '../dominio/unita';
+import { formatta, leggiNumero, type Scritta, scrittaVuota, totaleScritta, UNITA_BASE } from '../dominio/unita';
+import { CampoQuantita } from '../ui/CampoQuantita';
 import {
   confronta,
   contestoPerGemini,
@@ -670,38 +671,29 @@ function testoDecisione(d: Decisione, q: (v: number | null) => string | null): s
 
 function QuantitaVerifica({ ingrediente, iniziale, fatto }: { ingrediente: Ingrediente | null; iniziale: number | null; fatto: (v: number) => void }) {
   const dimensione = ingrediente?.dimensione ?? 'pezzi';
-  const [unita, setUnita] = useState<Unita>(UNITA_BASE[dimensione]);
-  const [testo, setTesto] = useState(iniziale === null ? '' : String(iniziale).replace('.', ','));
+  const [scritta, setScritta] = useState<Scritta>(() => scrittaVuota(UNITA_BASE[dimensione], iniziale === null ? '' : String(iniziale).replace('.', ',')));
   const [errore, setErrore] = useState<string | null>(null);
   return (
     <form
-      className="riga quantita-verifica"
-      style={{ alignItems: 'flex-end', flexWrap: 'wrap' }}
+      className="quantita-verifica"
       noValidate
       onSubmit={(e) => {
         e.preventDefault();
-        const n = leggiNumero(testo);
-        if (n === 0) return fatto(0);
-        const b = n === null ? null : inBase(n, unita, dimensione, ingrediente?.peso_pz);
-        if (!b?.ok) return setErrore('Scrivi un numero, per esempio 2 o 1,5.');
+        if (leggiNumero(scritta.numero) === 0) return fatto(0);
+        const b = totaleScritta(scritta, dimensione, ingrediente?.peso_pz);
+        if (!b.ok) return setErrore(b.motivo === 'confezioni_non_valide' ? 'Scrivi quante confezioni, per esempio 1 o 3.' : 'Scrivi un numero, per esempio 2 o 1,5.');
         fatto(b.quantita.valore);
       }}
     >
-      <label className="campo cresce" style={{ margin: 0 }}>
-        <span>Quanto ce n’è</span>
-        <input inputMode="decimal" value={testo} onChange={(e) => setTesto(e.target.value)} autoFocus />
-      </label>
-      <label className="campo" style={{ margin: 0 }}>
-        <span>Unità</span>
-        <select value={unita} onChange={(e) => setUnita(e.target.value as Unita)}>
-          {unitaPer(dimensione, ingrediente?.peso_pz).map((u) => (
-            <option key={u} value={u}>
-              {UNITA[u].nome}
-            </option>
-          ))}
-        </select>
-      </label>
-      <button type="submit" className="bottone primario">
+      <CampoQuantita
+        scritta={scritta}
+        cambia={(x) => setScritta((s) => ({ ...s, ...x }))}
+        dimensione={dimensione}
+        pesoPz={ingrediente?.peso_pz}
+        etichetta="Quanto ce n’è"
+        autoFocus
+      />
+      <button type="submit" className="bottone primario pieno">
         OK
       </button>
       {errore && (

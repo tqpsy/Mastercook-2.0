@@ -3895,3 +3895,29 @@ button.speso-voce:focus-visible {
   background: var(--attenzione-tenue);
   color: var(--attenzione);
 }
+
+/* Quantità: quanto ne contiene una confezione e quante confezioni (− numero +). «compatto» per gli elenchi. */
+.campo-quantita .quante-confezioni {
+  margin: -4px 0 10px;
+}
+.campo-quantita .porzioni-contatore .dato {
+  width: 64px;
+  font-size: 1.15rem;
+}
+.campo-quantita .riepilogo-quantita {
+  margin: 0 0 12px;
+}
+.campo-quantita.compatto {
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.campo-quantita.compatto input.dato {
+  width: 80px;
+}
+.campo-quantita.compatto input.dato.quante {
+  width: 52px;
+  text-align: center;
+}
+.campo-quantita.compatto select.dato {
+  width: auto;
+}
