@@ -11,6 +11,7 @@ import { Foglio } from '../ui/Foglio';
 import { ConsiglioRipiano } from '../ui/Frigo';
 import { ripianoPer } from '../dominio/cucinato';
 import { usePronti } from './Cucinato';
+import { AggiornaAOcchio } from './Casa';
 import type { DatiMenu } from './Menu';
 import { useIcone } from './Ricette';
 
@@ -263,6 +264,10 @@ export function SegnaMangiato({
         ))}
       </ul>
       {totale > 0 && <p className="tenue piccolo">Gli avanzi li trovi in Casa, tra le cose da usare presto.</p>}
+      <AggiornaAOcchio
+        indice={indice}
+        ingredienti={valori.flatMap((x) => (x.p.avanzo_di || x.pronto ? [] : ((x.p.ricetta_id && indice.perId.get(x.p.ricetta_id)?.ingredienti) || []).map((g) => g.ingrediente_id)))}
+      />
       {errore && (
         <div className="avviso errore" role="alert">
           {errore}

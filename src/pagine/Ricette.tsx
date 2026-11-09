@@ -14,7 +14,8 @@ import { Foto } from '../ui/Foto';
 import { ModalitaCucina } from '../ui/ModalitaCucina';
 import { FineCucina } from './Cucinato';
 import { EditorRicetta, type Bozza, spostaPiatti } from './EditorRicetta';
-import { useLotti } from './Casa';
+import { useLotti, useScorteAOcchio } from './Casa';
+import { avvisoScorta } from '../dominio/livello';
 import { type Senza, valutaFamigliaSenza } from '../dominio/senza';
 import { type DatiMenu, useDatiMenu } from './Menu';
 import { toltiDellaPortata } from './Senza';
@@ -450,6 +451,8 @@ export function SchedaRicetta({
   const nelMenu = righeAttive(vista, 'portata').some((p) => p.ricetta_id === r.id) || righeAttive(vista, 'eccezione_membro').some((e) => e.ricetta_id === r.id);
   const [porzioni, setPorzioni] = useState(() => (porzioniIniziali && porzioniIniziali > 0 ? porzioniIniziali : r.porzioni));
   const casa = indice.estendi(inCasa);
+  // A occhio (formaggio, olio…): la ricetta non toglie grammi, ma se ne resta poco lo dice.
+  const scorte = useScorteAOcchio(indice);
   const origine = r.derivata_da ? indice.perId.get(r.derivata_da) : undefined;
   const [cambiaIcona, setCambiaIcona] = useState(false);
   const [cucina, setCucina] = useState(false);
@@ -490,7 +493,7 @@ export function SchedaRicetta({
           <span className={t?.quota === 0 ? 'ingrediente-tolto' : undefined}>{g.testo || indice.nome(g.ingrediente_id)}</span>
           {t && <span className="etichetta-taglio" style={{ marginLeft: 6 }}>✂️ {t.etichetta}</span>}
           {g.opzionale && <span className="tenue"> (facoltativo)</span>}
-          {inCasa.size > 0 && presente && !t && <span className="tenue"> · in casa</span>}
+          {inCasa.size > 0 && presente && !t && (avvisoScorta(scorte.get(g.ingrediente_id)) ? <span className="avviso-scorta"> · {avvisoScorta(scorte.get(g.ingrediente_id))}</span> : <span className="tenue"> · in casa</span>)}
         </span>
         <span>{quantitaDi(g)}</span>
       </li>

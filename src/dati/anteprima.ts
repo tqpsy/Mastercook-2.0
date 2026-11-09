@@ -162,7 +162,8 @@ const EFFETTI: Record<string, Effetto> = {
     ingrediente_id: d.ingrediente_id,
     nome: d.nome ?? null,
     quantita: Number(d.quantita),
-    unita: d.unita,
+    unita: d.livello ? 'pz' : d.unita,
+    livello: d.livello ?? null,
     luogo: d.luogo,
     data_acquisto: d.data_acquisto ?? null,
     data_limite: d.data_limite ?? null,
@@ -192,6 +193,21 @@ const EFFETTI: Record<string, Effetto> = {
     aggiungi('lotto', () => ({ ...copia, quantita: parte, luogo: d.luogo, ...stima, versione: 1 }))(righe, { id: d.nuovo_id }, famiglia);
   },
   modifica_lotto: modifica('lotto'),
+  // A occhio: il livello e i pezzi cambiano subito; passando da grammi a occhio (o il contrario) nasce un lotto nuovo.
+  cambia_livello: (righe, d, famiglia) => {
+    const lotto = (righe.lotto ?? []).find((r) => r.id === d.lotto_id);
+    if (!lotto) return;
+    if (lotto.livello && d.livello) {
+      righe.lotto = (righe.lotto ?? []).map((r) => (r.id === d.lotto_id ? { ...r, livello: d.livello, in_attesa: true } : r));
+      if (d.pezzi != null) cambiaQuantita(righe, lotto.id, () => Number(d.pezzi));
+      return;
+    }
+    if (!d.nuovo_id) return;
+    cambiaQuantita(righe, lotto.id, () => 0);
+    const copia = senzaChiavi(lotto);
+    const misura = d.livello ? { quantita: Number(d.pezzi ?? 1), unita: 'pz', livello: d.livello } : { quantita: Number(d.quantita), unita: d.unita, livello: null };
+    aggiungi('lotto', () => ({ ...copia, ...misura, chiuso_il: null, versione: 1 }))(righe, { id: d.nuovo_id }, famiglia);
+  },
   // Verifica con le foto: le quantità confermate e i nuovi alimenti si vedono subito; la memoria la scrive il server.
   verifica_inventario: (righe, d, famiglia) => {
     for (const o of (Array.isArray(d.operazioni) ? d.operazioni : []) as Record<string, unknown>[]) {

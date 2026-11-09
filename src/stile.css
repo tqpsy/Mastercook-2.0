@@ -4056,3 +4056,41 @@ button.speso-voce:focus-visible {
 .campo-quantita.compatto select.dato {
   width: auto;
 }
+
+/* Prodotti a occhio: pezzi e quanto resta a parole. */
+.contapezzi {
+  gap: 12px;
+}
+.contapezzi .bottone {
+  min-width: 44px;
+  font-size: 1.2rem;
+}
+.contapezzi strong {
+  min-width: 2ch;
+  text-align: center;
+  font-size: 1.2rem;
+}
+.livelli .tacche {
+  letter-spacing: -1px;
+  font-size: 0.7rem;
+  color: var(--primario);
+}
+.livelli .livello-poco .tacche,
+.livelli .livello-finendo .tacche {
+  color: var(--attenzione);
+}
+.avviso-scorta {
+  color: var(--attenzione);
+}
+.a-occhio-usati {
+  margin: 12px 0;
+}
+.a-occhio-usati li {
+  display: block;
+}
+.a-occhio-usati .scelte {
+  margin-top: 4px;
+}
+.livelli [aria-pressed='true'] .tacche {
+  color: inherit;
+}

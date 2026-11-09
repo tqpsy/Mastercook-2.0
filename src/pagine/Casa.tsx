@@ -13,6 +13,8 @@ import type { Indice, Ingrediente } from '../dominio/ricette';
 import { daUsarePresto, descriviData, descriviDurata, eFresco, giorniTra, type Luogo, oggi, piuGiorni, spreco, statoData, stima, type TipoData } from '../dominio/scadenze';
 import { formatta, leggiNumero, type Scritta, scrittaVuota, totaleScritta, UNITA_BASE, type UnitaBase } from '../dominio/unita';
 import { CampoQuantita } from '../ui/CampoQuantita';
+import { LivelloScorta } from '../ui/LivelloScorta';
+import { descriviLivello, eBasso, eLivello, LIVELLI, type Livello, puoAOcchio, type ScortaAOcchio, scorteAOcchio } from '../dominio/livello';
 import { CercaIngrediente } from '../ui/CercaIngrediente';
 import { type ProdottoScansionato, ScansionaProdotto } from '../ui/CodiceProdotto';
 import { FoglioSchedaProdotto } from '../ui/SchedaProdotto';
@@ -37,6 +39,8 @@ export interface Lotto {
   portata_id?: string | null;
   /** Dove sta nel frigo o nel freezer (Impostazioni › Il mio frigorifero). */
   posto?: string | null;
+  /** A occhio (formaggio, olio…): la quantità è il numero di pezzi e questo dice quanto resta di quello in uso. */
+  livello?: Livello | null;
   versione: number;
   in_attesa?: boolean;
 }
@@ -55,9 +59,16 @@ const aLotto = (r: RigaInVista): Lotto => ({
   note: (r.note as string | null) ?? null,
   portata_id: (r.portata_id as string | null) ?? null,
   posto: (r.posto as string | null) ?? null,
+  livello: eLivello(r.livello) ? r.livello : null,
   versione: Number(r.versione ?? 1),
   in_attesa: r.in_attesa,
 });
+
+/** Come stanno i prodotti a occhio, per ingrediente (e per i suoi antenati): per gli avvisi nelle ricette. */
+export function useScorteAOcchio(indice: Indice | null): Map<string, ScortaAOcchio> {
+  const lotti = useLotti();
+  return useMemo(() => (indice ? scorteAOcchio(lotti, (id) => indice.antenati(id)) : new Map()), [lotti, indice]);
+}
 
 /** I lotti aperti della famiglia. */
 export function useLotti(): Lotto[] {
@@ -76,6 +87,9 @@ function useSprecati(giorno: string) {
   }, [lotto, movimento, giorno]);
 }
 
+/** «300 g», o a occhio «Metà», «2 pezzi · poco». */
+export const quantitaLotto = (l: Pick<Lotto, 'quantita' | 'unita' | 'livello'>) => (l.livello ? descriviLivello(l.quantita, l.livello) : formatta({ valore: l.quantita, unita: l.unita }));
+
 export function EtichettaData({ lotto, giorno }: { lotto: Pick<Lotto, 'data_limite' | 'tipo_data'>; giorno: string }) {
   const s = statoData(lotto, giorno);
   const classe = s === 'scaduto' ? 'scaduto' : s === 'ok' ? '' : 'avviso-data';
@@ -92,6 +106,7 @@ export function Casa() {
   const [prestoAperto, setPrestoAperto] = useState(false);
   const giorno = oggi();
   const presto = useMemo(() => daUsarePresto(lotti, giorno), [lotti, giorno]);
+  const finendo = useMemo(() => lotti.filter(eBasso), [lotti]);
   const sprecati = useSprecati(giorno);
 
   if (!vista.pronta || !indice) return <p className="tenue">Sto caricando la casa…</p>;
@@ -137,6 +152,18 @@ export function Casa() {
               </>
             )}
           </details>
+        </section>
+      )}
+
+      {finendo.length > 0 && (
+        <section className="scheda" aria-label="Stanno per finire">
+          <h3 style={{ marginTop: 0 }}>
+            Stanno per finire <span className="etichetta">{finendo.length}</span>
+          </h3>
+          <p className="tenue" style={{ margin: '0 0 8px' }}>
+            Si usano a occhio e ne resta poco: forse basta per un’altra volta. Se serve per una ricetta, controlla; in Spesa li trovi da aggiungere alla lista.
+          </p>
+          <ElencoLotti indice={indice} lotti={finendo} giorno={giorno} apri={setAperto} conLuogo />
         </section>
       )}
 
@@ -426,12 +453,12 @@ const ElencoLotti = memo(function ElencoLotti({
                 <strong>{l.nome ?? ing?.nome ?? 'Ingrediente sconosciuto'}</strong>
                 {l.in_attesa && <span className="etichetta attesa" style={{ marginLeft: 8 }}>in invio</span>}
                 <span className="tenue" style={{ display: 'block' }}>
-                  {formatta({ valore: l.quantita, unita: l.unita })}
+                  {quantitaLotto(l)}
                   {conLuogo && ` · ${NOME_LUOGO[l.luogo]}`}
                   {posto && ` · 📍 ${posto.nome}`}
                 </span>
               </span>
-              <EtichettaData lotto={l} giorno={giorno} />
+              {eBasso(l) ? <span className="etichetta avviso-data">{l.livello === 'finendo' ? 'sta per finire' : 'poco'}</span> : <EtichettaData lotto={l} giorno={giorno} />}
             </button>
           </li>
         );
@@ -476,6 +503,10 @@ function NuovoLotto({ indice, luogo: luogoIniziale, chiudi }: { indice: Indice; 
   const [scansiona, setScansiona] = useState(false);
   const [codice, setCodice] = useState<ProdottoScansionato | null>(null);
   const [dettagli, setDettagli] = useState(false);
+  // A occhio: pezzi e quanto resta a parole, invece dei grammi (il formaggio non si pesa ogni volta).
+  const [aOcchio, setAOcchio] = useState(false);
+  const [pezzi, setPezzi] = useState(1);
+  const [livello, setLivello] = useState<Livello>('tanto');
   const giorno = oggi();
 
   /** Carne, pesce, frutta, verdura e avanzi senza confezione: la data la calcola l'app. Un prodotto scansionato è confezionato. */
@@ -495,7 +526,8 @@ function NuovoLotto({ indice, luogo: luogoIniziale, chiudi }: { indice: Indice; 
   async function salva(e: FormEvent) {
     e.preventDefault();
     if (!ing) return;
-    const q = quantitaDa(scritta, ing);
+    const occhio = aOcchio && puoAOcchio(ing);
+    const q = occhio ? { valore: pezzi, unita: 'pz' as const } : quantitaDa(scritta, ing);
     if (typeof q === 'string') return setErrore(q);
     if (!sceltaData) return setErrore('Indica la data: scadenza, «preferibilmente entro» o senza data.');
     if (sceltaData !== 'nessuna' && !/^\d{4}-\d{2}-\d{2}$/.test(data)) return setErrore('Scrivi la data che c’è sulla confezione.');
@@ -513,6 +545,7 @@ function NuovoLotto({ indice, luogo: luogoIniziale, chiudi }: { indice: Indice; 
       nome: nome.trim() || null,
       quantita: q.valore,
       unita: q.unita,
+      ...(occhio ? { livello } : {}),
       luogo,
       data_acquisto: giorno,
       origine: 'manuale',
@@ -521,7 +554,7 @@ function NuovoLotto({ indice, luogo: luogoIniziale, chiudi }: { indice: Indice; 
     });
     // Il codice a barre si ricorda con quello che si è scritto: la prossima volta propone la stessa confezione.
     const p = codice?.prodotto;
-    if (codice && (!p || p.ingrediente_id !== ing.id || p.quantita !== q.valore || p.unita !== q.unita || (p.nome ?? '') !== nome.trim())) {
+    if (codice && !occhio && (!p || p.ingrediente_id !== ing.id || p.quantita !== q.valore || p.unita !== q.unita || (p.nome ?? '') !== nome.trim())) {
       await esegui('salva_prodotto', { id: crypto.randomUUID(), codice: codice.codice, ingrediente_id: ing.id, nome: nome.trim() || null, quantita: q.valore, unita: q.unita });
     }
     chiudi();
@@ -574,9 +607,28 @@ function NuovoLotto({ indice, luogo: luogoIniziale, chiudi }: { indice: Indice; 
             </p>
           )}
           {codice && dettagli && <FoglioSchedaProdotto codice={codice.codice} nome={nome.trim() || ing.nome} chiudi={() => setDettagli(false)} />}
-          <div style={{ marginTop: 12 }}>
-            <CampoQuantita scritta={scritta} cambia={cambiaScritta} dimensione={ing.dimensione} pesoPz={ing.peso_pz} autoFocus />
-          </div>
+          {puoAOcchio(ing) && (
+            <div className="scelte" role="group" aria-label="Come lo conti" style={{ marginTop: 12 }}>
+              <button type="button" aria-pressed={!aOcchio} onClick={() => setAOcchio(false)}>
+                Peso o misuro
+              </button>
+              <button type="button" aria-pressed={aOcchio} onClick={() => setAOcchio(true)}>
+                A occhio
+              </button>
+            </div>
+          )}
+          {aOcchio && puoAOcchio(ing) ? (
+            <>
+              <p className="tenue" style={{ margin: '8px 0 0' }}>
+                Per ciò che usi senza pesare (formaggio, olio, sale): conti i pezzi e dici quanto ne resta. Le ricette non tolgono grammi, ti avviso io quando sta per finire.
+              </p>
+              <LivelloScorta pezzi={pezzi} livello={livello} cambia={(x) => (x.pezzi !== undefined && setPezzi(x.pezzi), x.livello && setLivello(x.livello))} />
+            </>
+          ) : (
+            <div style={{ marginTop: 12 }}>
+              <CampoQuantita scritta={scritta} cambia={cambiaScritta} dimensione={ing.dimensione} pesoPz={ing.peso_pz} autoFocus />
+            </div>
+          )}
           <div className="campo">
             <span>Dove</span>
             <div className="scelte">
@@ -646,7 +698,7 @@ function NuovoLotto({ indice, luogo: luogoIniziale, chiudi }: { indice: Indice; 
   );
 }
 
-type Azione = 'consumo' | 'spreco' | 'scaduto' | 'correggi' | 'sposta' | 'data' | null;
+type Azione = 'consumo' | 'spreco' | 'scaduto' | 'correggi' | 'sposta' | 'data' | 'occhio' | 'misura' | null;
 
 const TITOLI: Record<Exclude<Azione, null>, string> = {
   consumo: 'Quanto ne hai usato?',
@@ -655,6 +707,8 @@ const TITOLI: Record<Exclude<Azione, null>, string> = {
   correggi: 'Quanto ce n’è adesso?',
   sposta: 'Dove lo sposti?',
   data: 'Cambia la data',
+  occhio: 'A occhio: quanto ne hai?',
+  misura: 'Quanto pesa adesso?',
 };
 
 const NOME_CAUSALE: Record<string, string> = {
@@ -686,12 +740,23 @@ function SchedaLotto({ indice, lotto: l, giorno, chiudi }: { indice: Indice; lot
   // Al tocco la scheda compare subito; il disegno del frigo (il pezzo più pesante) arriva un attimo dopo, al suo posto.
   const disegna = useDeferredValue(true, false);
   const dataProtetta = l.fonte_data === 'confezione';
+  // A occhio: niente grammi, si tocca il livello. Un lotto misurato si può passare a occhio (e viceversa).
+  const occhio = !!l.livello;
+  const [nuovoLivello, setNuovoLivello] = useState<{ pezzi: number; livello: Livello }>({ pezzi: 1, livello: 'tanto' });
+  const cambiaLivello = (x: { pezzi?: number; livello?: Livello }) =>
+    void esegui('cambia_livello', { lotto_id: l.id, livello: x.livello ?? l.livello, ...(x.pezzi !== undefined ? { pezzi: x.pezzi } : {}) });
+  async function finitoUnPezzo() {
+    if (l.quantita > 1) return cambiaLivello({ pezzi: l.quantita - 1, livello: 'tanto' });
+    await esegui('cambia_livello', { lotto_id: l.id, livello: l.livello, pezzi: 0 });
+    chiudi();
+  }
 
   function apri(a: Azione) {
     setAzione(a);
     setErrore(null);
-    cambiaScritta({ numero: '', quante: '1' });
+    cambiaScritta({ numero: '', quante: '1', ...(a === 'misura' ? { unita: UNITA_BASE[ing?.dimensione ?? 'massa'] } : {}) });
     setTutto(a !== 'correggi');
+    setNuovoLivello({ pezzi: 1, livello: 'tanto' });
   }
 
   async function conferma(e: FormEvent) {
@@ -734,17 +799,26 @@ function SchedaLotto({ indice, lotto: l, giorno, chiudi }: { indice: Indice; lot
       else if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return setErrore('Scegli una data.');
       else campi = { tipo_data: tipo === 'stimata' ? 'scadenza' : tipo, data_limite: data, fonte_data: dataProtetta ? 'confezione' : 'utente', calcolata_il: null };
       await esegui('modifica_lotto', { id: l.id, versione_attesa: l.versione, campi });
+    } else if (azione === 'occhio') {
+      await esegui('cambia_livello', { lotto_id: l.id, nuovo_id: crypto.randomUUID(), ...nuovoLivello });
+      return chiudi();
+    } else if (azione === 'misura') {
+      const q = quantitaDa(scritta, ing);
+      if (typeof q === 'string') return setErrore(q);
+      await esegui('cambia_livello', { lotto_id: l.id, livello: null, quantita: q.valore, unita: q.unita, nuovo_id: crypto.randomUUID() });
+      return chiudi();
     }
     setAzione(null);
   }
 
-  const chiedeQuantita = azione === 'consumo' || azione === 'spreco' || azione === 'scaduto' || azione === 'sposta';
+  // A occhio si butta o si sposta tutto: una parte non si misura.
+  const chiedeQuantita = !occhio && (azione === 'consumo' || azione === 'spreco' || azione === 'scaduto' || azione === 'sposta');
   const scaduto = l.data_limite ? giorniTra(giorno, l.data_limite) < 0 : false;
 
   return (
     <Foglio titolo={l.nome ?? ing?.nome ?? 'Alimento'} chiudi={chiudi}>
       <p>
-        <strong>{formatta({ valore: l.quantita, unita: l.unita })}</strong> in {NOME_LUOGO[l.luogo].toLowerCase()} · <EtichettaData lotto={l} giorno={giorno} />
+        <strong>{quantitaLotto(l)}</strong> in {NOME_LUOGO[l.luogo].toLowerCase()} · <EtichettaData lotto={l} giorno={giorno} />
       </p>
       {frigo && l.luogo !== 'dispensa' && (
         <div className="consiglio-ripiano-mio">
@@ -779,26 +853,52 @@ function SchedaLotto({ indice, lotto: l, giorno, chiudi }: { indice: Indice; lot
       {l.tipo_data === 'stimata' && <p className="tenue">Data stimata dall’app per un alimento senza data: è indicativa, controlla sempre.</p>}
       {l.tipo_data === 'tmc' && scaduto && <p className="tenue">«Preferibilmente entro» superato: non vuol dire per forza da buttare, controlla aspetto e odore.</p>}
 
+      {!azione && occhio && l.livello && (
+        <div className="scheda" style={{ background: 'var(--superficie-2)' }}>
+          <LivelloScorta pezzi={l.quantita} livello={l.livello} cambia={cambiaLivello} />
+          <button className="bottone primario pieno" onClick={finitoUnPezzo}>
+            {l.quantita > 1 ? 'Finito quello aperto: ne apro un altro' : 'Finito'}
+          </button>
+          <p className="tenue piccolo" style={{ marginBottom: 0 }}>
+            A occhio: le ricette non tolgono grammi. Quando resta poco te lo segnalo in Casa, nelle ricette e nella spesa.
+          </p>
+        </div>
+      )}
+
       {!azione && (
         <div className="riga" style={{ flexWrap: 'wrap' }}>
-          <button className="bottone primario" onClick={() => apri('consumo')}>
-            Usato
-          </button>
+          {!occhio && (
+            <button className="bottone primario" onClick={() => apri('consumo')}>
+              Usato
+            </button>
+          )}
           <button className="bottone" onClick={() => apri('spreco')}>
             Buttato
           </button>
           <button className="bottone" onClick={() => apri('scaduto')}>
             Scaduto
           </button>
-          <button className="bottone" onClick={() => apri('correggi')}>
-            Correggi quantità
-          </button>
+          {!occhio && (
+            <button className="bottone" onClick={() => apri('correggi')}>
+              Correggi quantità
+            </button>
+          )}
           <button className="bottone" onClick={() => apri('sposta')}>
             Sposta
           </button>
           <button className="bottone" onClick={() => apri('data')}>
             Cambia data
           </button>
+          {!occhio && puoAOcchio(ing) && (
+            <button className="bottone" onClick={() => apri('occhio')}>
+              A occhio
+            </button>
+          )}
+          {occhio && (
+            <button className="bottone" onClick={() => apri('misura')}>
+              Pesa
+            </button>
+          )}
         </div>
       )}
 
@@ -824,7 +924,14 @@ function SchedaLotto({ indice, lotto: l, giorno, chiudi }: { indice: Indice; lot
               </button>
             </div>
           )}
-          {((chiedeQuantita && !tutto) || azione === 'correggi') && (
+          {azione === 'occhio' && (
+            <>
+              <p className="tenue" style={{ marginTop: 0 }}>Non scrivi più i grammi: conti i pezzi e dici quanto ne resta. Le ricette non lo scalano, ti avviso quando sta per finire.</p>
+              <LivelloScorta pezzi={nuovoLivello.pezzi} livello={nuovoLivello.livello} cambia={(x) => setNuovoLivello((n) => ({ ...n, ...x }))} />
+            </>
+          )}
+          {occhio && (azione === 'spreco' || azione === 'scaduto' || azione === 'sposta') && <p className="tenue" style={{ marginTop: 0 }}>Tutto ({quantitaLotto(l).toLowerCase()}).</p>}
+          {((chiedeQuantita && !tutto) || azione === 'correggi' || azione === 'misura') && (
             <CampoQuantita scritta={scritta} cambia={cambiaScritta} dimensione={ing?.dimensione ?? 'massa'} pesoPz={ing?.peso_pz} autoFocus />
           )}
           {azione === 'correggi' && <p className="tenue">Scrivi 0 se è finito. Se nel frattempo qualcuno l’ha cambiato da un altro telefono, te lo faremo vedere.</p>}
@@ -884,5 +991,58 @@ function SchedaLotto({ indice, lotto: l, giorno, chiudi }: { indice: Indice; lot
         </>
       )}
     </Foglio>
+  );
+}
+
+/**
+ * Dopo aver cucinato o mangiato: i prodotti a occhio usati dal piatto non perdono grammi, quindi si chiede a parole
+ * quanto ne resta. Un tocco cambia il livello; «Finito» toglie un pezzo (l'ultimo chiude il prodotto).
+ */
+export function AggiornaAOcchio({ indice, ingredienti }: { indice: Indice; ingredienti: string[] }) {
+  const { esegui } = useFamiglia();
+  const lotti = useLotti();
+  // Fissati all'apertura: un prodotto finito non deve sparire sotto il dito.
+  const [ids] = useState(() => {
+    const cercati = new Set(ingredienti);
+    return lotti.filter((l) => l.livello && indice.antenati(l.ingrediente_id).some((a) => cercati.has(a))).map((l) => l.id);
+  });
+  const tutti = useMemo(() => new Map(lotti.map((l) => [l.id, l])), [lotti]);
+  if (!ids.length) return null;
+  return (
+    <section className="a-occhio-usati" aria-label="A occhio: quanto ne resta?">
+      <span className="tenue piccolo">A occhio, non tolgo grammi: quanto ne resta?</span>
+      <ul className="elenco">
+        {ids.map((id) => {
+          const l = tutti.get(id);
+          const nome = indice.nome(l?.ingrediente_id ?? '') || 'Prodotto';
+          if (!l || !l.livello) {
+            return (
+              <li key={id} className="tenue piccolo">
+                {nome}: finito.
+              </li>
+            );
+          }
+          return (
+            <li key={id}>
+              <strong>{l.nome ?? nome}</strong>
+              {l.quantita > 1 && <span className="tenue piccolo"> · {l.quantita} pezzi</span>}
+              <div className="scelte compatte livelli" role="group" aria-label={`Quanto resta: ${l.nome ?? nome}`}>
+                {LIVELLI.map((x) => (
+                  <button type="button" key={x.id} aria-pressed={l.livello === x.id} className={`livello-${x.id}`} onClick={() => void esegui('cambia_livello', { lotto_id: l.id, livello: x.id })}>
+                    {x.nome}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => void esegui('cambia_livello', { lotto_id: l.id, livello: l.quantita > 1 ? 'tanto' : l.livello, pezzi: l.quantita - 1 })}
+                >
+                  Finito{l.quantita > 1 ? ' uno' : ''}
+                </button>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }

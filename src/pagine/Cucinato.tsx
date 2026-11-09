@@ -8,7 +8,7 @@ import { giorniTra, oggi } from '../dominio/scadenze';
 import { formattaGiorno, leggiNumero } from '../dominio/unita';
 import { Foglio } from '../ui/Foglio';
 import { ConsiglioRipiano } from '../ui/Frigo';
-import { type Lotto, useLotti } from './Casa';
+import { AggiornaAOcchio, type Lotto, useLotti } from './Casa';
 import { PorzioniAvanzate, SceltaLuogo, SegnaMangiato, TestaPiatto, testoNumero, useConferme } from './ConfermaPasto';
 import { useIcone, useInCasa } from './Ricette';
 import { type DatiMenu, useDatiMenu } from './Menu';
@@ -259,6 +259,7 @@ export function FineCucina({ indice, ricetta: r, porzioni, chiudi }: { indice: I
         <PorzioniAvanzate nome="Porzioni cucinate" valore={quante} cambia={setQuante} />
       </div>
       {nonInCasa.length > 0 && <p className="tenue piccolo">Non risultano in casa, quindi non li tolgo: {nonInCasa.join(', ')}.</p>}
+      <AggiornaAOcchio indice={indice} ingredienti={r.ingredienti.map((g) => g.ingrediente_id)} />
       {errore && (
         <div className="avviso errore" role="alert">
           {errore}
