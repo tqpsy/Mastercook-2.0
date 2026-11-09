@@ -5,7 +5,7 @@
 // Con `tipo: 'piano'` legge invece il piano del nutrizionista (PDF o foto in `documento`, tipo in `mime`).
 // Con `tipo: 'verifica'` guarda una zona (fino a 4 foto in `immagini`) e la confronta con il `contesto` mandato dall'app.
 // Con anche `flusso: true` risponde una riga JSON alla volta: {"visti": [...]} man mano, poi {"fine": true, "visti", "modello"}
-// oppure {"errore"}: l'app mostra gli alimenti mentre Gemini li trova.
+// oppure {"errore"}: l'app mostra gli alimenti mentre Gemini li trova. Vale anche per la foto singola (stesse righe, `visti` = alimenti).
 import { MAX_FOTO_VERIFICA, riconosci, riconosciZona, testoContesto, testoFrigo } from './nucleo.ts';
 import { leggiPianoDocumento, MIME_PIANO } from './piano.ts';
 
@@ -55,30 +55,36 @@ Deno.serve(async (req) => {
   // La chiave pubblica arriva dall'app con la richiesta; il token dell'utente lo verifica il database.
   const url = Deno.env.get('SUPABASE_URL')!;
   const pubblica = req.headers.get('apikey') || Deno.env.get('SUPABASE_ANON_KEY') || '';
-  const famiglia = await fetch(`${url}/rest/v1/famiglia?select=id&id=eq.${d.famiglia_id}`, {
-    headers: { apikey: pubblica, authorization: req.headers.get('authorization') ?? '' },
-  });
+  // I due controlli non dipendono l'uno dall'altro: partono insieme (un viaggio di rete in meno).
+  const [famiglia, r] = await Promise.all([
+    fetch(`${url}/rest/v1/famiglia?select=id&id=eq.${d.famiglia_id}`, {
+      headers: { apikey: pubblica, authorization: req.headers.get('authorization') ?? '' },
+    }),
+    // La chiave si legge con la chiave segreta del progetto: i telefoni non possono rileggerla.
+    fetch(`${url}/rest/v1/rpc/chiave_gemini_per_foto`, {
+      method: 'POST',
+      headers: { ...accessoServizio(), 'content-type': 'application/json' },
+      body: JSON.stringify({ p_famiglia: d.famiglia_id }),
+    }),
+  ]);
   const righe = famiglia.ok ? ((await famiglia.json()) as unknown[]) : [];
   if (!righe.length) return rispondi(403, { errore: 'non_autorizzato' });
 
-  // La chiave si legge con la chiave segreta del progetto: i telefoni non possono rileggerla.
-  const r = await fetch(`${url}/rest/v1/rpc/chiave_gemini_per_foto`, {
-    method: 'POST',
-    headers: { ...accessoServizio(), 'content-type': 'application/json' },
-    body: JSON.stringify({ p_famiglia: d.famiglia_id }),
-  });
   const scelta = r.ok ? ((await r.json()) as { chiave: string | null; condivisa: boolean }) : { chiave: null, condivisa: false };
   const chiave = scelta.chiave ?? (scelta.condivisa ? Deno.env.get('GEMINI_API_KEY') : undefined);
   if (!chiave) return rispondi(503, { errore: 'non_configurata' });
 
-  if (verifica && d.flusso === true) {
+  if ((verifica || !piano) && d.flusso === true) {
     const cod = new TextEncoder();
     const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
     const scrivi = writable.getWriter();
     const riga = (x: unknown) => scrivi.write(cod.encode(`${JSON.stringify(x)}\n`)).catch(() => {});
     (async () => {
       try {
-        const esito = await riconosciZona(immagini as string[], chiave, testoContesto(d.contesto), fetch, undefined, (visti) => void riga({ visti }));
+        const esito = verifica
+          ? await riconosciZona(immagini as string[], chiave, testoContesto(d.contesto), fetch, undefined, (visti) => void riga({ visti }))
+          : await riconosci(d.immagine!, chiave, fetch, undefined, testoFrigo(d.frigo), (visti) => void riga({ visti }));
+        if (!verifica && !('errore' in esito)) return void (await riga({ fine: true, visti: (esito as { alimenti: unknown[] }).alimenti, modello: esito.modello }));
         await riga('errore' in esito ? esito : { fine: true, ...esito });
       } catch {
         await riga({ errore: 'gemini', dettaglio: 'risposta interrotta' });

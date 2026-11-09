@@ -97,6 +97,21 @@ export function testoFrigo(frigo: unknown): string | null {
   return typeof frigo === 'string' && frigo.trim() ? frigo.slice(0, 1500) : null;
 }
 
+/**
+ * Per riconoscere cibo in una foto conta la rapidità, non la finezza: prima i modelli «lite» (molto più rapidi),
+ * poi gli altri. Per leggere i documenti (piano del nutrizionista) restano MODELLI.
+ */
+export const MODELLI_VELOCI = [
+  'gemini-3.5-flash-lite',
+  'gemini-3.1-flash-lite',
+  'gemini-flash-lite-latest',
+  'gemini-3.8-flash',
+  'gemini-3.6-flash',
+  'gemini-flash-latest',
+  'gemini-2.5-flash-lite',
+  'gemini-2.5-flash',
+];
+
 /** Una parte della richiesta a Gemini: un file (in base64) o del testo. */
 export type Parte = { inline_data: { mime_type: string; data: string } } | { text: string };
 
@@ -159,7 +174,7 @@ let ultimoBuono: { modello: string; quando: number } | null = null;
 const DURATA_MEMORIA_MS = 10 * 60 * 1000;
 
 function ordineModelli(modelli: string[]): string[] {
-  if (modelli !== MODELLI || !ultimoBuono || Date.now() - ultimoBuono.quando > DURATA_MEMORIA_MS) return modelli;
+  if ((modelli !== MODELLI && modelli !== MODELLI_VELOCI) || !ultimoBuono || Date.now() - ultimoBuono.quando > DURATA_MEMORIA_MS) return modelli;
   return [ultimoBuono.modello, ...modelli.filter((m) => m !== ultimoBuono!.modello)];
 }
 
@@ -212,7 +227,7 @@ export async function chiediGemini(
       ultimo = `${modello}: ${r.status} ${messaggioGoogle(testo)}`;
       continue;
     }
-    if (modelli === MODELLI) ultimoBuono = { modello, quando: Date.now() };
+    if (modelli === MODELLI || modelli === MODELLI_VELOCI) ultimoBuono = { modello, quando: Date.now() };
     if (opzioni.suTesto) return { testo: await leggiFlusso(r, opzioni.suTesto), modello };
     return { testo: testoDi(await r.json()), modello };
   }
@@ -259,9 +274,25 @@ export function oggettiCompleti(testo: string): unknown[] {
 /**
  * Riconosce gli alimenti nella foto. Con il frigo descritto, Gemini dice anche in quale parte vede ogni alimento.
  */
-export async function riconosci(immagine: string, chiave: string, chiama: typeof fetch = fetch, modelli = MODELLI, frigo: string | null = null): Promise<Esito> {
+export async function riconosci(
+  immagine: string,
+  chiave: string,
+  chiama: typeof fetch = fetch,
+  modelli = MODELLI_VELOCI,
+  frigo: string | null = null,
+  suAlimenti?: (finora: Riconosciuto[]) => void,
+): Promise<Esito> {
   const parti: Parte[] = [{ inline_data: { mime_type: 'image/jpeg', data: immagine } }, { text: frigo ? `${ISTRUZIONI}\n\n${frigo}` : ISTRUZIONI }];
-  const r = await chiediGemini(parti, SCHEMA, chiave, chiama, modelli, { veloce: true });
+  let quanti = 0;
+  const suTesto = suAlimenti
+    ? (finora: string) => {
+        const alimenti = leggiAlimenti(JSON.stringify(oggettiCompleti(finora)));
+        if (alimenti.length === quanti) return;
+        quanti = alimenti.length;
+        suAlimenti(alimenti);
+      }
+    : undefined;
+  const r = await chiediGemini(parti, SCHEMA, chiave, chiama, modelli, { veloce: true, suTesto });
   return 'errore' in r ? r : { alimenti: leggiAlimenti(r.testo), modello: r.modello };
 }
 
@@ -353,7 +384,7 @@ export async function riconosciZona(
   chiave: string,
   contesto: string | null,
   chiama: typeof fetch = fetch,
-  modelli = MODELLI,
+  modelli = MODELLI_VELOCI,
   suVisti?: (finora: VistoInZona[]) => void,
 ): Promise<{ visti: VistoInZona[]; modello: string } | { errore: 'quota' | 'chiave' | 'gemini'; dettaglio?: string }> {
   const parti: Parte[] = [

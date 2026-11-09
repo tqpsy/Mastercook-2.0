@@ -42,6 +42,8 @@ export function FotoFrigo({ indice, luogo: luogoIniziale, chiudi }: { indice: In
   const [letto, setLetto] = useState(avvisoLetto);
   const [stato, setStato] = useState<'scatta' | 'leggo' | 'scegli'>('scatta');
   const [errore, setErrore] = useState<string | null>(null);
+  /** I nomi trovati finora, mostrati mentre Gemini guarda ancora. */
+  const [trovati, setTrovati] = useState<string[]>([]);
   const [proposte, setProposte] = useState<PropostaFoto[]>([]);
   const [scelte, setScelte] = useState<Record<number, boolean>>({});
   const [quantita, setQuantita] = useState<Record<number, string>>({});
@@ -56,9 +58,10 @@ export function FotoFrigo({ indice, luogo: luogoIniziale, chiudi }: { indice: In
   async function leggi(file: File | undefined) {
     if (!file) return;
     setErrore(null);
+    setTrovati([]);
     setStato('leggo');
     const descrizione = frigo && luogo !== 'dispensa' ? descriviPerFoto(frigo, scelta?.id ?? null) : null;
-    const r = await riconosciFoto(famiglia, await riduciFoto(file, LATO_ANALISI), { dove, utenteId }, descrizione);
+    const r = await riconosciFoto(famiglia, await riduciFoto(file, LATO_ANALISI), { dove, utenteId }, descrizione, (t) => setTrovati(t.map((x) => x.nome)));
     if ('errore' in r) {
       setErrore(SPIEGA_ERRORE[r.errore] + (r.dettaglio ? ` (Risposta di Google: ${r.dettaglio})` : ''));
       return setStato('scatta');
@@ -190,9 +193,10 @@ export function FotoFrigo({ indice, luogo: luogoIniziale, chiudi }: { indice: In
         </>
       )}
       {stato === 'leggo' && (
-        <p role="status" aria-live="polite">
-          Sto guardando la foto…
-        </p>
+        <div role="status" aria-live="polite">
+          <p style={{ marginTop: 0 }}>Sto guardando la foto…</p>
+          {trovati.length > 0 && <p className="tenue">Finora: {trovati.join(', ')}</p>}
+        </div>
       )}
       {stato === 'scegli' &&
         (proposte.length === 0 ? (

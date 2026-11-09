@@ -25,29 +25,43 @@ async function base64(file: Blob): Promise<string> {
   return btoa(s);
 }
 
-/** `frigo`: il frigo della famiglia descritto a parole, perché Gemini dica anche dove vede ogni alimento. */
-export async function riconosciFoto(famiglia_id: string, foto: Blob, luogo?: Luogo, frigo: string | null = null): Promise<{ alimenti: Riconosciuto[] } | { errore: ErroreFoto; dettaglio?: string }> {
+/**
+ * `frigo`: il frigo della famiglia descritto a parole, perché Gemini dica anche dove vede ogni alimento.
+ * `avanza` riceve gli alimenti trovati finora, mentre Gemini guarda: si possono mostrare subito.
+ */
+export async function riconosciFoto(
+  famiglia_id: string,
+  foto: Blob,
+  luogo?: Luogo,
+  frigo: string | null = null,
+  avanza?: (trovati: Riconosciuto[]) => void,
+): Promise<{ alimenti: Riconosciuto[] } | { errore: ErroreFoto; dettaglio?: string }> {
   if (!navigator.onLine) return { errore: 'rete' };
   if (luogo?.dove === 'locale') {
     try {
       const chiave = await chiaveGeminiLocale(luogo.utenteId, famiglia_id);
       if (!chiave) return { errore: 'non_configurata' };
-      const esito = await riconosci(await base64(foto), chiave, fetch, undefined, testoFrigo(frigo));
+      const esito = await riconosci(await base64(foto), chiave, fetch, undefined, testoFrigo(frigo), avanza);
       return 'errore' in esito ? { errore: esito.errore, dettaglio: esito.dettaglio } : { alimenti: esito.alimenti };
     } catch {
       return { errore: 'rete' };
     }
   }
   try {
-    const { data, error } = await supabase().functions.invoke('foto-frigo', { body: { famiglia_id, immagine: await base64(foto), ...(frigo ? { frigo } : {}) } });
-    if (error) {
-      const risposta = (error as { context?: Response }).context;
-      const corpo = risposta && typeof risposta.json === 'function' ? await risposta.json().catch(() => null) : null;
-      const e = corpo?.errore as ErroreFoto | undefined;
-      const dettaglio = typeof corpo?.dettaglio === 'string' ? corpo.dettaglio.slice(0, 200) : undefined;
-      return { errore: e && ['quota', 'chiave', 'non_configurata', 'gemini', 'non_autorizzato'].includes(e) ? e : 'rete', dettaglio };
+    const token = (await supabase().auth.getSession()).data.session?.access_token ?? SUPABASE_CHIAVE;
+    const r = await fetch(`${SUPABASE_URL}/functions/v1/foto-frigo`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', apikey: SUPABASE_CHIAVE, authorization: `Bearer ${token}` },
+      body: JSON.stringify({ famiglia_id, immagine: await base64(foto), ...(frigo ? { frigo } : {}), flusso: true }),
+    });
+    if (r.ok && r.body && (r.headers.get('content-type') ?? '').includes('ndjson')) {
+      const esito = await leggiRighe(r, (_fase, visti) => avanza?.(visti as Riconosciuto[]));
+      return 'errore' in esito ? esito : { alimenti: esito.visti as Riconosciuto[] };
     }
-    return { alimenti: (data?.alimenti ?? []) as Riconosciuto[] };
+    // Una funzione di prima (risponde tutto insieme) o un errore.
+    const corpo = (await r.json().catch(() => null)) as { alimenti?: Riconosciuto[]; errore?: string; dettaglio?: unknown } | null;
+    if (r.ok) return { alimenti: corpo?.alimenti ?? [] };
+    return { errore: erroreNoto(corpo?.errore), dettaglio: typeof corpo?.dettaglio === 'string' ? corpo.dettaglio.slice(0, 200) : undefined };
   } catch {
     return { errore: 'rete' };
   }

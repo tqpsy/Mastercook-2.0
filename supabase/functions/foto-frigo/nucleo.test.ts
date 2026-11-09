@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { leggiAlimenti, messaggioGoogle, MODELLI, riconosci, testoFrigo } from './nucleo';
+import { leggiAlimenti, messaggioGoogle, MODELLI, MODELLI_VELOCI, riconosci, testoFrigo } from './nucleo';
 
 const risposta = (stato: number, corpo: unknown) => new Response(typeof corpo === 'string' ? corpo : JSON.stringify(corpo), { status: stato });
 const gemini = (testo: string) => risposta(200, { candidates: [{ content: { parts: [{ text: testo }] } }] });
@@ -94,5 +94,22 @@ describe('foto del frigo con Gemini', () => {
     expect(url[2]).toBe(url[1]);
     expect(url[2]).not.toBe(url[0]);
     expect(corpi[0]).toContain('MEDIA_RESOLUTION_LOW');
+  });
+
+  it('per le foto i modelli lite vengono per primi, e con suAlimenti gli alimenti arrivano man mano', async () => {
+    expect(MODELLI_VELOCI[0]).toContain('flash-lite');
+    expect([...MODELLI_VELOCI].sort()).toEqual([...MODELLI].sort());
+    const pezzi = ['[{"nome":"uova","quantita":6,"unita":"pz"},', '{"nome":"burro"', '}]'];
+    const sse = pezzi.map((t) => `data: ${JSON.stringify({ candidates: [{ content: { parts: [{ text: t }] } }] })}\r\n\r\n`).join('');
+    const passi: string[][] = [];
+    let url = '';
+    const chiama = (async (u: string) => {
+      url = u;
+      return new Response(sse, { status: 200 });
+    }) as unknown as typeof fetch;
+    const esito = await riconosci('AAAA', 'k', chiama, undefined, null, (a) => passi.push(a.map((x) => x.nome)));
+    expect(url).toContain(':streamGenerateContent?alt=sse');
+    expect(passi).toEqual([['uova'], ['uova', 'burro']]);
+    expect('alimenti' in esito && esito.alimenti.map((a) => a.nome)).toEqual(['uova', 'burro']);
   });
 });
