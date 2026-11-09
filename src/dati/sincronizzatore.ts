@@ -137,6 +137,12 @@ export class Sincronizzatore {
         await this.contaCoda();
         return 'vuota';
       }
+      // Se un comando precedente è stato applicato mentre questo entrava in coda, parte dalla versione che ha lasciato.
+      const dati = ribasa(voce.comando.tipo, voce.comando.dati, this.applicati);
+      if (dati !== voce.comando.dati) {
+        voce.comando = { ...voce.comando, dati };
+        await this.o.archivio.coda.update(voce.ordine!, { comando: voce.comando });
+      }
       let esito: Esito;
       try {
         await this.caricaFotoDi(voce);
