@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import catalogo from '../catalogo/catalogo.json';
 import type { Catalogo } from '../catalogo/tipi';
 import { Indice } from './ricette';
-import { daUsarePresto, descriviData, descriviDurata, eFresco, piuGiorni, spreco, statoData, stima, tipoFresco } from './scadenze';
+import { daUsarePresto, descriviData, descriviDurata, eFresco, piuGiorni, scadutoVero, spreco, statoData, stima, tipoFresco } from './scadenze';
 
 const indice = new Indice(catalogo as Catalogo);
 const insalata = indice.ingrediente('ing:insalata')!;
@@ -98,5 +98,16 @@ describe('carne, pesce e piatti cucinati (durate USDA, valore più prudente)', (
     expect(descriviDurata(1)).toBe('1 giorno');
     expect(descriviDurata(3)).toBe('3 giorni');
     expect(descriviDurata(180)).toBe('6 mesi');
+  });
+});
+
+describe('scadutoVero', () => {
+  const oggiData = '2026-11-10';
+  it('solo la scadenza vera già passata', () => {
+    expect(scadutoVero({ tipo_data: 'scadenza', data_limite: '2026-11-09' }, oggiData)).toBe(true);
+    expect(scadutoVero({ tipo_data: 'scadenza', data_limite: '2026-11-10' }, oggiData)).toBe(false);
+    expect(scadutoVero({ tipo_data: 'tmc', data_limite: '2026-10-01' }, oggiData)).toBe(false);
+    expect(scadutoVero({ tipo_data: 'stimata', data_limite: '2026-11-01' }, oggiData)).toBe(false);
+    expect(scadutoVero({ tipo_data: 'sconosciuta', data_limite: null }, oggiData)).toBe(false);
   });
 });

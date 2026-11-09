@@ -6,7 +6,7 @@ import { useIndice } from '../dati/indice';
 import { type ConfermaPasto as Conferma, daConfermare, type EsitoPasto, NOME_ESITO } from '../dominio/consumi';
 import type { CategoriaPasto, Eccezione, PortataMenu } from '../dominio/menu';
 import type { Indice, Ricetta } from '../dominio/ricette';
-import { daUsarePresto, giorniTra, oggi, piuGiorni, statoData } from '../dominio/scadenze';
+import { daUsarePresto, giorniTra, oggi, piuGiorni, scadutoVero, statoData } from '../dominio/scadenze';
 import { spesaDelGiorno, type BisognoDelGiorno } from '../dominio/spesa';
 import { formatta, formattaGiorno } from '../dominio/unita';
 import { Foglio } from '../ui/Foglio';
@@ -177,7 +177,7 @@ export function Oggi({ vai }: { vai: (scheda: 'spesa' | 'casa' | 'menu') => void
   const arretrati = daConfermare(dati.portate, attive, giorno).filter((p) => p.data < giorno);
   const portataAperta = aperto ? dati.portate.find((p) => p.id === aperto) : undefined;
   const daMangiare = diOggi.filter((p) => !attive.has(p.id));
-  const bisogni = indice ? spesaDelGiorno(indice, daMangiare, dati.persone, dati.eccezioni, dati.portate, dati.ospiti, lotti) : [];
+  const bisogni = indice ? spesaDelGiorno(indice, daMangiare, dati.persone, dati.eccezioni, dati.portate, dati.ospiti, lotti.filter((l) => !scadutoVero(l, giorno))) : [];
   const mancano = bisogni.filter((b) => b.manca > 0).length;
   const presto = daUsarePresto(lotti, giorno);
   const data = adesso.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
