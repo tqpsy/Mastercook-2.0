@@ -27,7 +27,7 @@ export function AvvisoMancanti() {
   if (!mancanti.length || !indice) return null;
   return (
     <div className="avviso" role="status">
-      In casa non c’erano abbastanza: {descriviMancanti(indice, mancanti)}. Ho tolto quello che c’era. Se li avevi, aggiungili o correggi le quantità in Casa.
+      In casa non c’era abbastanza (o era scaduto): {descriviMancanti(indice, mancanti)}. Ho tolto quello che c’era. Se li avevi, aggiungili o correggi le quantità in Casa.
       <button className="link" style={{ marginLeft: 8 }} onClick={() => setMancanti([])}>
         Ok
       </button>

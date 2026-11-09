@@ -4,7 +4,7 @@ import { dataLunga } from '../dominio/menu';
 import { CATEGORIE } from '../catalogo/tipi';
 import { candidate, type ContestoProposte, type FiltroProposte, proponi, RICETTE_PER_PASTO, tipoPiatto } from '../dominio/proposte';
 import { iconaRicetta, type Indice, type Ricetta } from '../dominio/ricette';
-import { daUsarePresto, oggi, piuGiorni } from '../dominio/scadenze';
+import { daUsarePresto, oggi, piuGiorni, scadutoVero } from '../dominio/scadenze';
 import { Foglio } from '../ui/Foglio';
 import { IconaCibo } from '../ui/IconaCibo';
 import { useLotti } from './Casa';
@@ -30,7 +30,7 @@ export function useContestoProposte(dati: DatiMenu, dal: string, al: string): Co
       vincoli: dati.vincoli,
       verifiche: dati.verifiche,
       gusti: dati.gusti,
-      inCasa: lotti.map((l) => l.ingrediente_id),
+      inCasa: lotti.filter((l) => !scadutoVero(l, giorno)).map((l) => l.ingrediente_id),
       urgenti: daUsarePresto(lotti, giorno).map((l) => l.ingrediente_id),
       recenti: dati.portate.filter((p) => p.ricetta_id && p.data >= piuGiorni(dal, -14) && p.data <= piuGiorni(al, 7)).map((p) => p.ricetta_id!),
       segni,
