@@ -1,12 +1,12 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { IconaCibo } from '../ui/IconaCibo';
 import { iconaIngrediente } from '../dominio/iconeCibo';
 import { LUOGHI, NOME_LUOGO } from '../catalogo/tipi';
-import { useFamiglia } from '../dati/contesto';
-import { abbinaAlimenti, type PropostaFoto } from '../dominio/fotoFrigo';
+import { useFamiglia, useVista } from '../dati/contesto';
+import { abbinaAlimenti, giaInCasa, type LottoInCasa, type PropostaFoto } from '../dominio/fotoFrigo';
 import type { Indice } from '../dominio/ricette';
 import { eFresco, type Luogo, oggi, stima } from '../dominio/scadenze';
-import { leggiNumero } from '../dominio/unita';
+import { formatta, leggiNumero } from '../dominio/unita';
 import { type ErroreFoto, riconosciFoto } from '../piattaforma/fotoFrigo';
 import { Foglio } from '../ui/Foglio';
 import { DisegnoFrigoMio } from '../ui/FrigoMio';
@@ -47,6 +47,15 @@ export function FotoFrigo({ indice, luogo: luogoIniziale, chiudi }: { indice: In
   const [quantita, setQuantita] = useState<Record<number, string>>({});
   const [luogo, setLuogo] = useState<Luogo>(luogoIniziale);
   const frigo = useFrigo();
+  const righeLotto = useVista().righe.lotto;
+  /** Ciò che è già in casa: la foto potrebbe mostrare cose già registrate. */
+  const lotti = useMemo<LottoInCasa[]>(
+    () =>
+      (righeLotto ?? [])
+        .filter((r) => !r.eliminato_il && !r.chiuso_il)
+        .map((r) => ({ ingrediente_id: String(r.ingrediente_id), luogo: String(r.luogo), unita: String(r.unita), quantita: Number(r.quantita), livello: (r.livello as string | null) ?? null })),
+    [righeLotto],
+  );
   /** La parte del frigo che si fotografa (null = tutto il frigo o tutto il freezer). */
   const [parte, setParte] = useState<string | null>(null);
   const [posti, setPosti] = useState<Record<number, string>>({});
@@ -65,7 +74,8 @@ export function FotoFrigo({ indice, luogo: luogoIniziale, chiudi }: { indice: In
     }
     const p = abbinaAlimenti(indice, r.alimenti);
     setProposte(p);
-    setScelte(Object.fromEntries(p.map((x, i) => [i, !!x.ingrediente])));
+    // Ciò che è già in casa parte senza spunta: si aggiunge solo se è davvero in più.
+    setScelte(Object.fromEntries(p.map((x, i) => [i, !!x.ingrediente && !giaInCasa(lotti, x.ingrediente.id, luogo)])));
     setQuantita(Object.fromEntries(p.map((x, i) => [i, x.quantita === null ? '' : String(x.quantita).replace('.', ',')])));
     // Il posto visto da Gemini se è una parte di questo luogo; altrimenti la parte fotografata.
     setPosti(Object.fromEntries(p.map((x, i) => [i, postiLuogo.find((q) => q.id === x.posto)?.id ?? scelta?.id ?? ''])));
@@ -90,7 +100,7 @@ export function FotoFrigo({ indice, luogo: luogoIniziale, chiudi }: { indice: In
         unita: p.unita,
         luogo,
         data_acquisto: null,
-        origine: 'manuale',
+        origine: 'foto',
         posto: posti[i] || null,
         ...(s
           ? { tipo_data: 'stimata', data_limite: s.data_limite, fonte_data: 'app', calcolata_il: s.calcolata_il, affidabilita: 'bassa' }
@@ -237,6 +247,16 @@ export function FotoFrigo({ indice, luogo: luogoIniziale, chiudi }: { indice: In
                         style={{ width: 80 }}
                       />
                       <span className="tenue">{p.unita}</span>
+                      {(() => {
+                        const c = giaInCasa(lotti, p.ingrediente.id, luogo);
+                        if (!c) return null;
+                        const quanto = c.aOcchio ? 'a occhio' : formatta({ valore: c.quantita, unita: c.unita as 'g' | 'ml' | 'pz' });
+                        return (
+                          <span className="tenue piccolo" style={{ flexBasis: '100%' }}>
+                            Già in casa: {quanto}. Spunta solo se è in più.
+                          </span>
+                        );
+                      })()}
                       {postiLuogo.length > 0 && (
                         <label className="riga posto-foto">
                           <span aria-hidden>📍</span>

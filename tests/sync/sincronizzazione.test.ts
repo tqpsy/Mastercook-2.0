@@ -471,4 +471,18 @@ describe('T-SYN-11: prova casuale con tre dispositivi e rete instabile', () => {
     expect(await a.sync.voci()).toEqual([]);
     expect(await vista()).toBe(true);
   });
+
+  it("avvisa dei mancanti quando un comando di scarico li restituisce, e non per un comando ripetuto", async () => {
+    const { famiglia, a } = await famigliaConDue();
+    await a.sync.sincronizza();
+    const visti: unknown[] = [];
+    a.sync.ascoltaApplicati((voce, esito) => visti.push([voce.comando.tipo, esito.dettaglio.mancanti]));
+    await a.sync.accoda('aggiungi_lotto', { id: randomUUID(), ingrediente_id: 'ing:spaghetti', quantita: 100, unita: 'g', luogo: 'dispensa', tipo_data: 'sconosciuta' });
+    await a.sync.accoda('usa_ricetta', { id: randomUUID(), ricetta_id: 'sys:carbonara', porzioni: 4 });
+    await a.sync.sincronizza();
+    expect(visti.map((v) => (v as unknown[])[0])).toEqual(['aggiungi_lotto', 'usa_ricetta']);
+    const mancanti = (visti[1] as [string, { ingrediente_id: string }[]])[1];
+    expect(mancanti.map((m) => m.ingrediente_id)).toContain('ing:spaghetti');
+    expect(famiglia).toBeTruthy();
+  });
 });
