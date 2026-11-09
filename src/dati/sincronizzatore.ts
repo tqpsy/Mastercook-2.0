@@ -38,6 +38,7 @@ export interface OpzioniSincronizzatore {
 export class Sincronizzatore {
   private readonly o: Required<OpzioniSincronizzatore>;
   private ascoltatori = new Set<(s: StatoSincronizzazione) => void>();
+  private ascoltatoriApplicati = new Set<(voce: VoceCoda, esito: Esito) => void>();
   private stato: StatoSincronizzazione = { in_attesa: 0, da_sistemare: 0, bloccato: null, senza_rete: false, ultimo_scarico: null };
   /** Le operazioni sulla rete avvengono una alla volta. */
   private fila: Promise<unknown> = Promise.resolve();
@@ -65,6 +66,12 @@ export class Sincronizzatore {
     this.ascoltatori.add(fn);
     fn(this.stato);
     return () => this.ascoltatori.delete(fn);
+  }
+
+  /** Avvisa ogni volta che il server applica un comando di questo dispositivo (non i ripetuti). */
+  ascoltaApplicati(fn: (voce: VoceCoda, esito: Esito) => void): () => void {
+    this.ascoltatoriApplicati.add(fn);
+    return () => this.ascoltatoriApplicati.delete(fn);
   }
 
   leggiStato(): StatoSincronizzazione {
@@ -156,6 +163,7 @@ export class Sincronizzatore {
         // Si toglie dalla coda con lo scarico che porta le sue righe (scaricaOra), non prima.
         await this.o.archivio.coda.update(voce.ordine!, { stato: 'inviata', esito });
         await this.ribasaCoda({ ...voce, esito });
+        if (!esito.ripetuto) for (const fn of this.ascoltatoriApplicati) fn(voce, esito);
       } else {
         await this.o.archivio.coda.update(voce.ordine!, { stato: 'da_sistemare', esito });
       }
