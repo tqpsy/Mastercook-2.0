@@ -100,6 +100,16 @@ describe('anteprima della coda', () => {
     ]);
   });
 
+  it('da completare a occhio: il lotto nasce in pezzi con il livello, la riga resta senza quantità', () => {
+    const righe = {
+      acquisto: [{ id: 'a1', famiglia_id: F, seq: 1, data: '2026-11-02', fonte: 'scontrino' }],
+      acquisto_riga: [{ id: 'r1', famiglia_id: F, seq: 2, acquisto_id: 'a1', ingrediente_id: 'ing:parmigiano', quantita: null, unita: null, lotto_id: null }],
+    };
+    const v = vistaConAnteprima(righe, [voce('completa_riga_acquisto', { id: 'r1', lotto_id: 'l1', livello: 'meta', pezzi: 2, luogo: 'frigo' })]);
+    expect(v.lotto?.map((l) => [l.id, l.quantita, l.unita, l.livello])).toEqual([['l1', 2, 'pz', 'meta']]);
+    expect(v.acquisto_riga?.map((r) => [r.quantita, r.lotto_id])).toEqual([[null, 'l1']]);
+  });
+
   it('ricette: una ricetta nuova compare con righe e passaggi; le modifiche riga per riga si vedono', () => {
     const v = vistaConAnteprima({}, [
       voce('salva_ricetta', {

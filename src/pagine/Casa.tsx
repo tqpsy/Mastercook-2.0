@@ -322,16 +322,19 @@ function CompletaRiga({ riga, chiudi }: { riga: RigaDaCompletare; chiudi: () => 
   const consiglio = useConsiglioPosto(ing, luogo);
   // Fresco o sfuso: la scadenza la calcola l'app dal giorno dell'acquisto, come nello scontrino.
   const proposta = eFresco(ing) ? stima(ing, luogo, riga.data) : null;
+  // Il formaggio comprato senza pesarlo: pezzi e quanto ne resta, come in «Aggiungi».
+  const [aOcchio, setAOcchio] = useState(false);
+  const [occhio, setOcchio] = useState<{ pezzi: number; livello: Livello }>({ pezzi: 1, livello: 'tanto' });
+  const conOcchio = aOcchio && puoAOcchio(ing);
 
   async function salva(e: FormEvent) {
     e.preventDefault();
-    const q = quantitaDa(scritta, ing);
+    const q = conOcchio ? null : quantitaDa(scritta, ing);
     if (typeof q === 'string') return setErrore(q);
     await esegui('completa_riga_acquisto', {
       id: riga.id,
       lotto_id: crypto.randomUUID(),
-      quantita: q.valore,
-      unita: q.unita,
+      ...(q ? { quantita: q.valore, unita: q.unita } : occhio),
       luogo,
       posto: consiglio?.posto.id ?? null,
       ...(proposta
@@ -348,7 +351,23 @@ function CompletaRiga({ riga, chiudi }: { riga: RigaDaCompletare; chiudi: () => 
           Comprato {dataBreve(riga.data)}
           {riga.negozio ? ` da ${riga.negozio}` : ''}. Scrivi quanto ne hai preso: entra in casa con la data dello scontrino.
         </p>
-        <CampoQuantita scritta={scritta} cambia={cambiaScritta} dimensione={ing.dimensione} pesoPz={ing.peso_pz} autoFocus />
+        {puoAOcchio(ing) && (
+          <div className="scelte" role="group" aria-label="Come lo conti">
+            <button type="button" aria-pressed={!aOcchio} onClick={() => setAOcchio(false)}>
+              Peso o misuro
+            </button>
+            <button type="button" aria-pressed={aOcchio} onClick={() => setAOcchio(true)}>
+              A occhio
+            </button>
+          </div>
+        )}
+        {conOcchio ? (
+          <LivelloScorta pezzi={occhio.pezzi} livello={occhio.livello} cambia={(x) => setOcchio((o) => ({ ...o, ...x }))} />
+        ) : (
+          <div style={{ marginTop: puoAOcchio(ing) ? 12 : 0 }}>
+            <CampoQuantita scritta={scritta} cambia={cambiaScritta} dimensione={ing.dimensione} pesoPz={ing.peso_pz} autoFocus />
+          </div>
+        )}
         <div className="campo">
           <span>Dove</span>
           <div className="scelte">
