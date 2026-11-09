@@ -272,7 +272,13 @@ async function leggiZonaInLocale(id: string) {
 /** In locale: le zone si leggono due alla volta; quando una finisce parte la prossima in coda. */
 function avanzaCodaLocale() {
   const l = letture.filter((x) => x.tipo === 'zona' && inLocale(x));
-  if (l.some((x) => x.fase === 'errore')) return; // una zona è fallita: le altre non partono (come prima)
+  const guasta = l.find((x) => x.fase === 'errore');
+  if (guasta) {
+    // Una zona è fallita: le altre in coda non partono (come prima) e finiscono con lo stesso errore, così la verifica
+    // non resta ferma su «leggo» e lo schermo non resta acceso. Le foto restano per riprovare.
+    for (const x of l) if (x.fase === 'coda') finisci(x.id, { fase: 'errore', errore: guasta.errore, dettaglio: guasta.dettaglio });
+    return;
+  }
   let attive = l.filter((x) => x.fase === 'invio' || x.fase === 'attesa').length;
   for (const x of l) {
     if (attive >= ZONE_INSIEME) break;

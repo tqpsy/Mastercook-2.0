@@ -304,6 +304,16 @@ export function diverse(a: number, b: number, unita: UnitaBase): boolean {
   return Math.abs(a - b) > Math.max(50, 0.25 * Math.max(a, b));
 }
 
+/**
+ * Quanto c'è in casa, in una sola unità: quella preferita (l'unità base dell'ingrediente) se almeno un lotto la usa,
+ * altrimenti quella del primo lotto. I lotti in un'altra unità (un formaggio «a occhio», contato in pezzi, accanto a
+ * uno pesato) non si sommano: 1 pezzo più 200 g non fa 201 g.
+ */
+function misura(ls: LottoInCasa[], preferita: UnitaBase | null): { unita: UnitaBase; inCasa: number } {
+  const unita = preferita && ls.some((l) => l.unita === preferita) ? preferita : ls[0].unita;
+  return { unita, inCasa: ls.filter((l) => l.unita === unita).reduce((s, l) => s + l.quantita, 0) };
+}
+
 const ORDINE: Record<TipoRiga, number> = { posto: 0, non_visto: 1, quantita: 2, nuovo: 3, incerto: 4, coerente: 5 };
 
 /**
@@ -360,25 +370,29 @@ export function confronta({
   }
 
   for (const [id, ls] of attesi) {
-    const inCasa = ls.reduce((s, l) => s + l.quantita, 0);
     const r = righe.get(id);
+    const ing = indice.ingrediente(id);
+    const m = misura(ls, r?.unita ?? (ing ? UNITA_BASE[ing.dimensione] : null));
     if (r) {
       r.lotti = ls;
-      r.inCasa = inCasa;
-      // Gemini e la casa possono usare unità diverse solo se l'ingrediente non si converte: allora non si confronta.
-      if (r.unita !== ls[0].unita) r.visto = null;
+      r.inCasa = m.inCasa;
+      // Gemini e la casa possono usare unità diverse (prodotti «a occhio», in pezzi): allora non si confronta.
+      if (r.unita !== m.unita) {
+        r.visto = null;
+        r.unita = m.unita;
+      }
       continue;
     }
     righe.set(id, {
       chiave: id,
       tipo: 'non_visto',
-      ingrediente: indice.ingrediente(id) ?? null,
+      ingrediente: ing ?? null,
       nomi: [],
       zona: zonaDelLotto(ls[0], zone, memoria)?.id ?? null,
       lotti: ls,
-      inCasa,
+      inCasa: m.inCasa,
       visto: null,
-      unita: ls[0].unita,
+      unita: m.unita,
       certezza: null,
       altrove: null,
       menu: null,
@@ -400,10 +414,15 @@ export function confronta({
     // Visto ma non atteso qui: se è in casa in un'altra zona dello stesso luogo, è solo spostato.
     const altrove = lotti.filter((l) => l.ingrediente_id === r.ingrediente!.id && l.quantita > 0 && fotografateLuoghi.has(l.luogo));
     if (altrove.length) {
+      const m = misura(altrove, r.unita);
       r.lotti = altrove;
-      r.inCasa = altrove.reduce((s, l) => s + l.quantita, 0);
+      r.inCasa = m.inCasa;
       r.altrove = nomeZona(zonaDelLotto(altrove[0], zone, memoria)?.id) ?? 'un’altra zona';
-      r.tipo = r.visto !== null && r.unita === altrove[0].unita && diverse(r.visto, r.inCasa, r.unita) ? 'quantita' : 'coerente';
+      if (r.unita !== m.unita) {
+        r.visto = null;
+        r.unita = m.unita;
+      }
+      r.tipo = r.visto !== null && r.unita && diverse(r.visto, r.inCasa, r.unita) ? 'quantita' : 'coerente';
       continue;
     }
     r.tipo = 'nuovo';
@@ -567,7 +586,8 @@ export function preparaVerifica({
     }
     const totale = d.azione === 'terminato' ? 0 : d.valore;
     if (!(totale >= 0)) continue;
-    const cambi = distribuisci(r.lotti, totale);
+    // Finito: tutti i lotti a zero. Una quantità nuova vale solo per i lotti nella stessa unità (non per quelli «a occhio» in pezzi).
+    const cambi = distribuisci(d.azione === 'terminato' ? r.lotti : r.lotti.filter((l) => l.unita === r.unita), totale);
     for (const c of cambi) operazioni.push({ azione: 'quantita', lotto_id: c.lotto_id, quantita: c.quantita });
     if (cambi.length) modifiche.push({ chiave: r.chiave, nome, prima: q(r.inCasa, r.unita), dopo: totale === 0 ? 'finito' : q(totale, r.unita) });
   }

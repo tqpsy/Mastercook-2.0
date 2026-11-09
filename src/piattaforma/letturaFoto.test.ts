@@ -144,4 +144,21 @@ describe('lettura della foto del frigo fuori dalla schermata', () => {
     expect(server.zonaLocale).toHaveBeenCalledTimes(3);
     expect(server.manda).not.toHaveBeenCalled();
   });
+  it('verifica in locale: se una zona fallisce, quelle in coda finiscono con lo stesso errore e tengono le foto', async () => {
+    const m = await import('./letturaFoto');
+    const finiture: ((r: unknown) => void)[] = [];
+    server.zonaLocale.mockImplementation(() => new Promise((ok) => finiture.push(ok)));
+    m.avviaVerifica({ famiglia: 'f1', sede: { dove: 'locale', utenteId: 'u' } as never, zone: ['a', 'b', 'c'].map((z) => ({ zonaId: z, foto: [new Blob(['x'])], contesto: z })) });
+    await passa(0);
+    finiture[0]({ errore: 'quota' });
+    await passa(0);
+    expect(m.lettureCorrenti().map((l) => l.fase)).toEqual(['errore', 'invio', 'errore']);
+    expect(m.lettureCorrenti()[2].errore).toBe('quota');
+    expect(server.zonaLocale).toHaveBeenCalledTimes(2);
+    expect(m.fotoDellaZona('c')).toHaveLength(1);
+    finiture[1]({ visti: [] });
+    await passa(0);
+    expect(m.lettureCorrenti().every((l) => l.fase === 'pronta' || l.fase === 'errore')).toBe(true);
+    m.scartaVerifica();
+  });
 });

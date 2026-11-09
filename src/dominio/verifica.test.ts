@@ -201,6 +201,26 @@ describe('dalle decisioni al comando', () => {
   });
 });
 
+describe('prodotti «a occhio» (in pezzi) accanto a quelli pesati', () => {
+  it('non si sommano ai grammi, e una quantità nuova non cambia i pezzi', () => {
+    const pesato = lotto('ing:parmigiano', 200, 'g', 'r2', { data_limite: '2026-11-10' });
+    const aOcchio = lotto('ing:parmigiano', 1, 'pz', 'r2', { data_limite: '2026-12-31' });
+    const righe = confronta({ indice, lotti: [pesato, aOcchio], zone, fotografate: ['r2'], visti: [visto('parmigiano', 'r2', 500, 'g')], memoria: MEMORIA_VUOTA });
+    const r = righe.find((x) => x.chiave === 'ing:parmigiano')!;
+    expect(r).toMatchObject({ unita: 'g', inCasa: 200, visto: 500, tipo: 'quantita' });
+    const { dati } = preparaVerifica({ righe, decisioni: { [r.chiave]: { azione: 'quantita', valore: 500 } }, zone, fotografate: ['r2'], correzioni: {}, nuovoId: () => 'x', stima: () => null });
+    expect(dati.operazioni).toEqual([{ azione: 'quantita', lotto_id: pesato.id, quantita: 500 }]);
+    const finito = preparaVerifica({ righe, decisioni: { [r.chiave]: { azione: 'terminato' } }, zone, fotografate: ['r2'], correzioni: {}, nuovoId: () => 'x', stima: () => null });
+    expect(finito.dati.operazioni.map((o) => ('lotto_id' in o ? o.lotto_id : null))).toEqual([pesato.id, aOcchio.id]);
+  });
+
+  it('solo a occhio: si mostra in pezzi e non si confronta coi grammi visti', () => {
+    const aOcchio = lotto('ing:parmigiano', 1, 'pz', 'r2');
+    const r = confronta({ indice, lotti: [aOcchio], zone, fotografate: ['r2'], visti: [visto('parmigiano', 'r2', 300, 'g')], memoria: MEMORIA_VUOTA })[0];
+    expect(r).toMatchObject({ unita: 'pz', inCasa: 1, visto: null, tipo: 'coerente' });
+  });
+});
+
 describe('menu', () => {
   it('il primo giorno che serve, da oggi in poi', () => {
     const ricetta = indice.ricette.find((r) => r.ingredienti.some((i) => i.ingrediente_id === 'ing:uova'))!;

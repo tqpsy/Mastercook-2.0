@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { type ChangeEvent, useEffect, useState } from 'react';
 import { IconaCibo } from '../ui/IconaCibo';
 import { iconaIngrediente } from '../dominio/iconeCibo';
 import { LUOGHI, NOME_LUOGO } from '../catalogo/tipi';
@@ -79,11 +79,20 @@ export function FotoFrigo({ indice, luogo: luogoIniziale, chiudi }: { indice: In
   const stato: 'scatta' | 'leggo' | 'scegli' = !mia || mia.fase === 'errore' ? 'scatta' : mia.fase === 'pronta' && preparata === mia.id ? 'scegli' : 'leggo';
   const erroreLettura = mia?.fase === 'errore' && mia.errore ? SPIEGA_ERRORE[mia.errore] + (mia.dettaglio ? ` (Risposta di Google: ${mia.dettaglio})` : '') : null;
 
-  async function leggi(file: File | undefined) {
+  async function leggi(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    // Così la stessa foto si può scegliere di nuovo (per esempio dopo un errore).
+    e.target.value = '';
     if (!file) return;
     setErrore(null);
     const descrizione = frigo && luogo !== 'dispensa' ? descriviPerFoto(frigo, scelta?.id ?? null) : null;
-    avviaLettura({ famiglia, sede: { dove, utenteId }, luogoCasa: luogo, parte, descrizione, foto: await riduciFoto(file, LATO_ANALISI) });
+    let foto: Blob;
+    try {
+      foto = await riduciFoto(file, LATO_ANALISI);
+    } catch {
+      return setErrore('Non riesco ad aprire questa foto: prova a scattarne un’altra o a sceglierne una diversa.');
+    }
+    avviaLettura({ famiglia, sede: { dove, utenteId }, luogoCasa: luogo, parte, descrizione, foto });
   }
 
   async function conferma() {
@@ -199,11 +208,11 @@ export function FotoFrigo({ indice, luogo: luogoIniziale, chiudi }: { indice: In
           )}
           <label className="bottone primario pieno">
             <span aria-hidden>📷</span> Scatta una foto
-            <input type="file" accept="image/*" capture="environment" hidden aria-label="Foto del frigo" onChange={(e) => void leggi(e.target.files?.[0])} />
+            <input type="file" accept="image/*" capture="environment" hidden aria-label="Foto del frigo" onChange={(e) => void leggi(e)} />
           </label>
           <label className="bottone pieno" style={{ marginTop: 8 }}>
             <span aria-hidden>🖼️</span> Scegli dalla galleria del telefono
-            <input type="file" accept="image/*" hidden aria-label="Galleria del telefono per il frigo" onChange={(e) => void leggi(e.target.files?.[0])} />
+            <input type="file" accept="image/*" hidden aria-label="Galleria del telefono per il frigo" onChange={(e) => void leggi(e)} />
           </label>
           <p className="tenue">Gemini di Google, con la chiave della famiglia: la foto non resta nell’app.</p>
         </>
