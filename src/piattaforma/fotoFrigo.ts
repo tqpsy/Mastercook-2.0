@@ -51,36 +51,52 @@ export async function riconosciFotoLocale(
 }
 
 /**
- * Famiglia sul server: manda la foto con l'id della lettura e basta. La funzione risponde subito (202) e lavora da
- * sola anche con l'app in tasca. Rimandare lo stesso id non fa doppi effetti. `'rete'`: non si sa se è arrivata.
+ * Famiglia sul server: manda la foto (o le foto di una zona) con l'id della lettura e basta. La funzione risponde
+ * subito (202) e lavora da sola anche con l'app in tasca. Rimandare lo stesso id non fa doppi effetti.
+ * `'rete'`: non si sa se è arrivata.
  */
-export async function mandaFotoAlServer(famiglia_id: string, lettura_id: string, foto: Blob, frigo: string | null): Promise<'ok' | 'rete' | { errore: ErroreFoto; dettaglio?: string }> {
+export async function mandaAlServer(famiglia_id: string, lettura_id: string, corpo: () => Promise<Record<string, unknown>>): Promise<'ok' | 'rete' | { errore: ErroreFoto; dettaglio?: string }> {
   if (!navigator.onLine) return 'rete';
   try {
     const token = (await supabase().auth.getSession()).data.session?.access_token ?? SUPABASE_CHIAVE;
     const r = await fetch(`${SUPABASE_URL}/functions/v1/foto-frigo`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', apikey: SUPABASE_CHIAVE, authorization: `Bearer ${token}` },
-      body: JSON.stringify({ famiglia_id, lettura_id, immagine: await base64(foto), ...(frigo ? { frigo } : {}) }),
+      body: JSON.stringify({ famiglia_id, lettura_id, ...(await corpo()) }),
     });
     if (r.status === 202) return 'ok';
-    const corpo = (await r.json().catch(() => null)) as { errore?: string; dettaglio?: unknown } | null;
-    return { errore: erroreNoto(corpo?.errore), dettaglio: typeof corpo?.dettaglio === 'string' ? corpo.dettaglio.slice(0, 200) : undefined };
+    const risposta = (await r.json().catch(() => null)) as { errore?: string; dettaglio?: unknown } | null;
+    return { errore: erroreNoto(risposta?.errore), dettaglio: typeof risposta?.dettaglio === 'string' ? risposta.dettaglio.slice(0, 200) : undefined };
   } catch {
     return 'rete';
   }
 }
 
+/** Il corpo della richiesta per la foto singola del frigo. */
+export async function corpoFotoFrigo(foto: Blob, frigo: string | null) {
+  return { immagine: await base64(foto), ...(frigo ? { frigo } : {}) };
+}
+
+/** Il corpo della richiesta per una zona della verifica (le sue foto e il contesto della famiglia). */
+export async function corpoZona(foto: Blob[], contesto: string, ritardo: number) {
+  return { tipo: 'verifica', immagini: await Promise.all(foto.slice(0, 4).map(base64)), contesto, ...(ritardo ? { ritardo } : {}) };
+}
+
 /** Com'è andata la lettura sul server: `assente` se la foto non è mai arrivata, `rete` se non si è potuto chiedere. */
-export type StatoServer = { stato: 'in_corso' } | ({ stato: 'pronta' } & { alimenti: Riconosciuto[] }) | { stato: 'errore'; errore: ErroreFoto; dettaglio?: string } | { stato: 'assente' } | { stato: 'rete' };
+export type StatoServer =
+  | { stato: 'in_corso' }
+  | { stato: 'pronta'; alimenti: Riconosciuto[]; visti: VistoInZona[] }
+  | { stato: 'errore'; errore: ErroreFoto; dettaglio?: string }
+  | { stato: 'assente' }
+  | { stato: 'rete' };
 
 export async function chiediLettura(lettura_id: string): Promise<StatoServer> {
   try {
     const { data, error } = await supabase().rpc('leggi_lettura_foto', { p_id: lettura_id });
     if (error) return { stato: 'rete' };
     if (!data) return { stato: 'assente' };
-    const r = data as { stato: string; risultato: { alimenti?: Riconosciuto[]; errore?: string; dettaglio?: unknown } | null };
-    if (r.stato === 'pronta') return { stato: 'pronta', alimenti: r.risultato?.alimenti ?? [] };
+    const r = data as { stato: string; risultato: { alimenti?: Riconosciuto[]; visti?: VistoInZona[]; errore?: string; dettaglio?: unknown } | null };
+    if (r.stato === 'pronta') return { stato: 'pronta', alimenti: r.risultato?.alimenti ?? [], visti: r.risultato?.visti ?? [] };
     if (r.stato === 'errore') return { stato: 'errore', errore: erroreNoto(r.risultato?.errore), dettaglio: typeof r.risultato?.dettaglio === 'string' ? r.risultato.dettaglio.slice(0, 200) : undefined };
     return { stato: 'in_corso' };
   } catch {
@@ -92,76 +108,28 @@ export async function chiediLettura(lettura_id: string): Promise<StatoServer> {
 export type FaseLettura = 'preparo' | 'invio' | 'guarda';
 export type Avanzamento = (fase: FaseLettura, visti: VistoInZona[]) => void;
 
-type EsitoZona = { visti: VistoInZona[] } | { errore: ErroreFoto; dettaglio?: string };
+export type EsitoZona = { visti: VistoInZona[] } | { errore: ErroreFoto; dettaglio?: string };
 
 const ERRORI_FOTO: ErroreFoto[] = ['quota', 'chiave', 'non_configurata', 'gemini', 'non_autorizzato'];
 const erroreNoto = (e: unknown): ErroreFoto => (ERRORI_FOTO.includes(e as ErroreFoto) ? (e as ErroreFoto) : 'rete');
 
-/** Le righe JSON della funzione (una per riga): passa gli alimenti man mano e restituisce l'ultima, con l'esito. */
-async function leggiRighe(r: Response, avanza: Avanzamento): Promise<EsitoZona> {
-  const lettore = r.body!.getReader();
-  const dec = new TextDecoder();
-  let resto = '';
-  let esito: EsitoZona = { errore: 'rete' };
-  const riga = (l: string) => {
-    if (!l.trim()) return;
-    try {
-      const x = JSON.parse(l) as { visti?: VistoInZona[]; fine?: boolean; errore?: string; dettaglio?: string };
-      if (x.errore) esito = { errore: erroreNoto(x.errore), dettaglio: typeof x.dettaglio === 'string' ? x.dettaglio.slice(0, 200) : undefined };
-      else if (x.fine) esito = { visti: x.visti ?? [] };
-      else if (x.visti) avanza('guarda', x.visti);
-    } catch {
-      // riga rotta: si ignora
-    }
-  };
-  for (;;) {
-    const { value, done } = await lettore.read();
-    if (done) break;
-    resto += dec.decode(value, { stream: true });
-    const righe = resto.split('\n');
-    resto = righe.pop() ?? '';
-    righe.forEach(riga);
-  }
-  riga(resto);
-  return esito;
-}
-
 /**
- * Verifica dell'inventario: le foto di una zona (fino a 4, la stessa zona da più lati) e il contesto della famiglia
- * (src/dominio/verifica.ts). Le foto non si salvano: passano a Google e basta.
+ * Verifica dell'inventario, famiglia «solo su questo telefono»: le foto di una zona (fino a 4, la stessa zona da più
+ * lati) e il contesto della famiglia (src/dominio/verifica.ts) vanno da qui a Gemini. Le foto non si salvano.
  * `avanza` riceve la fase e gli alimenti trovati finora, mentre Gemini guarda.
+ * (Per le famiglie sul server la zona parte con `mandaAlServer` e si legge in background.)
  */
-export async function riconosciZona(famiglia_id: string, foto: Blob[], contesto: string, luogo?: Luogo, avanza: Avanzamento = () => {}): Promise<EsitoZona> {
+export async function riconosciZonaLocale(luogo: Luogo, famiglia_id: string, foto: Blob[], contesto: string, avanza: Avanzamento = () => {}): Promise<EsitoZona> {
   if (!navigator.onLine) return { errore: 'rete' };
   avanza('preparo', []);
   const immagini = await Promise.all(foto.slice(0, 4).map(base64));
   avanza('invio', []);
-  if (luogo?.dove === 'locale') {
-    try {
-      const chiave = await chiaveGeminiLocale(luogo.utenteId, famiglia_id);
-      if (!chiave) return { errore: 'non_configurata' };
-      avanza('guarda', []);
-      const esito = await riconosciZonaGemini(immagini, chiave, contesto, fetch, undefined, (visti) => avanza('guarda', visti));
-      return 'errore' in esito ? { errore: esito.errore, dettaglio: esito.dettaglio } : { visti: esito.visti };
-    } catch {
-      return { errore: 'rete' };
-    }
-  }
   try {
-    const token = (await supabase().auth.getSession()).data.session?.access_token ?? SUPABASE_CHIAVE;
-    const r = await fetch(`${SUPABASE_URL}/functions/v1/foto-frigo`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', apikey: SUPABASE_CHIAVE, authorization: `Bearer ${token}` },
-      body: JSON.stringify({ famiglia_id, tipo: 'verifica', immagini, contesto, flusso: true }),
-    });
-    if (r.ok && r.body && (r.headers.get('content-type') ?? '').includes('ndjson')) {
-      avanza('guarda', []);
-      return await leggiRighe(r, avanza);
-    }
-    // Una funzione di prima (risponde tutto insieme) o un errore.
-    const corpo = (await r.json().catch(() => null)) as { visti?: VistoInZona[]; errore?: string; dettaglio?: unknown } | null;
-    if (r.ok) return { visti: corpo?.visti ?? [] };
-    return { errore: erroreNoto(corpo?.errore), dettaglio: typeof corpo?.dettaglio === 'string' ? corpo.dettaglio.slice(0, 200) : undefined };
+    const chiave = await chiaveGeminiLocale(luogo.utenteId, famiglia_id);
+    if (!chiave) return { errore: 'non_configurata' };
+    avanza('guarda', []);
+    const esito = await riconosciZonaGemini(immagini, chiave, contesto, fetch, undefined, (visti) => avanza('guarda', visti));
+    return 'errore' in esito ? { errore: esito.errore, dettaglio: esito.dettaglio } : { visti: esito.visti };
   } catch {
     return { errore: 'rete' };
   }

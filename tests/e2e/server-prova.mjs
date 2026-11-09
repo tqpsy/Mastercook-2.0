@@ -31,6 +31,7 @@ const FUNZIONI = {
   entra_con_invito: (a) => ['select public.entra_con_invito($1) as r', [a.comando]],
   scarica_modifiche: (a) => ['select public.scarica_modifiche($1, $2, $3) as r', [a.p_famiglia, a.p_dopo, a.p_limite]],
   imposta_chiave_gemini: (a) => ['select public.imposta_chiave_gemini($1, $2) as r', [a.p_famiglia, a.p_chiave]],
+  leggi_lettura_foto: (a) => ['select public.leggi_lettura_foto($1) as r', [a.p_id]],
   stato_chiave_gemini: (a) => ['select public.stato_chiave_gemini($1) as r', [a.p_famiglia]],
   mio_consenso: () => ['select public.mio_consenso() as r', []],
   registra_consenso: (a) => ['select public.registra_consenso($1) as r', [a.p_versione]],
@@ -75,6 +76,13 @@ function utenteDalToken(req) {
   }
 }
 
+/** Come la funzione vera con `lettura_id`: risponde subito 202 e chiude la lettura dopo una pausa, come un lavoro in background. */
+async function lavoroInBackground(res, lettura_id, famiglia_id, risultato) {
+  const nuova = (await pool.query('select public.nuova_lettura_foto($1, $2) as r', [lettura_id, famiglia_id])).rows[0].r;
+  if (nuova) setTimeout(() => void pool.query("select public.chiudi_lettura_foto($1, 'pronta', $2::jsonb)", [lettura_id, JSON.stringify(risultato)]), 800);
+  return rispondi(res, 202, { lettura_id });
+}
+
 async function corpo(req) {
   let s = '';
   for await (const c of req) s += c;
@@ -115,7 +123,7 @@ createServer(async (req, res) => {
     // Foto del frigo: al posto di Gemini una risposta fissa; il controllo su chi fa parte della famiglia è vero.
     if (percorso === '/functions/v1/foto-frigo' && req.method === 'POST') {
       const sub = utenteDalToken(req);
-      const { famiglia_id, immagine, tipo, documento, immagini, contesto, flusso } = await corpo(req);
+      const { famiglia_id, immagine, tipo, documento, immagini, contesto, lettura_id } = await corpo(req);
       const file = tipo === 'piano' ? documento : tipo === 'verifica' ? immagini?.[0] : immagine;
       const r = sub && typeof file === 'string' && file.length > 0 ? await comeUtente(sub, 'select 1 from famiglia where id = $1', [famiglia_id]) : { rowCount: 0 };
       if (!r.rowCount) return rispondi(res, 403, { errore: 'non_autorizzato' });
@@ -134,14 +142,8 @@ createServer(async (req, res) => {
             ? [{ nome: 'petto di pollo', codice: /- (p\d+): petto di pollo/.exec(String(contesto))[1], quantita: 500, unita: 'g', certezza: 'sicuro' }]
             : []),
         ];
-        if (!flusso) return rispondi(res, 200, { modello: 'prova', visti });
-        // Come la funzione vera con `flusso`: una riga alla volta, con una pausa, così si vede l'avanzamento.
-        res.writeHead(200, { 'content-type': 'application/x-ndjson', 'access-control-allow-origin': '*' });
-        for (let i = 1; i <= visti.length; i++) {
-          res.write(`${JSON.stringify({ visti: visti.slice(0, i) })}\n`);
-          await new Promise((ok) => setTimeout(ok, 400));
-        }
-        return res.end(`${JSON.stringify({ fine: true, modello: 'prova', visti })}\n`);
+        if (lettura_id) return lavoroInBackground(res, lettura_id, famiglia_id, { visti, modello: 'prova' });
+        return rispondi(res, 200, { modello: 'prova', visti });
       }
       // Il piano del nutrizionista letto da un PDF: una risposta fissa nel formato di Gemini.
       if (tipo === 'piano')
@@ -170,15 +172,14 @@ createServer(async (req, res) => {
             ],
           },
         });
-      return rispondi(res, 200, {
-        modello: 'prova',
-        alimenti: [
-          { nome: 'latte', quantita: 1000, unita: 'ml' },
-          { nome: 'uova', quantita: 6, unita: 'pz' },
-          { nome: 'zucchina', quantita: null, unita: null },
-          { nome: 'oggetto misterioso', quantita: null, unita: null },
-        ],
-      });
+      const alimenti = [
+        { nome: 'latte', quantita: 1000, unita: 'ml' },
+        { nome: 'uova', quantita: 6, unita: 'pz' },
+        { nome: 'zucchina', quantita: null, unita: null },
+        { nome: 'oggetto misterioso', quantita: null, unita: null },
+      ];
+      if (lettura_id) return lavoroInBackground(res, lettura_id, famiglia_id, { alimenti, modello: 'prova' });
+      return rispondi(res, 200, { modello: 'prova', alimenti });
     }
     const f = percorso.match(/^\/storage\/v1\/object\/(?:authenticated\/)?foto\/(.+)$/);
     if (f) {

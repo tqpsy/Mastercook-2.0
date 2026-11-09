@@ -8,7 +8,7 @@ import type { Indice } from '../dominio/ricette';
 import { eFresco, type Luogo, oggi, stima } from '../dominio/scadenze';
 import { leggiNumero } from '../dominio/unita';
 import { type ErroreFoto } from '../piattaforma/fotoFrigo';
-import { avviaLettura, riprovaLettura, scartaLettura, segnaAperta, siPuoRiprovare, useLetturaFoto } from '../piattaforma/letturaFoto';
+import { avviaLettura, riprovaLettura, scartaLettura, segnaAperta, siPuoRiprovare, useLetture } from '../piattaforma/letturaFoto';
 import { Foglio } from '../ui/Foglio';
 import { DisegnoFrigoMio } from '../ui/FrigoMio';
 import { descriviPerFoto, posto as postoFrigo, postiDi } from '../dominio/frigo';
@@ -54,12 +54,12 @@ export function FotoFrigo({ indice, luogo: luogoIniziale, chiudi }: { indice: In
   const postiLuogo = frigo ? postiDi(frigo, luogo) : [];
 
   // La lettura vive fuori da questo foglio (src/piattaforma/letturaFoto.ts): chiuderlo o cambiare scheda non la ferma.
-  const { lettura } = useLetturaFoto();
+  const { frigo: lettura } = useLetture();
   const mia = lettura && lettura.famiglia === famiglia ? lettura : null;
   const [preparata, setPreparata] = useState<string | null>(null);
   useEffect(() => {
-    segnaAperta(true);
-    return () => segnaAperta(false);
+    segnaAperta('frigo', true);
+    return () => segnaAperta('frigo', false);
   }, []);
   // Appena la lettura è pronta si preparano le proposte (una volta sola per lettura: poi le modifiche sono della persona).
   if (mia && mia.fase === 'pronta' && mia.alimenti && preparata !== mia.id) {

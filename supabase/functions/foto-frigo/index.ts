@@ -3,10 +3,8 @@
 // per le famiglie di chi gestisce l'app, il segreto del progetto (GEMINI_API_KEY): non arriva mai sui telefoni.
 // La foto non si salva: passa a Google e basta.
 // Con `tipo: 'piano'` legge invece il piano del nutrizionista (PDF o foto in `documento`, tipo in `mime`).
-// Con `lettura_id` (foto singola) risponde subito 202 e lavora in background: il risultato si legge con `leggi_lettura_foto`.
+// Con `lettura_id` (foto singola o zona della verifica) risponde subito 202 e lavora in background: il risultato si legge con `leggi_lettura_foto`.
 // Con `tipo: 'verifica'` guarda una zona (fino a 4 foto in `immagini`) e la confronta con il `contesto` mandato dall'app.
-// Con anche `flusso: true` risponde una riga JSON alla volta: {"visti": [...]} man mano, poi {"fine": true, "visti", "modello"}
-// oppure {"errore"}: l'app mostra gli alimenti mentre Gemini li trova.
 import { MAX_FOTO_VERIFICA, riconosci, riconosciZona, testoContesto, testoFrigo } from './nucleo.ts';
 import { leggiPianoDocumento, MIME_PIANO } from './piano.ts';
 
@@ -34,7 +32,7 @@ const rispondi = (stato: number, dati: unknown) => new Response(JSON.stringify(d
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
   if (req.method !== 'POST') return rispondi(405, { errore: 'metodo' });
-  let d: { lettura_id?: string; famiglia_id?: string; immagine?: string; frigo?: unknown; tipo?: string; documento?: string; mime?: string; immagini?: unknown; contesto?: unknown; flusso?: unknown };
+  let d: { lettura_id?: string; ritardo?: unknown; famiglia_id?: string; immagine?: string; frigo?: unknown; tipo?: string; documento?: string; mime?: string; immagini?: unknown; contesto?: unknown};
   try {
     d = await req.json();
   } catch {
@@ -77,20 +75,26 @@ Deno.serve(async (req) => {
 
   // Lettura in background: la funzione risponde subito e finisce il lavoro da sola, anche con l'app in tasca.
   // L'app, tornata in primo piano, chiede com'è andata con `leggi_lettura_foto`. Lo stesso id non parte due volte.
-  if (!piano && !verifica && typeof d.lettura_id === 'string' && /^[0-9a-f-]{36}$/.test(d.lettura_id)) {
+  // Vale per la foto singola e per una zona della verifica. `ritardo` (secondi, al più 90) fa partire Gemini più tardi:
+  // con molte zone non si chiede tutto insieme, e la quota gratuita (richieste al minuto) regge.
+  if (!piano && typeof d.lettura_id === 'string' && /^[0-9a-f-]{36}$/.test(d.lettura_id)) {
     const rpc = (nome: string, corpo: unknown) =>
       fetch(`${url}/rest/v1/rpc/${nome}`, { method: 'POST', headers: { ...accessoServizio(), 'content-type': 'application/json' }, body: JSON.stringify(corpo) });
     const nuova = await rpc('nuova_lettura_foto', { p_id: d.lettura_id, p_famiglia: d.famiglia_id });
     if (!nuova.ok) return rispondi(502, { errore: 'gemini', dettaglio: 'lettura non avviata' });
     if ((await nuova.json()) === true) {
       const id = d.lettura_id;
+      const ritardo = typeof d.ritardo === 'number' && d.ritardo > 0 ? Math.min(d.ritardo, 90) : 0;
       const lavoro = (async () => {
         let stato = 'errore';
         let risultato: unknown = { errore: 'gemini', dettaglio: 'risposta interrotta' };
         try {
-          const esito = await riconosci(d.immagine!, chiave, fetch, undefined, testoFrigo(d.frigo));
+          if (ritardo) await new Promise((ok) => setTimeout(ok, ritardo * 1000));
+          const esito = verifica
+            ? await riconosciZona(immagini as string[], chiave, testoContesto(d.contesto))
+            : await riconosci(d.immagine!, chiave, fetch, undefined, testoFrigo(d.frigo));
           if ('errore' in esito) risultato = { errore: esito.errore, ...(esito.dettaglio ? { dettaglio: esito.dettaglio } : {}) };
-          else [stato, risultato] = ['pronta', { alimenti: esito.alimenti, modello: esito.modello }];
+          else [stato, risultato] = ['pronta', 'visti' in esito ? { visti: esito.visti, modello: esito.modello } : { alimenti: esito.alimenti, modello: esito.modello }];
         } catch {
           // resta l'errore «risposta interrotta»
         }
@@ -100,23 +104,6 @@ Deno.serve(async (req) => {
       (globalThis as unknown as { EdgeRuntime?: { waitUntil(p: Promise<unknown>): void } }).EdgeRuntime?.waitUntil(lavoro);
     }
     return rispondi(202, { lettura_id: d.lettura_id });
-  }
-
-  if (verifica && d.flusso === true) {
-    const cod = new TextEncoder();
-    const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
-    const scrivi = writable.getWriter();
-    const riga = (x: unknown) => scrivi.write(cod.encode(`${JSON.stringify(x)}\n`)).catch(() => {});
-    (async () => {
-      try {
-        const esito = await riconosciZona(immagini as string[], chiave, testoContesto(d.contesto), fetch, undefined, (visti) => void riga({ visti }));
-        await riga('errore' in esito ? esito : { fine: true, ...esito });
-      } catch {
-        await riga({ errore: 'gemini', dettaglio: 'risposta interrotta' });
-      }
-      await scrivi.close().catch(() => {});
-    })();
-    return new Response(readable, { headers: { ...CORS, 'content-type': 'application/x-ndjson', 'cache-control': 'no-cache' } });
   }
 
   const esito = piano
