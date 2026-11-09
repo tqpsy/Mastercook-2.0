@@ -79,4 +79,20 @@ describe('foto del frigo con Gemini', () => {
     expect(testoFrigo(42)).toBeNull();
     expect(testoFrigo('x'.repeat(5000))).toHaveLength(1500);
   });
+
+  it('chiede la risoluzione bassa e, dopo un modello senza quota, riparte da quello che ha risposto', async () => {
+    const url: string[] = [];
+    const corpi: string[] = [];
+    const finte = [risposta(429, 'quota'), gemini('[]'), gemini('[]')];
+    const chiama = (async (u: string, o?: RequestInit) => {
+      url.push(u);
+      corpi.push(String(o?.body));
+      return finte.shift()!;
+    }) as unknown as typeof fetch;
+    await riconosci('AAAA', 'k', chiama);
+    await riconosci('AAAA', 'k', chiama);
+    expect(url[2]).toBe(url[1]);
+    expect(url[2]).not.toBe(url[0]);
+    expect(corpi[0]).toContain('MEDIA_RESOLUTION_LOW');
+  });
 });
