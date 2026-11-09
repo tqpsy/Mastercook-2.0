@@ -3,7 +3,7 @@
  */
 import { expect, test } from '@playwright/test';
 import { dataLunga } from '../../src/dominio/menu';
-import { oggi } from '../../src/dominio/scadenze';
+import { oggi, piuGiorni } from '../../src/dominio/scadenze';
 import { apri, nuovoUtente, sql } from './aiuti';
 
 test('solo su questo telefono: i dati restano qui e il server non ne sa nulla', async ({ browser }, info) => {
@@ -37,4 +37,19 @@ test('solo su questo telefono: i dati restano qui e il server non ne sa nulla', 
   await page.getByRole('button', { name: 'Impostazioni' }).click();
   await expect(page.getByText(/stanno solo su questo telefono: non escono da qui/)).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Inviti' })).toHaveCount(0);
+
+  // Il promemoria: tace nei primi giorni, dopo due settimane senza copia si fa vedere, e «Più tardi» lo zittisce.
+  await page.getByRole('button', { name: 'Oggi', exact: true }).click();
+  await expect(page.getByText(/da un po’ non ne hai una copia/)).toHaveCount(0);
+  const vecchio = piuGiorni(oggi(), -20);
+  await page.evaluate((giorno) => {
+    for (const k of Object.keys(localStorage)) if (k.startsWith('mc-promemoria-copia-prima-')) localStorage.setItem(k, giorno);
+  }, vecchio);
+  await page.reload();
+  await expect(page.getByText(/da un po’ non ne hai una copia/)).toBeVisible({ timeout: 60_000 });
+  await page.getByRole('button', { name: 'Più tardi' }).click();
+  await expect(page.getByText(/da un po’ non ne hai una copia/)).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByText(nome, { exact: true })).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByText(/da un po’ non ne hai una copia/)).toHaveCount(0);
 });

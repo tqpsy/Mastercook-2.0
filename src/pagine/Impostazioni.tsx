@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { AntoninoImpostazioni } from './Antonino';
 import { VoceMioFrigo } from './MioFrigo';
 import { idDispositivo, righeAttive, useFamiglia, useVista } from '../dati/contesto';
-import { esporta, nomeFileEsportazione } from '../dati/esportazione';
+import { salvaCopiaFile } from '../dati/copiaFile';
+import { segnaCopiaSalvata } from '../dati/promemoriaCopia';
 import { oggi } from '../dominio/scadenze';
 import { spiegaMotivo } from '../dati/messaggi';
 import { VERSIONE_APP } from '../dati/tipi';
@@ -244,25 +245,10 @@ function IMieiDati({ nomeFamiglia, apriFamiglia }: { nomeFamiglia: string; apriF
   async function scarica() {
     setStato('Preparo il file…');
     try {
-      const file = await esporta(trasporto, famiglia);
-      const nomeFile = nomeFileEsportazione(nomeFamiglia, oggi());
-      const blob = new File([JSON.stringify(file, null, 2)], nomeFile, { type: 'application/json' });
-      const fatto = `${file.conteggi.membro} persone, ${file.conteggi.vincolo_alimentare} tra allergie ed esigenze.`;
-      // Sul telefono si apre la scelta di dove metterla (su iPhone: «Salva in File», anche iCloud Drive).
-      if (navigator.canShare?.({ files: [blob] })) {
-        try {
-          await navigator.share({ files: [blob], title: `Mastercook: ${nomeFamiglia}` });
-          return setStato(`Copia salvata: ${fatto}`);
-        } catch (e) {
-          if ((e as Error).name === 'AbortError') return setStato(null);
-        }
-      }
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = nomeFile;
-      a.click();
-      URL.revokeObjectURL(a.href);
-      setStato(`Scaricato: ${fatto}`);
+      const esito = await salvaCopiaFile(trasporto, famiglia, nomeFamiglia, oggi());
+      if (esito.tipo === 'annullata') return setStato(null);
+      segnaCopiaSalvata(famiglia, oggi());
+      setStato(`${esito.tipo === 'salvata' ? 'Copia salvata' : 'Scaricato'}: ${esito.riassunto}`);
     } catch {
       setStato(dove === 'locale' ? 'Non sono riuscito a preparare il file. Riprova.' : 'Serve la connessione per esportare: il file si prepara dal server, così è completo.');
     }

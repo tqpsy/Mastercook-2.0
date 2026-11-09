@@ -12,6 +12,7 @@ import { formatta, formattaGiorno } from '../dominio/unita';
 import { Foglio } from '../ui/Foglio';
 import { Foto, riduciFoto } from '../ui/Foto';
 import { Icona } from '../ui/Icona';
+import { PromemoriaCopia } from '../ui/PromemoriaCopia';
 import { Sigla, type SiglaPersona, sigleDi } from '../ui/Sigla';
 import { useLotti } from './Casa';
 import { ConfermaPasto, SegnaMangiato, useConferme } from './ConfermaPasto';
@@ -201,6 +202,8 @@ export function Oggi({ vai }: { vai: (scheda: 'spesa' | 'casa' | 'menu') => void
         </p>
         <h2 className="titolo-grande">{nome ? `${saluto(adesso)}, ${nome}` : saluto(adesso)}</h2>
       </header>
+
+      <PromemoriaCopia nomeFamiglia={String(famiglia?.nome ?? 'la famiglia')} />
 
       {indice && presto.length > 0 && (
         // Una tendina chiusa di base, come in Casa: si vede subito quanti prodotti stanno per scadere.

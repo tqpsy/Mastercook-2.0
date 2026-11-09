@@ -27,6 +27,9 @@ Quando crea la famiglia, ognuno sceglie:
 - Un solo account; niente inviti.
 - Se il telefono si perde o si cancellano i dati del browser, la famiglia si perde, a meno di avere la copia sul
   Drive o una copia salvata (Impostazioni → «Salva una copia», che su iPhone si può mettere in iCloud Drive).
+- Promemoria: in «Oggi», se da 14 giorni non c'è una copia salvata a mano (e il Drive non è collegato), compare un avviso
+  con «Salva una copia» e «Più tardi» (tace 7 giorni). Le date stanno solo su questo dispositivo
+  (`src/dati/promemoriaCopia.ts`); la regola è in `src/dominio/promemoriaCopia.ts`.
 
 ## Come funziona «sul mio Google Drive»
 
