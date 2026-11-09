@@ -314,7 +314,12 @@ function PianoNutrizionista({ regole, salva, indice }: { regole: RegoleAntonino;
         )}
       </div>
       {/* Niente filtro sul tipo: alcuni telefoni non lasciano scegliere i .json scaricati; il file si controlla dopo. */}
-      <input ref={file} type="file" hidden aria-label="File del piano" onChange={(e) => e.target.files?.[0] && void carica(e.target.files[0])} />
+      <input ref={file} type="file" hidden aria-label="File del piano" onChange={(e) => {
+          const f = e.target.files?.[0];
+          // Così lo stesso file si può scegliere di nuovo (per esempio dopo un errore di Gemini).
+          e.target.value = '';
+          if (f) void carica(f);
+        }} />
       <p className="tenue piccolo">Un PDF o una foto li legge Gemini con la chiave della famiglia: passano a Google e non si salvano.</p>
       {esito && (
         <p className={`avviso ${esito.ok ? 'info' : 'errore'}`} role="status">
