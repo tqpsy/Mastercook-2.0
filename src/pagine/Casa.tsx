@@ -1,4 +1,4 @@
-import { type FormEvent, memo, useDeferredValue, useMemo, useState } from 'react';
+import { type FormEvent, memo, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { IconaCibo } from '../ui/IconaCibo';
 import { iconaIngrediente } from '../dominio/iconeCibo';
 import { LUOGHI, NOME_LUOGO } from '../catalogo/tipi';
@@ -21,6 +21,7 @@ import { FoglioSchedaProdotto } from '../ui/SchedaProdotto';
 import { chiediAOpenFoodFacts } from '../ui/openFoodFacts';
 import { type SchedaProdotto, schedaVuota } from '../dominio/schedaProdotto';
 import { Foglio } from '../ui/Foglio';
+import { consumaApertura, useLetturaFoto } from '../piattaforma/letturaFoto';
 import { FotoFrigo } from './FotoFrigo';
 import { Verifica, VoceVerifica } from './Verifica';
 import { useDatiMenu } from './Menu';
@@ -104,6 +105,12 @@ export function Casa() {
   const lotti = useLotti();
   const [luogo, setLuogo] = useState<Luogo>('frigo');
   const [aperto, setAperto] = useState<string | 'nuovo' | 'foto' | 'verifica' | null>(null);
+  // L'avviso «foto del frigo» in alto porta qui: il foglio della foto si apre sul risultato (o sull'attesa).
+  const { richiestaApertura } = useLetturaFoto();
+  if (richiestaApertura && aperto !== 'foto') setAperto('foto');
+  useEffect(() => {
+    if (richiestaApertura) consumaApertura();
+  }, [richiestaApertura]);
   // «Da usare presto» è chiusa di base: l'elenco e le ricette (calcolo pesante) si preparano solo quando si apre.
   const [prestoAperto, setPrestoAperto] = useState(false);
   const giorno = oggi();

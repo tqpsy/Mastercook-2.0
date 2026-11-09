@@ -5,8 +5,8 @@ import { scaricaFoto } from '../piattaforma/supabase';
 /** Lato lungo massimo: abbastanza per il tablet, leggera da caricare (di solito 150–300 KB). */
 const LATO = 1280;
 
-/** Lato lungo per le foto mandate a Gemini: meno pixel, risposta più rapida. */
-export const LATO_ANALISI = 896;
+/** Lato lungo per le foto mandate a Gemini: abbastanza per leggere le etichette. */
+export const LATO_ANALISI = 1536;
 
 /** Riduce la foto scattata o scelta a un JPEG di al massimo 1280 px. */
 export async function riduciFoto(file: Blob, lato = LATO): Promise<Blob> {

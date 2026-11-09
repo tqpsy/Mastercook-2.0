@@ -6,7 +6,7 @@
 // Con `lettura_id` (foto singola) risponde subito 202 e lavora in background: il risultato si legge con `leggi_lettura_foto`.
 // Con `tipo: 'verifica'` guarda una zona (fino a 4 foto in `immagini`) e la confronta con il `contesto` mandato dall'app.
 // Con anche `flusso: true` risponde una riga JSON alla volta: {"visti": [...]} man mano, poi {"fine": true, "visti", "modello"}
-// oppure {"errore"}: l'app mostra gli alimenti mentre Gemini li trova. Vale anche per la foto singola (stesse righe, `visti` = alimenti).
+// oppure {"errore"}: l'app mostra gli alimenti mentre Gemini li trova.
 import { MAX_FOTO_VERIFICA, riconosci, riconosciZona, testoContesto, testoFrigo } from './nucleo.ts';
 import { leggiPianoDocumento, MIME_PIANO } from './piano.ts';
 
@@ -102,17 +102,14 @@ Deno.serve(async (req) => {
     return rispondi(202, { lettura_id: d.lettura_id });
   }
 
-  if ((verifica || !piano) && d.flusso === true) {
+  if (verifica && d.flusso === true) {
     const cod = new TextEncoder();
     const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
     const scrivi = writable.getWriter();
     const riga = (x: unknown) => scrivi.write(cod.encode(`${JSON.stringify(x)}\n`)).catch(() => {});
     (async () => {
       try {
-        const esito = verifica
-          ? await riconosciZona(immagini as string[], chiave, testoContesto(d.contesto), fetch, undefined, (visti) => void riga({ visti }))
-          : await riconosci(d.immagine!, chiave, fetch, undefined, testoFrigo(d.frigo), (visti) => void riga({ visti }));
-        if (!verifica && !('errore' in esito)) return void (await riga({ fine: true, visti: (esito as { alimenti: unknown[] }).alimenti, modello: esito.modello }));
+        const esito = await riconosciZona(immagini as string[], chiave, testoContesto(d.contesto), fetch, undefined, (visti) => void riga({ visti }));
         await riga('errore' in esito ? esito : { fine: true, ...esito });
       } catch {
         await riga({ errore: 'gemini', dettaglio: 'risposta interrotta' });
