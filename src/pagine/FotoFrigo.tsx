@@ -12,7 +12,7 @@ import { Foglio } from '../ui/Foglio';
 import { DisegnoFrigoMio } from '../ui/FrigoMio';
 import { descriviPerFoto, posto as postoFrigo, postiDi } from '../dominio/frigo';
 import { useFrigo } from './MioFrigo';
-import { riduciFoto } from '../ui/Foto';
+import { LATO_ANALISI, riduciFoto } from '../ui/Foto';
 
 export const CHIAVE_AVVISO = 'mc-foto-frigo-avviso';
 
@@ -58,7 +58,7 @@ export function FotoFrigo({ indice, luogo: luogoIniziale, chiudi }: { indice: In
     setErrore(null);
     setStato('leggo');
     const descrizione = frigo && luogo !== 'dispensa' ? descriviPerFoto(frigo, scelta?.id ?? null) : null;
-    const r = await riconosciFoto(famiglia, await riduciFoto(file), { dove, utenteId }, descrizione);
+    const r = await riconosciFoto(famiglia, await riduciFoto(file, LATO_ANALISI), { dove, utenteId }, descrizione);
     if ('errore' in r) {
       setErrore(SPIEGA_ERRORE[r.errore] + (r.dettaglio ? ` (Risposta di Google: ${r.dettaglio})` : ''));
       return setStato('scatta');

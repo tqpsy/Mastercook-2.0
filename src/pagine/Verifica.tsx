@@ -32,7 +32,7 @@ import type { VistoInZona } from '../../supabase/functions/foto-frigo/nucleo';
 import { type FaseLettura, riconosciZona } from '../piattaforma/fotoFrigo';
 import { CercaIngrediente } from '../ui/CercaIngrediente';
 import { Foglio } from '../ui/Foglio';
-import { riduciFoto } from '../ui/Foto';
+import { LATO_ANALISI, riduciFoto } from '../ui/Foto';
 import { IconaCibo } from '../ui/IconaCibo';
 import { useLotti } from './Casa';
 import { avvisoLetto, CHIAVE_AVVISO, SPIEGA_ERRORE } from './FotoFrigo';
@@ -121,7 +121,7 @@ function FotoZona({ zona, foto, aggiungi, togli }: { zona: ZonaVerifica; foto: B
               if (!f) return;
               setRiduco(true);
               try {
-                aggiungi(await riduciFoto(f));
+                aggiungi(await riduciFoto(f, LATO_ANALISI));
               } finally {
                 setRiduco(false);
               }

@@ -154,6 +154,15 @@ async function leggiFlusso(r: Response, suTesto: (finora: string) => void): Prom
   return testo;
 }
 
+/** Il modello che ha risposto per ultimo: per qualche minuto si riparte da lui, senza ritentare quelli senza quota. */
+let ultimoBuono: { modello: string; quando: number } | null = null;
+const DURATA_MEMORIA_MS = 10 * 60 * 1000;
+
+function ordineModelli(modelli: string[]): string[] {
+  if (modelli !== MODELLI || !ultimoBuono || Date.now() - ultimoBuono.quando > DURATA_MEMORIA_MS) return modelli;
+  return [ultimoBuono.modello, ...modelli.filter((m) => m !== ultimoBuono!.modello)];
+}
+
 /**
  * Chiede a Gemini una risposta JSON con lo schema dato, passando al modello dopo quando la quota gratuita di uno
  * è finita o il modello non è disponibile per questa chiave.
@@ -173,13 +182,13 @@ export async function chiediGemini(
         responseMimeType: 'application/json',
         responseSchema: schema,
         temperature: 0.1,
-        ...(breve ? { thinkingConfig: ragionamentoBreve(modello) } : {}),
+        ...(breve ? { thinkingConfig: ragionamentoBreve(modello), mediaResolution: 'MEDIA_RESOLUTION_LOW' } : {}),
       },
     });
   const metodo = opzioni.suTesto ? 'streamGenerateContent?alt=sse' : 'generateContent';
   let quota = false;
   let ultimo = '';
-  for (const modello of modelli) {
+  for (const modello of ordineModelli(modelli)) {
     const manda = (breve: boolean) =>
       chiama(`https://generativelanguage.googleapis.com/v1beta/models/${modello}:${metodo}`, {
         method: 'POST',
@@ -190,7 +199,7 @@ export async function chiediGemini(
     if (r.status === 400 && opzioni.veloce) {
       // Un modello che non accetta il ragionamento ridotto: si riprova com'era prima.
       const testo = await r.clone().text().catch(() => '');
-      if (/think/i.test(testo)) r = await manda(false);
+      if (/think|media/i.test(testo)) r = await manda(false);
     }
     if (r.status === 429) {
       quota = true; // quota di questo modello finita: il prossimo
@@ -203,6 +212,7 @@ export async function chiediGemini(
       ultimo = `${modello}: ${r.status} ${messaggioGoogle(testo)}`;
       continue;
     }
+    if (modelli === MODELLI) ultimoBuono = { modello, quando: Date.now() };
     if (opzioni.suTesto) return { testo: await leggiFlusso(r, opzioni.suTesto), modello };
     return { testo: testoDi(await r.json()), modello };
   }
