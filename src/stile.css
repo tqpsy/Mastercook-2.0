@@ -362,6 +362,12 @@ p {
 .elenco > li:last-child {
   border-bottom: 0;
 }
+/* Casa: con un centinaio di prodotti il telefono impagina e disegna solo le righe sullo schermo (aprire la scheda
+   e una finestra sopra la pagina costava l'impaginazione di tutte). 73 px: l'altezza di una riga. */
+.colonne-luoghi .elenco > li {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 73px;
+}
 
 .emoji {
   font-size: 1.8rem;

@@ -1,4 +1,4 @@
-import { type FormEvent, useMemo, useState } from 'react';
+import { type FormEvent, memo, useDeferredValue, useMemo, useState } from 'react';
 import { IconaCibo } from '../ui/IconaCibo';
 import { iconaIngrediente } from '../dominio/iconeCibo';
 import { LUOGHI, NOME_LUOGO } from '../catalogo/tipi';
@@ -91,7 +91,7 @@ export function Casa() {
   // «Da usare presto» è chiusa di base: l'elenco e le ricette (calcolo pesante) si preparano solo quando si apre.
   const [prestoAperto, setPrestoAperto] = useState(false);
   const giorno = oggi();
-  const presto = daUsarePresto(lotti, giorno);
+  const presto = useMemo(() => daUsarePresto(lotti, giorno), [lotti, giorno]);
   const sprecati = useSprecati(giorno);
 
   if (!vista.pronta || !indice) return <p className="tenue">Sto caricando la casa…</p>;
@@ -148,25 +148,7 @@ export function Casa() {
           </button>
         ))}
       </div>
-      <div className="colonne-luoghi">
-        {LUOGHI.map((l) => {
-          const qui = lotti.filter((x) => x.luogo === l).sort((a, b) => indice.nome(a.ingrediente_id).localeCompare(indice.nome(b.ingrediente_id), 'it'));
-          return (
-            <section key={l} className={`scheda luogo${l === luogo ? ' attivo' : ''}`} aria-label={NOME_LUOGO[l]}>
-              <h3 className="titolo-luogo">
-                {NOME_LUOGO[l]} <span className="etichetta">{qui.length}</span>
-              </h3>
-              {qui.length ? (
-                <ElencoLotti indice={indice} lotti={qui} giorno={giorno} apri={setAperto} />
-              ) : (
-                <p className="tenue" style={{ margin: 0 }}>
-                  Niente in {NOME_LUOGO[l].toLowerCase()}. Aggiungi ciò che hai con «+ Aggiungi»: la quantità la scrivi tu, l’app non la indovina.
-                </p>
-              )}
-            </section>
-          );
-        })}
-      </div>
+      <ColonneLuoghi indice={indice} lotti={lotti} giorno={giorno} luogo={luogo} apri={setAperto} />
 
       {sprecati.length > 0 && (
         <section className="scheda" aria-label="Buttato negli ultimi 30 giorni">
@@ -202,6 +184,53 @@ interface RigaDaCompletare {
   data: string;
   negozio: string | null;
 }
+
+/**
+ * Frigo, freezer e dispensa con i loro prodotti. Separato e memorizzato: toccando un prodotto si apre la sua scheda
+ * senza ridisegnare tutti gli elenchi (con un centinaio di prodotti la scheda si apriva in ritardo sul telefono).
+ */
+const ColonneLuoghi = memo(function ColonneLuoghi({
+  indice,
+  lotti,
+  giorno,
+  luogo,
+  apri,
+}: {
+  indice: Indice;
+  lotti: Lotto[];
+  giorno: string;
+  luogo: Luogo;
+  apri: (id: string) => void;
+}) {
+  const perLuogo = useMemo(
+    () =>
+      new Map(
+        LUOGHI.map((l) => [l, lotti.filter((x) => x.luogo === l).sort((a, b) => indice.nome(a.ingrediente_id).localeCompare(indice.nome(b.ingrediente_id), 'it'))]),
+      ),
+    [lotti, indice],
+  );
+  return (
+    <div className="colonne-luoghi">
+      {LUOGHI.map((l) => {
+        const qui = perLuogo.get(l)!;
+        return (
+          <section key={l} className={`scheda luogo${l === luogo ? ' attivo' : ''}`} aria-label={NOME_LUOGO[l]}>
+            <h3 className="titolo-luogo">
+              {NOME_LUOGO[l]} <span className="etichetta">{qui.length}</span>
+            </h3>
+            {qui.length ? (
+              <ElencoLotti indice={indice} lotti={qui} giorno={giorno} apri={apri} />
+            ) : (
+              <p className="tenue" style={{ margin: 0 }}>
+                Niente in {NOME_LUOGO[l].toLowerCase()}. Aggiungi ciò che hai con «+ Aggiungi»: la quantità la scrivi tu, l’app non la indovina.
+              </p>
+            )}
+          </section>
+        );
+      })}
+    </div>
+  );
+});
 
 /**
  * Le cose comprate con lo scontrino senza scriverne la quantità: in casa entrano quando si scrive quanto.
@@ -368,12 +397,25 @@ export function useConsiglioPosto(ing: Ingrediente | null, luogo: Luogo): Consig
   return postoIngrediente(frigo, { id: ing.id, reparto: ing.reparto, sottocategoria }, luogo);
 }
 
-function ElencoLotti({ indice, lotti, giorno, apri, conLuogo }: { indice: Indice; lotti: Lotto[]; giorno: string; apri: (id: string) => void; conLuogo?: boolean }) {
+const ElencoLotti = memo(function ElencoLotti({
+  indice,
+  lotti,
+  giorno,
+  apri,
+  conLuogo,
+}: {
+  indice: Indice;
+  lotti: Lotto[];
+  giorno: string;
+  apri: (id: string) => void;
+  conLuogo?: boolean;
+}) {
   const frigo = useFrigo();
   return (
     <ul className="elenco">
       {lotti.map((l) => {
         const ing = indice.ingrediente(l.ingrediente_id);
+        const posto = postoDelLotto(frigo, l);
         return (
           <li key={l.id}>
             <button className="voce" onClick={() => apri(l.id)} aria-label={`Apri ${l.nome ?? ing?.nome}`}>
@@ -386,7 +428,7 @@ function ElencoLotti({ indice, lotti, giorno, apri, conLuogo }: { indice: Indice
                 <span className="tenue" style={{ display: 'block' }}>
                   {formatta({ valore: l.quantita, unita: l.unita })}
                   {conLuogo && ` · ${NOME_LUOGO[l.luogo]}`}
-                  {postoDelLotto(frigo, l) && ` · 📍 ${postoDelLotto(frigo, l)!.nome}`}
+                  {posto && ` · 📍 ${posto.nome}`}
                 </span>
               </span>
               <EtichettaData lotto={l} giorno={giorno} />
@@ -396,7 +438,7 @@ function ElencoLotti({ indice, lotti, giorno, apri, conLuogo }: { indice: Indice
       })}
     </ul>
   );
-}
+});
 
 /** Legge «1,5» + «kg» × quante confezioni per l'ingrediente e lo porta in unità base, o dice cosa non va. */
 export function quantitaDa(scritta: Scritta, ing: Ingrediente | undefined): { valore: number; unita: UnitaBase } | string {
@@ -641,6 +683,8 @@ function SchedaLotto({ indice, lotto: l, giorno, chiudi }: { indice: Indice; lot
   const consiglio = useConsiglioPosto(ing ?? null, l.luogo);
   const postoOra = postoDelLotto(frigo, l);
   const storia = (vista.righe.movimento ?? []).filter((m) => m.lotto_id === l.id).sort((a, b) => String(b.creato_il ?? '').localeCompare(String(a.creato_il ?? '')));
+  // Al tocco la scheda compare subito; il disegno del frigo (il pezzo più pesante) arriva un attimo dopo, al suo posto.
+  const disegna = useDeferredValue(true, false);
   const dataProtetta = l.fonte_data === 'confezione';
 
   function apri(a: Azione) {
@@ -704,7 +748,12 @@ function SchedaLotto({ indice, lotto: l, giorno, chiudi }: { indice: Indice; lot
       </p>
       {frigo && l.luogo !== 'dispensa' && (
         <div className="consiglio-ripiano-mio">
-          <DisegnoFrigoMio frigo={frigo} evidenzia={postoOra?.id ?? consiglio?.posto.id} inFondo={!postoOra && consiglio?.inFondo} />
+          {disegna ? (
+            <DisegnoFrigoMio frigo={frigo} evidenzia={postoOra?.id ?? consiglio?.posto.id} inFondo={!postoOra && consiglio?.inFondo} />
+          ) : (
+            // Lo stesso spazio del disegno (196 × 300), così la scheda non salta quando arriva.
+            <div className="frigo-mio" style={{ aspectRatio: '196 / 300' }} aria-hidden />
+          )}
           <div className="cosa-ci-va">
             <label className="campo" style={{ margin: 0 }}>
               <span className="tenue piccolo">{postoOra ? 'Sta qui' : 'Mettilo qui'}</span>

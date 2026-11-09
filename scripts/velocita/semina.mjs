@@ -32,6 +32,8 @@ const caso = (a) => a[Math.floor(Math.random() * a.length)];
 const e = await applica('crea_famiglia', { nome: 'Casa Prova', membro: { id: randomUUID(), nome: 'Luca', emoji: '🧑' } });
 if (e.esito !== 'applicato') throw new Error(JSON.stringify(e));
 for (const nome of ['Raffaella', 'Sofia', 'Marco']) await applica('aggiungi_membro', { id: randomUUID(), nome });
+// Il frigo configurato (Impostazioni › Il mio frigorifero): in Casa la scheda di un prodotto disegna il frigo.
+await applica('imposta_frigo', { frigo: { piani: ['r', 'r', 'r', 'r', 'c'], balconcini: 4, sportello: 'dx', litri: null, freezer: { posizione: 'sotto', piani: ['c', 'c', 'c'], litri: null } } });
 
 const lavori = [];
 for (let d = -GIORNI; d <= 7; d++) {
