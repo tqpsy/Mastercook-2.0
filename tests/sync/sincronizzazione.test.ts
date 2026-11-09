@@ -179,6 +179,105 @@ describe('sincronizzazione tra dispositivi', () => {
     expect(Number((await banco.sql('select porzione from membro where id = $1', [membro]))[0].porzione)).toBe(1);
   });
 
+  it('un tocco che si accoda proprio mentre il precedente viene applicato non diventa un falso conflitto', async () => {
+    const { famiglia, a, membro } = await famigliaConDue();
+    await a.sync.sincronizza();
+    await a.sync.accoda('modifica_membro', { id: membro, versione_attesa: 1, campi: { porzione: 2 } });
+
+    // Un cancello sulla rete (il primo comando è «in volo») e uno sull'inserimento in coda del secondo.
+    const apriRete = Promise.withResolvers<void>();
+    const inVolo = Promise.withResolvers<void>();
+    const apriCoda = Promise.withResolvers<void>();
+    const inInserimento = Promise.withResolvers<void>();
+    const applicaVera = a.rete.applica.bind(a.rete);
+    a.rete.applica = async (c) => {
+      inVolo.resolve();
+      await apriRete.promise;
+      return applicaVera(c);
+    };
+    const aggiungiVera = a.archivio.coda.add.bind(a.archivio.coda);
+    a.archivio.coda.add = (async (voce: Parameters<typeof aggiungiVera>[0]) => {
+      inInserimento.resolve();
+      await apriCoda.promise;
+      return aggiungiVera(voce);
+    }) as typeof a.archivio.coda.add;
+
+    const invio = a.sync.invia();
+    await inVolo.promise;
+    // Il secondo tocco parte ancora dalla versione 1 (il primo non è applicato) e si ferma prima di entrare in coda.
+    const secondo = a.sync.accoda('modifica_membro', { id: membro, versione_attesa: 1, campi: { porzione: 1 } });
+    await inInserimento.promise;
+    // Ora il primo viene applicato dal server: la coda non contiene ancora il secondo, che non può essere aggiornato da lì.
+    apriRete.resolve();
+    expect(await invio).toBe('vuota');
+    apriCoda.resolve();
+    await secondo;
+
+    a.archivio.coda.add = aggiungiVera as typeof a.archivio.coda.add;
+    await a.sync.sincronizza();
+    expect(a.sync.leggiStato()).toMatchObject({ in_attesa: 0, da_sistemare: 0 });
+    expect(Number((await banco.sql('select porzione from membro where id = $1', [membro]))[0].porzione)).toBe(1);
+    expect(await statoLocale(a, famiglia)).toEqual(await statoServer(banco, famiglia));
+  });
+
+  it('un invio che parte mentre il secondo tocco sta ancora per essere riallineato non lo manda con la versione vecchia', async () => {
+    const { famiglia, a, membro } = await famigliaConDue();
+    await a.sync.sincronizza();
+    await a.sync.accoda('modifica_membro', { id: membro, versione_attesa: 1, campi: { porzione: 2 } });
+
+    const apriRete = Promise.withResolvers<void>();
+    const inVolo = Promise.withResolvers<void>();
+    const apriCoda = Promise.withResolvers<void>();
+    const inInserimento = Promise.withResolvers<void>();
+    const apriRiallineamento = Promise.withResolvers<void>();
+    const inRiallineamento = Promise.withResolvers<void>();
+    const applicaVera = a.rete.applica.bind(a.rete);
+    a.rete.applica = async (c) => {
+      inVolo.resolve();
+      await apriRete.promise;
+      return applicaVera(c);
+    };
+    const aggiungiVera = a.archivio.coda.add.bind(a.archivio.coda);
+    a.archivio.coda.add = (async (voce: Parameters<typeof aggiungiVera>[0]) => {
+      inInserimento.resolve();
+      await apriCoda.promise;
+      return aggiungiVera(voce);
+    }) as typeof a.archivio.coda.add;
+    let riallineamentoFermato = false;
+    const aggiornaVera = a.archivio.coda.update.bind(a.archivio.coda);
+    a.archivio.coda.update = (async (chiave: Parameters<typeof aggiornaVera>[0], cambi: Parameters<typeof aggiornaVera>[1]) => {
+      // Solo il primo riallineamento del comando (cambia `comando`) si ferma: gli esiti dell'invio passano.
+      if (!riallineamentoFermato && cambi && typeof cambi === 'object' && 'comando' in cambi) {
+        riallineamentoFermato = true;
+        inRiallineamento.resolve();
+        await apriRiallineamento.promise;
+      }
+      return aggiornaVera(chiave, cambi);
+    }) as typeof a.archivio.coda.update;
+
+    const invio = a.sync.invia();
+    await inVolo.promise;
+    const secondo = a.sync.accoda('modifica_membro', { id: membro, versione_attesa: 1, campi: { porzione: 1 } });
+    await inInserimento.promise;
+    apriRete.resolve();
+    expect(await invio).toBe('vuota');
+
+    // Il secondo entra in coda e il suo riallineamento si ferma a metà: nel frattempo parte un altro giro di invio
+    // (il minuto del pianificatore, il ritorno in primo piano…) e trova il secondo ancora con la versione vecchia.
+    apriCoda.resolve();
+    await inRiallineamento.promise;
+    expect(await a.sync.invia()).toBe('vuota');
+    apriRiallineamento.resolve();
+    await secondo;
+
+    a.archivio.coda.add = aggiungiVera as typeof a.archivio.coda.add;
+    a.archivio.coda.update = aggiornaVera as typeof a.archivio.coda.update;
+    await a.sync.sincronizza();
+    expect(a.sync.leggiStato()).toMatchObject({ in_attesa: 0, da_sistemare: 0 });
+    expect(Number((await banco.sql('select porzione from membro where id = $1', [membro]))[0].porzione)).toBe(1);
+    expect(await statoLocale(a, famiglia)).toEqual(await statoServer(banco, famiglia));
+  });
+
   it('una modifica di un altro dispositivo in mezzo resta un conflitto vero', async () => {
     const { a, b, membro } = await famigliaConDue();
     await a.sync.sincronizza();
