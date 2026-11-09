@@ -802,6 +802,7 @@ function RigaVista({
       {apri === 'quantita' && (r.ingrediente || r.unita) && (
         <QuantitaVerifica
           ingrediente={r.ingrediente}
+          inPezzi={r.unita === 'pz'}
           iniziale={decisione && 'valore' in decisione ? decisione.valore : (r.visto ?? r.inCasa)}
           fatto={(v) => {
             decidi(r.lotti.length ? (v === 0 ? { azione: 'terminato' } : { azione: 'quantita', valore: v }) : { azione: 'aggiungi', valore: v });
@@ -844,8 +845,10 @@ function testoDecisione(d: Decisione, q: (v: number | null) => string | null): s
   }
 }
 
-function QuantitaVerifica({ ingrediente, iniziale, fatto }: { ingrediente: Ingrediente | null; iniziale: number | null; fatto: (v: number) => void }) {
-  const dimensione = ingrediente?.dimensione ?? 'pezzi';
+function QuantitaVerifica({ ingrediente, inPezzi, iniziale, fatto }: { ingrediente: Ingrediente | null; inPezzi: boolean; iniziale: number | null; fatto: (v: number) => void }) {
+  // In casa in pezzi (un prodotto «a occhio»): si scrivono i pezzi, senza farli diventare grammi.
+  const dimensione = inPezzi ? 'pezzi' : (ingrediente?.dimensione ?? 'pezzi');
+  const pesoPz = inPezzi ? null : ingrediente?.peso_pz;
   const [scritta, setScritta] = useState<Scritta>(() => scrittaVuota(UNITA_BASE[dimensione], iniziale === null ? '' : String(iniziale).replace('.', ',')));
   const [errore, setErrore] = useState<string | null>(null);
   return (
@@ -855,7 +858,7 @@ function QuantitaVerifica({ ingrediente, iniziale, fatto }: { ingrediente: Ingre
       onSubmit={(e) => {
         e.preventDefault();
         if (leggiNumero(scritta.numero) === 0) return fatto(0);
-        const b = totaleScritta(scritta, dimensione, ingrediente?.peso_pz);
+        const b = totaleScritta(scritta, dimensione, pesoPz);
         if (!b.ok) return setErrore(b.motivo === 'confezioni_non_valide' ? 'Scrivi quante confezioni, per esempio 1 o 3.' : 'Scrivi un numero, per esempio 2 o 1,5.');
         fatto(b.quantita.valore);
       }}
@@ -864,7 +867,7 @@ function QuantitaVerifica({ ingrediente, iniziale, fatto }: { ingrediente: Ingre
         scritta={scritta}
         cambia={(x) => setScritta((s) => ({ ...s, ...x }))}
         dimensione={dimensione}
-        pesoPz={ingrediente?.peso_pz}
+        pesoPz={pesoPz}
         etichetta="Quanto ce n’è"
         autoFocus
       />
