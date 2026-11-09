@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { type ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { useFamiglia, useVista } from '../dati/contesto';
 import { NOME_LUOGO, LUOGHI } from '../catalogo/tipi';
 import { iconaIngrediente } from '../dominio/iconeCibo';
@@ -98,6 +98,17 @@ function Miniatura({ foto, togli }: { foto: Blob; togli: () => void }) {
 
 function FotoZona({ zona, foto, aggiungi, togli }: { zona: ZonaVerifica; foto: Blob[]; aggiungi: (f: Blob) => void; togli: (i: number) => void }) {
   const [riduco, setRiduco] = useState(false);
+  const scegli = async (e: ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    e.target.value = '';
+    if (!f) return;
+    setRiduco(true);
+    try {
+      aggiungi(await riduciFoto(f, LATO_ANALISI));
+    } finally {
+      setRiduco(false);
+    }
+  };
   return (
     <div className="foto-zona">
       {foto.length > 0 && (
@@ -108,27 +119,16 @@ function FotoZona({ zona, foto, aggiungi, togli }: { zona: ZonaVerifica; foto: B
         </div>
       )}
       {foto.length < MAX_FOTO_ZONA && (
-        <label className={`bottone ${foto.length ? '' : 'primario '}pieno`} aria-busy={riduco}>
-          <span aria-hidden>📷</span> {foto.length ? 'Un’altra angolazione' : `Fotografa ${zona.nome.toLowerCase()}`}
-          <input
-            type="file"
-            accept="image/*"
-            capture="environment"
-            hidden
-            aria-label={`Foto di ${zona.nome}`}
-            onChange={async (e) => {
-              const f = e.target.files?.[0];
-              e.target.value = '';
-              if (!f) return;
-              setRiduco(true);
-              try {
-                aggiungi(await riduciFoto(f, LATO_ANALISI));
-              } finally {
-                setRiduco(false);
-              }
-            }}
-          />
-        </label>
+        <>
+          <label className={`bottone ${foto.length ? '' : 'primario '}pieno`} aria-busy={riduco}>
+            <span aria-hidden>📷</span> {foto.length ? 'Un’altra angolazione' : `Fotografa ${zona.nome.toLowerCase()}`}
+            <input type="file" accept="image/*" capture="environment" hidden aria-label={`Foto di ${zona.nome}`} onChange={scegli} />
+          </label>
+          <label className="bottone pieno" style={{ marginTop: 8 }} aria-busy={riduco}>
+            <span aria-hidden>🖼️</span> Scegli dalla galleria
+            <input type="file" accept="image/*" hidden aria-label={`Galleria del telefono per ${zona.nome}`} onChange={scegli} />
+          </label>
+        </>
       )}
     </div>
   );
