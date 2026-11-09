@@ -304,11 +304,3 @@ export const SIGNIFICATO_NOVA: Record<1 | 2 | 3 | 4, string> = {
 export function schedaVuota(s: SchedaProdotto): boolean {
   return !s.valori.length && !s.ingredienti && !s.elencoIngredienti.length && !s.allergeni.length && !s.tracce.length && !s.additivi.length && !s.nova && !s.nutriScore;
 }
-
-/**
- * Gli allergeni sono un'informazione affidabile solo se l'etichetta è stata letta per intero:
- * senza l'elenco degli ingredienti, «nessun allergene» può voler dire «non so».
- */
-export function allergeniAffidabili(s: SchedaProdotto): boolean {
-  return !!s.ingredienti || s.elencoIngredienti.length > 0;
-}

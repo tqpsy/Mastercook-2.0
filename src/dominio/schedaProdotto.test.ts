@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allergeniAffidabili, schedaDaOpenFoodFacts, schedaVuota } from './schedaProdotto';
+import { schedaDaOpenFoodFacts, schedaVuota } from './schedaProdotto';
 import { daOpenFoodFacts } from './scontrini';
 
 // Forma della risposta di /api/v3/product/{codice}: status testuale, risultato, prodotto.
@@ -116,7 +116,7 @@ describe('scheda prodotto da Open Food Facts v3', () => {
   });
 });
 
-describe('dati per compilare la scheda dell’ingrediente', () => {
+describe('dati della scheda di un singolo prodotto', () => {
   const s = schedaDaOpenFoodFacts(V3)!;
 
   it('gli allergeni hanno i codici dell’app, senza doppioni', () => {
@@ -128,10 +128,5 @@ describe('dati per compilare la scheda dell’ingrediente', () => {
   it('il formato viene dalla quantità dichiarata, solo in g o ml', () => {
     expect(s.formato).toEqual({ quantita: 350, unita: 'g' });
     expect(schedaDaOpenFoodFacts({ product: { product_quantity: 6, product_quantity_unit: 'pz' } })!.formato).toBeUndefined();
-  });
-
-  it('«nessun allergene» vale solo se l’etichetta ha gli ingredienti', () => {
-    expect(allergeniAffidabili(s)).toBe(true);
-    expect(allergeniAffidabili(schedaDaOpenFoodFacts({ product: { product_name: 'x', allergens_tags: [] } })!)).toBe(false);
   });
 });

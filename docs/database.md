@@ -174,7 +174,7 @@ Migrazione `20261031000000_scontrini.sql`. Tabelle `scontrino`, `scontrino_riga`
   `scontrino` e un movimento di carico (T-ACQ-2). Annullare quell'acquisto funziona come per gli altri.
 - Le righe né abbinate né nuove (sacchetti, righe sbagliate) restano solo sullo scontrino.
 - **Prodotti**: un codice a barre per famiglia, associato a un ingrediente con nome e formato della confezione;
-  dal codice si ricorda anche `scheda` (JSON, max 60 kB): valori nutrizionali, ingredienti, allergeni e formato letti da Open Food Facts. Un nuovo salvataggio senza scheda non la cancella. Gli allergeni (codici `glutine`, `latte`…) compilano un ingrediente della famiglia che non li conosceva, solo se l'etichetta ha l'elenco degli ingredienti;
+  dal codice si ricorda anche `scheda` (JSON, max 60 kB): valori nutrizionali, ingredienti, allergeni e formato letti da Open Food Facts. Un nuovo salvataggio senza scheda non la cancella. Ingredienti e allergeni valgono solo per quel codice: non si copiano sull'ingrediente né su altri prodotti, nemmeno della stessa marca;
   salvarlo di nuovo lo aggiorna. Per un codice nuovo l'app chiede a Open Food Facts nome e formato (parte solo il
   numero del codice) e la persona sceglie l'ingrediente.
 
