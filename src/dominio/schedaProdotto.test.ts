@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { schedaDaOpenFoodFacts, schedaVuota } from './schedaProdotto';
+import { allergeniAffidabili, schedaDaOpenFoodFacts, schedaVuota } from './schedaProdotto';
 import { daOpenFoodFacts } from './scontrini';
 
 // Forma della risposta di /api/v3/product/{codice}: status testuale, risultato, prodotto.
@@ -113,5 +113,25 @@ describe('scheda prodotto da Open Food Facts v3', () => {
     expect(b.base).toBe('100 ml');
     expect(b.linguaIngredienti).toBe('altra');
     expect(b.valori[0]).toMatchObject({ chiave: 'sugars', per100: 10.6 });
+  });
+});
+
+describe('dati per compilare la scheda dell’ingrediente', () => {
+  const s = schedaDaOpenFoodFacts(V3)!;
+
+  it('gli allergeni hanno i codici dell’app, senza doppioni', () => {
+    expect(s.allergeniUE).toEqual(['glutine', 'uova']);
+    const doppi = schedaDaOpenFoodFacts({ product: { allergens_tags: ['en:nuts', 'en:nuts', 'en:sesame-seeds', 'en:boh'] } })!;
+    expect(doppi.allergeniUE).toEqual(['frutta_a_guscio', 'sesamo']);
+  });
+
+  it('il formato viene dalla quantità dichiarata, solo in g o ml', () => {
+    expect(s.formato).toEqual({ quantita: 350, unita: 'g' });
+    expect(schedaDaOpenFoodFacts({ product: { product_quantity: 6, product_quantity_unit: 'pz' } })!.formato).toBeUndefined();
+  });
+
+  it('«nessun allergene» vale solo se l’etichetta ha gli ingredienti', () => {
+    expect(allergeniAffidabili(s)).toBe(true);
+    expect(allergeniAffidabili(schedaDaOpenFoodFacts({ product: { product_name: 'x', allergens_tags: [] } })!)).toBe(false);
   });
 });

@@ -16,6 +16,8 @@ import { CampoQuantita } from '../ui/CampoQuantita';
 import { CercaIngrediente } from '../ui/CercaIngrediente';
 import { type ProdottoScansionato, ScansionaProdotto } from '../ui/CodiceProdotto';
 import { FoglioSchedaProdotto } from '../ui/SchedaProdotto';
+import { chiediAOpenFoodFacts } from '../ui/openFoodFacts';
+import { allergeniAffidabili, type SchedaProdotto, schedaVuota } from '../dominio/schedaProdotto';
 import { Foglio } from '../ui/Foglio';
 import { FotoFrigo } from './FotoFrigo';
 import { Verifica, VoceVerifica } from './Verifica';
@@ -440,6 +442,20 @@ const ElencoLotti = memo(function ElencoLotti({
   );
 });
 
+/** La scheda del codice scansionato: quella appena letta, quella ricordata o, per qualche istante, quella in arrivo da Open Food Facts. */
+async function schedaDelCodice(c: ProdottoScansionato): Promise<SchedaProdotto | undefined> {
+  const pronta = c.scheda ?? c.prodotto?.scheda ?? undefined;
+  if (pronta) return pronta;
+  const attesa = new Promise<undefined>((r) => setTimeout(r, 2500));
+  const scheda = (await Promise.race([chiediAOpenFoodFacts(c.codice), attesa]))?.scheda;
+  return scheda && !schedaVuota(scheda) ? scheda : undefined;
+}
+
+/** Vero se l'ingrediente è della famiglia, non ne conosce gli allergeni e l'etichetta letta per intero può dirli. */
+function daCompilare(ing: Ingrediente, scheda: SchedaProdotto | null | undefined): scheda is SchedaProdotto {
+  return !!scheda && !ing.di_sistema && !ing.allergeni_noti && allergeniAffidabili(scheda);
+}
+
 /** Legge «1,5» + «kg» × quante confezioni per l'ingrediente e lo porta in unità base, o dice cosa non va. */
 export function quantitaDa(scritta: Scritta, ing: Ingrediente | undefined): { valore: number; unita: UnitaBase } | string {
   if (leggiNumero(scritta.numero) === null) return 'Scrivi una quantità, per esempio 500 o 1,5.';
@@ -521,8 +537,21 @@ function NuovoLotto({ indice, luogo: luogoIniziale, chiudi }: { indice: Indice; 
     });
     // Il codice a barre si ricorda con quello che si è scritto: la prossima volta propone la stessa confezione.
     const p = codice?.prodotto;
-    if (codice && (!p || p.ingrediente_id !== ing.id || p.quantita !== q.valore || p.unita !== q.unita || (p.nome ?? '') !== nome.trim())) {
-      await esegui('salva_prodotto', { id: crypto.randomUUID(), codice: codice.codice, ingrediente_id: ing.id, nome: nome.trim() || null, quantita: q.valore, unita: q.unita });
+    const scheda = codice ? await schedaDelCodice(codice) : undefined;
+    if (codice && (!p || (scheda && !p.scheda) || p.ingrediente_id !== ing.id || p.quantita !== q.valore || p.unita !== q.unita || (p.nome ?? '') !== nome.trim())) {
+      await esegui('salva_prodotto', {
+        id: crypto.randomUUID(),
+        codice: codice.codice,
+        ingrediente_id: ing.id,
+        nome: nome.trim() || null,
+        quantita: q.valore,
+        unita: q.unita,
+        ...(scheda ? { scheda } : {}),
+      });
+    }
+    // Un ingrediente della famiglia di cui non si conoscono gli allergeni li prende dall'etichetta del prodotto.
+    if (scheda && daCompilare(ing, scheda)) {
+      await esegui('modifica_ingrediente', { id: ing.id, versione_attesa: ing.versione ?? 1, campi: { allergeni: scheda.allergeniUE, allergeni_noti: true } });
     }
     chiudi();
   }
@@ -536,7 +565,7 @@ function NuovoLotto({ indice, luogo: luogoIniziale, chiudi }: { indice: Indice; 
           setScansiona(false);
           setCodice(x);
           scegli(x.ingrediente, true);
-          const formato = x.prodotto?.quantita && x.prodotto.unita ? { quantita: x.prodotto.quantita, unita: x.prodotto.unita } : x.esterno?.formato;
+          const formato = x.prodotto?.quantita && x.prodotto.unita ? { quantita: x.prodotto.quantita, unita: x.prodotto.unita } : (x.esterno?.formato ?? x.scheda?.formato);
           if (formato && formato.unita === UNITA_BASE[x.ingrediente.dimensione]) {
             cambiaScritta({ numero: String(formato.quantita).replace('.', ','), unita: formato.unita, quante: '1' });
           }
@@ -573,7 +602,13 @@ function NuovoLotto({ indice, luogo: luogoIniziale, chiudi }: { indice: Indice; 
               </button>
             </p>
           )}
-          {codice && dettagli && <FoglioSchedaProdotto codice={codice.codice} nome={nome.trim() || ing.nome} chiudi={() => setDettagli(false)} />}
+          {codice && daCompilare(ing, codice.scheda ?? codice.prodotto?.scheda) && (
+            <p className="tenue" style={{ margin: '4px 0 0' }}>
+              Dall’etichetta: {(codice.scheda ?? codice.prodotto?.scheda)!.allergeniUE.length ? `contiene ${(codice.scheda ?? codice.prodotto?.scheda)!.allergeni.join(', ')}` : 'nessun allergene dichiarato'}. Compilo io gli
+              allergeni di {ing.nome}.
+            </p>
+          )}
+          {codice && dettagli && <FoglioSchedaProdotto codice={codice.codice} nome={nome.trim() || ing.nome} salvata={codice.scheda ?? codice.prodotto?.scheda ?? null} chiudi={() => setDettagli(false)} />}
           <div style={{ marginTop: 12 }}>
             <CampoQuantita scritta={scritta} cambia={cambiaScritta} dimensione={ing.dimensione} pesoPz={ing.peso_pz} autoFocus />
           </div>

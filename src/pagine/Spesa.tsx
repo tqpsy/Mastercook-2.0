@@ -319,12 +319,12 @@ function NelCarrello({
     <ScansionaProdotto
       indice={indice}
       chiudi={chiudi}
-      trovato={async ({ codice, ingrediente, prodotto, esterno }) => {
+      trovato={async ({ codice, ingrediente, prodotto, esterno, scheda }) => {
         chiudi();
         messo({ codice, nome: prodotto?.nome ?? esterno?.nome ?? ingrediente.nome });
         if (!prodotto) {
           const f = esterno?.formato?.unita === UNITA_BASE[ingrediente.dimensione] ? esterno.formato : undefined;
-          prodotto = { id: crypto.randomUUID(), codice, ingrediente_id: ingrediente.id, nome: esterno?.nome ?? null, quantita: f?.quantita ?? null, unita: f?.unita ?? null };
+          prodotto = { id: crypto.randomUUID(), codice, ingrediente_id: ingrediente.id, nome: esterno?.nome ?? null, quantita: f?.quantita ?? null, unita: f?.unita ?? null, ...(scheda ? { scheda } : {}) };
           await esegui('salva_prodotto', prodotto as unknown as Record<string, unknown>);
         }
         // Solo una voce nella stessa unità: 10 capsule non sono «caffè, 250 g».
