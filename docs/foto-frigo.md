@@ -14,6 +14,28 @@ catalogo e in casa entra solo ciò che la persona spunta e conferma, con le quan
 4. La risposta è una lista `{nome, quantita, unita}`; l'app la abbina al catalogo (`src/dominio/fotoFrigo.ts`).
    Ciò che non trova resta da aggiungere a mano.
 
+## Lettura in background
+
+La foto singola non si legge più dal telefono (che passando a un'altra app viene sospeso e interrompe la richiesta):
+
+1. L'app (`src/piattaforma/letturaFoto.ts`) manda la foto con un id (`lettura_id`). La funzione apre la lettura
+   (`public.nuova_lettura_foto`, solo `service_role`), risponde subito `202` e continua da sola
+   (`EdgeRuntime.waitUntil`). Mandare lo stesso id due volte non fa doppi effetti.
+2. Alla fine scrive gli alimenti (mai la foto) in `interno.lettura_foto` (`public.chiudi_lettura_foto`). Si cancellano
+   dopo due giorni. Una lettura rimasta «in corso» più di quattro minuti risulta errore.
+3. L'app chiede com'è andata con `public.leggi_lettura_foto(id)` (solo i membri della famiglia) ogni pochi secondi e
+   subito appena torna in primo piano. Se la foto non risulta arrivata (telefono in tasca durante l'invio) la rimanda
+   con lo stesso id. L'id si ricorda sul dispositivo: riaprendo l'app il risultato si ritrova.
+4. Lo stato vive fuori dal foglio: si può chiudere, cambiare scheda o usare l'app. In alto compare un avviso
+   (`AvvisoLetturaFoto`) che riporta al risultato.
+
+Famiglia «solo su questo telefono»: non c'è un server che lavori al posto del telefono. La lettura continua mentre
+si naviga nell'app (e lo schermo resta acceso), ma non con l'app in secondo piano; se si interrompe si riprova con
+la stessa foto.
+
+Per essere esatta la lettura usa i modelli pieni (`MODELLI`), la foto a 1536 px e `mediaResolution` alta, con
+ragionamento libero; è più lenta, e per questo sta in background.
+
 ## Quale chiave
 
 - **La chiave della famiglia**, se c'è. Chi amministra la scrive in Impostazioni → Foto del frigo

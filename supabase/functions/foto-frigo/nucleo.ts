@@ -35,9 +35,10 @@ export interface Riconosciuto {
 export type Esito = { alimenti: Riconosciuto[]; modello: string } | { errore: 'quota' | 'chiave' | 'gemini'; dettaglio?: string };
 
 export const ISTRUZIONI = `Sei l'aiuto di un'app di cucina italiana. Nella foto c'è un frigo, un freezer o una dispensa.
-Elenca gli alimenti che vedi con certezza. Per ognuno:
+Guarda la foto con calma, parte per parte (ripiani, cassetti, porta, confezioni dietro o in parte coperte) e leggi le etichette visibili: elenca TUTTI gli alimenti che si riconoscono, senza fermarti ai primi e senza saltare quelli piccoli.
+Distingui i prodotti simili (latte e panna, yogurt e formaggio fresco, burro e margarina, passata e polpa) dall'etichetta o dall'aspetto: se non si capisce quale sia, non scegliere a caso e non metterlo. Elenca una sola volta lo stesso alimento. Per ognuno:
 - nome: nome generico in italiano, al singolare e minuscolo, come lo cercheresti in un ricettario (es. "latte", "uova", "zucchina", "mozzarella", "prosciutto cotto"); niente marche;
-- quantita e unita: quanto ce n'è, solo se si capisce dalla foto. "pz" per le cose che si contano (uova, zucchine, vasetti), "g" o "ml" per le confezioni con un peso o volume tipico (una bottiglia di latte da un litro = 1000 ml). Se non lo capisci, null.
+- quantita e unita: quanto ce n'è, contando con attenzione ciò che si vede (uova nella scatola, vasetti, bottiglie), solo se si capisce dalla foto. "pz" per le cose che si contano (uova, zucchine, vasetti), "g" o "ml" per le confezioni con un peso o volume tipico (una bottiglia di latte da un litro = 1000 ml). Se non lo capisci, null.
 Non inventare: se non sei sicuro di cosa sia, non metterlo. Ignora persone, documenti e oggetti che non sono cibo.`;
 
 const SCHEMA = {
@@ -100,17 +101,12 @@ export function testoFrigo(frigo: unknown): string | null {
 /** Una parte della richiesta a Gemini: un file (in base64) o del testo. */
 export type Parte = { inline_data: { mime_type: string; data: string } } | { text: string };
 
-/** Opzioni di una richiesta: `veloce` riduce il ragionamento del modello, `suTesto` riceve la risposta man mano. */
+/** Opzioni di una richiesta: `preciso` guarda le foto alla massima risoluzione, `suTesto` riceve la risposta man mano. */
 export interface OpzioniGemini {
-  /** Per riconoscere cibo in una foto basta poco ragionamento: la risposta arriva molto prima. */
-  veloce?: boolean;
+  /** Per riconoscere esattamente: foto alla massima risoluzione e ragionamento libero (la risposta è più lenta). */
+  preciso?: boolean;
   /** Con questa funzione la risposta arriva a pezzi (streaming): riceve tutto il testo arrivato finora. */
   suTesto?: (finora: string) => void;
-}
-
-/** Ragionamento ridotto: i modelli 2.5 vogliono un budget, i 3.x un livello. */
-function ragionamentoBreve(modello: string): Record<string, unknown> {
-  return modello.startsWith('gemini-2.5') ? { thinkingBudget: 0 } : { thinkingLevel: 'low' };
 }
 
 /** Il testo di un pezzo della risposta di Gemini. */
@@ -175,31 +171,31 @@ export async function chiediGemini(
   modelli = MODELLI,
   opzioni: OpzioniGemini = {},
 ): Promise<{ testo: string; modello: string } | { errore: 'quota' | 'chiave' | 'gemini'; dettaglio?: string }> {
-  const corpo = (modello: string, breve: boolean) =>
+  const corpo = (preciso: boolean) =>
     JSON.stringify({
       contents: [{ parts: parti }],
       generationConfig: {
         responseMimeType: 'application/json',
         responseSchema: schema,
         temperature: 0.1,
-        ...(breve ? { thinkingConfig: ragionamentoBreve(modello), mediaResolution: 'MEDIA_RESOLUTION_LOW' } : {}),
+        ...(preciso ? { mediaResolution: 'MEDIA_RESOLUTION_HIGH' } : {}),
       },
     });
   const metodo = opzioni.suTesto ? 'streamGenerateContent?alt=sse' : 'generateContent';
   let quota = false;
   let ultimo = '';
   for (const modello of ordineModelli(modelli)) {
-    const manda = (breve: boolean) =>
+    const manda = (preciso: boolean) =>
       chiama(`https://generativelanguage.googleapis.com/v1beta/models/${modello}:${metodo}`, {
         method: 'POST',
         headers: { 'content-type': 'application/json', 'x-goog-api-key': chiave },
-        body: corpo(modello, breve),
+        body: corpo(preciso),
       });
-    let r = await manda(!!opzioni.veloce);
-    if (r.status === 400 && opzioni.veloce) {
-      // Un modello che non accetta il ragionamento ridotto: si riprova com'era prima.
+    let r = await manda(!!opzioni.preciso);
+    if (r.status === 400 && opzioni.preciso) {
+      // Un modello che non accetta la risoluzione richiesta: si riprova com'era prima.
       const testo = await r.clone().text().catch(() => '');
-      if (/think|media/i.test(testo)) r = await manda(false);
+      if (/media|resolution/i.test(testo)) r = await manda(false);
     }
     if (r.status === 429) {
       quota = true; // quota di questo modello finita: il prossimo
@@ -259,9 +255,25 @@ export function oggettiCompleti(testo: string): unknown[] {
 /**
  * Riconosce gli alimenti nella foto. Con il frigo descritto, Gemini dice anche in quale parte vede ogni alimento.
  */
-export async function riconosci(immagine: string, chiave: string, chiama: typeof fetch = fetch, modelli = MODELLI, frigo: string | null = null): Promise<Esito> {
+export async function riconosci(
+  immagine: string,
+  chiave: string,
+  chiama: typeof fetch = fetch,
+  modelli = MODELLI,
+  frigo: string | null = null,
+  suAlimenti?: (finora: Riconosciuto[]) => void,
+): Promise<Esito> {
   const parti: Parte[] = [{ inline_data: { mime_type: 'image/jpeg', data: immagine } }, { text: frigo ? `${ISTRUZIONI}\n\n${frigo}` : ISTRUZIONI }];
-  const r = await chiediGemini(parti, SCHEMA, chiave, chiama, modelli, { veloce: true });
+  let quanti = 0;
+  const suTesto = suAlimenti
+    ? (finora: string) => {
+        const alimenti = leggiAlimenti(JSON.stringify(oggettiCompleti(finora)));
+        if (alimenti.length === quanti) return;
+        quanti = alimenti.length;
+        suAlimenti(alimenti);
+      }
+    : undefined;
+  const r = await chiediGemini(parti, SCHEMA, chiave, chiama, modelli, { preciso: true, suTesto });
   return 'errore' in r ? r : { alimenti: leggiAlimenti(r.testo), modello: r.modello };
 }
 
@@ -369,6 +381,6 @@ export async function riconosciZona(
         suVisti(visti);
       }
     : undefined;
-  const r = await chiediGemini(parti, SCHEMA_VERIFICA, chiave, chiama, modelli, { veloce: true, suTesto });
+  const r = await chiediGemini(parti, SCHEMA_VERIFICA, chiave, chiama, modelli, { preciso: true, suTesto });
   return 'errore' in r ? r : { visti: leggiVisti(r.testo, true), modello: r.modello };
 }

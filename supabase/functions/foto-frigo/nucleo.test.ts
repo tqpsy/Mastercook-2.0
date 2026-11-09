@@ -80,7 +80,7 @@ describe('foto del frigo con Gemini', () => {
     expect(testoFrigo('x'.repeat(5000))).toHaveLength(1500);
   });
 
-  it('chiede la risoluzione bassa e, dopo un modello senza quota, riparte da quello che ha risposto', async () => {
+  it('chiede la risoluzione massima e, dopo un modello senza quota, riparte da quello che ha risposto', async () => {
     const url: string[] = [];
     const corpi: string[] = [];
     const finte = [risposta(429, 'quota'), gemini('[]'), gemini('[]')];
@@ -93,6 +93,21 @@ describe('foto del frigo con Gemini', () => {
     await riconosci('AAAA', 'k', chiama);
     expect(url[2]).toBe(url[1]);
     expect(url[2]).not.toBe(url[0]);
-    expect(corpi[0]).toContain('MEDIA_RESOLUTION_LOW');
+    expect(corpi[0]).toContain('MEDIA_RESOLUTION_HIGH');
+  });
+
+  it('con suAlimenti gli alimenti arrivano man mano', async () => {
+    const pezzi = ['[{"nome":"uova","quantita":6,"unita":"pz"},', '{"nome":"burro"', '}]'];
+    const sse = pezzi.map((t) => `data: ${JSON.stringify({ candidates: [{ content: { parts: [{ text: t }] } }] })}\r\n\r\n`).join('');
+    const passi: string[][] = [];
+    let url = '';
+    const chiama = (async (u: string) => {
+      url = u;
+      return new Response(sse, { status: 200 });
+    }) as unknown as typeof fetch;
+    const esito = await riconosci('AAAA', 'k', chiama, undefined, null, (a) => passi.push(a.map((x) => x.nome)));
+    expect(url).toContain(':streamGenerateContent?alt=sse');
+    expect(passi).toEqual([['uova'], ['uova', 'burro']]);
+    expect('alimenti' in esito && esito.alimenti.map((a) => a.nome)).toEqual(['uova', 'burro']);
   });
 });

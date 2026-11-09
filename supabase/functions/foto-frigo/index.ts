@@ -3,6 +3,7 @@
 // per le famiglie di chi gestisce l'app, il segreto del progetto (GEMINI_API_KEY): non arriva mai sui telefoni.
 // La foto non si salva: passa a Google e basta.
 // Con `tipo: 'piano'` legge invece il piano del nutrizionista (PDF o foto in `documento`, tipo in `mime`).
+// Con `lettura_id` (foto singola) risponde subito 202 e lavora in background: il risultato si legge con `leggi_lettura_foto`.
 // Con `tipo: 'verifica'` guarda una zona (fino a 4 foto in `immagini`) e la confronta con il `contesto` mandato dall'app.
 // Con anche `flusso: true` risponde una riga JSON alla volta: {"visti": [...]} man mano, poi {"fine": true, "visti", "modello"}
 // oppure {"errore"}: l'app mostra gli alimenti mentre Gemini li trova.
@@ -33,7 +34,7 @@ const rispondi = (stato: number, dati: unknown) => new Response(JSON.stringify(d
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS });
   if (req.method !== 'POST') return rispondi(405, { errore: 'metodo' });
-  let d: { famiglia_id?: string; immagine?: string; frigo?: unknown; tipo?: string; documento?: string; mime?: string; immagini?: unknown; contesto?: unknown; flusso?: unknown };
+  let d: { lettura_id?: string; famiglia_id?: string; immagine?: string; frigo?: unknown; tipo?: string; documento?: string; mime?: string; immagini?: unknown; contesto?: unknown; flusso?: unknown };
   try {
     d = await req.json();
   } catch {
@@ -55,21 +56,51 @@ Deno.serve(async (req) => {
   // La chiave pubblica arriva dall'app con la richiesta; il token dell'utente lo verifica il database.
   const url = Deno.env.get('SUPABASE_URL')!;
   const pubblica = req.headers.get('apikey') || Deno.env.get('SUPABASE_ANON_KEY') || '';
-  const famiglia = await fetch(`${url}/rest/v1/famiglia?select=id&id=eq.${d.famiglia_id}`, {
-    headers: { apikey: pubblica, authorization: req.headers.get('authorization') ?? '' },
-  });
+  // I due controlli non dipendono l'uno dall'altro: partono insieme (un viaggio di rete in meno).
+  const [famiglia, r] = await Promise.all([
+    fetch(`${url}/rest/v1/famiglia?select=id&id=eq.${d.famiglia_id}`, {
+      headers: { apikey: pubblica, authorization: req.headers.get('authorization') ?? '' },
+    }),
+    // La chiave si legge con la chiave segreta del progetto: i telefoni non possono rileggerla.
+    fetch(`${url}/rest/v1/rpc/chiave_gemini_per_foto`, {
+      method: 'POST',
+      headers: { ...accessoServizio(), 'content-type': 'application/json' },
+      body: JSON.stringify({ p_famiglia: d.famiglia_id }),
+    }),
+  ]);
   const righe = famiglia.ok ? ((await famiglia.json()) as unknown[]) : [];
   if (!righe.length) return rispondi(403, { errore: 'non_autorizzato' });
 
-  // La chiave si legge con la chiave segreta del progetto: i telefoni non possono rileggerla.
-  const r = await fetch(`${url}/rest/v1/rpc/chiave_gemini_per_foto`, {
-    method: 'POST',
-    headers: { ...accessoServizio(), 'content-type': 'application/json' },
-    body: JSON.stringify({ p_famiglia: d.famiglia_id }),
-  });
   const scelta = r.ok ? ((await r.json()) as { chiave: string | null; condivisa: boolean }) : { chiave: null, condivisa: false };
   const chiave = scelta.chiave ?? (scelta.condivisa ? Deno.env.get('GEMINI_API_KEY') : undefined);
   if (!chiave) return rispondi(503, { errore: 'non_configurata' });
+
+  // Lettura in background: la funzione risponde subito e finisce il lavoro da sola, anche con l'app in tasca.
+  // L'app, tornata in primo piano, chiede com'è andata con `leggi_lettura_foto`. Lo stesso id non parte due volte.
+  if (!piano && !verifica && typeof d.lettura_id === 'string' && /^[0-9a-f-]{36}$/.test(d.lettura_id)) {
+    const rpc = (nome: string, corpo: unknown) =>
+      fetch(`${url}/rest/v1/rpc/${nome}`, { method: 'POST', headers: { ...accessoServizio(), 'content-type': 'application/json' }, body: JSON.stringify(corpo) });
+    const nuova = await rpc('nuova_lettura_foto', { p_id: d.lettura_id, p_famiglia: d.famiglia_id });
+    if (!nuova.ok) return rispondi(502, { errore: 'gemini', dettaglio: 'lettura non avviata' });
+    if ((await nuova.json()) === true) {
+      const id = d.lettura_id;
+      const lavoro = (async () => {
+        let stato = 'errore';
+        let risultato: unknown = { errore: 'gemini', dettaglio: 'risposta interrotta' };
+        try {
+          const esito = await riconosci(d.immagine!, chiave, fetch, undefined, testoFrigo(d.frigo));
+          if ('errore' in esito) risultato = { errore: esito.errore, ...(esito.dettaglio ? { dettaglio: esito.dettaglio } : {}) };
+          else [stato, risultato] = ['pronta', { alimenti: esito.alimenti, modello: esito.modello }];
+        } catch {
+          // resta l'errore «risposta interrotta»
+        }
+        await rpc('chiudi_lettura_foto', { p_id: id, p_stato: stato, p_risultato: risultato }).catch(() => {});
+      })();
+      // Il lavoro continua dopo la risposta (EdgeRuntime esiste solo sul server di Supabase).
+      (globalThis as unknown as { EdgeRuntime?: { waitUntil(p: Promise<unknown>): void } }).EdgeRuntime?.waitUntil(lavoro);
+    }
+    return rispondi(202, { lettura_id: d.lettura_id });
+  }
 
   if (verifica && d.flusso === true) {
     const cod = new TextEncoder();

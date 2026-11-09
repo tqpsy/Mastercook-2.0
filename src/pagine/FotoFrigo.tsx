@@ -1,13 +1,14 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { IconaCibo } from '../ui/IconaCibo';
 import { iconaIngrediente } from '../dominio/iconeCibo';
 import { LUOGHI, NOME_LUOGO } from '../catalogo/tipi';
-import { useFamiglia, useVista } from '../dati/contesto';
-import { abbinaAlimenti, giaInCasa, type LottoInCasa, type PropostaFoto } from '../dominio/fotoFrigo';
+import { useFamiglia } from '../dati/contesto';
+import { abbinaAlimenti, type PropostaFoto } from '../dominio/fotoFrigo';
 import type { Indice } from '../dominio/ricette';
 import { eFresco, type Luogo, oggi, stima } from '../dominio/scadenze';
-import { formatta, leggiNumero } from '../dominio/unita';
-import { type ErroreFoto, riconosciFoto } from '../piattaforma/fotoFrigo';
+import { leggiNumero } from '../dominio/unita';
+import { type ErroreFoto } from '../piattaforma/fotoFrigo';
+import { avviaLettura, riprovaLettura, scartaLettura, segnaAperta, siPuoRiprovare, useLetturaFoto } from '../piattaforma/letturaFoto';
 import { Foglio } from '../ui/Foglio';
 import { DisegnoFrigoMio } from '../ui/FrigoMio';
 import { descriviPerFoto, posto as postoFrigo, postiDi } from '../dominio/frigo';
@@ -40,46 +41,49 @@ export function avvisoLetto(): boolean {
 export function FotoFrigo({ indice, luogo: luogoIniziale, chiudi }: { indice: Indice; luogo: Luogo; chiudi: () => void }) {
   const { esegui, famiglia, dove, utenteId } = useFamiglia();
   const [letto, setLetto] = useState(avvisoLetto);
-  const [stato, setStato] = useState<'scatta' | 'leggo' | 'scegli'>('scatta');
   const [errore, setErrore] = useState<string | null>(null);
   const [proposte, setProposte] = useState<PropostaFoto[]>([]);
   const [scelte, setScelte] = useState<Record<number, boolean>>({});
   const [quantita, setQuantita] = useState<Record<number, string>>({});
   const [luogo, setLuogo] = useState<Luogo>(luogoIniziale);
   const frigo = useFrigo();
-  const righeLotto = useVista().righe.lotto;
-  /** Ciò che è già in casa: la foto potrebbe mostrare cose già registrate. */
-  const lotti = useMemo<LottoInCasa[]>(
-    () =>
-      (righeLotto ?? [])
-        .filter((r) => !r.eliminato_il && !r.chiuso_il)
-        .map((r) => ({ ingrediente_id: String(r.ingrediente_id), luogo: String(r.luogo), unita: String(r.unita), quantita: Number(r.quantita), livello: (r.livello as string | null) ?? null })),
-    [righeLotto],
-  );
   /** La parte del frigo che si fotografa (null = tutto il frigo o tutto il freezer). */
   const [parte, setParte] = useState<string | null>(null);
   const [posti, setPosti] = useState<Record<number, string>>({});
   const scelta = frigo ? postoFrigo(frigo, parte) : null;
   const postiLuogo = frigo ? postiDi(frigo, luogo) : [];
 
+  // La lettura vive fuori da questo foglio (src/piattaforma/letturaFoto.ts): chiuderlo o cambiare scheda non la ferma.
+  const { lettura } = useLetturaFoto();
+  const mia = lettura && lettura.famiglia === famiglia ? lettura : null;
+  const [preparata, setPreparata] = useState<string | null>(null);
+  useEffect(() => {
+    segnaAperta(true);
+    return () => segnaAperta(false);
+  }, []);
+  // Appena la lettura è pronta si preparano le proposte (una volta sola per lettura: poi le modifiche sono della persona).
+  if (mia && mia.fase === 'pronta' && mia.alimenti && preparata !== mia.id) {
+    const l = mia.luogoCasa as Luogo;
+    const p = abbinaAlimenti(indice, mia.alimenti);
+    const postiDelLuogo = frigo ? postiDi(frigo, l) : [];
+    const parteFotografata = frigo ? postoFrigo(frigo, mia.parte) : null;
+    setPreparata(mia.id);
+    setLuogo(l);
+    setParte(mia.parte);
+    setProposte(p);
+    setScelte(Object.fromEntries(p.map((x, i) => [i, !!x.ingrediente])));
+    setQuantita(Object.fromEntries(p.map((x, i) => [i, x.quantita === null ? '' : String(x.quantita).replace('.', ',')])));
+    // Il posto visto da Gemini se è una parte di questo luogo; altrimenti la parte fotografata.
+    setPosti(Object.fromEntries(p.map((x, i) => [i, postiDelLuogo.find((q) => q.id === x.posto)?.id ?? parteFotografata?.id ?? ''])));
+  }
+  const stato: 'scatta' | 'leggo' | 'scegli' = !mia || mia.fase === 'errore' ? 'scatta' : mia.fase === 'pronta' && preparata === mia.id ? 'scegli' : 'leggo';
+  const erroreLettura = mia?.fase === 'errore' && mia.errore ? SPIEGA_ERRORE[mia.errore] + (mia.dettaglio ? ` (Risposta di Google: ${mia.dettaglio})` : '') : null;
+
   async function leggi(file: File | undefined) {
     if (!file) return;
     setErrore(null);
-    setStato('leggo');
     const descrizione = frigo && luogo !== 'dispensa' ? descriviPerFoto(frigo, scelta?.id ?? null) : null;
-    const r = await riconosciFoto(famiglia, await riduciFoto(file, LATO_ANALISI), { dove, utenteId }, descrizione);
-    if ('errore' in r) {
-      setErrore(SPIEGA_ERRORE[r.errore] + (r.dettaglio ? ` (Risposta di Google: ${r.dettaglio})` : ''));
-      return setStato('scatta');
-    }
-    const p = abbinaAlimenti(indice, r.alimenti);
-    setProposte(p);
-    // Ciò che è già in casa parte senza spunta: si aggiunge solo se è davvero in più.
-    setScelte(Object.fromEntries(p.map((x, i) => [i, !!x.ingrediente && !giaInCasa(lotti, x.ingrediente.id, luogo)])));
-    setQuantita(Object.fromEntries(p.map((x, i) => [i, x.quantita === null ? '' : String(x.quantita).replace('.', ',')])));
-    // Il posto visto da Gemini se è una parte di questo luogo; altrimenti la parte fotografata.
-    setPosti(Object.fromEntries(p.map((x, i) => [i, postiLuogo.find((q) => q.id === x.posto)?.id ?? scelta?.id ?? ''])));
-    setStato('scegli');
+    avviaLettura({ famiglia, sede: { dove, utenteId }, luogoCasa: luogo, parte, descrizione, foto: await riduciFoto(file, LATO_ANALISI) });
   }
 
   async function conferma() {
@@ -100,13 +104,14 @@ export function FotoFrigo({ indice, luogo: luogoIniziale, chiudi }: { indice: In
         unita: p.unita,
         luogo,
         data_acquisto: null,
-        origine: 'foto',
+        origine: 'manuale',
         posto: posti[i] || null,
         ...(s
           ? { tipo_data: 'stimata', data_limite: s.data_limite, fonte_data: 'app', calcolata_il: s.calcolata_il, affidabilita: 'bassa' }
           : { tipo_data: 'sconosciuta', data_limite: null, fonte_data: null }),
       });
     }
+    scartaLettura();
     chiudi();
   }
 
@@ -200,15 +205,24 @@ export function FotoFrigo({ indice, luogo: luogoIniziale, chiudi }: { indice: In
         </>
       )}
       {stato === 'leggo' && (
-        <p role="status" aria-live="polite">
-          Sto guardando la foto…
-        </p>
+        <div role="status" aria-live="polite">
+          <p style={{ marginTop: 0 }}>Sto guardando la foto con attenzione, per riconoscere tutto con precisione…</p>
+          <p className="tenue">
+            {dove === 'locale'
+              ? 'Tieni aperta l’app finché non ho finito: la foto va da questo telefono a Gemini.'
+              : 'Puoi chiudere questo foglio, usare l’app o passare a un’altra: ci penso io e ti avviso qui appena è pronta.'}
+          </p>
+          {mia && mia.trovati.length > 0 && <p className="tenue">Finora: {mia.trovati.join(', ')}</p>}
+          <button className="bottone pieno" style={{ marginTop: 12 }} onClick={() => chiudi()}>
+            Continua a usare l’app
+          </button>
+        </div>
       )}
       {stato === 'scegli' &&
         (proposte.length === 0 ? (
           <>
             <p>Nella foto non ho riconosciuto alimenti. Prova con più luce o più da vicino, oppure aggiungi a mano.</p>
-            <button className="bottone pieno" onClick={() => setStato('scatta')}>
+            <button className="bottone pieno" onClick={() => scartaLettura()}>
               Un’altra foto
             </button>
           </>
@@ -247,16 +261,6 @@ export function FotoFrigo({ indice, luogo: luogoIniziale, chiudi }: { indice: In
                         style={{ width: 80 }}
                       />
                       <span className="tenue">{p.unita}</span>
-                      {(() => {
-                        const c = giaInCasa(lotti, p.ingrediente.id, luogo);
-                        if (!c) return null;
-                        const quanto = c.aOcchio ? 'a occhio' : formatta({ valore: c.quantita, unita: c.unita as 'g' | 'ml' | 'pz' });
-                        return (
-                          <span className="tenue piccolo" style={{ flexBasis: '100%' }}>
-                            Già in casa: {quanto}. Spunta solo se è in più.
-                          </span>
-                        );
-                      })()}
                       {postiLuogo.length > 0 && (
                         <label className="riga posto-foto">
                           <span aria-hidden>📍</span>
@@ -290,11 +294,19 @@ export function FotoFrigo({ indice, luogo: luogoIniziale, chiudi }: { indice: In
             >
               Aggiungi in casa ({proposte.filter((p, i) => p.ingrediente && scelte[i]).length})
             </button>
+            <button className="bottone pieno" style={{ marginTop: 8 }} onClick={() => scartaLettura()}>
+              Scarta e rifai la foto
+            </button>
           </>
         ))}
-      {errore && (
+      {(errore ?? erroreLettura) && (
         <div className="avviso errore" role="alert" style={{ marginTop: 12 }}>
-          {errore}
+          {errore ?? erroreLettura}
+          {erroreLettura && siPuoRiprovare() && (
+            <button className="bottone piccolo" style={{ marginTop: 8, display: 'block' }} onClick={() => riprovaLettura()}>
+              Riprova con la stessa foto
+            </button>
+          )}
         </div>
       )}
     </Foglio>

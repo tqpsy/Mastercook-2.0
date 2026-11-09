@@ -24,6 +24,8 @@ import { Icona } from './ui/Icona';
 import { aggiungiPasso, togliPasso } from './ui/indietro';
 import { AvvisoMancanti } from './ui/AvvisoMancanti';
 import { AvvisoSync, useStatoBreve } from './ui/StatoSync';
+import { AvvisoLetturaFoto } from './ui/AvvisoLetturaFoto';
+import { riprendiLettura } from './piattaforma/letturaFoto';
 
 const CHIAVE_INVITO = 'mc-invito';
 const CHIAVE_FAMIGLIA = 'mc-famiglia';
@@ -273,7 +275,11 @@ function Guscio({ email, apriFamiglia }: { email: string; apriFamiglia: (famigli
     },
     [],
   );
-  const { sync, utenteId, archivio, dove } = useFamiglia();
+  const { sync, utenteId, archivio, dove, famiglia } = useFamiglia();
+  // Se la lettura di una foto era in corso quando l'app si è chiusa, il risultato si ritrova dal server.
+  useEffect(() => {
+    riprendiLettura(famiglia);
+  }, [famiglia]);
   const avvisi = useAvvisi();
   const schede = useMemo(
     () =>
@@ -328,6 +334,7 @@ function Guscio({ email, apriFamiglia }: { email: string; apriFamiglia: (famigli
         {/* Il nome della scheda si vede già evidenziato nella barra: qui resta solo per il lettore dello schermo. */}
         <h1 className="solo-lettore">{titoloScheda}</h1>
         <AvvisoSync />
+        <AvvisoLetturaFoto vai={vai} />
         <AvvisoMancanti />
         <CopiaAutomatica apriFamiglia={apriFamiglia} />
         {pagina('oggi', pagine.oggi)}
