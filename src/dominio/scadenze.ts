@@ -142,6 +142,14 @@ export function statoData(l: LottoData, oggiData: string): StatoData {
   return 'ok';
 }
 
+/**
+ * Scadenza vera (non «preferibilmente entro», non una stima) già passata: il lotto non conta più come disponibile
+ * per la spesa, per lo scarico e per le ricette finché non lo si scarica. Come `interno.lotto_scaduto` nel database.
+ */
+export function scadutoVero(l: LottoData, oggiData: string): boolean {
+  return l.tipo_data === 'scadenza' && !!l.data_limite && l.data_limite < oggiData;
+}
+
 /** Testo breve per l'etichetta della data. */
 export function descriviData(l: LottoData, oggiData: string): string {
   const s = statoData(l, oggiData);

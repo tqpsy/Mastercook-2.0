@@ -22,6 +22,7 @@ import { oggi, piuGiorni, statoData } from './dominio/scadenze';
 import { CopiaAutomatica } from './ui/CopiaAutomatica';
 import { Icona } from './ui/Icona';
 import { aggiungiPasso, togliPasso } from './ui/indietro';
+import { AvvisoMancanti } from './ui/AvvisoMancanti';
 import { AvvisoSync, useStatoBreve } from './ui/StatoSync';
 
 const CHIAVE_INVITO = 'mc-invito';
@@ -327,6 +328,7 @@ function Guscio({ email, apriFamiglia }: { email: string; apriFamiglia: (famigli
         {/* Il nome della scheda si vede già evidenziato nella barra: qui resta solo per il lettore dello schermo. */}
         <h1 className="solo-lettore">{titoloScheda}</h1>
         <AvvisoSync />
+        <AvvisoMancanti />
         <CopiaAutomatica apriFamiglia={apriFamiglia} />
         {pagina('oggi', pagine.oggi)}
         {pagina('menu', pagine.menu)}

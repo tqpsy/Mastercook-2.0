@@ -152,6 +152,27 @@ describe('scontrini', () => {
     expect((await casa(famiglia)).map((x) => x.q)).toEqual([0, 0]);
   });
 
+  it('una riga da completare entra anche a occhio: pezzi e livello, la riga resta senza quantità e senza prezzo per grammo', async () => {
+    const { u, famiglia } = await famigliaCon();
+    const riga = randomUUID();
+    const c = scontrino(famiglia, [{ descrizione: 'PARMIGIANO REGG.', prezzo: 6.9, nuova: { id: riga, lotto_id: randomUUID(), ingrediente_id: 'ing:parmigiano', luogo: 'frigo' } }]);
+    await u.applica(c);
+    const lotto = randomUUID();
+    const completa = comando('completa_riga_acquisto', famiglia, { id: riga, lotto_id: lotto, livello: 'tanto', pezzi: 2, luogo: 'frigo' });
+    expect((await u.applica(completa)).esito).toBe('applicato');
+    const [l] = await banco.sql('select quantita::float as q, unita, livello, data_acquisto::text as data from lotto where id = $1', [lotto]);
+    expect(l).toEqual({ q: 2, unita: 'pz', livello: 'tanto', data: '2026-11-02' });
+    const [r] = await banco.sql('select quantita, unita, lotto_id, prezzo::text from acquisto_riga where id = $1', [riga]);
+    expect(r).toEqual({ quantita: null, unita: null, lotto_id: lotto, prezzo: '6.90' });
+    // Ripetuto non carica due volte; un altro telefono trova la riga già completata.
+    await u.applica(completa);
+    expect((await casa(famiglia)).map((x) => x.q)).toEqual([2]);
+    expect((await u.applica(comando('completa_riga_acquisto', famiglia, { id: riga, lotto_id: randomUUID(), livello: 'poco', luogo: 'frigo' }))).esito).toBe('conflitto');
+    // Pezzi non interi no; annullando l'acquisto il lotto a occhio si toglie tutto.
+    expect((await u.applica(comando('annulla_acquisto', famiglia, { id: c.dati.acquisto_id }))).esito).toBe('applicato');
+    expect((await casa(famiglia)).map((x) => x.q)).toEqual([0]);
+  });
+
   it('completare: quantità e unità devono essere giuste, e un acquisto annullato non si completa', async () => {
     const { u, famiglia } = await famigliaCon();
     const riga = randomUUID();

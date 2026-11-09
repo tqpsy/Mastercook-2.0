@@ -213,6 +213,16 @@ describe('date e origine', () => {
     expect((await u.applica(comando('aggiungi_lotto', famiglia, sconosciuta))).esito).toBe('applicato');
   });
 
+  it('la foto del frigo mette lotti con origine «foto»; «scontrino» e «avanzo» restano vietati', async () => {
+    const { u, famiglia } = await famigliaCon();
+    const l = lotto({ origine: 'foto' });
+    expect((await u.applica(comando('aggiungi_lotto', famiglia, l))).esito).toBe('applicato');
+    expect(await banco.sql('select origine from lotto where id = $1', [l.id])).toEqual([{ origine: 'foto' }]);
+    for (const origine of ['scontrino', 'avanzo']) {
+      expect((await u.applica(comando('aggiungi_lotto', famiglia, lotto({ origine })))).dettaglio.motivo).toBe('origine_non_ammessa');
+    }
+  });
+
   it('T-ACQ-1 (parte manuale) un lotto a mano ha origine «manuale»; «acquisto» non si può scegliere', async () => {
     const { u, famiglia } = await famigliaCon();
     const e = await u.applica(comando('aggiungi_lotto', famiglia, lotto({ origine: 'acquisto' })));

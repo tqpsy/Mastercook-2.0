@@ -568,7 +568,8 @@ const EFFETTI: Record<string, Effetto> = {
     if (!acquisto || acquisto.stato === 'annullato') return;
     righe.acquisto = (righe.acquisto ?? []).map((a) => (a === acquisto ? { ...a, stato: 'annullato', in_attesa: true } : a));
     for (const r of (righe.acquisto_riga ?? []).filter((x) => x.acquisto_id === d.id && x.lotto_id)) {
-      cambiaQuantita(righe, String(r.lotto_id), (q) => q - Math.min(q, Number(r.quantita)));
+      // Una riga completata a occhio non ha quantità: l'annullo toglie tutto il lotto, come il server.
+      cambiaQuantita(righe, String(r.lotto_id), (q) => (r.quantita == null ? 0 : q - Math.min(q, Number(r.quantita))));
     }
   },
   completa_riga_acquisto: (righe, d, famiglia) => {
@@ -578,8 +579,9 @@ const EFFETTI: Record<string, Effetto> = {
     aggiungi('lotto', (x) => ({
       ingrediente_id: riga.ingrediente_id,
       nome: null,
-      quantita: Number(x.quantita),
-      unita: x.unita,
+      quantita: Number(x.livello ? (x.pezzi ?? 1) : x.quantita),
+      unita: x.livello ? 'pz' : x.unita,
+      livello: x.livello ?? null,
       luogo: x.luogo ?? 'dispensa',
       data_acquisto: acquisto?.data ?? null,
       data_limite: x.data_limite ?? null,
@@ -591,7 +593,7 @@ const EFFETTI: Record<string, Effetto> = {
       versione: 1,
     }))(righe, { ...d, id: d.lotto_id }, famiglia);
     righe.acquisto_riga = (righe.acquisto_riga ?? []).map((r) =>
-      r === riga ? { ...r, quantita: Number(d.quantita), unita: d.unita, lotto_id: d.lotto_id, in_attesa: true } : r,
+      r === riga ? { ...r, ...(d.livello ? {} : { quantita: Number(d.quantita), unita: d.unita }), lotto_id: d.lotto_id, in_attesa: true } : r,
     );
   },
   correggi_riga_acquisto: (righe, d) => {
