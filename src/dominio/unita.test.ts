@@ -46,6 +46,9 @@ describe('unità e quantità (T-UNI)', () => {
     expect(leggiNumero('1.250')).toBe(1250);
     expect(leggiNumero('1.250,5')).toBe(1250.5);
     expect(leggiNumero('0.75')).toBe(0.75);
+    expect(leggiNumero('0.250')).toBe(0.25);
+    expect(leggiNumero('0.500')).toBe(0.5);
+    expect(totaleScritta({ numero: '0.250', unita: 'kg', quante: '1' }, 'massa')).toEqual({ ok: true, quantita: { valore: 250, unita: 'g' } });
     expect(leggiNumero('')).toBeNull();
     expect(leggiNumero('due')).toBeNull();
   });

@@ -131,13 +131,13 @@ export function formatta(q: Quantita | null | undefined): string {
   return `${numero(q.unita === 'pz' ? 2 : 1).format(q.valore)} ${q.unita}`;
 }
 
-/** Legge un numero scritto all'italiana: «1,5», «1.250», «1.250,5», «0.75». */
+/** Legge un numero scritto all'italiana: «1,5», «1.250», «1.250,5», «0.75», «0.250» (uno zero iniziale non è mai un migliaio). */
 export function leggiNumero(testo: string): number | null {
   const t = testo.trim().replace(/\s/g, '');
   if (!t) return null;
   let normale: string;
   if (t.includes(',')) normale = t.replace(/\./g, '').replace(',', '.');
-  else if (/^\d{1,3}(\.\d{3})+$/.test(t)) normale = t.replace(/\./g, '');
+  else if (/^[1-9]\d{0,2}(\.\d{3})+$/.test(t)) normale = t.replace(/\./g, '');
   else normale = t;
   if (!/^\d+(\.\d+)?$/.test(normale)) return null;
   const n = Number(normale);
