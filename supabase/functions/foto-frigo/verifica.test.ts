@@ -60,7 +60,7 @@ describe('verifica dell’inventario con Gemini', () => {
 
   it('con suVisti chiede la risposta in streaming e passa gli alimenti man mano', async () => {
     let indirizzo = '';
-    let corpo: { generationConfig: { thinkingConfig?: unknown } } | null = null;
+    let corpo: { generationConfig: { mediaResolution?: unknown } } | null = null;
     const pezzi = ['[{"nome":"uova","certezza":"sicuro"},', '{"nome":"burro","cer', 'tezza":"probabile"}]'];
     const sse = pezzi.map((t) => `data: ${JSON.stringify({ candidates: [{ content: { parts: [{ text: t }] } }] })}\r\n\r\n`).join('');
     const chiama = (async (url: string, init: RequestInit) => {
@@ -71,21 +71,21 @@ describe('verifica dell’inventario con Gemini', () => {
     const man: string[][] = [];
     const r = await riconosciZona(['a'], 'k', null, chiama, ['gemini-3.8-flash'], (v) => man.push(v.map((x) => x.nome)));
     expect(indirizzo).toContain(':streamGenerateContent?alt=sse');
-    expect(corpo!.generationConfig.thinkingConfig).toEqual({ thinkingLevel: 'low' });
+    expect(corpo!.generationConfig.mediaResolution).toBe('MEDIA_RESOLUTION_HIGH');
     expect(man).toEqual([['uova'], ['uova', 'burro']]);
     expect(r).toMatchObject({ modello: 'gemini-3.8-flash', visti: [{ nome: 'uova' }, { nome: 'burro', certezza: 'probabile' }] });
   });
 
-  it('ragionamento ridotto: budget 0 per i 2.5; se il modello non lo accetta si riprova senza', async () => {
-    const corpi: { generationConfig: { thinkingConfig?: unknown } }[] = [];
+  it('chiede la risoluzione massima; se il modello non la accetta si riprova senza', async () => {
+    const corpi: { generationConfig: { mediaResolution?: unknown } }[] = [];
     const chiama = (async (_: string, init: RequestInit) => {
       const c = JSON.parse(String(init.body));
       corpi.push(c);
-      if (c.generationConfig.thinkingConfig) return new Response('{"error":{"message":"thinking_level is not supported"}}', { status: 400 });
+      if (c.generationConfig.mediaResolution) return new Response('{"error":{"message":"mediaResolution is not supported"}}', { status: 400 });
       return gemini('[]');
     }) as typeof fetch;
     const r = await riconosciZona(['a'], 'k', null, chiama, ['gemini-2.5-flash']);
-    expect(corpi.map((c) => c.generationConfig.thinkingConfig)).toEqual([{ thinkingBudget: 0 }, undefined]);
+    expect(corpi.map((c) => c.generationConfig.mediaResolution)).toEqual(['MEDIA_RESOLUTION_HIGH', undefined]);
     expect(r).toEqual({ visti: [], modello: 'gemini-2.5-flash' });
   });
 });
