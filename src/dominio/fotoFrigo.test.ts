@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import catalogo from '../catalogo/catalogo.json';
 import type { Catalogo } from '../catalogo/tipi';
-import { abbinaAlimenti } from './fotoFrigo';
+import { abbinaAlimenti, giaInCasa } from './fotoFrigo';
 import { Indice } from './ricette';
 
 const indice = new Indice(catalogo as Catalogo);
@@ -22,5 +22,25 @@ describe('foto del frigo: abbinare al catalogo', () => {
       [null, null, null],
     ]);
     expect(p[3].nome).toBe('oggetto misterioso');
+  });
+});
+
+describe('foto del frigo: cosa c’è già in casa', () => {
+  const lotti = [
+    { ingrediente_id: 'ing:latte', luogo: 'frigo', unita: 'ml', quantita: 1000 },
+    { ingrediente_id: 'ing:latte', luogo: 'frigo', unita: 'ml', quantita: 500 },
+    { ingrediente_id: 'ing:latte', luogo: 'dispensa', unita: 'ml', quantita: 1000 },
+    { ingrediente_id: 'ing:olio', luogo: 'frigo', unita: 'pz', quantita: 2, livello: 'meta' },
+    { ingrediente_id: 'ing:uova', luogo: 'frigo', unita: 'pz', quantita: 0 },
+  ];
+  it('somma i lotti dello stesso ingrediente nello stesso posto', () => {
+    expect(giaInCasa(lotti, 'ing:latte', 'frigo')).toEqual({ lotti: 2, quantita: 1500, unita: 'ml', aOcchio: false });
+  });
+  it('un prodotto a occhio non ha una quantità da sommare', () => {
+    expect(giaInCasa(lotti, 'ing:olio', 'frigo')).toEqual({ lotti: 1, quantita: 0, unita: 'pz', aOcchio: true });
+  });
+  it('niente se non c’è o se è finito', () => {
+    expect(giaInCasa(lotti, 'ing:uova', 'frigo')).toBeNull();
+    expect(giaInCasa(lotti, 'ing:pane', 'frigo')).toBeNull();
   });
 });
