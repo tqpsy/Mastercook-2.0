@@ -18,6 +18,8 @@ import { descriviLivello, eBasso, eLivello, LIVELLI, type Livello, puoAOcchio, t
 import { CercaIngrediente } from '../ui/CercaIngrediente';
 import { type ProdottoScansionato, ScansionaProdotto } from '../ui/CodiceProdotto';
 import { FoglioSchedaProdotto } from '../ui/SchedaProdotto';
+import { chiediAOpenFoodFacts } from '../ui/openFoodFacts';
+import { type SchedaProdotto, schedaVuota } from '../dominio/schedaProdotto';
 import { Foglio } from '../ui/Foglio';
 import { FotoFrigo } from './FotoFrigo';
 import { Verifica, VoceVerifica } from './Verifica';
@@ -467,6 +469,15 @@ const ElencoLotti = memo(function ElencoLotti({
   );
 });
 
+/** La scheda del codice scansionato: quella appena letta, quella ricordata o, per qualche istante, quella in arrivo da Open Food Facts. */
+async function schedaDelCodice(c: ProdottoScansionato): Promise<SchedaProdotto | undefined> {
+  const pronta = c.scheda ?? c.prodotto?.scheda ?? undefined;
+  if (pronta) return pronta;
+  const attesa = new Promise<undefined>((r) => setTimeout(r, 2500));
+  const scheda = (await Promise.race([chiediAOpenFoodFacts(c.codice), attesa]))?.scheda;
+  return scheda && !schedaVuota(scheda) ? scheda : undefined;
+}
+
 /** Legge «1,5» + «kg» × quante confezioni per l'ingrediente e lo porta in unità base, o dice cosa non va. */
 export function quantitaDa(scritta: Scritta, ing: Ingrediente | undefined): { valore: number; unita: UnitaBase } | string {
   if (leggiNumero(scritta.numero) === null) return 'Scrivi una quantità, per esempio 500 o 1,5.';
@@ -554,8 +565,17 @@ function NuovoLotto({ indice, luogo: luogoIniziale, chiudi }: { indice: Indice; 
     });
     // Il codice a barre si ricorda con quello che si è scritto: la prossima volta propone la stessa confezione.
     const p = codice?.prodotto;
-    if (codice && !occhio && (!p || p.ingrediente_id !== ing.id || p.quantita !== q.valore || p.unita !== q.unita || (p.nome ?? '') !== nome.trim())) {
-      await esegui('salva_prodotto', { id: crypto.randomUUID(), codice: codice.codice, ingrediente_id: ing.id, nome: nome.trim() || null, quantita: q.valore, unita: q.unita });
+    const scheda = codice ? await schedaDelCodice(codice) : undefined;
+    if (codice && !occhio && (!p || (scheda && !p.scheda) || p.ingrediente_id !== ing.id || p.quantita !== q.valore || p.unita !== q.unita || (p.nome ?? '') !== nome.trim())) {
+      await esegui('salva_prodotto', {
+        id: crypto.randomUUID(),
+        codice: codice.codice,
+        ingrediente_id: ing.id,
+        nome: nome.trim() || null,
+        quantita: q.valore,
+        unita: q.unita,
+        ...(scheda ? { scheda } : {}),
+      });
     }
     chiudi();
   }
@@ -569,7 +589,7 @@ function NuovoLotto({ indice, luogo: luogoIniziale, chiudi }: { indice: Indice; 
           setScansiona(false);
           setCodice(x);
           scegli(x.ingrediente, true);
-          const formato = x.prodotto?.quantita && x.prodotto.unita ? { quantita: x.prodotto.quantita, unita: x.prodotto.unita } : x.esterno?.formato;
+          const formato = x.prodotto?.quantita && x.prodotto.unita ? { quantita: x.prodotto.quantita, unita: x.prodotto.unita } : (x.esterno?.formato ?? x.scheda?.formato);
           if (formato && formato.unita === UNITA_BASE[x.ingrediente.dimensione]) {
             cambiaScritta({ numero: String(formato.quantita).replace('.', ','), unita: formato.unita, quante: '1' });
           }
@@ -606,7 +626,7 @@ function NuovoLotto({ indice, luogo: luogoIniziale, chiudi }: { indice: Indice; 
               </button>
             </p>
           )}
-          {codice && dettagli && <FoglioSchedaProdotto codice={codice.codice} nome={nome.trim() || ing.nome} chiudi={() => setDettagli(false)} />}
+          {codice && dettagli && <FoglioSchedaProdotto codice={codice.codice} nome={nome.trim() || ing.nome} salvata={codice.scheda ?? codice.prodotto?.scheda ?? null} chiudi={() => setDettagli(false)} />}
           {puoAOcchio(ing) && (
             <div className="scelte" role="group" aria-label="Come lo conti" style={{ marginTop: 12 }}>
               <button type="button" aria-pressed={!aOcchio} onClick={() => setAOcchio(false)}>

@@ -66,7 +66,11 @@ export interface SchedaProdotto {
   linguaIngredienti?: 'it' | 'altra';
   elencoIngredienti: Ingrediente[];
   allergeni: string[];
+  /** Gli stessi allergeni, con i codici dell'app (`glutine`, `frutta_a_guscio`…): quelli dei 14 allergeni UE. */
+  allergeniUE: string[];
   tracce: string[];
+  /** Formato della confezione (500 g, 1000 ml, 6 pz) come dichiarato in etichetta. */
+  formato?: { quantita: number; unita: 'g' | 'ml' | 'pz' };
   /** Sigle degli additivi, es. "E330". */
   additivi: string[];
   /** NOVA 1–4: grado di lavorazione (Monteiro et al., Università di San Paolo). */
@@ -162,6 +166,24 @@ const ALLERGENI: Record<string, string> = {
   molluscs: 'molluschi',
 };
 
+/** I codici con cui l'app confronta gli allergeni degli ingredienti con i vincoli dei membri (`all:<codice>`). */
+const CODICE_ALLERGENE: Record<string, string> = {
+  gluten: 'glutine',
+  crustaceans: 'crostacei',
+  eggs: 'uova',
+  fish: 'pesce',
+  peanuts: 'arachidi',
+  soybeans: 'soia',
+  milk: 'latte',
+  nuts: 'frutta_a_guscio',
+  celery: 'sedano',
+  mustard: 'senape',
+  'sesame-seeds': 'sesamo',
+  'sulphur-dioxide-and-sulphites': 'solfiti',
+  lupin: 'lupini',
+  molluscs: 'molluschi',
+};
+
 const LIVELLI: Record<string, Livello> = { low: 'basso', moderate: 'moderato', high: 'alto' };
 const NOMI_LIVELLI = { fat: 'grassi', 'saturated-fat': 'grassi saturi', sugars: 'zuccheri', salt: 'sale' } as const;
 
@@ -247,6 +269,9 @@ export function schedaDaOpenFoodFacts(risposta: unknown): SchedaProdotto | undef
   // Le bevande hanno i valori per 100 ml: Open Food Facts lo dice con l'unità del formato.
   const base = String(p.product_quantity_unit ?? '').toLowerCase() === 'ml' || /\d\s*(ml|cl|l)\b/i.test(String(p.quantity ?? '')) ? '100 ml' : '100 g';
   const ingredientiTesto = (testoIt || testo).replace(/_/g, '');
+  const q = numero(p.product_quantity);
+  const uq = String(p.product_quantity_unit ?? '').toLowerCase();
+  const formato: SchedaProdotto['formato'] = q && q > 0 && (uq === 'g' || uq === 'ml') ? { quantita: q, unita: uq } : undefined;
   return {
     codice: String(r?.code ?? p.code ?? ''),
     valori: p.no_nutrition_data === 'on' ? [] : valori(n),
@@ -255,7 +280,9 @@ export function schedaDaOpenFoodFacts(risposta: unknown): SchedaProdotto | undef
     ...(ingredientiTesto ? { ingredienti: ingredientiTesto, linguaIngredienti: testoIt ? 'it' : 'altra' } : {}),
     elencoIngredienti: ingredienti(p.ingredients),
     allergeni: tag(p.allergens_tags).map((x) => nomeTag(x, ALLERGENI)),
+    allergeniUE: [...new Set(tag(p.allergens_tags).flatMap((x) => CODICE_ALLERGENE[x.split(':')[1] ?? ''] ?? []))],
     tracce: tag(p.traces_tags).map((x) => nomeTag(x, ALLERGENI)),
+    ...(formato ? { formato } : {}),
     additivi: tag(p.additives_tags).map((x) => nomeTag(x).toUpperCase()),
     ...(nova === 1 || nova === 2 || nova === 3 || nova === 4 ? { nova } : {}),
     ...(/^[A-E]$/.test(ns) ? { nutriScore: ns as SchedaProdotto['nutriScore'] } : {}),

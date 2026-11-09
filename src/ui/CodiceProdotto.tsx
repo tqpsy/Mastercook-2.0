@@ -2,10 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { useVista } from '../dati/contesto';
 import type { Indice, Ingrediente } from '../dominio/ricette';
 import { type ProdottoEsterno, suggerisciIngrediente } from '../dominio/scontrini';
+import type { SchedaProdotto } from '../dominio/schedaProdotto';
 import type { UnitaBase } from '../dominio/unita';
 import { CercaIngrediente } from './CercaIngrediente';
 import { Foglio } from './Foglio';
-import { chiediAOpenFoodFacts, cercaSuOpenFoodFacts } from './openFoodFacts';
+import { chiediAOpenFoodFacts, type RispostaOff } from './openFoodFacts';
 import { FoglioSchedaProdotto } from './SchedaProdotto';
 import { Scanner } from './Scanner';
 
@@ -17,6 +18,8 @@ export interface Prodotto {
   nome: string | null;
   quantita: number | null;
   unita: UnitaBase | null;
+  /** Valori nutrizionali, ingredienti e allergeni letti dal codice, ricordati con il prodotto. */
+  scheda?: SchedaProdotto | null;
 }
 
 export function useProdotti(): Map<string, Prodotto> {
@@ -39,6 +42,8 @@ export interface ProdottoScansionato {
   prodotto?: Prodotto;
   /** Per un codice nuovo: nome e formato proposti da Open Food Facts, se li conosce. */
   esterno?: ProdottoEsterno;
+  /** Per un codice nuovo: la scheda di Open Food Facts, da ricordare insieme al codice. */
+  scheda?: SchedaProdotto;
 }
 
 /**
@@ -68,17 +73,18 @@ export function ScansionaProdotto({ indice, trovato, chiudi }: { indice: Indice;
 }
 
 function CodiceNuovo({ indice, codice, trovato, chiudi }: { indice: Indice; codice: string; trovato: (p: ProdottoScansionato) => void; chiudi: () => void }) {
-  const [esterno, setEsterno] = useState<ProdottoEsterno | null | undefined>(undefined);
+  const [risposta, setRisposta] = useState<RispostaOff | null | undefined>(undefined);
+  const esterno = risposta === undefined ? undefined : (risposta?.esterno ?? null);
   const [dettagli, setDettagli] = useState(false);
   useEffect(() => {
     let attivo = true;
-    void cercaSuOpenFoodFacts(codice).then((x) => attivo && setEsterno(x ?? null));
+    void chiediAOpenFoodFacts(codice).then((x) => attivo && setRisposta(x ?? null));
     return () => {
       attivo = false;
     };
   }, [codice]);
   const suggerito = esterno ? suggerisciIngrediente(esterno.nome, indice) : undefined;
-  const scelto = (ingrediente: Ingrediente) => trovato({ codice, ingrediente, ...(esterno ? { esterno } : {}) });
+  const scelto = (ingrediente: Ingrediente) => trovato({ codice, ingrediente, ...(esterno ? { esterno } : {}), ...(risposta?.scheda ? { scheda: risposta.scheda } : {}) });
 
   return (
     <Foglio titolo="Codice nuovo" chiudi={chiudi}>
