@@ -169,7 +169,7 @@ export function Casa() {
       {/* Telefono: una scheda per luogo. Da 900 px: frigo, freezer e dispensa affiancati, e le schede spariscono. */}
       <div className="scelte schede-luogo" role="tablist" aria-label="Dove">
         {LUOGHI.map((l) => (
-          <button key={l} role="tab" aria-pressed={luogo === l} aria-selected={luogo === l} onClick={() => setLuogo(l)}>
+          <button key={l} role="tab" aria-selected={luogo === l} onClick={() => setLuogo(l)}>
             {NOME_LUOGO[l]} ({lotti.filter((x) => x.luogo === l).length})
           </button>
         ))}

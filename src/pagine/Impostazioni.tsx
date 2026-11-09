@@ -107,7 +107,7 @@ function NomeFamiglia({ nome, versione }: { nome: string; versione: number }) {
     >
       <span>Nome della famiglia</span>
       <div className="riga">
-        <input className="cresce" value={testo} onChange={(e) => setTesto(e.target.value)} maxLength={80} required />
+        <input className="cresce" aria-label="Nome della famiglia" value={testo} onChange={(e) => setTesto(e.target.value)} maxLength={80} required />
         {testo.trim() !== nome && <button className="bottone primario piccolo">Salva</button>}
       </div>
     </form>

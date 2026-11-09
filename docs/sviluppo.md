@@ -39,6 +39,12 @@ pg_ctl -D /tmp/pg/data -l /tmp/pg/log -o "-p 54329 -k /tmp/pg" start
 `npm run test:e2e` avvia un server di prova (porta 14400, sotto le porte che Linux usa per le connessioni in uscita) e l'app (porta 5173) e prova telefono e tablet.
 Se le porte sono occupate: `MC_PORTA_SERVER=54410 MC_PORTA_APP=5183 npm run test:e2e`.
 
+## Librerie solo per i test
+
+| Libreria | Perché |
+|---|---|
+| `axe-core` 4.10.2 (MPL-2.0) | `tests/e2e/accessibilita.spec.ts`: controlla le regole WCAG A e AA su ogni scheda, telefono e tablet. Non entra nell'app |
+
 ## Librerie caricate solo quando servono
 
 | Libreria | Perché | Cosa scarica |
