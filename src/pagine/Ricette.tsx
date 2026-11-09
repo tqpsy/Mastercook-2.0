@@ -21,7 +21,7 @@ import { type DatiMenu, useDatiMenu } from './Menu';
 import { toltiDellaPortata } from './Senza';
 import { BottoniModo, BottoniSegno, CercaRicetta, type FiltroIngredienti, MODI, type Segno, SEGNI } from '../ui/FiltriRicetta';
 import { haPrincipale, usaIngrediente } from '../dominio/principale';
-import { daUsarePresto, oggi } from '../dominio/scadenze';
+import { daUsarePresto, oggi, scadutoVero, type TipoData } from '../dominio/scadenze';
 import { type ModoSuggerimento, type Segni, segniDa, suggerisci, ultimeVolte } from '../dominio/suggerimenti';
 
 const PAGINA = 40;
@@ -89,7 +89,16 @@ export function AvvisoAdatto({ esito, adatto, righe }: { esito: Esito; adatto: s
 export function useInCasa(): Set<string> {
   const vista = useVista();
   const lotti = vista.righe.lotto;
-  return useMemo(() => new Set((lotti ?? []).filter((l) => !l.eliminato_il && !l.chiuso_il && Number(l.quantita) > 0).map((l) => String(l.ingrediente_id))), [lotti]);
+  const giorno = oggi();
+  return useMemo(
+    () =>
+      new Set(
+        (lotti ?? [])
+          .filter((l) => !l.eliminato_il && !l.chiuso_il && Number(l.quantita) > 0 && !scadutoVero({ tipo_data: l.tipo_data as TipoData, data_limite: (l.data_limite as string | null) ?? null }, giorno))
+          .map((l) => String(l.ingrediente_id)),
+      ),
+    [lotti, giorno],
+  );
 }
 
 /** Le icone scelte dalla famiglia, per ricetta. */

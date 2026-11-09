@@ -9,7 +9,7 @@ import { type Consiglio, postoDelLotto, postoIngrediente } from '../dominio/frig
 import { useFrigo } from './MioFrigo';
 import { ricettePerUrgenti } from '../dominio/consumi';
 import type { Indice, Ingrediente } from '../dominio/ricette';
-import { daUsarePresto, descriviData, type Luogo, oggi, piuGiorni, spreco, statoData, type TipoData } from '../dominio/scadenze';
+import { daUsarePresto, descriviData, type Luogo, oggi, piuGiorni, scadutoVero, spreco, statoData, type TipoData } from '../dominio/scadenze';
 import { formatta, type UnitaBase } from '../dominio/unita';
 import { descriviLivello, eBasso, eLivello, LIVELLI, type Livello, type ScortaAOcchio, scorteAOcchio } from '../dominio/livello';
 import { type ProdottoScansionato } from '../ui/CodiceProdotto';
@@ -106,6 +106,7 @@ export function Casa() {
   const giorno = oggi();
   const presto = useMemo(() => daUsarePresto(lotti, giorno), [lotti, giorno]);
   const finendo = useMemo(() => lotti.filter(eBasso), [lotti]);
+  const scaduti = useMemo(() => lotti.filter((l) => scadutoVero(l, giorno)).length, [lotti, giorno]);
   const sprecati = useSprecati(giorno);
 
   if (!vista.pronta || !indice) return <p className="tenue">Sto caricando la casa…</p>;
@@ -145,6 +146,11 @@ export function Casa() {
             </summary>
             {prestoAperto && (
               <>
+                {scaduti > 0 && (
+                  <p className="tenue" style={{ marginTop: 0 }}>
+                    {scaduti === 1 ? 'Un prodotto è scaduto' : `${scaduti} prodotti sono scaduti`}: non {scaduti === 1 ? 'lo' : 'li'} conto per la spesa e le ricette. Se {scaduti === 1 ? 'l’hai buttato' : 'li hai buttati'}, scarica {scaduti === 1 ? 'il lotto' : 'i lotti'} con «Buttato perché scaduto».
+                  </p>
+                )}
                 <ElencoLotti indice={indice} lotti={presto.slice(0, 8)} giorno={giorno} apri={setAperto} conLuogo />
                 {presto.length > 8 && <p className="tenue">E altri {presto.length - 8}.</p>}
                 <RicettePerUrgenti indice={indice} presto={presto} lotti={lotti} giorno={giorno} />
