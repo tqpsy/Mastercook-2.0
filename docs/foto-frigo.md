@@ -16,7 +16,8 @@ catalogo e in casa entra solo ciò che la persona spunta e conferma, con le quan
 
 ## Lettura in background
 
-La foto singola non si legge più dal telefono (che passando a un'altra app viene sospeso e interrompe la richiesta):
+Né la foto singola né la verifica con le foto si leggono più dal telefono (che passando a un'altra app viene sospeso e
+interrompe la richiesta). Ogni lettura è una **lettura**: la foto del frigo è una, la verifica ne ha una per zona.
 
 1. L'app (`src/piattaforma/letturaFoto.ts`) manda la foto con un id (`lettura_id`). La funzione apre la lettura
    (`public.nuova_lettura_foto`, solo `service_role`), risponde subito `202` e continua da sola
@@ -27,11 +28,15 @@ La foto singola non si legge più dal telefono (che passando a un'altra app vien
    subito appena torna in primo piano. Se la foto non risulta arrivata (telefono in tasca durante l'invio) la rimanda
    con lo stesso id. L'id si ricorda sul dispositivo: riaprendo l'app il risultato si ritrova.
 4. Lo stato vive fuori dal foglio: si può chiudere, cambiare scheda o usare l'app. In alto compare un avviso
-   (`AvvisoLetturaFoto`) che riporta al risultato.
+   (`AvvisoLetturaFoto`) che riporta al foglio giusto in Casa; riaprendolo si ritrova il punto in cui era (attesa,
+   risultato o errore con le foto ancora in memoria per riprovare).
+5. Verifica: le zone partono tutte subito (`tipo: 'verifica'` + `lettura_id`), ma `ritardo` fa guardare a Gemini due
+   zone alla volta, a 20 secondi di distanza, così la quota gratuita (richieste al minuto) regge.
+   Sul server gli alimenti arrivano a lettura finita (non più man mano).
 
 Famiglia «solo su questo telefono»: non c'è un server che lavori al posto del telefono. La lettura continua mentre
 si naviga nell'app (e lo schermo resta acceso), ma non con l'app in secondo piano; se si interrompe si riprova con
-la stessa foto.
+la stessa foto. Lì la verifica legge due zone alla volta e mostra gli alimenti man mano.
 
 Per essere esatta la lettura usa i modelli pieni (`MODELLI`), la foto a 1536 px e `mediaResolution` alta, con
 ragionamento libero; è più lenta, e per questo sta in background.

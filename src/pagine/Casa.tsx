@@ -21,7 +21,7 @@ import { FoglioSchedaProdotto } from '../ui/SchedaProdotto';
 import { chiediAOpenFoodFacts } from '../ui/openFoodFacts';
 import { type SchedaProdotto, schedaVuota } from '../dominio/schedaProdotto';
 import { Foglio } from '../ui/Foglio';
-import { consumaApertura, useLetturaFoto } from '../piattaforma/letturaFoto';
+import { consumaApertura, useLetture } from '../piattaforma/letturaFoto';
 import { FotoFrigo } from './FotoFrigo';
 import { Verifica, VoceVerifica } from './Verifica';
 import { useDatiMenu } from './Menu';
@@ -106,8 +106,8 @@ export function Casa() {
   const [luogo, setLuogo] = useState<Luogo>('frigo');
   const [aperto, setAperto] = useState<string | 'nuovo' | 'foto' | 'verifica' | null>(null);
   // L'avviso «foto del frigo» in alto porta qui: il foglio della foto si apre sul risultato (o sull'attesa).
-  const { richiestaApertura } = useLetturaFoto();
-  if (richiestaApertura && aperto !== 'foto') setAperto('foto');
+  const { richiestaApertura } = useLetture();
+  if (richiestaApertura && aperto !== richiestaApertura) setAperto(richiestaApertura);
   useEffect(() => {
     if (richiestaApertura) consumaApertura();
   }, [richiestaApertura]);

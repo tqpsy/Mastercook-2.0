@@ -29,7 +29,8 @@ import {
   zoneDa,
 } from '../dominio/verifica';
 import type { VistoInZona } from '../../supabase/functions/foto-frigo/nucleo';
-import { type FaseLettura, riconosciZona } from '../piattaforma/fotoFrigo';
+import type { FaseLettura } from '../piattaforma/fotoFrigo';
+import { avviaVerifica, fotoDellaZona, scartaVerifica, segnaAperta, useLetture } from '../piattaforma/letturaFoto';
 import { CercaIngrediente } from '../ui/CercaIngrediente';
 import { Foglio } from '../ui/Foglio';
 import { LATO_ANALISI, riduciFoto } from '../ui/Foto';
@@ -278,7 +279,11 @@ export function Verifica({ indice, chiudi }: { indice: Indice; chiudi: () => voi
   const { portate } = useDatiMenu(vista);
   const giorno = oggi();
   const [letto, setLetto] = useState(avvisoLetto);
-  const [passo, setPasso] = useState<Passo>('zone');
+  // Le letture vivono fuori da questo foglio (src/piattaforma/letturaFoto.ts): chiuderlo, cambiare scheda o passare a
+  // un'altra app non le ferma, e riaprendo la verifica si ritrova il punto in cui era.
+  const { zone: lettureZone } = useLetture();
+  const mie = useMemo(() => lettureZone.filter((l) => l.famiglia === famiglia), [lettureZone, famiglia]);
+  const [passo, setPasso] = useState<Passo>(() => (mie.length ? 'leggo' : 'zone'));
   const [modo, setModo] = useState<'guidata' | 'libera'>('guidata');
   const [scelte, setScelte] = useState<string[]>([]);
   const [foto, setFoto] = useState<Record<string, Blob[]>>({});
@@ -291,7 +296,6 @@ export function Verifica({ indice, chiudi }: { indice: Indice; chiudi: () => voi
   /** Righe spostate nel posto giusto (chiave → parte del frigo). */
   const [spostati, setSpostati] = useState<Record<string, string>>({});
   const [errore, setErrore] = useState<string | null>(null);
-  const [lettura, setLettura] = useState<Record<string, StatoLettura>>({});
   const [esito, setEsito] = useState(0);
 
   const lotti = useMemo(
@@ -312,42 +316,60 @@ export function Verifica({ indice, chiudi }: { indice: Indice; chiudi: () => voi
     setFoto((x) => ({ ...x, [id]: (x[id] ?? []).filter((_, j) => j !== i) }));
   }
 
-  async function leggi() {
+  function leggi() {
     const daLeggere = zoneScelte.filter((z) => foto[z.id]?.length);
     if (!daLeggere.length) return setErrore('Fai almeno una foto.');
     setErrore(null);
-    setLettura(Object.fromEntries(daLeggere.map((z) => [z.id, { fase: 'attesa', visti: [] } satisfies StatoLettura])));
-    setPasso('leggo');
     const nomiMenu = [...menu.keys()].map((id) => indice.ingrediente(id)?.nome.toLowerCase()).filter((x): x is string => !!x);
-    const perZona = new Map<string, Visto[]>();
-    let fallita: string | null = null;
-    // Due zone alla volta: Gemini risponde prima e la quota gratuita (richieste al minuto) regge.
-    const coda = [...daLeggere];
-    const lavora = async () => {
-      for (let z = coda.shift(); z && !fallita; z = coda.shift()) {
-        const zona = z;
-        const noti = prodottiNoti(indice, lotti, zone, memoria, zona.luogo);
-        const aggiorna = (fase: StatoLettura['fase'], visti: VistoInZona[]) => setLettura((x) => ({ ...x, [zona.id]: { fase, visti } }));
-        const r = await riconosciZona(famiglia, foto[zona.id], contestoPerGemini(zona, foto[zona.id].length, noti, nomiMenu, memoria), { dove, utenteId }, aggiorna);
-        if ('errore' in r) {
-          fallita ??= SPIEGA_ERRORE[r.errore] + (r.dettaglio ? ` (Risposta di Google: ${r.dettaglio})` : '');
-          return;
-        }
-        aggiorna('fatto', r.visti);
-        perZona.set(zona.id, vistiDaGemini(zona.id, r.visti, noti));
-      }
-    };
-    await Promise.all([lavora(), lavora()]);
-    if (fallita) {
-      setErrore(fallita);
-      return setPasso('scatta');
-    }
-    setVisti(daLeggere.flatMap((z) => perZona.get(z.id) ?? []));
-    setFotografate(daLeggere.map((z) => z.id));
-    setDecisioni({});
-    setSpostati({});
-    setPasso('risultato');
+    avviaVerifica({
+      famiglia,
+      sede: { dove, utenteId },
+      zone: daLeggere.map((z) => ({
+        zonaId: z.id,
+        foto: foto[z.id],
+        contesto: contestoPerGemini(z, foto[z.id].length, prodottiNoti(indice, lotti, zone, memoria, z.luogo), nomiMenu, memoria),
+      })),
+    });
+    setPasso('leggo');
   }
+
+  // Quando tutte le zone sono finite (anche se nel frattempo il foglio era chiuso) si passa al risultato, o all'errore.
+  if (passo === 'leggo' && mie.length > 0 && mie.every((l) => l.fase === 'pronta' || l.fase === 'errore')) {
+    const guasta = mie.find((l) => l.fase === 'errore');
+    if (guasta) {
+      setErrore(SPIEGA_ERRORE[guasta.errore ?? 'rete'] + (guasta.dettaglio ? ` (Risposta di Google: ${guasta.dettaglio})` : ''));
+      // Le foto non si perdono: si può riprovare subito, anche se il foglio era stato chiuso.
+      setScelte(zone.filter((z) => mie.some((l) => l.zonaId === z.id)).map((z) => z.id));
+      setFoto((x) => ({ ...Object.fromEntries(mie.map((l) => [l.zonaId!, fotoDellaZona(l.zonaId!)])), ...x }));
+      setPasso('scatta');
+    } else {
+      const lette = zone.filter((z) => mie.some((l) => l.zonaId === z.id));
+      setVisti(lette.flatMap((z) => vistiDaGemini(z.id, mie.find((l) => l.zonaId === z.id)?.visti ?? [], prodottiNoti(indice, lotti, zone, memoria, z.luogo))));
+      setFotografate(lette.map((z) => z.id));
+      setDecisioni({});
+      setSpostati({});
+      setPasso('risultato');
+    }
+  }
+  useEffect(() => {
+    // Il risultato è passato al foglio: la lettura nello stato condiviso non serve più.
+    if (passo !== 'leggo' && mie.length > 0 && mie.every((l) => l.fase === 'pronta' || l.fase === 'errore')) scartaVerifica();
+  }, [passo, mie]);
+  useEffect(() => {
+    segnaAperta('verifica', true);
+    return () => segnaAperta('verifica', false);
+  }, []);
+  /** Per mostrare l'avanzamento: la fase di ogni zona e gli alimenti trovati finora. */
+  const stato = useMemo(
+    () =>
+      Object.fromEntries(
+        mie.map((l) => [
+          l.zonaId!,
+          { fase: l.fase === 'pronta' ? 'fatto' : l.fase === 'attesa' ? 'guarda' : l.fase === 'invio' ? 'invio' : 'attesa', visti: l.visti ?? [] } satisfies StatoLettura,
+        ]),
+      ) as Record<string, StatoLettura>,
+    [mie],
+  );
 
   const preparata = useMemo(
     () =>
@@ -476,7 +498,7 @@ export function Verifica({ indice, chiudi }: { indice: Indice; chiudi: () => voi
                   {foto[zoneScelte[guida].id]?.length ? 'Avanti' : 'Salta questa zona'}
                 </button>
               ) : (
-                <button className="bottone primario cresce" disabled={!zoneScelte.some((z) => foto[z.id]?.length)} onClick={() => void leggi()}>
+                <button className="bottone primario cresce" disabled={!zoneScelte.some((z) => foto[z.id]?.length)} onClick={leggi}>
                   Confronta con la casa
                 </button>
               )}
@@ -494,14 +516,26 @@ export function Verifica({ indice, chiudi }: { indice: Indice; chiudi: () => voi
               <button className="bottone" onClick={() => setPasso('zone')}>
                 Zone
               </button>
-              <button className="bottone primario cresce" disabled={!zoneScelte.some((z) => foto[z.id]?.length)} onClick={() => void leggi()}>
+              <button className="bottone primario cresce" disabled={!zoneScelte.some((z) => foto[z.id]?.length)} onClick={leggi}>
                 Confronta con la casa
               </button>
             </div>
           </>
         ))}
 
-      {passo === 'leggo' && <Lettura zone={zoneScelte.filter((z) => lettura[z.id])} foto={foto} stato={lettura} />}
+      {passo === 'leggo' && (
+        <>
+          <Lettura zone={zone.filter((z) => stato[z.id])} foto={Object.fromEntries(Object.keys(stato).map((id) => [id, foto[id] ?? fotoDellaZona(id)]))} stato={stato} />
+          <p className="tenue piccolo" style={{ marginTop: 12 }}>
+            {dove === 'locale'
+              ? 'Tieni aperta l’app finché non ho finito: le foto vanno da questo telefono a Gemini.'
+              : 'Puoi chiudere questo foglio, usare l’app o passare a un’altra: ci penso io e ti avviso qui appena è pronto.'}
+          </p>
+          <button className="bottone pieno" style={{ marginTop: 8 }} onClick={() => chiudi()}>
+            Continua a usare l’app
+          </button>
+        </>
+      )}
 
       {passo === 'risultato' && (
         <Risultato

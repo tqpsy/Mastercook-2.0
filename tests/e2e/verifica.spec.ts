@@ -67,14 +67,18 @@ test('verifica con le foto: solo le anomalie, decido io, riepilogo e poi la casa
   await foglio.getByRole('button', { name: 'Avanti' }).click();
   await foglio.getByRole('button', { name: 'Confronta con la casa' }).click();
 
-  // Mentre Gemini guarda: barra, tempo, la foto con i riquadri e gli alimenti man mano.
+  // Mentre Gemini guarda: barra, tempo e le foto. Sul server la lettura non dipende dal foglio: si può chiudere,
+  // usare l'app, e un avviso in alto riporta al risultato.
   await expect(foglio.getByRole('progressbar', { name: 'Avanzamento della verifica' })).toBeVisible();
   await expect(foglio.getByLabel('Tempo trascorso')).toHaveText(/^\d+:\d\d$/);
   const lettura = foglio.getByRole('region', { name: 'Lettura di Ripiano alto' });
   await expect(lettura.getByRole('img', { name: 'Foto che Gemini sta guardando' })).toHaveCount(2);
-  await expect(lettura.getByRole('list', { name: 'Trovati in Ripiano alto' })).toContainText('uova · 2 pz');
-  await expect(lettura.locator('.riquadro-visto').first()).toBeVisible();
   if (info.project.name === 'telefono') await foglio.screenshot({ path: 'test-results/verifica-lettura.png' });
+  await foglio.getByRole('button', { name: 'Continua a usare l’app' }).click();
+  await expect(page.getByRole('dialog', { name: 'Verifica con le foto' })).toHaveCount(0);
+  const avviso = page.getByRole('button', { name: /le foto della verifica/ });
+  await expect(avviso).toBeVisible();
+  await avviso.click();
 
   // Rapida: le uova sono meno, il burro non si vede, le zucchine sono nuove, il barattolo non si sa. Lo yogurt (ripiano 3) non c'entra.
   await expect(foglio.getByRole('button', { name: /Rapida \(4\)/ })).toHaveAttribute('aria-pressed', 'true');
