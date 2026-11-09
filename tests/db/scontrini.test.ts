@@ -177,6 +177,21 @@ describe('scontrini', () => {
   });
 });
 
+describe('scheda del prodotto', () => {
+  it('la scheda si salva col codice, si rilegge e non si perde se un nuovo salvataggio non la porta', async () => {
+    const { u, famiglia } = await famigliaCon();
+    const scheda = { codice: '8001234567890', allergeniUE: ['glutine'], valori: [{ chiave: 'fat', per100: 17, unita: 'g' }] };
+    const base = { codice: '8001234567890', ingrediente_id: 'ing:pasta', nome: 'Penne', quantita: 500, unita: 'g' };
+    expect((await u.applica(comando('salva_prodotto', famiglia, { id: randomUUID(), ...base, scheda }))).esito).toBe('applicato');
+    expect(await banco.sql('select scheda from prodotto where famiglia_id = $1', [famiglia])).toEqual([{ scheda }]);
+    expect((await u.applica(comando('salva_prodotto', famiglia, { id: randomUUID(), ...base, nome: 'Penne rigate' }))).esito).toBe('applicato');
+    expect(await banco.sql('select nome, scheda from prodotto where famiglia_id = $1', [famiglia])).toEqual([{ nome: 'Penne rigate', scheda }]);
+    // Una scheda che non è un oggetto si ignora, non rompe il salvataggio.
+    expect((await u.applica(comando('salva_prodotto', famiglia, { id: randomUUID(), ...base, scheda: 'testo' }))).esito).toBe('applicato');
+    expect(await banco.sql('select scheda from prodotto where famiglia_id = $1', [famiglia])).toEqual([{ scheda }]);
+  });
+});
+
 describe('prodotti', () => {
   it('un codice a barre per famiglia: salvarlo di nuovo lo aggiorna; il formato deve avere un’unità coerente', async () => {
     const { u, famiglia } = await famigliaCon();

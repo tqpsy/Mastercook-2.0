@@ -480,7 +480,7 @@ const EFFETTI: Record<string, Effetto> = {
   },
   salva_prodotto: (righe, d, famiglia) => {
     const esistente = (righe.prodotto ?? []).find((p) => p.codice === d.codice && !p.eliminato_il);
-    const campi = { codice: d.codice, ingrediente_id: d.ingrediente_id, nome: d.nome ?? null, quantita: d.quantita ?? null, unita: d.unita ?? null };
+    const campi = { codice: d.codice, ingrediente_id: d.ingrediente_id, nome: d.nome ?? null, quantita: d.quantita ?? null, unita: d.unita ?? null, ...(d.scheda ? { scheda: d.scheda } : {}) };
     if (esistente) righe.prodotto = (righe.prodotto ?? []).map((p) => (p === esistente ? { ...p, ...campi, in_attesa: true } : p));
     else aggiungi('prodotto', () => ({ ...campi, versione: 1 }))(righe, d, famiglia);
   },

@@ -115,3 +115,18 @@ describe('scheda prodotto da Open Food Facts v3', () => {
     expect(b.valori[0]).toMatchObject({ chiave: 'sugars', per100: 10.6 });
   });
 });
+
+describe('dati della scheda di un singolo prodotto', () => {
+  const s = schedaDaOpenFoodFacts(V3)!;
+
+  it('gli allergeni hanno i codici dell’app, senza doppioni', () => {
+    expect(s.allergeniUE).toEqual(['glutine', 'uova']);
+    const doppi = schedaDaOpenFoodFacts({ product: { allergens_tags: ['en:nuts', 'en:nuts', 'en:sesame-seeds', 'en:boh'] } })!;
+    expect(doppi.allergeniUE).toEqual(['frutta_a_guscio', 'sesamo']);
+  });
+
+  it('il formato viene dalla quantità dichiarata, solo in g o ml', () => {
+    expect(s.formato).toEqual({ quantita: 350, unita: 'g' });
+    expect(schedaDaOpenFoodFacts({ product: { product_quantity: 6, product_quantity_unit: 'pz' } })!.formato).toBeUndefined();
+  });
+});

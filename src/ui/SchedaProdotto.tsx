@@ -6,16 +6,18 @@ import { chiediAOpenFoodFacts } from './openFoodFacts';
 const numero = new Intl.NumberFormat('it-IT', { maximumFractionDigits: 3 });
 
 /** Il foglio «Valori e ingredienti» di un codice a barre, chiesto a Open Food Facts. */
-export function FoglioSchedaProdotto({ codice, nome, chiudi }: { codice: string; nome?: string; chiudi: () => void }) {
+export function FoglioSchedaProdotto({ codice, nome, salvata, chiudi }: { codice: string; nome?: string; salvata?: SchedaProdotto | null; chiudi: () => void }) {
   // undefined = sto cercando; null = niente rete o servizio lento; {} = prodotto sconosciuto.
-  const [scheda, setScheda] = useState<SchedaProdotto | null | undefined | false>(undefined);
+  const [scheda, setScheda] = useState<SchedaProdotto | null | undefined | false>(salvata ?? undefined);
   useEffect(() => {
+    // La scheda ricordata con il prodotto si apre subito e anche senza rete.
+    if (salvata) return;
     let attivo = true;
     void chiediAOpenFoodFacts(codice).then((r) => attivo && setScheda(r === undefined ? null : (r.scheda ?? false)));
     return () => {
       attivo = false;
     };
-  }, [codice]);
+  }, [codice, salvata]);
 
   return (
     <Foglio titolo={nome || 'Valori e ingredienti'} chiudi={chiudi} alto>
