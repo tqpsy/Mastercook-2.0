@@ -7,7 +7,7 @@
  * piacciono, la varietà (niente stesso piatto in due settimane, niente pasta a pranzo e a cena).
  */
 import { valutaPerFamiglia, type Verifica, type Vincolo } from './compatibilita';
-import { gustiPerPiatto, type Gusto, type Persona } from './menu';
+import { alPasto, gustiPerPiatto, type Gusto, type OspitiPasto, ospitiDel, type Persona } from './menu';
 import type { Categoria } from '../catalogo/tipi';
 import { haPrincipale, type Principale, usaIngrediente } from './principale';
 import { copertura, type Indice, mancanti, principali, type Ricetta } from './ricette';
@@ -50,6 +50,11 @@ export interface ContestoProposte {
   segni?: Segni;
   /** Al pasto ci sono ospiti: le ricette 💫 valgono di più. */
   conOspiti?: boolean;
+  /**
+   * Gli ospiti già segnati nel menu. Per i pasti in cui ci sono, `proponi` sceglie solo ricette adatte anche a
+   * loro (allergie, intolleranze, esigenze) e dà più peso alle 💫.
+   */
+  ospiti?: OspitiPasto[];
   /** Le regole di Antonino (pesi e obiettivi della settimana). Senza: i pesi di base e nessun obiettivo. */
   regole?: RegoleAntonino;
   /** Cosa Antonino ricorda di questa famiglia (scarti, scelte, «non proporla più»). */
@@ -236,8 +241,14 @@ export function proponi(
   const ripetizioni = (r: Ricetta) => basiDi1(r).reduce((s, b) => s + (basi.get(b) ?? 0) * pesoRipetizione(b), 0);
   if (regole) for (const p of settimana?.piatti ?? []) conta1(p.data, p.ricetta);
   posti.forEach((posto, k) => {
-    if (!perPasto.has(posto.categoria)) perPasto.set(posto.categoria, candidate(indice, posto.categoria, c));
-    const tutte = perPasto.get(posto.categoria)!;
+    // Con ospiti a quel pasto si cercano ricette adatte anche a loro: le candidate sono quelle del pasto con loro.
+    const ospiti = c.ospiti ? ospitiDel(c.ospiti, posto.data, posto.categoria) : undefined;
+    const chiaveCandidate = ospiti ? `${posto.categoria}|${ospiti.id}` : posto.categoria;
+    if (!perPasto.has(chiaveCandidate)) {
+      const contesto = ospiti ? { ...c, ...alPasto(c.persone, c.vincoli, ospiti), conOspiti: true } : c;
+      perPasto.set(chiaveCandidate, candidate(indice, posto.categoria, contesto));
+    }
+    const tutte = perPasto.get(chiaveCandidate)!;
     const no = new Set(scarta.get(`${posto.data}|${posto.categoria}`) ?? []);
     const giorno = tipi.get(posto.data) ?? [];
     const libere = tutte.filter((x) => !usate.has(x.ricetta.id) && !no.has(x.ricetta.id));

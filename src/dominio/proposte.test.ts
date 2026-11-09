@@ -3,6 +3,7 @@ import catalogo from '../catalogo/catalogo.json';
 import type { Catalogo } from '../catalogo/tipi';
 import { valutaPerFamiglia } from './compatibilita';
 import { candidate, type ContestoProposte, proponi } from './proposte';
+import { alPasto } from './menu';
 import { Indice } from './ricette';
 
 const indice = new Indice(catalogo as Catalogo);
@@ -33,6 +34,27 @@ describe('proposte del menu', () => {
     const p = proponi(indice, posti, { ...base, vincoli });
     expect(p.length).toBeGreaterThan(0);
     for (const x of p) expect(valutaPerFamiglia(indice, x.ricetta, persone, vincoli).esito).toBe('adatta');
+  });
+
+  it('con ospiti vegetariani a una cena, quella cena ha solo piatti vegetariani; gli altri pasti restano invariati', () => {
+    const ospiti = [{ id: 'o1', data: '2026-11-04', categoria: 'cena', adulti: 2, bambini: 0, oggetti: ['cls:vegetariano'] }];
+    const p = proponi(indice, posti, { ...base, ospiti });
+    const cena = p.find((x) => x.data === '2026-11-04' && x.categoria === 'cena');
+    expect(cena).toBeDefined();
+    const loro = alPasto(persone, [], ospiti[0]);
+    for (const r of [cena!.ricetta, ...cena!.altre]) expect(valutaPerFamiglia(indice, r, loro.persone, loro.vincoli).esito).toBe('adatta');
+    // Gli altri pasti si propongono come prima, senza il vincolo degli ospiti.
+    const senza = proponi(indice, posti, base);
+    expect(p.filter((x) => !(x.data === '2026-11-04' && x.categoria === 'cena')).length).toBeGreaterThan(0);
+    expect(p.find((x) => x.data === '2026-11-03' && x.categoria === 'cena')?.ricetta.id).toBe(senza.find((x) => x.data === '2026-11-03' && x.categoria === 'cena')?.ricetta.id);
+  });
+
+  it('con ospiti allergici a una cena, nessuna proposta se non si può escludere neanche una traccia: meglio vuoto che a rischio', () => {
+    const ospiti = [{ id: 'o1', data: '2026-11-04', categoria: 'cena', adulti: 2, bambini: 0, oggetti: ['all:uova'] }];
+    const p = proponi(indice, posti, { ...base, ospiti });
+    const loro = alPasto(persone, [], ospiti[0]);
+    const cena = p.find((x) => x.data === '2026-11-04' && x.categoria === 'cena');
+    if (cena) expect(valutaPerFamiglia(indice, cena.ricetta, loro.persone, loro.vincoli).esito).toBe('adatta');
   });
 
   it('Antonino per un pasto: una ricetta ⛔ solo per un ingrediente che si toglie arriva dopo, con cosa togliere', () => {

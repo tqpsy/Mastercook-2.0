@@ -21,7 +21,7 @@ test('accessibilità: nessuna violazione WCAG A/AA nelle schede', async ({ brows
   for (const scheda of SCHEDE) {
     await page.getByRole('button', { name: scheda, exact: true }).click();
     await page.waitForTimeout(600);
-    const esito = await page.evaluate(async () => {
+    const esito = await page.evaluate(async (): Promise<string[]> => {
       // @ts-expect-error axe è iniettato nella pagina
       const r = await window.axe.run(document, { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa'] } });
       return r.violations.map((v: { id: string; help: string; nodes: { target: unknown[] }[] }) => `${v.id}: ${v.help} (${v.nodes.length}) ${v.nodes.slice(0, 3).map((n) => String(n.target)).join(' | ')}`);

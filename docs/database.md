@@ -346,7 +346,9 @@ Limiti noti, voluti o rimandati:
   aveva preso da quell'acquisto invece che da un altro dello stesso prodotto, la quantità si sistema a mano in Casa.
 - Le intolleranze diverse dal lattosio (fruttosio, istamina, nichel, sorbitolo) non hanno ingredienti segnati nel
   catalogo: le ricette risultano «da verificare» e il «va bene» della famiglia vale come scelta consapevole.
-- «Proponi la settimana» sceglie per la famiglia; le esigenze degli ospiti si vedono sul piatto nel menu, dopo.
+- «Proponi la settimana» tiene conto degli ospiti già segnati su un pasto (`ospiti` in `ContestoProposte`): lì propone solo
+  piatti adatti anche a loro. Con un'allergia degli ospiti, che vale anche per le tracce, spesso non c'è nessun piatto
+  verificabile e il pasto resta vuoto: meglio che a rischio, si sceglie a mano.
 - Famiglia «sul mio Google Drive»: un dispositivo alla volta. Se due copie divergono si sceglie quale tenere e le
   modifiche dell'altra si perdono (l'app lo dice). Per usare due dispositivi insieme serve la famiglia sul server.
 

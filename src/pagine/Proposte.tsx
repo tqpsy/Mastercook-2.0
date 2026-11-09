@@ -30,6 +30,7 @@ export function useContestoProposte(dati: DatiMenu, dal: string, al: string): Co
       vincoli: dati.vincoli,
       verifiche: dati.verifiche,
       gusti: dati.gusti,
+      ospiti: dati.ospiti,
       inCasa: lotti.map((l) => l.ingrediente_id),
       urgenti: daUsarePresto(lotti, giorno).map((l) => l.ingrediente_id),
       recenti: dati.portate.filter((p) => p.ricetta_id && p.data >= piuGiorni(dal, -14) && p.data <= piuGiorni(al, 7)).map((p) => p.ricetta_id!),
