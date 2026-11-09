@@ -38,6 +38,8 @@ export class Rete implements Trasporto {
   foto: { percorso: string; dopo: number }[] = [];
   /** Il deposito delle foto non risponde (la rete dei comandi sì). */
   fotoGuaste = false;
+  /** Il deposito risponde, ma rifiuta il file (non è un problema di rete). */
+  fotoRifiutate = false;
   constructor(
     private utente: Utente,
     private caso: () => number = Math.random,
@@ -61,6 +63,7 @@ export class Rete implements Trasporto {
   async caricaFoto(percorso: string): Promise<void> {
     this.controlla();
     if (this.fotoGuaste) throw new ErroreRete('deposito irraggiungibile');
+    if (this.fotoRifiutate) throw new Error('deposito: file rifiutato');
     this.foto.push({ percorso, dopo: this.richieste });
   }
 

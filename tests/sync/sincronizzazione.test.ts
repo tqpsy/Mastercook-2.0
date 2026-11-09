@@ -330,6 +330,25 @@ describe('T-SYN-11: prova casuale con tre dispositivi e rete instabile', () => {
     expect((await a.archivio.foto.get(percorso))?.caricata).toBe(true);
   });
 
+  it('se il deposito rifiuta la foto il comando parte lo stesso, ma la foto non risulta caricata', async () => {
+    const { famiglia, a } = await famigliaConDue();
+    await a.sync.sincronizza();
+    const id = randomUUID();
+    const percorso = `${famiglia}/${randomUUID()}.jpg`;
+    await a.archivio.foto.put({ percorso, famiglia_id: famiglia, file: new Blob(['jpeg']), caricata: false });
+    await a.sync.accoda('salva_ricetta', {
+      id,
+      nuova: true,
+      campi: { titolo: 'Torta', categoria: 'dolce', porzioni: 8, foto: percorso },
+      ingredienti: { aggiungi: [{ id: randomUUID(), ingrediente_id: 'ing:farina', quantita: 300, unita: 'g', qb: false, opzionale: false, ordine: 0 }] },
+      passi: { aggiungi: [{ id: randomUUID(), ordine: 0, testo: 'Cuoci.' }] },
+    });
+    a.rete.fotoRifiutate = true;
+    expect(await a.sync.invia()).toBe('vuota');
+    expect(await banco.sql('select count(*)::int as n from ricetta where id = $1', [id])).toEqual([{ n: 1 }]);
+    expect((await a.archivio.foto.get(percorso))?.caricata).toBe(false);
+  });
+
   it('un comando applicato resta nell’anteprima finché lo scarico non porta le sue righe: nessun ritorno indietro a metà', async () => {
     const { a, famiglia } = await famigliaConDue();
     await a.sync.sincronizza();
