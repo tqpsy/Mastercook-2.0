@@ -24,6 +24,8 @@ const MOTIVI: Record<string, string> = {
   comando_malformato: 'Operazione non valida.',
   id_gia_usato: 'Operazione non valida.',
   unita_incompatibile: 'L’unità non va bene per questo ingrediente (per esempio grammi di uova).',
+  livello_non_ammesso: 'Questo si conta già a pezzi (come le uova): non serve «a occhio».',
+  livello_non_valido: 'Scegli quanto ne resta: tanto, metà, poco o sta per finire.',
   ricetta_di_sistema: 'Le ricette del catalogo non si modificano: duplicala per farne una tua.',
   ingrediente_di_sistema: 'Gli ingredienti del catalogo non si modificano.',
   ricetta_non_trovata: 'La ricetta di partenza non esiste più.',

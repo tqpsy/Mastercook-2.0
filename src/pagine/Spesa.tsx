@@ -24,7 +24,10 @@ import { CercaIngrediente } from '../ui/CercaIngrediente';
 import { Foglio } from '../ui/Foglio';
 import { ScansionaProdotto } from '../ui/CodiceProdotto';
 import { FoglioSchedaProdotto } from '../ui/SchedaProdotto';
-import { quantitaDa } from './Casa';
+import { quantitaDa, useLotti, useScorteAOcchio } from './Casa';
+import { avvisoScorta, NOME_LIVELLO } from '../dominio/livello';
+import { IconaCibo } from '../ui/IconaCibo';
+import { iconaIngrediente } from '../dominio/iconeCibo';
 import { Scontrino } from './Scontrino';
 import { Speso } from './Speso';
 
@@ -205,6 +208,8 @@ export function Spesa() {
         ))
       )}
 
+      <StannoPerFinire indice={indice} voci={voci} />
+
       {carrello.length === 0 && (
         <button className="bottone pieno" onClick={() => setConferma(true)}>
           Registra una spesa senza lista
@@ -226,6 +231,48 @@ export function Spesa() {
       {ultimo && dettagli && <FoglioSchedaProdotto codice={ultimo.codice} nome={ultimo.nome} chiudi={() => setDettagli(false)} />}
       {acquisto && <SchedaAcquisto indice={indice} acquisto={acquisto} righe={righe.filter((r) => r.acquisto_id === acquisto.id)} chiudi={() => setAcquistoAperto(null)} />}
     </>
+  );
+}
+
+/**
+ * Ciò che si usa a occhio e sta per finire (o ne resta poco), non ancora in lista: si aggiunge con un tocco.
+ * Se il menu lo chiede, la lista lo mette già da sola quando sta per finire.
+ */
+function StannoPerFinire({ indice, voci }: { indice: Indice; voci: VoceSpesa[] }) {
+  const { esegui } = useFamiglia();
+  const lotti = useLotti();
+  const scorte = useScorteAOcchio(indice);
+  const inLista = new Set(voci.filter((v) => v.stato === 'da_acquistare' || v.stato === 'nel_carrello').map((v) => v.ingrediente_id));
+  const visti = new Set<string>();
+  const elenco = lotti.filter((l) => {
+    if (!l.livello || visti.has(l.ingrediente_id) || inLista.has(l.ingrediente_id) || !avvisoScorta(scorte.get(l.ingrediente_id))) return false;
+    visti.add(l.ingrediente_id);
+    return true;
+  });
+  if (!elenco.length) return null;
+  return (
+    <section className="scheda" aria-label="Stanno per finire">
+      <h3 style={{ marginTop: 0 }}>Stanno per finire</h3>
+      <ul className="elenco">
+        {elenco.map((l) => {
+          const ing = indice.ingrediente(l.ingrediente_id);
+          return (
+            <li key={l.id} className="riga spazio">
+              <span>
+                <IconaCibo valore={iconaIngrediente(ing)} /> {indice.nome(l.ingrediente_id)} <span className="tenue">· {NOME_LIVELLO[scorte.get(l.ingrediente_id)?.livello ?? 'poco']}</span>
+              </span>
+              <button
+                className="bottone piccolo"
+                aria-label={`Aggiungi alla lista: ${indice.nome(l.ingrediente_id)}`}
+                onClick={() => void esegui('aggiungi_voce', { id: crypto.randomUUID(), ingrediente_id: l.ingrediente_id, testo: null, quantita: null, unita: UNITA_BASE[ing?.dimensione ?? 'massa'] })}
+              >
+                + Lista
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 

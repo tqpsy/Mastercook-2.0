@@ -182,7 +182,7 @@ export function spesaDelGiorno(
   eccezioni: Eccezione[],
   tutte: PortataMenu[],
   ospiti: OspitiPasto[],
-  lotti: { id: string; ingrediente_id: string; unita: string; quantita: number; data_limite: string | null }[],
+  lotti: { id: string; ingrediente_id: string; unita: string; quantita: number; data_limite: string | null; livello?: string | null }[],
 ): BisognoDelGiorno[] {
   const somme = new Map<string, Consumo>();
   for (const p of portate) {
@@ -193,14 +193,20 @@ export function spesaDelGiorno(
       somme.set(k, prima ? { ...prima, quantita: prima.quantita + c.quantita } : { ...c });
     }
   }
-  const ordinati = [...lotti].sort((a, b) => (a.data_limite ?? '9999').localeCompare(b.data_limite ?? '9999'));
+  // A occhio (formaggio, olio…): basta, salvo l'ultimo pezzo che sta per finire. Come `basta_a_occhio` nel database.
+  const aOcchio = lotti.filter((l) => l.livello && l.quantita > 0);
+  const basta = (id: string) => {
+    const qui = aOcchio.filter((l) => indice.antenati(l.ingrediente_id).includes(id));
+    return qui.reduce((t, l) => t + l.quantita, 0) > 1 || qui.some((l) => l.livello !== 'finendo');
+  };
+  const ordinati = lotti.filter((l) => !l.livello).sort((a, b) => (a.data_limite ?? '9999').localeCompare(b.data_limite ?? '9999'));
   const usato = new Map<string, number>();
   const bisogni = [...somme.values()]
     .filter((c) => c.quantita > 0)
     .sort((a, b) => indice.antenati(b.ingrediente_id).length - indice.antenati(a.ingrediente_id).length || a.ingrediente_id.localeCompare(b.ingrediente_id));
   return bisogni
     .map((b) => {
-      let resta = b.quantita;
+      let resta = b.unita !== 'pz' && basta(b.ingrediente_id) ? 0 : b.quantita;
       for (const l of ordinati) {
         if (resta <= 0) break;
         if (l.unita !== b.unita || !indice.antenati(l.ingrediente_id).includes(b.ingrediente_id)) continue;

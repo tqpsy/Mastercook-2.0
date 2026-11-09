@@ -88,6 +88,18 @@ describe('anteprima della coda', () => {
     ]);
   });
 
+  it('casa a occhio: il livello e i pezzi cambiano subito; da grammi a occhio nasce un lotto nuovo', () => {
+    const grammi = { id: 'l1', famiglia_id: F, seq: 3, quantita: 300, unita: 'g', livello: null, luogo: 'frigo', data_limite: '2026-12-01', tipo_data: 'scadenza', chiuso_il: null };
+    const v = vistaConAnteprima({ lotto: [grammi] }, [
+      voce('cambia_livello', { lotto_id: 'l1', livello: 'meta', pezzi: 2, nuovo_id: 'l2' }),
+      voce('cambia_livello', { lotto_id: 'l2', livello: 'poco', pezzi: 1 }),
+    ]);
+    expect(v.lotto?.map((l) => [l.id, l.quantita, l.unita, l.livello, l.data_limite, l.chiuso_il])).toEqual([
+      ['l1', 0, 'g', null, '2026-12-01', 'in_attesa'],
+      ['l2', 1, 'pz', 'poco', '2026-12-01', null],
+    ]);
+  });
+
   it('ricette: una ricetta nuova compare con righe e passaggi; le modifiche riga per riga si vedono', () => {
     const v = vistaConAnteprima({}, [
       voce('salva_ricetta', {

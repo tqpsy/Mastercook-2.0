@@ -105,6 +105,14 @@ describe('spesa del giorno', () => {
     const r = spesaDelGiorno(indice, [portata('p'), portata('q')], [], [], [], [], [lotto('l1', 'ing:spaghetti', 400)]);
     expect(r.find((b) => b.ingrediente_id === 'ing:spaghetti')).toMatchObject({ serve: 640, inCasa: 400, manca: 240 });
   });
+
+  it('a occhio basta (il pecorino «poco»), salvo l’ultimo pezzo che sta per finire', () => {
+    const pecorino = (livello: string, quantita = 1) => ({ id: 'l', ingrediente_id: 'ing:pecorino', unita: 'pz', quantita, data_limite: null, livello });
+    const manca = (l: ReturnType<typeof pecorino>) => spesaDelGiorno(indice, [portata('p')], [], [], [], [], [l]).find((b) => b.ingrediente_id === 'ing:pecorino');
+    expect(manca(pecorino('poco'))).toMatchObject({ serve: 60, inCasa: 60, manca: 0 });
+    expect(manca(pecorino('finendo'))).toMatchObject({ manca: 60 });
+    expect(manca(pecorino('finendo', 2))).toMatchObject({ manca: 0 });
+  });
 });
 
 describe('spesa del giorno: avanzi piccoli', () => {
