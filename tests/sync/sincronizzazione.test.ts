@@ -179,6 +179,47 @@ describe('sincronizzazione tra dispositivi', () => {
     expect(Number((await banco.sql('select porzione from membro where id = $1', [membro]))[0].porzione)).toBe(1);
   });
 
+  it('un tocco che si accoda proprio mentre il precedente viene applicato non diventa un falso conflitto', async () => {
+    const { famiglia, a, membro } = await famigliaConDue();
+    await a.sync.sincronizza();
+    await a.sync.accoda('modifica_membro', { id: membro, versione_attesa: 1, campi: { porzione: 2 } });
+
+    // Un cancello sulla rete (il primo comando è «in volo») e uno sull'inserimento in coda del secondo.
+    const apriRete = Promise.withResolvers<void>();
+    const inVolo = Promise.withResolvers<void>();
+    const apriCoda = Promise.withResolvers<void>();
+    const inInserimento = Promise.withResolvers<void>();
+    const applicaVera = a.rete.applica.bind(a.rete);
+    a.rete.applica = async (c) => {
+      inVolo.resolve();
+      await apriRete.promise;
+      return applicaVera(c);
+    };
+    const aggiungiVera = a.archivio.coda.add.bind(a.archivio.coda);
+    a.archivio.coda.add = (async (voce: Parameters<typeof aggiungiVera>[0]) => {
+      inInserimento.resolve();
+      await apriCoda.promise;
+      return aggiungiVera(voce);
+    }) as typeof a.archivio.coda.add;
+
+    const invio = a.sync.invia();
+    await inVolo.promise;
+    // Il secondo tocco parte ancora dalla versione 1 (il primo non è applicato) e si ferma prima di entrare in coda.
+    const secondo = a.sync.accoda('modifica_membro', { id: membro, versione_attesa: 1, campi: { porzione: 1 } });
+    await inInserimento.promise;
+    // Ora il primo viene applicato dal server: la coda non contiene ancora il secondo, che non può essere aggiornato da lì.
+    apriRete.resolve();
+    expect(await invio).toBe('vuota');
+    apriCoda.resolve();
+    await secondo;
+
+    a.archivio.coda.add = aggiungiVera as typeof a.archivio.coda.add;
+    await a.sync.sincronizza();
+    expect(a.sync.leggiStato()).toMatchObject({ in_attesa: 0, da_sistemare: 0 });
+    expect(Number((await banco.sql('select porzione from membro where id = $1', [membro]))[0].porzione)).toBe(1);
+    expect(await statoLocale(a, famiglia)).toEqual(await statoServer(banco, famiglia));
+  });
+
   it('una modifica di un altro dispositivo in mezzo resta un conflitto vero', async () => {
     const { a, b, membro } = await famigliaConDue();
     await a.sync.sincronizza();

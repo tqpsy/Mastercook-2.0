@@ -103,7 +103,7 @@ export class Sincronizzatore {
       versione_app: this.o.versioneApp,
       dispositivo: this.o.dispositivo,
     };
-    await this.o.archivio.coda.add({
+    const ordine = await this.o.archivio.coda.add({
       id: comando.id,
       famiglia_id: comando.famiglia_id,
       comando,
@@ -111,6 +111,10 @@ export class Sincronizzatore {
       tentativi: 0,
       creato_il: this.o.ora().toISOString(),
     });
+    // Un comando dello stesso dispositivo può essere stato applicato mentre questo entrava in coda: `ribasaCoda` non
+    // lo vedeva ancora. Si riallinea ora; se invece viene applicato più tardi, `ribasaCoda` lo trova già in coda.
+    const riallineati = ribasa(tipo, comando.dati, this.applicati);
+    if (riallineati !== comando.dati) await this.o.archivio.coda.update(ordine, { comando: { ...comando, dati: riallineati } });
     await this.contaCoda();
     return comando.id;
   }
