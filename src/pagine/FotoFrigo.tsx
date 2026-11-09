@@ -198,8 +198,12 @@ export function FotoFrigo({ indice, luogo: luogoIniziale, chiudi }: { indice: In
             <p className="tenue piccolo">Configura il frigo in Impostazioni › Il mio frigorifero: ti dirò anche su che ripiano ho visto ogni cosa.</p>
           )}
           <label className="bottone primario pieno">
-            <span aria-hidden>📷</span> Scatta o scegli la foto
+            <span aria-hidden>📷</span> Scatta una foto
             <input type="file" accept="image/*" capture="environment" hidden aria-label="Foto del frigo" onChange={(e) => void leggi(e.target.files?.[0])} />
+          </label>
+          <label className="bottone pieno" style={{ marginTop: 8 }}>
+            <span aria-hidden>🖼️</span> Scegli dalla galleria del telefono
+            <input type="file" accept="image/*" hidden aria-label="Galleria del telefono per il frigo" onChange={(e) => void leggi(e.target.files?.[0])} />
           </label>
           <p className="tenue">Gemini di Google, con la chiave della famiglia: la foto non resta nell’app.</p>
         </>
