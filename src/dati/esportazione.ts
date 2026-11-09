@@ -131,3 +131,15 @@ export function controllaFile(testo: string): ControlloFile {
   }
   return { valido: true, file: file as FileEsportazione };
 }
+
+/** Nome del file di copia: «mastercook-famiglia-rossi-2026-11-09.json». Accenti tolti, mai due trattini di fila. */
+export function nomeFileEsportazione(nomeFamiglia: string, giorno: string): string {
+  const nome =
+    nomeFamiglia
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'famiglia';
+  return `mastercook-${nome}-${giorno}.json`;
+}

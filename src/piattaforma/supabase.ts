@@ -3,6 +3,7 @@
  */
 import { createClient, type Session, type SupabaseClient } from '@supabase/supabase-js';
 import { SUPABASE_CHIAVE, SUPABASE_URL } from '../config';
+import { eRifiutoDelServer } from '../dati/errori';
 import { type Comando, ErroreRete, type Esito, type Pagina, type Trasporto } from '../dati/tipi';
 
 let client: SupabaseClient | null = null;
@@ -51,11 +52,13 @@ interface ErrorePostgrest {
 /**
  * Traduce gli errori della chiamata: la rete assente o un server irraggiungibile diventano
  * ErroreRete (il comando si ripresenterà con lo stesso id); un accesso scaduto diventa un
- * rifiuto transitorio, così la coda si ferma finché non si accede di nuovo.
+ * rifiuto transitorio, così la coda si ferma finché non si accede di nuovo; un no deciso del server
+ * (400, 403, 409, 413, 422) diventa un rifiuto vero, che manda il comando in «da sistemare».
  */
 function errore(e: ErrorePostgrest): Esito | never {
   const scaduto = e.code === 'PGRST301' || e.code === 'PGRST303' || e.status === 401 || /jwt/i.test(e.message);
   if (scaduto) return { esito: 'rifiutato', transitorio: true, dettaglio: { motivo: 'non_autenticato' } };
+  if (eRifiutoDelServer(e.status)) return { esito: 'rifiutato', dettaglio: { motivo: 'errore_server', stato: e.status, codice: e.code } };
   throw new ErroreRete(e.message);
 }
 
@@ -78,7 +81,10 @@ export const trasportoSupabase: Trasporto & { entra(c: Comando): Promise<Esito> 
   entra: (comando) => chiama<Esito>('entra_con_invito', { comando }),
   async scarica(famiglia, dopo, limite) {
     const r = await chiama<Pagina | Esito>('scarica_modifiche', { p_famiglia: famiglia, p_dopo: dopo, p_limite: limite ?? 500 });
-    if ('esito' in r) return { righe: [], altre: false, errore: 'non_autenticato' };
+    if ('esito' in r) {
+      if (r.dettaglio.motivo !== 'non_autenticato') throw new ErroreRete(`scarico rifiutato (${String(r.dettaglio.stato ?? '')})`);
+      return { righe: [], altre: false, errore: 'non_autenticato' };
+    }
     return r;
   },
   async caricaFoto(percorso, file) {

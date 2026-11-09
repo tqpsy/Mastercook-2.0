@@ -58,6 +58,13 @@ describe('unità e quantità (T-UNI)', () => {
     expect(scala({ valore: 3, unita: 'pz' }, 4, 2)).toEqual({ valore: 1.5, unita: 'pz' });
     expect(scala({ valore: 1, unita: 'pz' }, 4, 1)).toEqual({ valore: 0.5, unita: 'pz' });
     expect(scala({ valore: 2, unita: 'g' }, 4, 1)).toEqual({ valore: 0.5, unita: 'g' });
+    expect(scala({ valore: 0.04, unita: 'g' }, 4, 1)).toEqual({ valore: 0.1, unita: 'g' });
+  });
+
+  it('formatta non scrive «1000 g» ma «1 kg»', () => {
+    expect(formatta({ valore: 999.96, unita: 'g' })).toBe('1 kg');
+    expect(formatta({ valore: 999.96, unita: 'ml' })).toBe('1 l');
+    expect(formatta({ valore: 999.4, unita: 'g' })).toBe('999,4 g');
   });
 });
 

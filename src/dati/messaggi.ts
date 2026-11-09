@@ -4,6 +4,7 @@ const MOTIVI: Record<string, string> = {
   eliminato: 'Nel frattempo è stato eliminato da un altro dispositivo.',
   non_trovato: 'Non esiste più.',
   dati_non_validi: 'Alcuni dati non sono validi.',
+  errore_server: 'Il server non ha accettato questa modifica. Puoi scartarla e rifarla.',
   nessun_campo: 'Non c’era niente da cambiare.',
   solo_amministratore: 'Solo chi amministra la famiglia può farlo.',
   ultimo_amministratore: 'Serve almeno un amministratore nella famiglia.',

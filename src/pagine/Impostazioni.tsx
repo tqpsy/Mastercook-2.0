@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { AntoninoImpostazioni } from './Antonino';
 import { VoceMioFrigo } from './MioFrigo';
 import { idDispositivo, righeAttive, useFamiglia, useVista } from '../dati/contesto';
-import { esporta } from '../dati/esportazione';
+import { esporta, nomeFileEsportazione } from '../dati/esportazione';
+import { oggi } from '../dominio/scadenze';
 import { spiegaMotivo } from '../dati/messaggi';
 import { VERSIONE_APP } from '../dati/tipi';
 import { impostaChiave, type StatoChiave, statoChiave } from '../piattaforma/fotoFrigo';
@@ -244,8 +245,7 @@ function IMieiDati({ nomeFamiglia, apriFamiglia }: { nomeFamiglia: string; apriF
     setStato('Preparo il file…');
     try {
       const file = await esporta(trasporto, famiglia);
-      const giorno = new Date().toISOString().slice(0, 10);
-      const nomeFile = `mastercook-${nomeFamiglia.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${giorno}.json`;
+      const nomeFile = nomeFileEsportazione(nomeFamiglia, oggi());
       const blob = new File([JSON.stringify(file, null, 2)], nomeFile, { type: 'application/json' });
       const fatto = `${file.conteggi.membro} persone, ${file.conteggi.vincolo_alimentare} tra allergie ed esigenze.`;
       // Sul telefono si apre la scelta di dove metterla (su iPhone: «Salva in File», anche iCloud Drive).

@@ -126,8 +126,10 @@ const GIORNO = new Intl.DateTimeFormat('it-IT', { weekday: 'short', day: 'numeri
 /** Testo leggibile: 1500 g → «1,5 kg», 750 ml → «750 ml», 1250 g → «1,25 kg», 2 pz → «2 pz». */
 export function formatta(q: Quantita | null | undefined): string {
   if (!q) return 'quantità da indicare';
-  if (q.unita === 'g' && q.valore >= 1000) return `${numero(3).format(q.valore / 1000)} kg`;
-  if (q.unita === 'ml' && q.valore >= 1000) return `${numero(3).format(q.valore / 1000)} l`;
+  // 999,96 g si scriverebbe «1000 g»: si guarda il valore già arrotondato come lo si mostra.
+  const mostrato = q.unita === 'pz' ? q.valore : Math.round(q.valore * 10) / 10;
+  if (q.unita === 'g' && mostrato >= 1000) return `${numero(3).format(q.valore / 1000)} kg`;
+  if (q.unita === 'ml' && mostrato >= 1000) return `${numero(3).format(q.valore / 1000)} l`;
   return `${numero(q.unita === 'pz' ? 2 : 1).format(q.valore)} ${q.unita}`;
 }
 
@@ -147,7 +149,8 @@ export function leggiNumero(testo: string): number | null {
 /** Scala una quantità per le porzioni: 4 porzioni base, 6 richieste → × 1,5. I pezzi si arrotondano al mezzo. */
 export function scala(q: Quantita, porzioniBase: number, porzioni: number): Quantita {
   const v = (q.valore * porzioni) / porzioniBase;
-  return { unita: q.unita, valore: q.unita === 'pz' ? Math.max(0.5, Math.round(v * 2) / 2) : v >= 10 ? Math.round(v) : Math.round(v * 10) / 10 };
+  // Una quantità vera non diventa mai «0 g»: sotto il decimo si resta a 0,1.
+  return { unita: q.unita, valore: q.unita === 'pz' ? Math.max(0.5, Math.round(v * 2) / 2) : v >= 10 ? Math.round(v) : Math.max(v > 0 ? 0.1 : 0, Math.round(v * 10) / 10) };
 }
 
 /** Prezzo all'italiana: 2.3 → «2,30 €». */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { componiFile, controllaFile } from './esportazione';
+import { componiFile, controllaFile, nomeFileEsportazione } from './esportazione';
 import type { RigaScaricata } from './tipi';
 
 const F = 'f1';
@@ -60,5 +60,13 @@ describe('esportazione', () => {
       conteggi: Object.fromEntries(Object.entries(f.conteggi).filter(([t]) => !menu.includes(t))),
     };
     expect(controllaFile(JSON.stringify(v2)).valido).toBe(true);
+  });
+});
+
+describe('nome del file di copia', () => {
+  it('toglie accenti e trattini doppi, e non resta mai senza nome', () => {
+    expect(nomeFileEsportazione('Famiglia Rossi', '2026-11-09')).toBe('mastercook-famiglia-rossi-2026-11-09.json');
+    expect(nomeFileEsportazione('È la città!', '2026-11-09')).toBe('mastercook-e-la-citta-2026-11-09.json');
+    expect(nomeFileEsportazione('🍝🍝', '2026-11-09')).toBe('mastercook-famiglia-2026-11-09.json');
   });
 });
