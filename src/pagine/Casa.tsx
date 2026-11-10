@@ -411,14 +411,19 @@ function RicettePerUrgenti({ indice, presto, lotti, giorno }: { indice: Indice; 
   const dati = useDatiMenu(useVista());
   const { esegui } = useFamiglia();
   const cenaOggi = dati.portate.some((p) => p.data === giorno && p.categoria === 'cena');
-  const proposte = ricettePerUrgenti(
-    indice,
-    presto.map((l) => l.ingrediente_id),
-    lotti.map((l) => l.ingrediente_id),
-    dati.persone,
-    dati.vincoli,
-    3,
-    dati.verifiche,
+  // Il calcolo passa per tutto il catalogo: si rifà solo se cambiano i dati, non a ogni disegno della scheda.
+  const proposte = useMemo(
+    () =>
+      ricettePerUrgenti(
+        indice,
+        presto.map((l) => l.ingrediente_id),
+        lotti.map((l) => l.ingrediente_id),
+        dati.persone,
+        dati.vincoli,
+        3,
+        dati.verifiche,
+      ),
+    [indice, presto, lotti, dati.persone, dati.vincoli, dati.verifiche],
   );
   if (!proposte.length) return null;
   return (

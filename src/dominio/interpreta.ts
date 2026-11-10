@@ -101,7 +101,22 @@ function cercaNelCatalogo(indice: Indice, pezzo: string): Ingrediente | undefine
 }
 
 /** Traduce un vincolo scritto a parole. */
+const RICORDATE = new WeakMap<Indice, Map<string, Interpretazione>>();
+
+/**
+ * Traduce un testo scritto a parole. Il risultato dipende solo dall'indice e dal testo, e chi valuta le ricette lo
+ * chiede per ogni ricetta: senza memoria, con qualche regola scritta a parole una sola scheda impiegava secondi.
+ * Il risultato non va modificato.
+ */
 export function interpreta(indice: Indice, testo: string): Interpretazione {
+  let perTesto = RICORDATE.get(indice);
+  if (!perTesto) RICORDATE.set(indice, (perTesto = new Map()));
+  let r = perTesto.get(testo);
+  if (!r) perTesto.set(testo, (r = calcolaInterpretazione(indice, testo)));
+  return r;
+}
+
+function calcolaInterpretazione(indice: Indice, testo: string): Interpretazione {
   const capiti: Capito[] = [];
   const nonCapiti: string[] = [];
   // Si spezza sul testo originale (virgole, «e», «o», «né»), poi si pulisce ogni pezzo.
