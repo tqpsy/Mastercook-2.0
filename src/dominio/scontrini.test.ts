@@ -55,7 +55,7 @@ describe('lettura dello scontrino', () => {
 
   it('prezzi letti male: barra al posto della virgola, lettera dell’IVA letta come cifra', () => {
     const t = leggiScontrino(
-      ['DESCRIZIONE', 'IPERAL VALT LATTE PS   1/35 A', 'BIO PRIMIA POLPA FIN   1720 A', 'PERE WILLIAMS G500   0.994', 'MENTADENT COLLUTORIO   4,990', 'TOTALE 8,73'].join('\n'),
+      ['DESCRIZIONE', 'IPERAL VALT LATTE PS   1/35 A', 'BIO PRIMIA POLPA FIN   1720 A', 'PERE WILLIAMS G500   0.994', 'MENTADENT COLLUTORIO   4,990', 'TOTALE 8,53'].join('\n'),
     );
     expect(t.righe.map((r) => r.prezzo)).toEqual([1.35, 1.2, 0.99, 4.99]);
     expect(t.righe.map((r) => r.senzaPrezzo)).toEqual([undefined, undefined, undefined, undefined]);
@@ -70,14 +70,24 @@ describe('lettura dello scontrino', () => {
     expect(t.righe).toEqual([
       { descrizione: 'MOLISANA PENNONI RIG', prezzo: 0, senzaPrezzo: true },
       { descrizione: 'PRIMIA YOGURT GRECO', prezzo: 0, senzaPrezzo: true },
-      { descrizione: 'IPERAL SPATZLE', prezzo: 1.99 },
+      { descrizione: 'IPERAL SPATZLE', prezzo: 1.99, iva: 'A' },
       { descrizione: 'PRIMIA YOGURT GRECO', prezzo: 0, senzaPrezzo: true },
     ]);
     expect(t).toMatchObject({ totale: 4.87, quadra: false });
   });
 
+  it('un solo prezzo illeggibile vale quanto manca al totale; se il pagamento smentisce il totale non si corregge niente', () => {
+    const t = leggiScontrino('DESCRIZIONE\nPANE   1,50 A\nLATTE   ip: |\nTOTALE 2,89\nCARTA   2,89');
+    expect(t.righe[1]).toMatchObject({ descrizione: 'LATTE', prezzo: 1.39, corretta: true });
+    expect(t).toMatchObject({ quadra: true, corretti: 1 });
+    // Il totale letto 5,00 ma il pagamento dice 2,89: è il totale a essere sbagliato, i prezzi restano.
+    const u = leggiScontrino('DESCRIZIONE\nPANE   1,50 A\nLATTE   1,39 A\nTOTALE 5,00\nCARTA   2,89');
+    expect(u.righe.map((r) => r.prezzo)).toEqual([1.5, 1.39]);
+    expect(u.corretti).toBe(0);
+  });
+
   it('un testo senza scontrino non inventa nulla', () => {
-    expect(leggiScontrino('ciao a tutti')).toEqual({ negozio: 'Ciao A Tutti', data: null, ora: null, totale: null, righe: [], quadra: false });
+    expect(leggiScontrino('ciao a tutti')).toEqual({ negozio: 'Ciao A Tutti', data: null, ora: null, totale: null, righe: [], corretti: 0, quadra: false });
     expect(leggiScontrino('').righe).toEqual([]);
     // Il totale che non torna si segnala.
     expect(leggiScontrino('PANE 1,50\nTOTALE 3,00').quadra).toBe(false);
@@ -132,7 +142,7 @@ describe('scontrini veri, letti da Tesseract', () => {
   it('pezzi letti male, prezzo sotto la descrizione, segni sporchi dopo il prezzo', () => {
     const s = leggiScontrino('DESCRIZIONE PREZZO\nYOGURT BIANCO\n2 xXx 0,99   1,98 B\nCARTA IGIENICA 4 ROT. 22% 2,30 |\nOLIO EVO 1L 4% 7,90 È\nTOTALF 12,18');
     expect(s.righe).toEqual([
-      { descrizione: 'YOGURT BIANCO', prezzo: 1.98, pezzi: 2 },
+      { descrizione: 'YOGURT BIANCO', prezzo: 1.98, pezzi: 2, iva: 'B' },
       { descrizione: 'CARTA IGIENICA 4 ROT.', prezzo: 2.3 },
       { descrizione: 'OLIO EVO 1L', prezzo: 7.9, formato: { quantita: 1000, unita: 'ml' } },
     ]);

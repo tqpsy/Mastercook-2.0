@@ -9,6 +9,7 @@
  * dopo il prezzo e righe spezzate su due linee. Una riga di cui si legge il nome ma non il prezzo non
  * sparisce: resta senza prezzo, e il conto con il totale dice quanto manca.
  */
+import { correggiPrezzi } from './quadratura';
 import { type Indice, type Ingrediente, normalizza } from './ricette';
 import type { UnitaBase } from './unita';
 
@@ -20,6 +21,12 @@ export interface RigaLetta {
   pezzi?: number;
   /** «0,856 kg x 1,99 €/kg»: il peso in grammi. */
   grammi?: number;
+  /** La lettera dell'aliquota IVA scritta dopo il prezzo («A», «B», «C»). */
+  iva?: string;
+  /** Lo sconto già tolto dal prezzo (il prezzo scritto sotto la riga). */
+  sconto?: number;
+  /** Il prezzo letto non tornava con il totale: è stato corretto (cifre confuse) o ricavato dal resto. */
+  corretta?: boolean;
   /** La descrizione si legge ma il prezzo no: la riga resta (con prezzo 0) perché lo scriva una persona. */
   senzaPrezzo?: boolean;
   /** Il formato scritto nella descrizione: «1L» → 1000 ml, «2X125G» → 250 g. */
@@ -34,11 +41,13 @@ export interface ScontrinoLetto {
   righe: RigaLetta[];
   /** La somma delle righe coincide con il totale: la lettura è probabilmente completa. */
   quadra: boolean;
+  /** Quanti prezzi sono stati corretti perché il conto tornasse. */
+  corretti: number;
 }
 
 /** Il prezzo in fondo alla riga, con quello che può seguirlo: «€», la lettera o la percentuale dell'IVA, un segno sporco. */
-const IMPORTO = /(-?\s?\d{1,4}\s?[.,:]\s?\d{2})(?![\d%])\s*(?:€|EUR|EURO)?\s*(?:[^\s\d]{1,2}|\d{1,2}\s?%)?\s*$/;
-const FINE_RIGHE = /\b(SUB\s?TOTALE|TOTALE|TOTAL)\b|^SUBTOT/;
+export const IMPORTO = /(-?\s?\d{1,4}\s?[.,:]\s?\d{2})(?![\d%])\s*(?:€|EUR|EURO)?\s*(?:([^\s\d]{1,2})|\d{1,2}\s?%)?\s*$/;
+export const FINE_RIGHE = /\b(SUB\s?TOTALE|TOTALE|TOTAL)\b|^SUBTOT/;
 
 /** Le due parole differiscono al più di una lettera (sostituita, in più o in meno). */
 function quasiUguali(a: string, b: string): boolean {
@@ -50,13 +59,13 @@ function quasiUguali(a: string, b: string): boolean {
 
 /** «TOTALE» anche letto male («TOTALF», «T0TALE», «TOTAIE»). */
 const eTotale = (linea: string) => linea.split(/[^A-Z0-9]+/).some((p) => p === 'TOTALE' || (p.length >= 5 && quasiUguali(p, 'TOTALE')));
-const fineRighe = (linea: string) => FINE_RIGHE.test(linea) || eTotale(linea);
-const DA_SALTARE =
+export const fineRighe = (linea: string) => FINE_RIGHE.test(linea) || eTotale(linea);
+export const DA_SALTARE =
   /\b(IVA|CONTANTE|CONTANTI|RESTO|PAGAMENTO|PAGATO|BANCOMAT|ELETTRONICO|RESO|ARROTONDAMENTO|IMPORTO|NUMERO|DOCUMENTO|SCONTRINO|BUONO|BUONI|PUNTI|SALDO|CASSA|CASSIERE|OPERATORE|TEL|TESSERA|ARTICOLI|VISA|MASTERCARD|MAESTRO|P\.?\s?IVA|C\.?F\.?)\b|CARTA (DI )?(CREDITO|DEBITO)/;
-const SCONTO = /\b(SCONTO|SC\.|SCONT|PROMO|OFFERTA|RIBASSO|RIDUZIONE|STORNO)\b/;
-const INTESTAZIONE_RIGHE = /\bDESCRIZIONE\b|\bPREZZO\s*\(?€?\)?\s*$/;
+export const SCONTO = /\b(SCONTO|SC\.|SCONT|PROMO|OFFERTA|RIBASSO|RIDUZIONE|STORNO)\b/;
+export const INTESTAZIONE_RIGHE = /\bDESCRIZIONE\b|\bPREZZO\s*\(?€?\)?\s*$/;
 /** «2 x 0,99» (la lettura sbaglia la x: «xXx», «×», «*»). */
-const PEZZI = /^(\d{1,3})\s*(?:PZ|N\.?)?\s*[X*×]{1,3}\s*(\d{1,4}[.,]\d{2})\b/;
+export const PEZZI = /^(\d{1,3})\s*(?:PZ|N\.?)?\s*[X*×]{1,3}\s*(\d{1,4}[.,]\d{2})\b/;
 /** «0,856 kg x 1,99 €/kg» oppure, alla Iper, «0,386 * 4,90Kg»: peso, poi prezzo al chilo. */
 const PESO = /(\d{1,3}[.,]\d{1,3})\s*KG\s*[X*×]\s*(\d{1,4}[.,]\d{2})|^(\d{1,3}[.,]\d{3})\s*[X*×]\s*(\d{1,4}[.,]\d{2})\s*(?:€\s*\/?\s*)?[^\s\d]{0,4}/;
 /** Ragione sociale nell'intestazione: il nome del negozio più affidabile. */
@@ -84,8 +93,8 @@ export function pulisciLinea(linea: string): string {
     .trim();
 }
 
-const numero = (s: string) => Number(s.replace(/\s/g, '').replace(',', '.'));
-const centesimi = (n: number) => Math.round(n * 100) / 100;
+export const numero = (s: string) => Number(s.replace(/\s/g, '').replace(',', '.'));
+export const centesimi = (n: number) => Math.round(n * 100) / 100;
 
 /** Il formato della confezione scritto nella descrizione, in unità base. */
 export function formatoDaDescrizione(descrizione: string): RigaLetta['formato'] {
@@ -155,6 +164,9 @@ function negozioDa(linee: string[]): string | null {
   return null;
 }
 
+/** La lettera dell'IVA dopo il prezzo (una sola lettera maiuscola). */
+const letteraIva = (importo: RegExpMatchArray): { iva?: string } => (/^[A-Z]$/.test(importo[2] ?? '') ? { iva: importo[2] } : {});
+
 /** Legge il testo di uno scontrino. Non inventa: quello che non trova resta null o fuori dalle righe. */
 export function leggiScontrino(testo: string): ScontrinoLetto {
   const linee = testo.split(/\r?\n/).map(pulisciLinea).filter(Boolean);
@@ -166,6 +178,11 @@ export function leggiScontrino(testo: string): ScontrinoLetto {
   let pezziSospesi: number | null = null;
   /** Gli altri importi che dovrebbero valere quanto il totale (subtotale, pagato): servono se il totale è letto male. */
   const altriTotali: number[] = [];
+  /** La legenda in fondo («A: IVA 4,00%») e l'IVA totale («DI CUI IVA»): servono a controllare i prezzi letti male. */
+  const aliquote: Record<string, number> = {};
+  let ivaTotale: number | null = null;
+  /** L'importo della riga del pagamento con carta («Isp Masterca 60,07»): vale il totale se il totale è letto male. */
+  let pagato: number | null = null;
 
   /** Una descrizione rimasta senza prezzo (la lettura l'ha rovinato): la riga resta, vuota, da completare. */
   const chiudiSospesa = () => {
@@ -201,6 +218,14 @@ export function leggiScontrino(testo: string): ScontrinoLetto {
       }
       continue;
     }
+    if (!inRighe) {
+      const legenda = linea.match(/\b([A-Z])\s*[:.;]?\s*IVA\s*(\d{1,2})(?:[.,]\d+)?\s*%/);
+      if (legenda) aliquote[legenda[1]] = Number(legenda[2]) / 100;
+      const diCui = /\bDI CUI\b/.test(linea) ? linea.match(IMPORTO) : null;
+      if (diCui && ivaTotale === null) ivaTotale = numero(diCui[1]);
+      const importoPagato = linea.match(IMPORTO);
+      if (importoPagato && pagato === null && !legenda && !/\bIVA\b|\bDI CUI\b|RESTO|CONTANT|ARROTOND|\bDOC/.test(linea) && (linea.slice(0, importoPagato.index).match(/[A-Z]/g) ?? []).length >= 3) pagato = numero(importoPagato[1]);
+    }
     if (!inRighe || DA_SALTARE.test(linea)) continue;
     const peso = linea.match(PESO);
     const pezzi = peso ? null : linea.match(PEZZI);
@@ -214,7 +239,7 @@ export function leggiScontrino(testo: string): ScontrinoLetto {
       const precedente = righe.at(-1);
       if (importo && descrizioneSospesa) {
         // «YOGURT» poi «2 x 0,99   1,98»: descrizione sopra, pezzi e prezzo sotto.
-        aggiungi(descrizioneSospesa, numero(importo[1]), { pezzi: n });
+        aggiungi(descrizioneSospesa, numero(importo[1]), { pezzi: n, ...letteraIva(importo) });
         continue;
       }
       // «YOGURT 1,98» poi «2 x 0,99»: i pezzi vanno alla riga sopra; altrimenti a quella sotto.
@@ -242,7 +267,10 @@ export function leggiScontrino(testo: string): ScontrinoLetto {
 
     if (SCONTO.test(linea) || valore < 0) {
       const precedente = righe.at(-1);
-      if (precedente) precedente.prezzo = centesimi(Math.max(0, precedente.prezzo - Math.abs(valore)));
+      if (precedente) {
+        precedente.prezzo = centesimi(Math.max(0, precedente.prezzo - Math.abs(valore)));
+        precedente.sconto = centesimi((precedente.sconto ?? 0) + Math.abs(valore));
+      }
       continue;
     }
     if ((descrizione.match(/[A-Z]/g) ?? []).length < 2) {
@@ -255,15 +283,39 @@ export function leggiScontrino(testo: string): ScontrinoLetto {
       chiudiSospesa();
     }
     const grammi = peso ? Math.round(numero(peso[1] ?? peso[3]) * 1000) : 0;
-    aggiungi(descrizione, valore, grammi > 0 ? { grammi } : {});
+    aggiungi(descrizione, valore, { ...(grammi > 0 ? { grammi } : {}), ...letteraIva(importo) });
   }
 
   chiudiSospesa();
   // Un testo in cui nessuna riga ha un prezzo non è uno scontrino: niente righe inventate.
   if (righe.every((r) => r.senzaPrezzo)) righe.length = 0;
-  const somma = centesimi(righe.reduce((s, r) => s + r.prezzo, 0));
+  if (totale === null && righe.length) totale = pagato;
+  let somma = centesimi(righe.reduce((s, r) => s + r.prezzo, 0));
   // Il totale letto non torna ma il subtotale o l'importo pagato sì: era il totale a essere letto male.
   if (righe.length && (totale === null || Math.abs(somma - totale) >= 0.011) && altriTotali.some((x) => Math.abs(x - somma) < 0.011)) totale = somma;
+  let corretti = 0;
+  if (righe.length && totale !== null && Math.abs(somma - totale) >= 0.011) {
+    const senza = righe.filter((r) => r.senzaPrezzo);
+    if (senza.length === 1 && totale - somma > 0) {
+      // Una sola riga senza prezzo: vale quanto manca per arrivare al totale.
+      Object.assign(senza[0], { prezzo: centesimi(totale - somma), corretta: true });
+      delete senza[0].senzaPrezzo;
+      corretti = 1;
+    } else if (!senza.length && !(pagato !== null && Math.abs(pagato - totale) >= 0.011)) {
+      // (Se il pagamento dice un'altra cifra, è il totale a essere letto male: i prezzi non si toccano.)
+      const nuovi = correggiPrezzi(
+        righe.map((r) => ({ cent: Math.round(r.prezzo * 100), nome: r.descrizione, iva: r.iva, modificabile: r.sconto === undefined })),
+        { totale: Math.round(totale * 100), ...(ivaTotale !== null ? { ivaTotale: Math.round(ivaTotale * 100) } : {}), aliquote },
+      );
+      for (const [i, c] of (nuovi ?? []).entries()) {
+        if (c === Math.round(righe[i].prezzo * 100)) continue;
+        righe[i].prezzo = c / 100;
+        righe[i].corretta = true;
+        corretti++;
+      }
+    }
+    somma = centesimi(righe.reduce((s, r) => s + r.prezzo, 0));
+  }
   const { data, ora } = dataOraDa(linee.join('\n'));
   return {
     negozio: negozioDa(linee),
@@ -271,6 +323,7 @@ export function leggiScontrino(testo: string): ScontrinoLetto {
     ora,
     totale,
     righe,
+    corretti,
     quadra: totale !== null && righe.length > 0 && Math.abs(somma - totale) < 0.011,
   };
 }
