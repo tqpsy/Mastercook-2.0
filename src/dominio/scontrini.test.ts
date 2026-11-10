@@ -86,6 +86,13 @@ describe('lettura dello scontrino', () => {
     expect(u.corretti).toBe(0);
   });
 
+  it('uno scontrino ritagliato (senza intestazione) non ha un negozio: una riga con il prezzo non è un nome', () => {
+    const s = leggiScontrino('LATTE ESL BIO 3,12 B\nSALVASLIP COOP MAXI 2,16 C\nSCANSIONATO CON CAMSCANNER');
+    expect(s.negozio).toBeNull();
+    // Il piè di pagina senza prezzo (filigrana) non è un prodotto.
+    expect(s.righe.map((r) => r.descrizione)).toEqual(['LATTE ESL BIO', 'SALVASLIP COOP MAXI']);
+  });
+
   it('un testo senza scontrino non inventa nulla', () => {
     expect(leggiScontrino('ciao a tutti')).toEqual({ negozio: 'Ciao A Tutti', data: null, ora: null, totale: null, righe: [], corretti: 0, quadra: false });
     expect(leggiScontrino('').righe).toEqual([]);

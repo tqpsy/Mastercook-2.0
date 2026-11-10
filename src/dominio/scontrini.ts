@@ -62,7 +62,7 @@ const eTotale = (linea: string) => linea.split(/[^A-Z0-9]+/).some((p) => p === '
 export const fineRighe = (linea: string) => FINE_RIGHE.test(linea) || eTotale(linea);
 export const DA_SALTARE =
   /\b(IVA|CONTANTE|CONTANTI|RESTO|PAGAMENTO|PAGATO|BANCOMAT|ELETTRONICO|RESO|ARROTONDAMENTO|IMPORTO|NUMERO|DOCUMENTO|SCONTRINO|BUONO|BUONI|PUNTI|SALDO|CASSA|CASSIERE|OPERATORE|TEL|TESSERA|ARTICOLI|VISA|MASTERCARD|MAESTRO|P\.?\s?IVA|C\.?F\.?)\b|CARTA (DI )?(CREDITO|DEBITO)/;
-export const SCONTO = /\b(SCONTO|SC\.|SCONT|PROMO|OFFERTA|RIBASSO|RIDUZIONE|STORNO)\b/;
+export const SCONTO = /\b(SCONTO|SC\.|SCONT|PROMO|OFFERTA|RIBASSO|RIDUZIONE|STORNO|COUPON)\b|TOO\s?GOO?D|TO\s?GO\b/;
 export const INTESTAZIONE_RIGHE = /\bDESCRIZIONE\b|\bPREZZO\s*\(?€?\)?\s*$/;
 
 /** Quante lettere diverse (sostituite, in più o in meno) ci sono tra due parole. */
@@ -77,7 +77,14 @@ function distanza(a: string, b: string): number {
 }
 
 /** L'intestazione delle righe, anche letta male («DESCRIZTONE»). */
-export const eIntestazione = (linea: string) => INTESTAZIONE_RIGHE.test(linea) || linea.split(/[^A-Z]+/).some((p) => p.length >= 9 && p.length <= 12 && distanza(p, 'DESCRIZIONE') <= 2);
+export const eIntestazione = (linea: string) => {
+  if (INTESTAZIONE_RIGHE.test(linea)) return true;
+  const parole = linea.split(/[^A-Z]+/);
+  if (parole.some((p) => p.length >= 9 && p.length <= 12 && distanza(p, 'DESCRIZIONE') <= 2)) return true;
+  // «PREZZO IVA» letto «PREZZD TVA»: la parola e, accanto, l'IVA o il totale.
+  return parole.some((p) => p.length >= 5 && p.length <= 7 && distanza(p, 'PREZZO') <= 1) && parole.some((p) => /^[IT1L]VA$/.test(p) || p === 'TOTALE' || p === 'EUR');
+};
+
 
 /** Dove finiscono le righe: il totale (anche letto male) o il numero di articoli che lo precede. */
 export const eFineRighe = (linea: string) => fineRighe(linea) || /\bARTICOLI\b|COMPLESSIV/.test(linea);
@@ -100,9 +107,11 @@ export function pulisciLinea(linea: string): string {
     // Il prezzo letto con una barra o un apice al posto della virgola («1/35 A»), o con la barra letta 7 prima della lettera dell'IVA («1720 A»).
     .replace(/(\s\d{1,3})[/'’`´](\d{2})(?=\s?[A-Z]?$)/, '$1,$2')
     .replace(/(\s\d)7(\d{2})(?=\s[ABC]$)/, '$1,$2')
+    // Dopo il prezzo, una cifra sola al posto della lettera dell'IVA («0,20 0» per «0,20 D»).
+    .replace(/(^|\s)(-?\d{1,4}[.,]\d{2}) [0468]$/, '$1$2')
     // La lettera dell'IVA attaccata al prezzo e letta come cifra («0,994» per «0,99 A», «4,990» per «4,99 C»).
     // Lo 0 solo se il numero è almeno 1: «0,850» è un peso, non un prezzo.
-    .replace(/(\s\d{1,4}[.,]\d{2})(\d)$/, (x, prezzo: string, cifra: string) => ('468'.includes(cifra) || (cifra === '0' && !/^\s0/.test(prezzo)) ? prezzo : x))
+    .replace(/(^|\s)(\d{1,4}[.,]\d{2})(\d)$/, (x, prima: string, prezzo: string, cifra: string) => ('468'.includes(cifra) || (cifra === '0' && !/^0/.test(prezzo)) ? `${prima}${prezzo}` : x))
     .replace(/(^|[\s*X])([\dO]{1,4}) ?([.,]) ?([\dO]{2})(?=$|[\s%A-Z])/g, (_, a: string, i: string, sep: string, d: string) =>
       /\d/.test(i + d) ? `${a}${i.replace(/O/g, '0')}${sep}${d.replace(/O/g, '0')}` : `${a}${i}${sep}${d}`,
     )
@@ -171,11 +180,13 @@ const nomeProprio = (l: string) =>
 function negozioDa(linee: string[]): string | null {
   const intestazione = linee.slice(0, 15);
   // La ragione sociale («IPER MONTEBELLO S.P.A.») è quasi sempre il nome giusto.
-  const societa = intestazione.find((l) => SOCIETA.test(l) && !/^(VIA|CORSO|PIAZZA|V\.LE)\b/.test(l) && !/\d{5,}/.test(l));
+  const societa = intestazione.find((l) => SOCIETA.test(l) && !IMPORTO.test(l) && !/^(VIA|CORSO|PIAZZA|V\.LE)\b/.test(l) && !/\d{5,}/.test(l));
   if (societa) return nomeProprio(societa);
+  // Un testo con prezzi ma senza intestazione («documento commerciale», «descrizione») è uno scontrino ritagliato: le prime righe sono prodotti.
+  if (linee.some((l) => IMPORTO.test(l)) && !linee.some((l) => /DOCUMENTO|COMMERCIALE|DESCRIZIONE|FISCALE|SCONTRINO/.test(l))) return null;
   for (const l of linee.slice(0, 6)) {
     // Niente indirizzi, indirizzi web, orari (lo screenshot ha in alto l'ora del telefono).
-    if ((l.match(/[A-Z]/g) ?? []).length < 3 || DA_SALTARE.test(l) || /^VIA\b|^CORSO\b|^PIAZZA\b|^V\.LE\b|HTTP|WWW|\.(IT|COM)\b|\d{1,2}:\d{2}/.test(l)) continue;
+    if ((l.match(/[A-Z]/g) ?? []).length < 3 || DA_SALTARE.test(l) || IMPORTO.test(l) || /^VIA\b|^CORSO\b|^PIAZZA\b|^V\.LE\b|HTTP|WWW|\.(IT|COM)\b|\d{1,2}:\d{2}/.test(l)) continue;
     return nomeProprio(l);
   }
   return null;
@@ -244,6 +255,12 @@ export function leggiScontrino(testo: string): ScontrinoLetto {
       if (importoPagato && pagato === null && !legenda && !/\bIVA\b|\bDI CUI\b|RESTO|CONTANT|ARROTOND|\bDOC/.test(linea) && (linea.slice(0, importoPagato.index).match(/[A-Z]/g) ?? []).length >= 3) pagato = numero(importoPagato[1]);
     }
     if (!inRighe || DA_SALTARE.test(linea)) continue;
+    // «2 PANE 0,49 0,98»: quantità, prezzo unitario e totale di riga (colonne QTA, PREZZO, TOTALE).
+    const colonne = linea.match(/^(\d{1,3})\s+(\D.*?)\s+(\d{1,4}[.,]\d{2})\s+(\d{1,4}[.,]\d{2})\s*([A-Z])?$/);
+    if (colonne && !/^[X*×\s]+$/.test(colonne[2]) && Math.abs(Number(colonne[1]) * numero(colonne[3]) - numero(colonne[4])) < 0.011) {
+      aggiungi(colonne[2], numero(colonne[4]), { pezzi: Number(colonne[1]), ...(colonne[5] ? { iva: colonne[5] } : {}) });
+      continue;
+    }
     const peso = linea.match(PESO);
     const pezzi = peso ? null : linea.match(PEZZI);
     let importo = linea.match(IMPORTO);
@@ -304,6 +321,8 @@ export function leggiScontrino(testo: string): ScontrinoLetto {
   }
 
   chiudiSospesa();
+  // Senza totale (scontrino ritagliato) le righe di testo in fondo senza prezzo sono piè di pagina o filigrane, non prodotti.
+  if (totale === null && pagato === null) while (righe.length && righe.at(-1)!.senzaPrezzo) righe.pop();
   // Un testo in cui nessuna riga ha un prezzo non è uno scontrino: niente righe inventate.
   if (righe.every((r) => r.senzaPrezzo)) righe.length = 0;
   if (totale === null && righe.length) totale = pagato;

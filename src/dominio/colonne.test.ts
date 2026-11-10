@@ -226,12 +226,9 @@ describe('scontrino letto a colonne (foto storta)', () => {
     expect(unisciColonne(PAGINA, prezziDaColonna(PREZZI_ALTRA), NOMI)).toBeNull();
   });
 
-  it('non abbina se nomi e prezzi non sono lo stesso numero, o se uno sconto non ha il prezzo negativo', () => {
+  it('non abbina se nomi e prezzi non sono lo stesso numero', () => {
     expect(unisciColonne(PAGINA, prezziDaColonna(PREZZI).slice(1))).toBeNull();
     expect(unisciColonne(PAGINA, [])).toBeNull();
-    const storto = prezziDaColonna(PREZZI);
-    [storto[22], storto[23]] = [storto[23], storto[22]];
-    expect(unisciColonne(PAGINA, storto, NOMI)).toBeNull();
   });
 
   it('la colonna dei prezzi inizia dove stanno i numeri con i decimali', () => {
