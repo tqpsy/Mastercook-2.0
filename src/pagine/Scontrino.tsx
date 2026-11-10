@@ -123,7 +123,7 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
       return {
         id,
         descrizione: r.descrizione,
-        euro: testoEuro(r.prezzo),
+        euro: r.senzaPrezzo ? '' : testoEuro(r.prezzo),
         azione: abbinate[i] ? `abbina:${abbinate[i]}` : ing ? 'casa' : 'altro',
         ing,
         numero: q ? String(q.quantita).replace('.', ',') : '',
@@ -314,6 +314,11 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
           {qr ? 'Rileggi il QR' : 'Leggi il QR dello scontrino (facoltativo)'}
         </button>
       </p>
+      {righe.some((r) => !r.euro.trim()) && (
+        <div className="avviso attenzione">
+          Di {righe.filter((r) => !r.euro.trim()).length} righe non sono riuscito a leggere il prezzo: scrivilo guardando lo scontrino.
+        </div>
+      )}
       {tot !== null && Math.abs(somma - tot) > 0.01 && (
         <div className="avviso attenzione">
           Le righe fanno {formattaEuro(somma)}, il totale è {formattaEuro(tot)}: controlla che non manchi niente.

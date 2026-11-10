@@ -53,6 +53,29 @@ describe('lettura dello scontrino', () => {
     expect(t).toMatchObject({ data: '2026-11-03', ora: '09:05', quadra: true });
   });
 
+  it('prezzi letti male: barra al posto della virgola, lettera dell’IVA letta come cifra', () => {
+    const t = leggiScontrino(
+      ['DESCRIZIONE', 'IPERAL VALT LATTE PS   1/35 A', 'BIO PRIMIA POLPA FIN   1720 A', 'PERE WILLIAMS G500   0.994', 'MENTADENT COLLUTORIO   4,990', 'TOTALE 8,73'].join('\n'),
+    );
+    expect(t.righe.map((r) => r.prezzo)).toEqual([1.35, 1.2, 0.99, 4.99]);
+    expect(t.righe.map((r) => r.senzaPrezzo)).toEqual([undefined, undefined, undefined, undefined]);
+    // Un peso o una data non diventano prezzi.
+    expect(leggiScontrino('DESCRIZIONE\nBANANE   0,850\nPANE 1,50\n10/11/2026 18:18').righe.filter((r) => !r.senzaPrezzo).map((r) => r.prezzo)).toEqual([1.5]);
+  });
+
+  it('una riga con il nome chiaro e il prezzo rovinato resta, senza prezzo, e il conto non torna', () => {
+    const t = leggiScontrino(
+      ['DESCRIZIONE', 'MOLISANA PENNONI RIG   ip: |', 'X6', 'PRIMIA YOGURT GRECO   5’ B', 'IPERAL SPATZLE   1,99 A', 'PRIMIA YOGURT GRECO   0° SE', 'TOTALE 4,87'].join('\n'),
+    );
+    expect(t.righe).toEqual([
+      { descrizione: 'MOLISANA PENNONI RIG', prezzo: 0, senzaPrezzo: true },
+      { descrizione: 'PRIMIA YOGURT GRECO', prezzo: 0, senzaPrezzo: true },
+      { descrizione: 'IPERAL SPATZLE', prezzo: 1.99 },
+      { descrizione: 'PRIMIA YOGURT GRECO', prezzo: 0, senzaPrezzo: true },
+    ]);
+    expect(t).toMatchObject({ totale: 4.87, quadra: false });
+  });
+
   it('un testo senza scontrino non inventa nulla', () => {
     expect(leggiScontrino('ciao a tutti')).toEqual({ negozio: 'Ciao A Tutti', data: null, ora: null, totale: null, righe: [], quadra: false });
     expect(leggiScontrino('').righe).toEqual([]);

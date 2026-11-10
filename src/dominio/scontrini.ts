@@ -6,7 +6,8 @@
  * Il formato è quello del «documento commerciale» italiano: intestazione del negozio, righe con
  * descrizione, aliquota IVA e prezzo, eventuali sconti sotto la riga, poi totale, pagamento, data e ora.
  * La lettura dalla foto sbaglia: qui si accettano virgole o punti, simboli dell'euro, lettere dell'IVA
- * dopo il prezzo e righe spezzate su due linee.
+ * dopo il prezzo e righe spezzate su due linee. Una riga di cui si legge il nome ma non il prezzo non
+ * sparisce: resta senza prezzo, e il conto con il totale dice quanto manca.
  */
 import { type Indice, type Ingrediente, normalizza } from './ricette';
 import type { UnitaBase } from './unita';
@@ -19,6 +20,8 @@ export interface RigaLetta {
   pezzi?: number;
   /** «0,856 kg x 1,99 €/kg»: il peso in grammi. */
   grammi?: number;
+  /** La descrizione si legge ma il prezzo no: la riga resta (con prezzo 0) perché lo scriva una persona. */
+  senzaPrezzo?: boolean;
   /** Il formato scritto nella descrizione: «1L» → 1000 ml, «2X125G» → 250 g. */
   formato?: { quantita: number; unita: UnitaBase };
 }
@@ -68,6 +71,12 @@ export function pulisciLinea(linea: string): string {
     .toUpperCase()
     .replace(/€/g, ' ')
     .replace(/\s+/g, ' ')
+    // Il prezzo letto con una barra o un apice al posto della virgola («1/35 A»), o con la barra letta 7 prima della lettera dell'IVA («1720 A»).
+    .replace(/(\s\d{1,3})[/'’`´](\d{2})(?=\s?[A-Z]?$)/, '$1,$2')
+    .replace(/(\s\d)7(\d{2})(?=\s[ABC]$)/, '$1,$2')
+    // La lettera dell'IVA attaccata al prezzo e letta come cifra («0,994» per «0,99 A», «4,990» per «4,99 C»).
+    // Lo 0 solo se il numero è almeno 1: «0,850» è un peso, non un prezzo.
+    .replace(/(\s\d{1,4}[.,]\d{2})(\d)$/, (x, prezzo: string, cifra: string) => ('468'.includes(cifra) || (cifra === '0' && !/^\s0/.test(prezzo)) ? prezzo : x))
     .replace(/(^|[\s*X])([\dO]{1,4}) ?([.,]) ?([\dO]{2})(?=$|[\s%A-Z])/g, (_, a: string, i: string, sep: string, d: string) =>
       /\d/.test(i + d) ? `${a}${i.replace(/O/g, '0')}${sep}${d.replace(/O/g, '0')}` : `${a}${i}${sep}${d}`,
     )
@@ -158,6 +167,17 @@ export function leggiScontrino(testo: string): ScontrinoLetto {
   /** Gli altri importi che dovrebbero valere quanto il totale (subtotale, pagato): servono se il totale è letto male. */
   const altriTotali: number[] = [];
 
+  /** Una descrizione rimasta senza prezzo (la lettura l'ha rovinato): la riga resta, vuota, da completare. */
+  const chiudiSospesa = () => {
+    if (descrizioneSospesa) {
+      // Del prezzo rovinato resta spesso un residuo in coda («5’ SOB», «IP: |»): via le parti finali corte o con segni strani.
+      const parole = descrizioneSospesa.split(' ');
+      while (parole.length > 1 && (parole.at(-1)!.replace(/[^A-Z0-9]/g, '').length <= 2 || /[^A-Z0-9.)]/.test(parole.at(-1)!)) && parole.slice(0, -1).some((x) => x.replace(/[^A-Z0-9]/g, '').length >= 4)) parole.pop();
+      righe.push({ descrizione: parole.join(' ').replace(/[^A-Z0-9.)]+$/, '').slice(0, 120), prezzo: 0, senzaPrezzo: true });
+    }
+    descrizioneSospesa = null;
+  };
+
   const aggiungi = (descrizione: string, prezzo: number, extra: Partial<RigaLetta> = {}) => {
     const riga: RigaLetta = { descrizione: descrizione.slice(0, 120), prezzo, ...extra };
     if (pezziSospesi && riga.pezzi === undefined) riga.pezzi = pezziSospesi;
@@ -171,6 +191,7 @@ export function leggiScontrino(testo: string): ScontrinoLetto {
   for (const [i, linea] of linee.entries()) {
     if (inizio >= 0 && i <= inizio) continue;
     if (fineRighe(linea) || (!inRighe && /\b(PAGAMENTO|PAGATO|ELETTRONICO)\b/.test(linea))) {
+      if (inRighe) chiudiSospesa();
       inRighe = false;
       const importo = linea.match(IMPORTO);
       if (importo && !/\bIVA\b|RESTO|CONTANT/.test(linea)) altriTotali.push(numero(importo[1]));
@@ -203,7 +224,10 @@ export function leggiScontrino(testo: string): ScontrinoLetto {
     }
     if (!importo) {
       // Una descrizione senza prezzo: il prezzo è sulla linea sotto (peso o solo importo).
-      if (!peso && (linea.match(/[A-Z]/g) ?? []).length >= 3) descrizioneSospesa = linea;
+      if (!peso && (linea.match(/[A-Z]/g) ?? []).length >= 3) {
+        chiudiSospesa();
+        descrizioneSospesa = linea;
+      }
       continue;
     }
     const valore = numero(importo[1]);
@@ -226,11 +250,17 @@ export function leggiScontrino(testo: string): ScontrinoLetto {
       descrizione = descrizioneSospesa;
     } else if (peso && descrizioneSospesa) {
       descrizione = descrizioneSospesa;
+    } else {
+      // La riga di sopra aveva il nome ma non il prezzo: questa è un'altra riga.
+      chiudiSospesa();
     }
     const grammi = peso ? Math.round(numero(peso[1] ?? peso[3]) * 1000) : 0;
     aggiungi(descrizione, valore, grammi > 0 ? { grammi } : {});
   }
 
+  chiudiSospesa();
+  // Un testo in cui nessuna riga ha un prezzo non è uno scontrino: niente righe inventate.
+  if (righe.every((r) => r.senzaPrezzo)) righe.length = 0;
   const somma = centesimi(righe.reduce((s, r) => s + r.prezzo, 0));
   // Il totale letto non torna ma il subtotale o l'importo pagato sì: era il totale a essere letto male.
   if (righe.length && (totale === null || Math.abs(somma - totale) >= 0.011) && altriTotali.some((x) => Math.abs(x - somma) < 0.011)) totale = somma;
