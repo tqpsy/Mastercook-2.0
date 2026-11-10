@@ -18,6 +18,7 @@ import { descriviLivello, eBasso, eLivello, LIVELLI, type Livello, puoAOcchio, t
 import { CercaIngrediente } from '../ui/CercaIngrediente';
 import { type ProdottoScansionato, ScansionaProdotto, useProdotti } from '../ui/CodiceProdotto';
 import { Scanner } from '../ui/Scanner';
+import { FotoData } from '../ui/FotoData';
 import { FoglioSchedaProdotto } from '../ui/SchedaProdotto';
 import { chiediAOpenFoodFacts } from '../ui/openFoodFacts';
 import { type SchedaProdotto, schedaVuota } from '../dominio/schedaProdotto';
@@ -725,6 +726,14 @@ function NuovoLotto({ indice, luogo: luogoIniziale, chiudi }: { indice: Indice; 
               </button>
             </div>
             {(sceltaData === 'scadenza' || sceltaData === 'tmc') && <input type="date" aria-label="Data" value={data} min={piuGiorni(giorno, -365)} onChange={(e) => setData(e.target.value)} />}
+            {(sceltaData === 'scadenza' || sceltaData === 'tmc') && (
+              <FotoData
+                letta={(d) => {
+                  setData(d.data);
+                  if (d.tipo) setSceltaData(d.tipo);
+                }}
+              />
+            )}
             {sceltaData === 'nessuna' && (
               <>
                 <label className="riga">
@@ -1040,6 +1049,14 @@ function SchedaLotto({ indice, lotto: l, giorno, chiudi }: { indice: Indice; lot
                 )}
               </div>
               {tipo !== 'sconosciuta' && <input type="date" aria-label="Data" value={data} onChange={(e) => setData(e.target.value)} />}
+              {tipo !== 'sconosciuta' && (
+                <FotoData
+                  letta={(d) => {
+                    setData(d.data);
+                    if (d.tipo) setTipo(d.tipo);
+                  }}
+                />
+              )}
             </>
           )}
           {errore && (
