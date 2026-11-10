@@ -391,6 +391,7 @@ test('foto del frigo: prima l’avviso su Google, poi si controlla e in casa ent
   await foglio.getByRole('button', { name: 'Chiudi' }).click();
 
   await page.getByRole('button', { name: 'Impostazioni' }).click();
+  await page.getByRole('heading', { name: 'Foto del frigo' }).click();
   const chiave = page.getByLabel('Chiave Gemini', { exact: true });
   await expect(chiave).toContainText('Nessuna chiave');
   await page.getByLabel('Chiave Gemini della famiglia').fill('AIzaProva_chiave-della-famiglia-1234');
