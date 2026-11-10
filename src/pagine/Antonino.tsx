@@ -18,6 +18,8 @@ import {
 import { comandoRicetta, leggiPiano, type Piano, pianoDaLettura, regoleConPiano, riassuntoPiano, ricetteNuove } from '../dominio/piano';
 import { type ErrorePiano, leggiPianoConGemini } from '../piattaforma/fotoFrigo';
 import { riduciFoto } from '../ui/Foto';
+import { Foglio } from '../ui/Foglio';
+import { Icona } from '../ui/Icona';
 import type { Indice } from '../dominio/ricette';
 import { oggi } from '../dominio/scadenze';
 import faccia from '../ui/antonino.webp';
@@ -83,6 +85,7 @@ export function AntoninoImpostazioni() {
   const { regole, memoria } = useAntonino();
   const impara = useImpara();
   const [aperto, setAperto] = useState(false);
+  const [foglio, setFoglio] = useState(false);
   const indice = useIndice(vista);
   const modificate = Object.keys(regoleDaSalvare(regole)).length > 0;
   const ricordi = memoria.scartate.size + memoria.scelte.size + memoria.maiPiu.size;
@@ -103,7 +106,23 @@ export function AntoninoImpostazioni() {
   return (
     <>
       <h2>Antonino</h2>
-      <div className="scheda antonino-impostazioni">
+      <div className="scheda">
+        <button className="voce" onClick={() => setFoglio(true)}>
+          <span className="emoji" aria-hidden>
+            <FacciaAntonino piccola />
+          </span>
+          <span className="cresce">
+            <strong>Antonino</strong>
+            <span className="tenue" style={{ display: 'block' }}>
+              Il menu della settimana, il piano del nutrizionista e quello che ha imparato
+            </span>
+          </span>
+          <Icona nome="avanti" />
+        </button>
+      </div>
+      {foglio && (
+        <Foglio titolo="Antonino" chiudi={() => setFoglio(false)} alto>
+      <div className="antonino-impostazioni">
         <Fumetto>
           Sono Antonino: preparo il menu della settimana e vi consiglio cosa cucinare. Propongo solo piatti adatti a chi mangia; qui sotto potete insegnarmi come
           volete la settimana.
@@ -180,6 +199,8 @@ export function AntoninoImpostazioni() {
           </button>
         )}
       </div>
+        </Foglio>
+      )}
     </>
   );
 }

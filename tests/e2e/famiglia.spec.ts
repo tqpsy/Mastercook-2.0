@@ -81,7 +81,7 @@ test('invito: chi apre il link entra con un tocco e vede la famiglia; le modific
   const { page: telefono } = await apri(browser, luca, info.project.use);
   await creaFamiglia(telefono, 'Casa Invito');
   await telefono.getByRole('button', { name: 'Impostazioni' }).click();
-  await telefono.getByRole('heading', { name: 'Inviti' }).click();
+  await telefono.getByRole('heading', { name: 'Chi usa l’app' }).click();
   await telefono.getByRole('button', { name: 'Crea un link d’invito' }).click();
   await expect(telefono.getByRole('button', { name: 'Condividi' })).toBeVisible();
   const [invito] = await sql<{ codice: string }>(`select codice from invito order by creato_il desc limit 1`);
@@ -151,6 +151,7 @@ test('importazione dal vecchio Mastercook: rapporto prima, poi famiglia nuova; s
 
   // Ritorno indietro: si elimina la famiglia importata riscrivendone il nome.
   await page.getByRole('button', { name: 'Impostazioni' }).click();
+  await page.getByRole('heading', { name: 'Famiglia', exact: true }).click();
   await page.getByText('Elimina questa famiglia').click();
   const elimina = page.getByRole('button', { name: 'Elimina per sempre' });
   await expect(elimina).toBeDisabled();

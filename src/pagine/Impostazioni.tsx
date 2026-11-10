@@ -41,57 +41,59 @@ export function Impostazioni({
 
   return (
     <>
-      <div className="scheda">
-        <button className="voce" onClick={vaiFamiglia}>
-          <span className="emoji" aria-hidden>
-            <Icona nome="famiglia" />
-          </span>
-          <span className="cresce">
-            <strong>Famiglia</strong>
-            <span className="tenue" style={{ display: 'block' }}>
-              Persone, allergie, gusti e pasti fuori casa
-            </span>
-          </span>
-          <Icona nome="avanti" />
-        </button>
-        <VoceSalvataggio />
-      </div>
+      <details className="sezione">
+        <summary>
+          <h2>Questo dispositivo</h2>
+        </summary>
+        <div className="scheda">
+          <SceltaTema />
+          <p>
+            Accesso come <strong>{email}</strong>
+          </p>
+          <Aggiornamento />
+          <button className="bottone pieno" onClick={esci}>
+            Esci
+          </button>
+        </div>
+      </details>
 
       <details className="sezione">
-<summary><h2>La tua famiglia</h2></summary>
-      <div className="scheda">
-        {famiglia && amministratore ? <NomeFamiglia nome={String(famiglia.nome)} versione={famiglia.versione ?? 1} /> : <p>{String(famiglia?.nome ?? '')}</p>}
-        <p className="tenue" style={{ marginBottom: 0 }}>
-          {dove === 'locale'
-            ? '📱 I dati di questa famiglia stanno solo su questo telefono: non escono da qui. Per non perderli, collega il tuo Google Drive o salva ogni tanto una copia.'
-            : '☁️ I dati di questa famiglia stanno sul server di Mastercook, in Europa, e si vedono da tutti i telefoni della famiglia.'}
-        </p>
-      </div>
+        <summary>
+          <h2>Famiglia</h2>
+        </summary>
+        <div className="scheda">
+          <button className="voce" onClick={vaiFamiglia}>
+            <span className="emoji" aria-hidden>
+              <Icona nome="famiglia" />
+            </span>
+            <span className="cresce">
+              <strong>Famiglia</strong>
+              <span className="tenue" style={{ display: 'block' }}>
+                Persone, allergie, gusti e pasti fuori casa
+              </span>
+            </span>
+            <Icona nome="avanti" />
+          </button>
+          <VoceSalvataggio />
+        </div>
+        <div className="scheda">
+          {famiglia && amministratore ? <NomeFamiglia nome={String(famiglia.nome)} versione={famiglia.versione ?? 1} /> : <p>{String(famiglia?.nome ?? '')}</p>}
+          <p className="tenue" style={{ marginBottom: 0 }}>
+            {dove === 'locale'
+              ? '📱 I dati di questa famiglia stanno solo su questo telefono: non escono da qui. Per non perderli, collega il tuo Google Drive o salva ogni tanto una copia.'
+              : '☁️ I dati di questa famiglia stanno sul server di Mastercook, in Europa, e si vedono da tutti i telefoni della famiglia.'}
+          </p>
+        </div>
+        {amministratore && famiglia && <EliminaFamiglia nome={String(famiglia.nome)} apriFamiglia={apriFamiglia} />}
       </details>
 
       <VoceMioFrigo />
-      {amministratore && dove === 'server' && <Inviti />}
       <Accessi amministratore={amministratore} io={utenteId} />
       <AntoninoImpostazioni />
       <ChiaveGemini amministratore={amministratore} />
       {dove === 'locale' && <CopiaSulDrive nome={String(famiglia?.nome ?? 'Famiglia')} />}
       <IMieiDati nomeFamiglia={String(famiglia?.nome ?? 'famiglia')} apriFamiglia={apriFamiglia} />
-      {amministratore && famiglia && <EliminaFamiglia nome={String(famiglia.nome)} apriFamiglia={apriFamiglia} />}
       <PrivacyEAccount dimentica={dimentica} />
-
-      <details className="sezione">
-<summary><h2>Questo dispositivo</h2></summary>
-      <div className="scheda">
-        <SceltaTema />
-        <p>
-          Accesso come <strong>{email}</strong>
-        </p>
-        <Aggiornamento />
-        <button className="bottone pieno" onClick={esci}>
-          Esci
-        </button>
-      </div>
-      </details>
     </>
   );
 }
@@ -150,9 +152,8 @@ function Inviti() {
 
   return (
     <>
-      <details className="sezione">
-<summary><h2>Inviti</h2></summary>
-      <div className="scheda">
+      <h3 style={{ marginTop: 18 }}>Inviti</h3>
+      <div>
         <p className="tenue">Manda il link a chi vuoi far entrare: accede con Google ed è dentro. Ogni link vale 7 giorni e per 5 persone.</p>
         <ul className="elenco">
           {inviti.map((i) => (
@@ -179,13 +180,12 @@ function Inviti() {
           Crea un link d’invito
         </button>
       </div>
-      </details>
     </>
   );
 }
 
 function Accessi({ amministratore, io }: { amministratore: boolean; io: string }) {
-  const { esegui } = useFamiglia();
+  const { esegui, dove } = useFamiglia();
   const vista = useVista();
   const accessi = righeAttive(vista, 'utente_famiglia');
   const membri = righeAttive(vista, 'membro');
@@ -223,6 +223,7 @@ function Accessi({ amministratore, io }: { amministratore: boolean; io: string }
             );
           })}
         </ul>
+        {amministratore && dove === 'server' && <Inviti />}
       </div>
       </details>
     </>
