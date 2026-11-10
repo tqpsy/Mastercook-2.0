@@ -16,7 +16,8 @@ import { CampoQuantita } from '../ui/CampoQuantita';
 import { LivelloScorta } from '../ui/LivelloScorta';
 import { descriviLivello, eBasso, eLivello, LIVELLI, type Livello, puoAOcchio, type ScortaAOcchio, scorteAOcchio } from '../dominio/livello';
 import { CercaIngrediente } from '../ui/CercaIngrediente';
-import { type ProdottoScansionato, ScansionaProdotto } from '../ui/CodiceProdotto';
+import { type ProdottoScansionato, ScansionaProdotto, useProdotti } from '../ui/CodiceProdotto';
+import { Scanner } from '../ui/Scanner';
 import { FoglioSchedaProdotto } from '../ui/SchedaProdotto';
 import { chiediAOpenFoodFacts } from '../ui/openFoodFacts';
 import { type SchedaProdotto, schedaVuota } from '../dominio/schedaProdotto';
@@ -791,6 +792,9 @@ function SchedaLotto({ indice, lotto: l, giorno, chiudi }: { indice: Indice; lot
   const [data, setData] = useState(l.data_limite ?? '');
   const [errore, setErrore] = useState<string | null>(null);
   const frigo = useFrigo();
+  const prodotti = useProdotti();
+  const [scansionaCodice, setScansionaCodice] = useState(false);
+  const [codiceSalvato, setCodiceSalvato] = useState<string | null>(null);
   const consiglio = useConsiglioPosto(ing ?? null, l.luogo);
   const postoOra = postoDelLotto(frigo, l);
   const storia = (vista.righe.movimento ?? []).filter((m) => m.lotto_id === l.id).sort((a, b) => String(b.creato_il ?? '').localeCompare(String(a.creato_il ?? '')));
@@ -868,9 +872,28 @@ function SchedaLotto({ indice, lotto: l, giorno, chiudi }: { indice: Indice; lot
     setAzione(null);
   }
 
+  /** Collega il codice a barre scansionato a questo prodotto: dalla prossima volta lo riconosco. */
+  async function collegaCodice(codice: string) {
+    setScansionaCodice(false);
+    const p = prodotti.get(codice);
+    const scheda = (await chiediAOpenFoodFacts(codice))?.scheda;
+    await esegui('salva_prodotto', {
+      id: crypto.randomUUID(),
+      codice,
+      ingrediente_id: l.ingrediente_id,
+      nome: l.nome ?? p?.nome ?? null,
+      quantita: p?.quantita ?? null,
+      unita: p?.unita ?? null,
+      ...(scheda && !schedaVuota(scheda) ? { scheda } : {}),
+    });
+    setCodiceSalvato(codice);
+  }
+
   // A occhio si butta o si sposta tutto: una parte non si misura.
   const chiedeQuantita = !occhio && (azione === 'consumo' || azione === 'spreco' || azione === 'scaduto' || azione === 'sposta');
   const scaduto = l.data_limite ? giorniTra(giorno, l.data_limite) < 0 : false;
+
+  if (scansionaCodice) return <Scanner titolo="Scansiona il codice a barre" chiudi={() => setScansionaCodice(false)} trovato={(c) => void collegaCodice(c)} />;
 
   return (
     <Foglio titolo={l.nome ?? ing?.nome ?? 'Alimento'} chiudi={chiudi}>
@@ -922,6 +945,12 @@ function SchedaLotto({ indice, lotto: l, giorno, chiudi }: { indice: Indice; lot
         </div>
       )}
 
+      {codiceSalvato && (
+        <div className="avviso info" role="status">
+          Codice {codiceSalvato} collegato a questo prodotto: la prossima volta lo riconosco.
+        </div>
+      )}
+
       {!azione && (
         <div className="riga" style={{ flexWrap: 'wrap' }}>
           {!occhio && (
@@ -945,6 +974,9 @@ function SchedaLotto({ indice, lotto: l, giorno, chiudi }: { indice: Indice; lot
           </button>
           <button className="bottone" onClick={() => apri('data')}>
             Cambia data
+          </button>
+          <button className="bottone" onClick={() => setScansionaCodice(true)}>
+            <span aria-hidden>📷</span> Scansiona codice a barre
           </button>
           {!occhio && puoAOcchio(ing) && (
             <button className="bottone" onClick={() => apri('occhio')}>
