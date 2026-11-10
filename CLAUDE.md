@@ -3,14 +3,14 @@
 ## A cosa serve
 PWA in italiano per organizzare i pasti di famiglia attorno al **menu della settimana**: ricette, casa (frigo, freezer, dispensa con lotti e scadenze), lista della spesa calcolata dal menu, scontrini, codici a barre, avanzi e consigli («Antonino»). Online su https://tqpsy.github.io/Mastercook-2.0/. Il vecchio repo `tqpsy/Mastercook` è **solo lettura**: non modificarlo mai.
 
-Stack: TypeScript, React 19 + Vite (nessun router), CSS a mano, Dexie (copia locale + coda comandi), PGlite (famiglia «solo su questo telefono»), Supabase gratuito UE (Postgres, login solo Google), tesseract.js (scontrini), Gemini con chiave gratuita della famiglia (foto del frigo).
+Stack: TypeScript, React 19 + Vite (nessun router), CSS a mano, Dexie (copia locale + coda comandi), PGlite (famiglia «solo su questo telefono»), Supabase gratuito UE (Postgres, login solo Google), PaddleOCR con onnxruntime-web e tesseract.js di ripiego (scontrini, sul telefono), Gemini con chiave gratuita della famiglia (foto del frigo).
 
 ## Cartelle e file principali
 - `src/App.tsx`: guscio con le schede Oggi, Menu, Spesa, Casa, Ricette (restano montate con `Activity`: una scheda nascosta non ha effetti attivi) e Impostazioni. `src/config.ts`: solo chiavi pubbliche. `src/stile.css`: tutto lo stile, con le variabili del design «La cucina di Luca».
 - `src/dati/`: motore dei dati. `sincronizzatore.ts` (coda comandi ed esiti), `archivio.ts` (Dexie), `anteprima.ts` (vista locale con i comandi in attesa), `lettura.ts` (dopo uno scarico legge solo le righe nuove; tabelle invariate restano gli stessi array), `contesto.tsx` (`useFamiglia`, `useVista`), `indice.ts` (catalogo), `esportazione.ts`, `migrazione.ts` (import dal vecchio), `tipi.ts`.
 - `src/dominio/`: logica pura, test accanto a ogni file. Per esempio `menu.ts`, `proposte.ts`, `antonino.ts`, `piano.ts` (file del piano del nutrizionista), `spesa.ts`, `speso.ts` (quanto si è speso), `livello.ts` (prodotti «a occhio»: pezzi + tanto/metà/poco/sta per finire), `verifica.ts` (verifica dell'inventario con le foto), `scontrini.ts`, `vincoli.ts`/`interpreta.ts`/`crudi.ts` (sicurezza alimentare), `iconeCibo.ts`.
 - `src/pagine/`: un file per schermata (`Oggi`, `Menu`, `Spesa` (con `Speso`), `Casa` (con `Verifica`, verifica con le foto), `Ricette`, `Antonino`, `Impostazioni`…).
-- `src/ui/`: componenti riusabili (`Icona`, `IconaCibo` + `disegniCibo.ts`, `Foglio`, `Scanner`, `CampoQuantita` (unità + quante confezioni), `LivelloScorta` (pezzi e livello a occhio), `ocr.ts`…).
+- `src/ui/`: componenti riusabili (`Icona`, `IconaCibo` + `disegniCibo.ts`, `Foglio`, `Scanner`, `CampoQuantita` (unità + quante confezioni), `LivelloScorta` (pezzi e livello a occhio), `ocr.ts` + `paddle.ts` (lettura scontrini)…).
 - `src/piattaforma/`: `supabase.ts`, `drive.ts` (solo `drive.file`), `fotoFrigo.ts`, `locale/` (PGlite in un worker).
 - `src/catalogo/`: `catalogo.json` (ricette e ingredienti di sistema), `ricette-nuove.json`.
 - `supabase/migrations/`: tutta la logica che vale per ogni dispositivo. `supabase/functions/foto-frigo/`: unica Edge Function (foto del frigo e lettura del piano del nutrizionista con Gemini, `piano.ts`).
