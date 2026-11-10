@@ -93,6 +93,14 @@ describe('lettura dello scontrino', () => {
     expect(s.righe.map((r) => r.descrizione)).toEqual(['LATTE ESL BIO', 'SALVASLIP COOP MAXI']);
   });
 
+  it('senza intestazione le righe prima del primo prezzo sono il negozio, non prodotti', () => {
+    const s = leggiScontrino('SUPERMERCATO ROSSI\nZUCCHINE 1,80\nLATTE INTERO 1L 1,29\nTOTALE 3,09');
+    expect(s.righe.map((r) => r.descrizione)).toEqual(['ZUCCHINE', 'LATTE INTERO 1L']);
+    expect(leggiScontrino('IPER\nPETTO POLLO FETTE   3,10\nPETTO POLLO FETTE   3,20\nTOTALE   6,30').righe).toHaveLength(2);
+    // Con l'intestazione, invece, una riga senza prezzo prima del primo prezzo resta (da completare).
+    expect(leggiScontrino('DESCRIZIONE\nLATTE   ip: |\nPANE 1,50\nTOTALE 1,50').righe[0]).toMatchObject({ descrizione: 'LATTE', senzaPrezzo: true });
+  });
+
   it('un testo senza scontrino non inventa nulla', () => {
     expect(leggiScontrino('ciao a tutti')).toEqual({ negozio: 'Ciao A Tutti', data: null, ora: null, totale: null, righe: [], corretti: 0, quadra: false });
     expect(leggiScontrino('').righe).toEqual([]);

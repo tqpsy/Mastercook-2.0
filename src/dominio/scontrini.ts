@@ -214,7 +214,8 @@ export function leggiScontrino(testo: string): ScontrinoLetto {
 
   /** Una descrizione rimasta senza prezzo (la lettura l'ha rovinato): la riga resta, vuota, da completare. */
   const chiudiSospesa = () => {
-    if (descrizioneSospesa) {
+    // Senza intestazione («DESCRIZIONE») il testo prima del primo prezzo è l'intestazione del negozio, non una riga.
+    if (descrizioneSospesa && (inizio >= 0 || righe.length > 0)) {
       // Del prezzo rovinato resta spesso un residuo in coda («5’ SOB», «IP: |»): via le parti finali corte o con segni strani.
       const parole = descrizioneSospesa.split(' ');
       while (parole.length > 1 && (parole.at(-1)!.replace(/[^A-Z0-9]/g, '').length <= 2 || /[^A-Z0-9.)]/.test(parole.at(-1)!)) && parole.slice(0, -1).some((x) => x.replace(/[^A-Z0-9]/g, '').length >= 4)) parole.pop();
