@@ -341,27 +341,72 @@ function CompletaRiga({ riga, chiudi }: { riga: RigaDaCompletare; chiudi: () => 
   const [aOcchio, setAOcchio] = useState(false);
   const [occhio, setOcchio] = useState<{ pezzi: number; livello: Livello }>({ pezzi: 1, livello: 'tanto' });
   const conOcchio = aOcchio && puoAOcchio(ing);
+  // Codice a barre e foto della data: riempiono da soli la quantità e la scadenza.
+  const prodotti = useProdotti();
+  const [scansiona, setScansiona] = useState(false);
+  const [codice, setCodice] = useState<ProdottoScansionato | null>(null);
+  const [tipoData, setTipoData] = useState<'scadenza' | 'tmc' | null>(null);
+  const [data, setData] = useState('');
+
+  async function codiceLetto(c: string) {
+    setScansiona(false);
+    const p = prodotti.get(c);
+    const esterno = p ? undefined : (await chiediAOpenFoodFacts(c))?.esterno;
+    setCodice({ codice: c, ingrediente: ing, ...(p ? { prodotto: p } : {}), ...(esterno ? { esterno } : {}) });
+    const formato = p?.quantita && p.unita ? { quantita: p.quantita, unita: p.unita } : esterno?.formato;
+    if (formato && formato.unita === UNITA_BASE[ing.dimensione]) {
+      setAOcchio(false);
+      cambiaScritta({ numero: String(formato.quantita).replace('.', ','), unita: formato.unita, quante: '1' });
+    }
+  }
 
   async function salva(e: FormEvent) {
     e.preventDefault();
     const q = conOcchio ? null : quantitaDa(scritta, ing);
     if (typeof q === 'string') return setErrore(q);
+    if (tipoData && !/^\d{4}-\d{2}-\d{2}$/.test(data)) return setErrore('Scrivi la data che c’è sulla confezione.');
     await esegui('completa_riga_acquisto', {
       id: riga.id,
       lotto_id: crypto.randomUUID(),
       ...(q ? { quantita: q.valore, unita: q.unita } : occhio),
       luogo,
       posto: consiglio?.posto.id ?? null,
-      ...(proposta
-        ? { data_limite: proposta.data_limite, tipo_data: 'stimata', fonte_data: 'app', calcolata_il: proposta.calcolata_il, affidabilita: 'bassa' }
-        : { tipo_data: 'sconosciuta' }),
+      ...(tipoData
+        ? { data_limite: data, tipo_data: tipoData, fonte_data: 'confezione' }
+        : proposta
+          ? { data_limite: proposta.data_limite, tipo_data: 'stimata', fonte_data: 'app', calcolata_il: proposta.calcolata_il, affidabilita: 'bassa' }
+          : { tipo_data: 'sconosciuta' }),
     });
+    // Il codice si ricorda con la quantità scritta, come in «Aggiungi in casa».
+    if (codice && q && (!codice.prodotto || codice.prodotto.ingrediente_id !== ing.id || codice.prodotto.quantita !== q.valore || codice.prodotto.unita !== q.unita)) {
+      const scheda = await schedaDelCodice(codice);
+      await esegui('salva_prodotto', {
+        id: crypto.randomUUID(),
+        codice: codice.codice,
+        ingrediente_id: ing.id,
+        nome: codice.prodotto?.nome ?? codice.esterno?.nome ?? null,
+        quantita: q.valore,
+        unita: q.unita,
+        ...(scheda ? { scheda } : {}),
+      });
+    }
     chiudi();
   }
+
+  if (scansiona) return <Scanner titolo="Scansiona il codice a barre" chiudi={() => setScansiona(false)} trovato={(c) => void codiceLetto(c)} />;
 
   return (
     <Foglio titolo={`Quanto ${ing.nome.toLowerCase()}?`} chiudi={chiudi}>
       <form onSubmit={salva} noValidate>
+        <button type="button" className="bottone pieno" onClick={() => setScansiona(true)}>
+          <span aria-hidden>📷</span> Scansiona il codice a barre
+        </button>
+        {codice && (
+          <p className="tenue" role="status">
+            Codice {codice.codice}
+            {codice.prodotto?.nome ?? codice.esterno?.nome ? `: ${codice.prodotto?.nome ?? codice.esterno?.nome}` : ''}. Controlla la quantità qui sotto.
+          </p>
+        )}
         <p className="tenue" style={{ marginTop: 0 }}>
           Comprato {dataBreve(riga.data)}
           {riga.negozio ? ` da ${riga.negozio}` : ''}. Scrivi quanto ne hai preso: entra in casa con la data dello scontrino.
@@ -394,7 +439,28 @@ function CompletaRiga({ riga, chiudi }: { riga: RigaDaCompletare; chiudi: () => 
           </div>
         </div>
         {consiglio && <p className="tenue">📍 Mettilo qui: {consiglio.posto.nome}{consiglio.inFondo ? ', in fondo' : ''}.</p>}
-        {proposta && <p className="tenue">Scadenza automatica: {dataBreve(proposta.data_limite)}. Puoi cambiarla dopo.</p>}
+        <div className="campo">
+          <span>Data sulla confezione</span>
+          <div className="scelte">
+            <button type="button" aria-pressed={tipoData === null} onClick={() => setTipoData(null)}>
+              Non la so
+            </button>
+            <button type="button" aria-pressed={tipoData === 'scadenza'} onClick={() => setTipoData('scadenza')}>
+              Da consumarsi entro
+            </button>
+            <button type="button" aria-pressed={tipoData === 'tmc'} onClick={() => setTipoData('tmc')}>
+              Preferibilmente entro
+            </button>
+          </div>
+          {tipoData && <input type="date" aria-label="Data" value={data} onChange={(e) => setData(e.target.value)} />}
+          <FotoData
+            letta={(d) => {
+              setData(d.data);
+              setTipoData(d.tipo ?? tipoData ?? 'scadenza');
+            }}
+          />
+        </div>
+        {!tipoData && proposta && <p className="tenue">Scadenza automatica: {dataBreve(proposta.data_limite)}. Puoi cambiarla dopo.</p>}
         {errore && (
           <div className="avviso errore" role="alert">
             {errore}
