@@ -24,6 +24,7 @@ test('elimina il mio account: si vede cosa sparisce, si conferma con ELIMINA', a
   const nome = `Casa Marco ${info.project.name}`;
   await creaFamiglia(page, nome);
   await page.getByRole('button', { name: 'Impostazioni' }).click();
+  await page.getByRole('heading', { name: 'Privacy' }).click();
   await page.getByRole('button', { name: 'Come trattiamo i tuoi dati' }).click();
   await expect(page.getByRole('dialog', { name: 'Privacy' }).getByText(/Garante/)).toBeVisible();
   await page.getByRole('dialog', { name: 'Privacy' }).getByRole('button', { name: 'Chiudi' }).click();

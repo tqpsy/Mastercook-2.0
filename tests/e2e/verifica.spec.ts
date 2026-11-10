@@ -27,6 +27,7 @@ test('verifica con le foto: solo le anomalie, decido io, riepilogo e poi la casa
   const salvato = () => expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
 
   await page.getByRole('button', { name: 'Impostazioni' }).click();
+  await page.getByRole('heading', { name: 'Foto del frigo' }).click();
   await page.getByLabel('Chiave Gemini della famiglia').fill('AIzaProva_chiave-della-famiglia-1234');
   await page.getByRole('button', { name: 'Salva la chiave' }).click();
   await expect(page.getByLabel('Chiave Gemini', { exact: true })).toContainText('…1234');
@@ -146,6 +147,7 @@ test('verifica con le foto: il pollo crudo sul ripiano alto è al posto sbagliat
   const { page } = await apri(browser, luca, info.project.use);
   await creaFamiglia(page, 'Casa Igiene');
   await page.getByRole('button', { name: 'Impostazioni' }).click();
+  await page.getByRole('heading', { name: 'Foto del frigo' }).click();
   await page.getByLabel('Chiave Gemini della famiglia').fill('AIzaProva_chiave-della-famiglia-1234');
   await page.getByRole('button', { name: 'Salva la chiave' }).click();
   await expect(page.getByLabel('Chiave Gemini', { exact: true })).toContainText('…1234');

@@ -57,7 +57,8 @@ export function Impostazioni({
         <VoceSalvataggio />
       </div>
 
-      <h2>La tua famiglia</h2>
+      <details className="sezione">
+<summary><h2>La tua famiglia</h2></summary>
       <div className="scheda">
         {famiglia && amministratore ? <NomeFamiglia nome={String(famiglia.nome)} versione={famiglia.versione ?? 1} /> : <p>{String(famiglia?.nome ?? '')}</p>}
         <p className="tenue" style={{ marginBottom: 0 }}>
@@ -66,6 +67,7 @@ export function Impostazioni({
             : '☁️ I dati di questa famiglia stanno sul server di Mastercook, in Europa, e si vedono da tutti i telefoni della famiglia.'}
         </p>
       </div>
+      </details>
 
       <VoceMioFrigo />
       {amministratore && dove === 'server' && <Inviti />}
@@ -77,7 +79,8 @@ export function Impostazioni({
       {amministratore && famiglia && <EliminaFamiglia nome={String(famiglia.nome)} apriFamiglia={apriFamiglia} />}
       <PrivacyEAccount dimentica={dimentica} />
 
-      <h2>Questo dispositivo</h2>
+      <details className="sezione">
+<summary><h2>Questo dispositivo</h2></summary>
       <div className="scheda">
         <SceltaTema />
         <p>
@@ -88,6 +91,7 @@ export function Impostazioni({
           Esci
         </button>
       </div>
+      </details>
     </>
   );
 }
@@ -146,7 +150,8 @@ function Inviti() {
 
   return (
     <>
-      <h2>Inviti</h2>
+      <details className="sezione">
+<summary><h2>Inviti</h2></summary>
       <div className="scheda">
         <p className="tenue">Manda il link a chi vuoi far entrare: accede con Google ed è dentro. Ogni link vale 7 giorni e per 5 persone.</p>
         <ul className="elenco">
@@ -174,6 +179,7 @@ function Inviti() {
           Crea un link d’invito
         </button>
       </div>
+      </details>
     </>
   );
 }
@@ -185,7 +191,8 @@ function Accessi({ amministratore, io }: { amministratore: boolean; io: string }
   const membri = righeAttive(vista, 'membro');
   return (
     <>
-      <h2>Chi usa l’app</h2>
+      <details className="sezione">
+<summary><h2>Chi usa l’app</h2></summary>
       <div className="scheda">
         <ul className="elenco">
           {accessi.map((a) => {
@@ -217,6 +224,7 @@ function Accessi({ amministratore, io }: { amministratore: boolean; io: string }
           })}
         </ul>
       </div>
+      </details>
     </>
   );
 }
@@ -270,7 +278,8 @@ function IMieiDati({ nomeFamiglia, apriFamiglia }: { nomeFamiglia: string; apriF
 
   return (
     <>
-      <h2>I tuoi dati</h2>
+      <details className="sezione">
+<summary><h2>I tuoi dati</h2></summary>
       <div className="scheda">
         <p className="tenue">
           Salva una copia completa dei dati della famiglia in un file da conservare dove vuoi: sul telefono, su iCloud Drive (su iPhone scegli «Salva in File»),
@@ -311,6 +320,7 @@ function IMieiDati({ nomeFamiglia, apriFamiglia }: { nomeFamiglia: string; apriF
           </>
         )}
       </div>
+      </details>
     </>
   );
 }
@@ -428,7 +438,8 @@ function ChiaveGemini({ amministratore }: { amministratore: boolean }) {
 
   return (
     <>
-      <h2>Foto del frigo</h2>
+      <details className="sezione">
+<summary><h2>Foto del frigo</h2></summary>
       <div className="scheda" aria-label="Chiave Gemini">
         <p style={{ marginTop: 0 }}>{descrizione}</p>
         {amministratore ? (
@@ -469,6 +480,7 @@ function ChiaveGemini({ amministratore }: { amministratore: boolean }) {
           </div>
         )}
       </div>
+      </details>
     </>
   );
 }
@@ -516,7 +528,8 @@ function PrivacyEAccount({ dimentica }: { dimentica: () => Promise<void> }) {
 
   return (
     <>
-      <h2>Privacy</h2>
+      <details className="sezione">
+<summary><h2>Privacy</h2></summary>
       <div className="scheda" aria-label="Privacy e account">
         <button className="bottone pieno" onClick={() => setLeggi(true)}>
           Come trattiamo i tuoi dati
@@ -561,6 +574,7 @@ function PrivacyEAccount({ dimentica }: { dimentica: () => Promise<void> }) {
         )}
         {errore && <div className="avviso errore">{errore}</div>}
       </div>
+      </details>
       {leggi && (
         <Foglio titolo="Privacy" chiudi={() => setLeggi(false)}>
           <TestoPrivacy />
@@ -620,7 +634,8 @@ function CopiaSulDrive({ nome }: { nome: string }) {
 
   return (
     <>
-      <h2>Google Drive</h2>
+      <details className="sezione">
+<summary><h2>Google Drive</h2></summary>
       <div className="scheda" aria-label="Copia sul Google Drive">
         <p style={{ marginTop: 0 }}>{descrizione}</p>
         {stato ? (
@@ -646,6 +661,7 @@ function CopiaSulDrive({ nome }: { nome: string }) {
           </div>
         )}
       </div>
+      </details>
       {spiega && <SpiegazioneDrive continua={() => void collega()} chiudi={() => setSpiega(false)} />}
     </>
   );

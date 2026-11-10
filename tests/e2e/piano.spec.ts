@@ -94,6 +94,7 @@ test('piano del nutrizionista da un PDF: lo legge Gemini con la chiave della fam
   await sezione.getByLabel('File del piano').setInputFiles(pdf);
   await expect(sezione.getByRole('status')).toContainText('serve la chiave Gemini della famiglia');
 
+  await page.getByRole('heading', { name: 'Foto del frigo' }).click();
   await page.getByLabel('Chiave Gemini della famiglia').fill('AIzaProva_chiave-della-famiglia-1234');
   await page.getByRole('button', { name: 'Salva la chiave' }).click();
   await expect(page.getByLabel('Chiave Gemini', { exact: true })).toContainText('finisce con …1234');

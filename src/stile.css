@@ -4094,3 +4094,27 @@ button.speso-voce:focus-visible {
 .livelli [aria-pressed='true'] .tacche {
   color: inherit;
 }
+
+details.sezione > summary {
+  min-height: 48px;
+  color: var(--testo);
+  list-style: none;
+  justify-content: space-between;
+}
+details.sezione > summary::-webkit-details-marker {
+  display: none;
+}
+details.sezione > summary::after {
+  content: '▾';
+  color: var(--testo-tenue);
+  transition: transform 0.15s;
+}
+details.sezione[open] > summary::after {
+  transform: rotate(180deg);
+}
+details.sezione > summary > h2 {
+  margin: 0;
+}
+details.sezione {
+  margin-bottom: 8px;
+}
