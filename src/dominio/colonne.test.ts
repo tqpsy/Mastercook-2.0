@@ -242,6 +242,29 @@ describe('scontrino letto a colonne (foto storta)', () => {
   });
 });
 
+describe('lettura della colonna dei prezzi', () => {
+  it('la virgola persa si rimette (tre o più cifre sole sono euro e centesimi), il segno meno e la lettera restano', () => {
+    expect(prezziDaColonna('135A\n595 B\n000C\n-044\n1,99 A\n33\nPREZZO IVA\nSAN PAOLO').map((p) => p.testo)).toEqual(['1,35 A', '5,95 B', '0,00 C', '-0,44', '1,99 A']);
+  });
+
+  it('uno sconto a cui è caduto il segno meno resta uno sconto; più prezzi che nomi: quelli in fondo sono del totale', () => {
+    const nomi = 'SAN PAOLO\nDESCRIZIONE\nPANE\nSCONTO\nLATTE\nARTICOLI 2\nTOTALE 2,35';
+    const t = unisciColonne('', prezziDaColonna('1,50 A\n0,40\n1,25 A\n2,35\n2,35'), nomi);
+    expect(t).not.toBeNull();
+    const s = leggiScontrino(t!);
+    expect(s.righe.map((r) => [r.descrizione, r.prezzo])).toEqual([['PANE', 1.1], ['LATTE', 1.25]]);
+    expect(s.righe[0].sconto).toBe(0.4);
+  });
+
+  it('con meno prezzi che nomi non si abbina: manca un prezzo e non si sa quale', () => {
+    expect(unisciColonne('', prezziDaColonna('1,50 A\n1,25 A'), 'DESCRIZIONE\nPANE\nLATTE\nUOVA\nARTICOLI 3')).toBeNull();
+  });
+
+  it('l’intestazione si riconosce anche letta male', () => {
+    expect(unisciColonne('', prezziDaColonna('1,50 A\n1,25 A'), 'DESCRIZTONE\nPANE\nLATTE\nARTICOLI 2')).not.toBeNull();
+  });
+});
+
 describe('correzione delle cifre confuse', () => {
   const riga = (nome: string, cent: number, iva?: string) => ({ nome, cent, iva, modificabile: true });
   it('una cifra letta male: il totale dice quale', () => {

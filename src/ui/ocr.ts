@@ -3,7 +3,10 @@
  * alla prima foto e scarica una volta il suo motore e il vocabolario italiano: la foto non esce mai
  * dal dispositivo.
  *
- * Prima si prepara la foto (ritaglio, misura, ombre tolte, bianco e nero: preparaScontrino.ts), poi si legge
+ * Prima si prova con PaddleOCR (paddle.ts), che legge la foto vera molto meglio; se non si carica (niente rete
+ * la prima volta, poca memoria) o il conto non torna, si passa a Tesseract. Si tiene sempre la lettura migliore.
+ *
+ * Con Tesseract: prima si prepara la foto (ritaglio, misura, ombre tolte, bianco e nero: preparaScontrino.ts), poi si legge
  * riga per riga in una sola colonna: con la lettura automatica delle colonne Tesseract metteva le descrizioni
  * da una parte e i prezzi dall'altra, e le righe non si ricomponevano più.
  * Se il conto non torna si rileggono a parte la colonna dei prezzi (solo cifre e virgola, molto più
@@ -12,7 +15,9 @@
  * Si tiene sempre la lettura migliore.
  */
 import { inizioColonnaPrezzi, type ParolaLetta, prezziDaColonna, unisciColonne } from '../dominio/colonne';
+import { impagina, inclinazione, inizioPrezzi, type Scatola } from '../dominio/paddle';
 import { leggiScontrino } from '../dominio/scontrini';
+import { leggiScatole, liberaPaddle, ruotaFoto } from './paddle';
 import { preparaFoto } from './preparaScontrino';
 
 /** Quanto è buona una lettura: il conto che torna vale più di tutto, poi le righe trovate. */
@@ -51,7 +56,54 @@ async function leggiAColonne(lettore: Lettore, PSM: typeof import('tesseract.js'
   return prezzi.flatMap((p) => [unisciColonne(prima, p, nomi), unisciColonne(prima, p)]).filter((t): t is string => t !== null);
 }
 
+/**
+ * Le letture possibili con PaddleOCR: la pagina riga per riga, e nomi e prezzi abbinati per ordine. Se il conto non
+ * torna: se la foto è inclinata si raddrizza e si rilegge; se un prezzo non è stato rilevato si rilegge la sola
+ * colonna dei prezzi con soglie più basse.
+ */
+export async function leggiConPaddle(foto: Blob, avanzamento: (frazione: number) => void): Promise<string[]> {
+  let tela = await preparaFoto(foto, true);
+  const larghezzaScontrino = tela.width;
+  let lettura = await leggiScatole(tela, (f) => avanzamento(f * 0.5));
+  const testi = (scatole: Scatola[]) => {
+    const { pagina, prezzi, nomi } = impagina(scatole, tela.width);
+    const abbinata = unisciColonne(pagina, prezziDaColonna(prezzi), nomi);
+    return abbinata ? [abbinata, pagina] : [pagina];
+  };
+  const out = testi(lettura.scatole);
+  const quadra = () => out.some((t) => leggiScontrino(t).quadra);
+  if (quadra()) return out;
+  // Foto inclinata (più di un grado): si raddrizza e si rilegge tutto.
+  const angolo = inclinazione(lettura.scatole, tela.width);
+  if (angolo !== null && Math.abs(angolo) > Math.PI / 180) {
+    tela = ruotaFoto(tela, angolo);
+    lettura = await leggiScatole(tela, (f) => avanzamento(0.5 + f * 0.3), larghezzaScontrino);
+    out.push(...testi(lettura.scatole));
+    if (quadra()) return out;
+  }
+  const x = inizioPrezzi(lettura.scatole, tela.width);
+  const colonna = await lettura.rileggiColonna(x, (f) => avanzamento(0.8 + f * 0.2));
+  out.push(...testi([...lettura.scatole.filter((s) => s.x0 < x), ...colonna]));
+  return out;
+}
+
 export async function leggiTestoDaFoto(foto: Blob, avanzamento: (frazione: number) => void): Promise<string> {
+  let migliore = '';
+  try {
+    for (const testo of await leggiConPaddle(foto, (f) => avanzamento(f * 0.8))) {
+      if (!migliore || punteggio(testo) > punteggio(migliore)) migliore = testo;
+    }
+    if (migliore && leggiScontrino(migliore).quadra) return migliore;
+  } catch {
+    // Modelli non scaricabili o memoria finita: si legge con Tesseract.
+  } finally {
+    await liberaPaddle().catch(() => undefined);
+  }
+  const tesseract = await leggiConTesseract(foto, (f) => avanzamento(migliore ? 0.8 + f * 0.2 : f));
+  return !migliore || punteggio(tesseract) > punteggio(migliore) ? tesseract : migliore;
+}
+
+async function leggiConTesseract(foto: Blob, avanzamento: (frazione: number) => void): Promise<string> {
   const { createWorker, PSM } = await import('tesseract.js');
   let passo = 0;
   let passi = 1;

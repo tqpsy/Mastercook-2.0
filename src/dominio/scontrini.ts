@@ -64,6 +64,23 @@ export const DA_SALTARE =
   /\b(IVA|CONTANTE|CONTANTI|RESTO|PAGAMENTO|PAGATO|BANCOMAT|ELETTRONICO|RESO|ARROTONDAMENTO|IMPORTO|NUMERO|DOCUMENTO|SCONTRINO|BUONO|BUONI|PUNTI|SALDO|CASSA|CASSIERE|OPERATORE|TEL|TESSERA|ARTICOLI|VISA|MASTERCARD|MAESTRO|P\.?\s?IVA|C\.?F\.?)\b|CARTA (DI )?(CREDITO|DEBITO)/;
 export const SCONTO = /\b(SCONTO|SC\.|SCONT|PROMO|OFFERTA|RIBASSO|RIDUZIONE|STORNO)\b/;
 export const INTESTAZIONE_RIGHE = /\bDESCRIZIONE\b|\bPREZZO\s*\(?€?\)?\s*$/;
+
+/** Quante lettere diverse (sostituite, in più o in meno) ci sono tra due parole. */
+function distanza(a: string, b: string): number {
+  let prec = Array.from({ length: b.length + 1 }, (_, k) => k);
+  for (let x = 1; x <= a.length; x++) {
+    const riga = [x];
+    for (let y = 1; y <= b.length; y++) riga[y] = Math.min(prec[y] + 1, riga[y - 1] + 1, prec[y - 1] + (a[x - 1] === b[y - 1] ? 0 : 1));
+    prec = riga;
+  }
+  return prec[b.length];
+}
+
+/** L'intestazione delle righe, anche letta male («DESCRIZTONE»). */
+export const eIntestazione = (linea: string) => INTESTAZIONE_RIGHE.test(linea) || linea.split(/[^A-Z]+/).some((p) => p.length >= 9 && p.length <= 12 && distanza(p, 'DESCRIZIONE') <= 2);
+
+/** Dove finiscono le righe: il totale (anche letto male) o il numero di articoli che lo precede. */
+export const eFineRighe = (linea: string) => fineRighe(linea) || /\bARTICOLI\b|COMPLESSIV/.test(linea);
 /** «2 x 0,99» (la lettura sbaglia la x: «xXx», «×», «*»). */
 export const PEZZI = /^(\d{1,3})\s*(?:PZ|N\.?)?\s*[X*×]{1,3}\s*(\d{1,4}[.,]\d{2})\b/;
 /** «0,856 kg x 1,99 €/kg» oppure, alla Iper, «0,386 * 4,90Kg»: peso, poi prezzo al chilo. */
@@ -170,7 +187,7 @@ const letteraIva = (importo: RegExpMatchArray): { iva?: string } => (/^[A-Z]$/.t
 /** Legge il testo di uno scontrino. Non inventa: quello che non trova resta null o fuori dalle righe. */
 export function leggiScontrino(testo: string): ScontrinoLetto {
   const linee = testo.split(/\r?\n/).map(pulisciLinea).filter(Boolean);
-  const inizio = linee.findIndex((l) => INTESTAZIONE_RIGHE.test(l));
+  const inizio = linee.findIndex(eIntestazione);
   const righe: RigaLetta[] = [];
   let totale: number | null = null;
   let inRighe = true;
