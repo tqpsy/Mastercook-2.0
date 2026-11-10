@@ -37,7 +37,7 @@ export function dateNelTesto(testo: string): string[] {
   }
   // Le date complete già lette non si rileggono come «mese e anno».
   t = t.replace(/(\d{1,2})\s*[./\-\s]\s*(\d{1,2})\s*[./\-\s]\s*(\d{4}|\d{2})(?!\d)/g, ' ').replace(/(\d{1,2})\s*([a-zì]{3})[a-z]*\.?\s*[./\-\s]?\s*(\d{4}|\d{2})(?!\d)/g, ' ');
-  for (const x of t.matchAll(/(?<![\d./-])(\d{1,2})\s*[./\-]\s*(\d{4})(?!\d)/g)) aggiungi(null, Number(x[1]), Number(x[2]));
+  for (const x of t.matchAll(/(?<![\d./-])(\d{1,2})\s*[./-]\s*(\d{4})(?!\d)/g)) aggiungi(null, Number(x[1]), Number(x[2]));
   for (const x of t.matchAll(/(?<!\d)([a-zì]{3})[a-z]*\.?\s*[./\-\s]?\s*(\d{4})(?!\d)/g)) {
     const m = MESI[x[1]!];
     if (m) aggiungi(null, m, Number(x[2]));
