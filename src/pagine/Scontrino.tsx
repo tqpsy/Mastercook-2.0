@@ -71,6 +71,8 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
   const [data, setData] = useState(oggi());
   const [ora, setOra] = useState('');
   const [totale, setTotale] = useState('');
+  /** Quanti prezzi la lettura ha corretto da sola perché il conto tornasse. */
+  const [corretti, setCorretti] = useState(0);
   const [qr, setQr] = useState<string | null>(null);
   const [leggiQr, setLeggiQr] = useState(false);
   const [righe, setRighe] = useState<RigaInRevisione[]>([]);
@@ -106,6 +108,7 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
     setData(giorno);
     setOra(s.ora ?? '');
     setTotale(testoEuro(s.totale));
+    setCorretti(s.corretti);
     setRighe(proposte(s.righe.map((r) => ({ id: crypto.randomUUID(), riga: r })), giorno));
     setRevisione(true);
   }
@@ -123,7 +126,7 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
       return {
         id,
         descrizione: r.descrizione,
-        euro: testoEuro(r.prezzo),
+        euro: r.senzaPrezzo ? '' : testoEuro(r.prezzo),
         azione: abbinate[i] ? `abbina:${abbinate[i]}` : ing ? 'casa' : 'altro',
         ing,
         numero: q ? String(q.quantita).replace('.', ',') : '',
@@ -314,6 +317,16 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
           {qr ? 'Rileggi il QR' : 'Leggi il QR dello scontrino (facoltativo)'}
         </button>
       </p>
+      {corretti > 0 && (
+        <div className="avviso">
+          {corretti === 1 ? 'Un prezzo era letto male e l’ho corretto' : `${corretti} prezzi erano letti male e li ho corretti`} perché il conto tornasse con il totale. Controlla sullo scontrino.
+        </div>
+      )}
+      {righe.some((r) => !r.euro.trim()) && (
+        <div className="avviso attenzione">
+          Di {righe.filter((r) => !r.euro.trim()).length} righe non sono riuscito a leggere il prezzo: scrivilo guardando lo scontrino.
+        </div>
+      )}
       {tot !== null && Math.abs(somma - tot) > 0.01 && (
         <div className="avviso attenzione">
           Le righe fanno {formattaEuro(somma)}, il totale è {formattaEuro(tot)}: controlla che non manchi niente.

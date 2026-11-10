@@ -257,7 +257,8 @@ export function daGrigi(g: Uint8ClampedArray, w: number, h: number): Pixel {
 }
 
 /** Nel browser: dalla foto a un canvas in bianco e nero pronto per Tesseract. */
-export async function preparaFoto(foto: Blob): Promise<HTMLCanvasElement> {
+/** Con `soloRitaglio` lo scontrino resta a colori (per PaddleOCR, che legge meglio la foto vera); altrimenti diventa bianco e nero (per Tesseract). */
+export async function preparaFoto(foto: Blob, soloRitaglio = false): Promise<HTMLCanvasElement> {
   const bitmap = await createImageBitmap(foto);
   // Prima una copia ridotta (al più 2000 punti di lato) solo per trovare lo scontrino.
   const ridotta = Math.min(1, 2000 / Math.max(bitmap.width, bitmap.height));
@@ -277,6 +278,7 @@ export async function preparaFoto(foto: Blob): Promise<HTMLCanvasElement> {
   ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(bitmap, sorgente.x, sorgente.y, sorgente.width, sorgente.height, 0, 0, tela.width, tela.height);
   bitmap.close();
+  if (soloRitaglio) return tela;
   const g = grigi(ctx.getImageData(0, 0, tela.width, tela.height));
   const bn = daGrigi(binarizza(g, tela.width, tela.height), tela.width, tela.height);
   const dati = ctx.createImageData(bn.width, bn.height);

@@ -43,6 +43,7 @@ Se le porte sono occupate: `MC_PORTA_SERVER=54410 MC_PORTA_APP=5183 npm run test
 
 | Libreria | Perché | Cosa scarica |
 |---|---|---|
+| `onnxruntime-web` 1.22.0 (MIT) + modelli PP-OCR (PaddleOCR, Apache-2.0) | Leggere gli scontrini con PaddleOCR (molto più preciso di Tesseract su foto storte): rilevazione e lettura del testo in WebAssembly, sul telefono. Tesseract resta come ripiego | Alla prima foto, dal sito dell'app: motore (11 MB) e modelli (13 MB, in `public/modelli-ocr/`: `det.onnx`, `rec.onnx` e `caratteri.txt`, presi dal pacchetto PyPI `rapidocr-onnxruntime` 1.2.3, che contiene i modelli PP-OCRv3 convertiti in ONNX). Non sono nella cache iniziale: dopo la prima volta restano in cache (`vite.config.ts`) |
 | `tesseract.js` 7.0.0 | Leggere il testo della foto di uno scontrino, sul telefono | Alla prima foto: motore e vocabolario italiano da cdn.jsdelivr.net (solo download, la foto non esce dal dispositivo) |
 | `barcode-detector` 3.2.3 | Leggere codici a barre e QR dove il browser non lo sa fare (Safari su iPhone) | Al primo uso: il lettore ZXing in WebAssembly da cdn.jsdelivr.net |
 | `@electric-sql/pglite` 0.5.10 (Apache-2.0) | Le famiglie «solo su questo telefono»: lo stesso Postgres del server, con le stesse migrazioni, nel browser | Alla prima famiglia locale: circa 17 MB (5 MB compressi) dal sito dell'app, poi in cache; chi usa il server non lo scarica |

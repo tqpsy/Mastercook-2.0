@@ -165,6 +165,15 @@ Migrazione `20261031000000_scontrini.sql`. Tabelle `scontrino`, `scontrino_riga`
 
 - Lo scontrino si legge sul telefono (foto con Tesseract, o testo incollato: `src/dominio/scontrini.ts`) e una
   persona rivede ogni riga prima di importare. Il server non legge immagini.
+- **Lettura dalla foto** (`src/ui/ocr.ts`): prima PaddleOCR (`src/ui/paddle.ts`, modelli ONNX nel browser: rilevazione a fasce
+  e lettura dei riquadri), poi, se non va, Tesseract. Nella foto la carta si piega e il prezzo finisce accanto al nome
+  sbagliato: `src/dominio/paddle.ts` ricompone nomi e prezzi come due colonne e `src/dominio/colonne.ts` li abbina
+  **per ordine** (con la lettura dell'intestazione e del totale tollerante agli errori). Se il conto non torna: la foto
+  inclinata si raddrizza (i prezzi sono allineati a destra) e si rilegge; la sola colonna dei prezzi si rilegge con
+  soglie più basse. Infine `src/dominio/quadratura.ts` corregge al più tre cifre confuse (3↔8, 5↔9…) scegliendo
+  l'unica soluzione che fa tornare il totale e l'IVA («DI CUI IVA», lettere A/B/C della legenda) e rende uguali le
+  righe gemelle. Una riga con il nome ma senza prezzo letto resta, vuota (`senzaPrezzo`). I prezzi corretti sono
+  segnalati nella schermata (`corretti`).
 - **Impronta** (`interno.impronta_scontrino`): il contenuto del QR se c'è, altrimenti negozio (solo lettere e cifre),
   data, ora e totale. È unica per famiglia: lo stesso scontrino importato di nuovo, anche da un altro telefono,
   risponde `gia_importato` e non cambia niente (T-ACQ-5).

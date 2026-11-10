@@ -44,8 +44,14 @@ export default defineConfig({
         // ma la prima volta che serve resta in cache, così poi funziona anche senza rete.
         // I caratteri (Outfit e Figtree) stanno nell'app: niente richieste a Google, e funzionano anche senza rete.
         globPatterns: ['**/*.{js,css,html,svg,png,webp,woff2}'],
-        globIgnores: ['**/anteprima-link.png', '**/pglite*', '**/initdb*', '**/motore.worker*'],
+        globIgnores: ['**/anteprima-link.png', '**/pglite*', '**/initdb*', '**/motore.worker*', '**/modelli-ocr/**', '**/ort-wasm*'],
         runtimeCaching: [
+          // Lettura degli scontrini (PaddleOCR): modelli e motore si scaricano alla prima foto, poi restano in cache.
+          {
+            urlPattern: ({ url }) => /\/modelli-ocr\/|\/assets\/ort-wasm[^/]*\.wasm$/.test(url.pathname),
+            handler: 'CacheFirst',
+            options: { cacheName: 'mastercook-lettura-scontrini', expiration: { maxEntries: 8 } },
+          },
           {
             urlPattern: ({ url }) => /\/assets\/((pglite|initdb)[^/]*\.(wasm|data)|motore\.worker[^/]*\.js)$/.test(url.pathname),
             handler: 'CacheFirst',
