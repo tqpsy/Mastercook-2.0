@@ -33,6 +33,7 @@ test('piano del nutrizionista: si carica dal file, cambia le regole per tutti e 
   const { page } = await apri(browser, luca, info.project.use);
   await creaFamiglia(page, 'Casa Piano');
   await page.getByRole('button', { name: 'Impostazioni' }).click();
+  await page.getByRole('button', { name: /Il menu della settimana, il piano/ }).click();
   const sezione = page.getByRole('region', { name: 'Piano del nutrizionista' });
   await expect(sezione.getByRole('button', { name: '📄 Carica il piano' })).toBeVisible();
 
@@ -82,6 +83,7 @@ test('piano del nutrizionista da un PDF: lo legge Gemini con la chiave della fam
   const { page } = await apri(browser, luca, info.project.use);
   await creaFamiglia(page, 'Casa Piano PDF');
   await page.getByRole('button', { name: 'Impostazioni' }).click();
+  await page.getByRole('button', { name: /Il menu della settimana, il piano/ }).click();
   const sezione = page.getByRole('region', { name: 'Piano del nutrizionista' });
   const pdf = { name: 'piano nutrizionale.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 prova') };
   const domande: string[] = [];

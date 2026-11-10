@@ -35,6 +35,7 @@ test('solo su questo telefono: i dati restano qui e il server non ne sa nulla', 
   await expect(page.getByRole('button', { name: 'Apri Spaghetti alla carbonara' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Impostazioni' }).click();
+  await page.getByRole('heading', { name: 'Famiglia', exact: true }).click();
   await expect(page.getByText(/stanno solo su questo telefono: non escono da qui/)).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Inviti' })).toHaveCount(0);
 });

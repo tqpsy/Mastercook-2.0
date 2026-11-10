@@ -397,6 +397,7 @@ test('Antonino: «mai più» toglie un’idea, in Impostazioni si riprende e si 
   await page.getByRole('dialog').getByRole('button', { name: 'Chiudi' }).click();
 
   await page.getByRole('button', { name: 'Impostazioni' }).click();
+  await page.getByRole('button', { name: /Il menu della settimana, il piano/ }).click();
   const mai = page.getByRole('list', { name: 'Piatti che non propone più' });
   await expect(mai.getByText(titolo)).toBeVisible();
   await mai.getByRole('button', { name: 'Riproponila' }).click();
