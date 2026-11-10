@@ -761,7 +761,13 @@ function Acquisti({ indice, acquisti, righe, apri }: { indice: Indice; acquisti:
 
 function SchedaAcquisto({ indice, acquisto: a, righe, chiudi }: { indice: Indice; acquisto: Acquisto; righe: RigaAcquisto[]; chiudi: () => void }) {
   const { esegui } = useFamiglia();
+  const vista = useVista();
   const annullato = a.stato === 'annullato';
+  // Cosa c'era scritto sullo scontrino per ogni riga: aiuta a scegliere l'alimento giusto.
+  const lette = useMemo(
+    () => new Map((vista.righe.scontrino_riga ?? []).filter((x) => !x.eliminato_il && x.acquisto_riga_id).map((x) => [String(x.acquisto_riga_id), String(x.descrizione)])),
+    [vista.righe.scontrino_riga],
+  );
   return (
     <Foglio titolo={`Spesa di ${formattaGiorno(a.data)}`} chiudi={chiudi}>
       <p className="tenue" style={{ marginTop: 0 }}>
@@ -769,9 +775,22 @@ function SchedaAcquisto({ indice, acquisto: a, righe, chiudi }: { indice: Indice
       </p>
       <ul className="elenco">
         {righe.map((r) => (
-          <RigaComprata key={r.id} indice={indice} riga={r} modificabile={!annullato} />
+          <RigaComprata key={r.id} indice={indice} riga={r} modificabile={!annullato} letta={lette.get(r.id)} />
         ))}
       </ul>
+      {annullato && (
+        <button
+          className="bottone primario pieno"
+          style={{ marginTop: 12 }}
+          onClick={async () => {
+            if (!window.confirm('Riattivare questo acquisto? Le quantità che l’annullo aveva tolto tornano in casa.')) return;
+            await esegui('riattiva_acquisto', { id: a.id });
+            chiudi();
+          }}
+        >
+          Riattiva l’acquisto
+        </button>
+      )}
       {!annullato && (
         <button
           className="bottone pericolo pieno"
@@ -789,11 +808,12 @@ function SchedaAcquisto({ indice, acquisto: a, righe, chiudi }: { indice: Indice
   );
 }
 
-function RigaComprata({ indice, riga: r, modificabile }: { indice: Indice; riga: RigaAcquisto; modificabile: boolean }) {
+function RigaComprata({ indice, riga: r, modificabile, letta }: { indice: Indice; riga: RigaAcquisto; modificabile: boolean; letta?: string }) {
   const { esegui } = useFamiglia();
   const [numero, setNumero] = useState(r.quantita == null ? '' : String(r.quantita).replace('.', ','));
   const [euro, setEuro] = useState(r.prezzo == null ? '' : String(r.prezzo).replace('.', ','));
   const [errore, setErrore] = useState<string | null>(null);
+  const [cambia, setCambia] = useState(false);
   const nome = r.ingrediente_id ? indice.nome(r.ingrediente_id) : (r.nome ?? 'Voce');
   // Dallo scontrino senza quantità: la quantità si scrive in Casa › Da completare, qui si corregge solo il prezzo.
   const conQuantita = Boolean(r.ingrediente_id && r.quantita != null);
@@ -813,6 +833,17 @@ function RigaComprata({ indice, riga: r, modificabile }: { indice: Indice; riga:
     });
   }
 
+  /** L'alimento giusto, scelto dopo la conferma: stessa quantità e stesso lotto, ma solo se si misura allo stesso modo. */
+  async function scegli(ing: Ingrediente) {
+    if (ing.id === r.ingrediente_id) return setCambia(false);
+    if (r.unita && UNITA_BASE[ing.dimensione] !== r.unita) {
+      return setErrore(`«${ing.nome}» non va bene: ${nome} è registrato in ${r.unita} e ${ing.nome} ${ing.dimensione === 'massa' ? 'si pesa' : ing.dimensione === 'volume' ? 'si misura in ml' : 'si conta a pezzi'}.`);
+    }
+    setErrore(null);
+    await esegui('cambia_ingrediente_riga', { id: r.id, ingrediente_id: ing.id, ingrediente_visto: r.ingrediente_id });
+    setCambia(false);
+  }
+
   return (
     <li>
       <form onSubmit={salva} className="riga" style={{ flexWrap: 'wrap' }}>
@@ -829,9 +860,34 @@ function RigaComprata({ indice, riga: r, modificabile }: { indice: Indice; riga:
         </label>
         {modificabile && cambiata && <button className="bottone primario piccolo">Correggi</button>}
       </form>
+      {letta && r.ingrediente_id && (
+        <p className="tenue" style={{ margin: '4px 0 0' }}>
+          Letto sullo scontrino: «{letta}»
+        </p>
+      )}
+      {modificabile && r.ingrediente_id &&
+        (cambia ? (
+          <div style={{ marginTop: 6 }}>
+            <CercaIngrediente indice={indice} etichetta={letta ? `Cos’è «${letta}»?` : 'Che cosa hai comprato?'} autoFocus scegli={scegli} />
+            <button type="button" className="bottone piccolo" onClick={() => {
+                setCambia(false);
+                setErrore(null);
+              }}>
+              Lascia {nome}
+            </button>
+          </div>
+        ) : (
+          <button type="button" className="bottone piccolo" style={{ marginTop: 6 }} onClick={() => setCambia(true)} aria-label={`Cambia l’alimento di ${nome}`}>
+            Cambia alimento
+          </button>
+        ))}
       {!r.ingrediente_id && <p className="tenue" style={{ margin: '4px 0 0' }}>Non è un alimento: non va in casa.</p>}
       {r.ingrediente_id && !conQuantita && <p className="tenue" style={{ margin: '4px 0 0' }}>Quantità da scrivere in Casa, alla voce «Da completare».</p>}
-      {errore && <div className="avviso errore">{errore}</div>}
+      {errore && (
+        <div className="avviso errore" role="alert">
+          {errore}
+        </div>
+      )}
     </li>
   );
 }

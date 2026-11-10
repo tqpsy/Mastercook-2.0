@@ -3,7 +3,7 @@
  */
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { type Banco, comando, creaFamiglia, nuovoBanco } from './banco';
+import { type Banco, comando, creaFamiglia, giornoRoma, nuovoBanco } from './banco';
 
 let banco: Banco;
 beforeAll(async () => {
@@ -21,7 +21,7 @@ describe('ricetta cucinata fuori dal menu', () => {
     const { famiglia } = await creaFamiglia(u);
     const vecchi = randomUUID();
     const nuovi = randomUUID();
-    await u.applica(comando('aggiungi_lotto', famiglia, { id: vecchi, ingrediente_id: 'ing:spaghetti', quantita: 100, unita: 'g', luogo: 'dispensa', data_limite: '2026-11-10', tipo_data: 'scadenza' }));
+    await u.applica(comando('aggiungi_lotto', famiglia, { id: vecchi, ingrediente_id: 'ing:spaghetti', quantita: 100, unita: 'g', luogo: 'dispensa', data_limite: giornoRoma(1), tipo_data: 'scadenza' }));
     await u.applica(comando('aggiungi_lotto', famiglia, { id: nuovi, ingrediente_id: 'ing:spaghetti', quantita: 500, unita: 'g', luogo: 'dispensa', data_limite: '2027-05-01', tipo_data: 'scadenza' }));
 
     // La carbonara del catalogo: 320 g di spaghetti per 4 porzioni → 160 g per 2.

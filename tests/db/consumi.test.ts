@@ -4,7 +4,7 @@
  */
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { type Banco, comando, creaFamiglia, nuovoBanco, type Utente } from './banco';
+import { type Banco, comando, creaFamiglia, giornoRoma, nuovoBanco, type Utente } from './banco';
 
 let banco: Banco;
 beforeAll(async () => {
@@ -143,7 +143,7 @@ describe('conferma del pasto', () => {
   it('T-CON-8 si toglie prima dai lotti che scadono prima; gli spaghetti valgono come pasta', async () => {
     const { u, famiglia } = await famigliaCon();
     const tardi = await lotto(u, famiglia, 'ing:spaghetti', 500, 'g', '2027-06-01');
-    const presto = await lotto(u, famiglia, 'ing:spaghetti', 200, 'g', '2026-11-10');
+    const presto = await lotto(u, famiglia, 'ing:spaghetti', 200, 'g', giornoRoma(1));
     const senza = await lotto(u, famiglia, 'ing:spaghetti', 500);
     const portata = await piatto(u, famiglia);
     await u.applica(conferma(famiglia, portata, 'come_previsto'));
