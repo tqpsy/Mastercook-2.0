@@ -6,6 +6,9 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { type Banco, comando, creaFamiglia, nuovoBanco, type Utente } from './banco';
 
+/** Una data a `n` giorni da oggi: le prove non devono scadere col calendario (un lotto scaduto non si scala più). */
+const traGiorni = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+
 let banco: Banco;
 beforeAll(async () => {
   banco = await nuovoBanco();
@@ -142,8 +145,8 @@ describe('conferma del pasto', () => {
 
   it('T-CON-8 si toglie prima dai lotti che scadono prima; gli spaghetti valgono come pasta', async () => {
     const { u, famiglia } = await famigliaCon();
-    const tardi = await lotto(u, famiglia, 'ing:spaghetti', 500, 'g', '2027-06-01');
-    const presto = await lotto(u, famiglia, 'ing:spaghetti', 200, 'g', '2026-11-10');
+    const tardi = await lotto(u, famiglia, 'ing:spaghetti', 500, 'g', traGiorni(400));
+    const presto = await lotto(u, famiglia, 'ing:spaghetti', 200, 'g', traGiorni(30));
     const senza = await lotto(u, famiglia, 'ing:spaghetti', 500);
     const portata = await piatto(u, famiglia);
     await u.applica(conferma(famiglia, portata, 'come_previsto'));
