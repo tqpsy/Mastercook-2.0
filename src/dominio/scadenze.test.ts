@@ -30,6 +30,7 @@ describe('scadenze e stime (T-SCA)', () => {
     expect(descriviData({ data_limite: '2026-10-25', tipo_data: 'tmc' }, OGGI)).toBe('Oltre il «preferibilmente entro» da 2 giorni');
     expect(descriviData({ data_limite: null, tipo_data: 'sconosciuta' }, OGGI)).toBe('Data sconosciuta');
     expect(descriviData({ data_limite: '2026-10-29', tipo_data: 'stimata' }, OGGI)).toBe('Entro 2 giorni (stima)');
+    expect(descriviData({ data_limite: '2029-05-01', tipo_data: 'tmc' }, OGGI)).toBe('Preferibilmente entro maggio 2029');
   });
 
   it('T-SCA-6 «da usare presto»: prima gli scaduti, poi oggi, poi i prossimi giorni, poi da controllare', () => {

@@ -12,7 +12,7 @@ import { ricettePerUrgenti } from '../dominio/consumi';
 import type { Indice, Ingrediente } from '../dominio/ricette';
 import { daUsarePresto, descriviData, descriviDurata, eFresco, giorniTra, type Luogo, oggi, piuGiorni, scadutoVero, spreco, statoData, stima, type TipoData } from '../dominio/scadenze';
 import { formatta, leggiNumero, type Scritta, scrittaVuota, totaleScritta, UNITA_BASE, type UnitaBase } from '../dominio/unita';
-import { chiaveGruppo, confezioneDa, daPrendere, descriviGruppo, type Gruppo, gruppoDi, quanteConfezioni, quellaAperta, raggruppa, unaConfezione } from '../dominio/confezioni';
+import { chiaveGruppo, confezioneDa, daPrendere, descriviGruppo, elencoConfezioni, type Gruppo, gruppoDi, quanteConfezioni, raggruppa, riassuntoConfezioni } from '../dominio/confezioni';
 import { CampoQuantita } from '../ui/CampoQuantita';
 import { LivelloScorta } from '../ui/LivelloScorta';
 import { descriviLivello, eBasso, eLivello, LIVELLI, type Livello, puoAOcchio, type ScortaAOcchio, scorteAOcchio } from '../dominio/livello';
@@ -855,18 +855,17 @@ function NuovoLotto({ indice, luogo: luogoIniziale, chiudi }: { indice: Indice; 
   );
 }
 
-type Azione = 'consumo' | 'spreco' | 'scaduto' | 'correggi' | 'sposta' | 'data' | 'occhio' | 'misura' | 'confezione' | null;
+type Azione = 'usa' | 'spreco' | 'correggi' | 'sposta' | 'data' | 'occhio' | 'misura' | 'confezione' | null;
 
 const TITOLI: Record<Exclude<Azione, null>, string> = {
-  consumo: 'Quanto ne hai usato?',
+  usa: 'Quanto ne hai usato?',
   spreco: 'Quanto ne hai buttato?',
-  scaduto: 'Quanto ne hai buttato perché scaduto?',
   correggi: 'Quanto ce n’è adesso?',
   sposta: 'Dove lo sposti?',
   data: 'Cambia la data',
   occhio: 'A occhio: quanto ne hai?',
   misura: 'Quanto pesa adesso?',
-  confezione: 'Quanto contiene una confezione?',
+  confezione: 'Quanto contiene una confezione chiusa?',
 };
 
 const NOME_CAUSALE: Record<string, string> = {
@@ -888,8 +887,9 @@ function SchedaLotto({ indice, lotto: l, lotti, giorno, chiudi }: { indice: Indi
   const g = useMemo(() => gruppoDi(lotti, l), [lotti, l]);
   const totale = g.totale;
   const quante = quanteConfezioni(g);
-  const una = unaConfezione(g);
-  const aperta = quellaAperta(g);
+  const confezioni = elencoConfezioni(g);
+  const f = (valore: number) => formatta({ valore, unita: l.unita });
+  const [eraScaduto, setEraScaduto] = useState(false);
   const vista = useVista();
   const ing = indice.ingrediente(l.ingrediente_id);
   const [azione, setAzione] = useState<Azione>(null);
@@ -925,8 +925,14 @@ function SchedaLotto({ indice, lotto: l, lotti, giorno, chiudi }: { indice: Indi
   function apri(a: Azione) {
     setAzione(a);
     setErrore(null);
-    cambiaScritta({ numero: '', quante: '1', ...(a === 'misura' ? { unita: UNITA_BASE[ing?.dimensione ?? 'massa'] } : {}) });
-    setTutto(a !== 'correggi');
+    setEraScaduto(false);
+    cambiaScritta({
+      numero: a === 'confezione' && (l.confezione || g.taglia) ? String(l.confezione ?? g.taglia).replace('.', ',') : '',
+      quante: '1',
+      ...(a === 'misura' ? { unita: UNITA_BASE[ing?.dimensione ?? 'massa'] } : a === 'confezione' ? { unita: l.unita } : {}),
+    });
+    // «Ho usato…»: di solito una parte, si scrivono i grammi.
+    setTutto(a !== 'correggi' && a !== 'usa');
     // Più confezioni a occhio: tanti pezzi quante sono le confezioni.
     setNuovoLivello({ pezzi: Math.min(99, Math.max(1, quante)), livello: 'tanto' });
   }
@@ -936,16 +942,29 @@ function SchedaLotto({ indice, lotto: l, lotti, giorno, chiudi }: { indice: Indi
     for (const p of prese) await esegui('scarica_lotto', { lotto_id: p.lotto_id, causale, quantita: p.quantita });
   }
 
-  async function usataUna(presa: { lotto_id: string; quantita: number } | null) {
-    if (!presa) return;
-    await scarica([presa], 'consumo');
-    if (presa.quantita >= totale) chiudi();
-  }
+
 
   async function conferma(e: FormEvent) {
     e.preventDefault();
     setErrore(null);
-    if (azione === 'consumo' || azione === 'spreco' || azione === 'scaduto') {
+    if (azione === 'usa') {
+      // «Ho usato 400 g»: si toglie prima dalla confezione aperta, poi se ne apre una chiusa (o più, se non basta).
+      let quantita = totale;
+      if (!tutto) {
+        const q = quantitaDa(scritta, ing);
+        if (typeof q === 'string') return setErrore(q);
+        if (q.valore > totale) return setErrore(`Ce n’è solo ${f(totale)}. Se ce n’era di più, usa «Correggi il totale» in «Altro».`);
+        quantita = q.valore;
+      }
+      for (const p of daPrendere(g, quantita)) {
+        const x = g.lotti.find((y) => y.id === p.lotto_id)!;
+        // Il lotto non sapeva quanto contiene una confezione: era una sola, intera. Lo ricorda, così quella aperta
+        // resta nella stessa riga delle altre.
+        if (p.quantita < x.quantita && !x.confezione) await esegui('modifica_lotto', { id: x.id, versione_attesa: x.versione, campi: { confezione: x.quantita } });
+        await esegui('scarica_lotto', { lotto_id: x.id, causale: 'consumo', quantita: p.quantita });
+      }
+      if (quantita >= totale) return chiudi();
+    } else if (azione === 'spreco') {
       let quantita = totale;
       if (!tutto) {
         const q = quantitaDa(scritta, ing);
@@ -953,7 +972,7 @@ function SchedaLotto({ indice, lotto: l, lotti, giorno, chiudi }: { indice: Indi
         if (q.valore > totale) return setErrore(`Ce n’è solo ${formatta({ valore: totale, unita: l.unita })}. Se ce n’era di più, usa «Correggi».`);
         quantita = q.valore;
       }
-      await scarica(daPrendere(g, quantita), azione);
+      await scarica(daPrendere(g, quantita), eraScaduto ? 'scaduto' : 'spreco');
       if (quantita >= totale) return chiudi();
     } else if (azione === 'correggi') {
       const n = leggiNumero(scritta.numero);
@@ -994,9 +1013,8 @@ function SchedaLotto({ indice, lotto: l, lotti, giorno, chiudi }: { indice: Indi
       else campi = { tipo_data: tipo === 'stimata' ? 'scadenza' : tipo, data_limite: data, fonte_data: dataProtetta ? 'confezione' : 'utente', calcolata_il: null };
       for (const x of g.lotti) await esegui('modifica_lotto', { id: x.id, versione_attesa: x.versione, campi });
     } else if (azione === 'confezione') {
-      const q = quantitaDa({ ...scritta, quante: '1' }, ing);
-      if (typeof q === 'string') return setErrore(q);
-      if (q.unita !== l.unita) return setErrore('Unità non adatta a questo prodotto.');
+      const q = nuovaConfezione;
+      if (!q) return setErrore('Scrivi quanto contiene una confezione chiusa, per esempio 500.');
       for (const x of g.lotti) await esegui('modifica_lotto', { id: x.id, versione_attesa: x.versione, campi: { confezione: q.valore } });
     } else if (azione === 'occhio') {
       // Più confezioni diventano un prodotto a occhio solo: le altre righe si chiudono.
@@ -1030,7 +1048,11 @@ function SchedaLotto({ indice, lotto: l, lotti, giorno, chiudi }: { indice: Indi
   }
 
   // A occhio si butta o si sposta tutto: una parte non si misura.
-  const chiedeQuantita = !occhio && (azione === 'consumo' || azione === 'spreco' || azione === 'scaduto' || azione === 'sposta');
+  const chiedeQuantita = !occhio && (azione === 'usa' || azione === 'spreco' || azione === 'sposta');
+  // «Quanto contiene una confezione»: un numero nell'unità del lotto, con l'anteprima di come si vedrà.
+  const nuovaConfezioneLetta = azione === 'confezione' ? quantitaDa({ ...scritta, quante: '1' }, ing) : null;
+  const nuovaConfezione = nuovaConfezioneLetta && typeof nuovaConfezioneLetta !== 'string' && nuovaConfezioneLetta.unita === l.unita ? nuovaConfezioneLetta : null;
+  const anteprima = nuovaConfezione ? riassuntoConfezioni(gruppoDi(g.lotti.map((x) => ({ ...x, confezione: nuovaConfezione.valore })), { ...l, confezione: nuovaConfezione.valore })) : null;
   const scaduto = l.data_limite ? giorniTra(giorno, l.data_limite) < 0 : false;
 
   if (scansionaCodice) return <Scanner titolo="Scansiona il codice a barre" chiudi={() => setScansionaCodice(false)} trovato={(c) => void collegaCodice(c)} />;
@@ -1038,23 +1060,36 @@ function SchedaLotto({ indice, lotto: l, lotti, giorno, chiudi }: { indice: Indi
   return (
     <Foglio titolo={l.nome ?? ing?.nome ?? 'Alimento'} chiudi={chiudi}>
       <p>
-        <strong>{quantitaRiga(g)}</strong>
-        {!occhio && quante > 1 && <span className="tenue"> (in tutto {formatta({ valore: totale, unita: l.unita })})</span>} in {NOME_LUOGO[l.luogo].toLowerCase()} ·{' '}
-        <EtichettaData lotto={l} giorno={giorno} />
+        <strong>{occhio ? quantitaLotto(l) : f(totale)}</strong> in {NOME_LUOGO[l.luogo].toLowerCase()} · <EtichettaData lotto={l} giorno={giorno} />
       </p>
-      {!occhio && quante > 1 && (
-        <div className="riga" style={{ flexWrap: 'wrap', marginBottom: 12 }}>
-          {una && (
-            <button className="bottone primario" onClick={() => void usataUna(una)}>
-              Usata una confezione
-            </button>
-          )}
-          {aperta && (
-            <button className="bottone" onClick={() => void usataUna(aperta)}>
-              Finita quella aperta
-            </button>
-          )}
-        </div>
+      {!occhio && !azione && (
+        <button className="bottone primario pieno" style={{ marginBottom: 12 }} onClick={() => apri('usa')}>
+          Ho usato…
+        </button>
+      )}
+      {!occhio && !azione && (
+        // Le confezioni una per una, per sapere cosa c'è: chiuse e quella aperta.
+        <section className="scheda confezioni" aria-label="Confezioni" style={{ background: 'var(--superficie-2)' }}>
+          <h3 style={{ marginTop: 0 }}>{riassuntoConfezioni(g)}</h3>
+          <ul className="elenco">
+            {confezioni.map((c, i) => (
+              <li key={`${c.lotto_id}:${i}`} className="riga spazio">
+                <span>
+                  {c.aperta ? (
+                    <>
+                      Aperta: restano <strong>{f(c.quantita)}</strong>
+                      {c.da && <span className="tenue"> di {f(c.da)}</span>}
+                    </>
+                  ) : (
+                    <>
+                      Chiusa da <strong>{f(c.quantita)}</strong>
+                    </>
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
       {frigo && l.luogo !== 'dispensa' && (
         <div className="consiglio-ripiano-mio">
@@ -1110,53 +1145,55 @@ function SchedaLotto({ indice, lotto: l, lotti, giorno, chiudi }: { indice: Indi
       )}
 
       {!azione && (
-        <div className="riga" style={{ flexWrap: 'wrap' }}>
-          {!occhio && (
-            <button className="bottone primario" onClick={() => apri('consumo')}>
-              Usato
+        <>
+          <div className="riga" style={{ flexWrap: 'wrap' }}>
+            <button className="bottone" onClick={() => apri('spreco')}>
+              Buttato
             </button>
-          )}
-          <button className="bottone" onClick={() => apri('spreco')}>
-            Buttato
-          </button>
-          <button className="bottone" onClick={() => apri('scaduto')}>
-            Scaduto
-          </button>
-          {!occhio && (
-            <button className="bottone" onClick={() => apri('correggi')}>
-              Correggi quantità
+            <button className="bottone" onClick={() => apri('sposta')}>
+              Sposta
             </button>
-          )}
-          {!occhio && (
-            <button className="bottone" onClick={() => apri('confezione')}>
-              {quante > 1 || l.confezione ? 'Cambia confezione' : 'Sono più confezioni'}
+            <button className="bottone" onClick={() => apri('data')}>
+              Cambia data
             </button>
-          )}
-          <button className="bottone" onClick={() => apri('sposta')}>
-            Sposta
-          </button>
-          <button className="bottone" onClick={() => apri('data')}>
-            Cambia data
-          </button>
-          <button className="bottone" onClick={() => setScansionaCodice(true)}>
-            <span aria-hidden>📷</span> Scansiona codice a barre
-          </button>
-          {!occhio && puoAOcchio(ing) && (
-            <button className="bottone" onClick={() => apri('occhio')}>
-              A occhio
-            </button>
-          )}
-          {occhio && (
-            <button className="bottone" onClick={() => apri('misura')}>
-              Pesa
-            </button>
-          )}
-        </div>
+          </div>
+          {/* Le cose che servono di rado, chiuse di base. */}
+          <details className="altro-lotto" style={{ marginTop: 12 }}>
+            <summary>Altro</summary>
+            <div className="riga" style={{ flexWrap: 'wrap', marginTop: 8 }}>
+              {!occhio && (
+                <button className="bottone" onClick={() => apri('confezione')}>
+                  Quanto contiene una confezione
+                </button>
+              )}
+              {!occhio && (
+                <button className="bottone" onClick={() => apri('correggi')}>
+                  Correggi il totale
+                </button>
+              )}
+              <button className="bottone" onClick={() => setScansionaCodice(true)}>
+                <span aria-hidden>📷</span> Codice a barre
+              </button>
+              {!occhio && puoAOcchio(ing) && (
+                <button className="bottone" onClick={() => apri('occhio')}>
+                  A occhio
+                </button>
+              )}
+              {occhio && (
+                <button className="bottone" onClick={() => apri('misura')}>
+                  Pesa
+                </button>
+              )}
+            </div>
+          </details>
+        </>
       )}
 
       {azione && (
         <form onSubmit={conferma} className="scheda" style={{ background: 'var(--superficie-2)' }} noValidate>
-          <h3 style={{ marginTop: 0 }}>{TITOLI[azione]}</h3>
+          <h3 style={{ marginTop: 0 }}>
+            {TITOLI[azione]}
+          </h3>
           {azione === 'sposta' && (
             <div className="scelte">
               {LUOGHI.filter((x) => x !== l.luogo).map((x) => (
@@ -1169,7 +1206,7 @@ function SchedaLotto({ indice, lotto: l, lotti, giorno, chiudi }: { indice: Indi
           {chiedeQuantita && (
             <div className="scelte">
               <button type="button" aria-pressed={tutto} onClick={() => setTutto(true)}>
-                Tutto ({formatta({ valore: totale, unita: l.unita })})
+                Tutto ({f(totale)})
               </button>
               <button type="button" aria-pressed={!tutto} onClick={() => setTutto(false)}>
                 Una parte
@@ -1182,14 +1219,24 @@ function SchedaLotto({ indice, lotto: l, lotti, giorno, chiudi }: { indice: Indi
               <LivelloScorta pezzi={nuovoLivello.pezzi} livello={nuovoLivello.livello} cambia={(x) => setNuovoLivello((n) => ({ ...n, ...x }))} />
             </>
           )}
-          {occhio && (azione === 'spreco' || azione === 'scaduto' || azione === 'sposta') && <p className="tenue" style={{ marginTop: 0 }}>Tutto ({quantitaLotto(l).toLowerCase()}).</p>}
-          {azione === 'confezione' && (
-            <p className="tenue" style={{ marginTop: 0 }}>
-              Ce n’è {formatta({ valore: totale, unita: l.unita })} in tutto. Scrivi quanto contiene una confezione: per esempio 500 g di pasta, e vedrai «500 g × 2».
-            </p>
+          {azione === 'spreco' && (
+            <label className="riga" style={{ gap: 8, marginTop: 8 }}>
+              <input type="checkbox" checked={eraScaduto} onChange={(e) => setEraScaduto(e.target.checked)} />
+              <span>Perché era scaduto</span>
+            </label>
           )}
+          {occhio && (azione === 'spreco' || azione === 'sposta') && <p className="tenue" style={{ marginTop: 0 }}>Tutto ({quantitaLotto(l).toLowerCase()}).</p>}
           {azione === 'confezione' && (
-            <CampoQuantita scritta={scritta} cambia={cambiaScritta} dimensione={ing?.dimensione ?? 'massa'} etichetta="Una confezione" autoFocus />
+            <>
+              <p className="tenue" style={{ marginTop: 0 }}>
+                Ce n’è {f(totale)} in tutto. Scrivi quanto c’è in una confezione chiusa (per la pasta di solito 500 g): ti dico come la vedo.
+              </p>
+              <label className="campo">
+                <span>Una confezione chiusa ({l.unita})</span>
+                <input inputMode="decimal" value={scritta.numero} onChange={(e) => cambiaScritta({ numero: e.target.value, unita: l.unita })} autoFocus />
+              </label>
+              {anteprima && <p role="status">{anteprima}</p>}
+            </>
           )}
           {((chiedeQuantita && !tutto) || azione === 'correggi' || azione === 'misura') && (
             <CampoQuantita scritta={scritta} cambia={cambiaScritta} dimensione={ing?.dimensione ?? 'massa'} pesoPz={ing?.peso_pz} autoFocus />

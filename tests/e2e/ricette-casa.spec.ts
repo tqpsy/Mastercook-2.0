@@ -198,13 +198,14 @@ test('casa: aggiunge, mostra cosa usare presto, scala la quantità usata e stima
   await expect(presto.getByText('Entro 1 giorno')).toBeVisible();
   await presto.getByRole('button', { name: /Apri Yogurt/ }).click();
   const lotto = page.getByRole('dialog', { name: /Yogurt/ });
-  await lotto.getByRole('button', { name: 'Usato' }).click();
-  await lotto.getByRole('button', { name: 'Una parte' }).click();
-  await lotto.getByLabel('Quantità').fill('200');
+  // 4 vasetti chiusi: si usa una parte di uno.
+  await expect(lotto).toContainText('4 confezioni: 4 da 125 g');
+  await lotto.getByRole('button', { name: 'Ho usato…' }).click();
+  await lotto.getByLabel('Quantità').fill('100');
   await lotto.getByRole('button', { name: 'Conferma' }).click();
-  // Restano 2 vasetti chiusi e uno aperto: la riga lo dice, con il totale.
-  await expect(lotto).toContainText('125 g × 2 + 50 g aperta');
-  await expect(lotto).toContainText('in tutto 300 g');
+  // Restano 3 vasetti chiusi e uno aperto.
+  await expect(lotto).toContainText('4 confezioni: 3 da 125 g, 1 aperta con 25 g');
+  await expect(lotto).toContainText('400 g in frigo');
   await expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
   await lotto.getByRole('button', { name: 'Chiudi' }).click();
 
@@ -225,7 +226,7 @@ test('casa: aggiunge, mostra cosa usare presto, scala la quantità usata e stima
   );
   expect(righe).toEqual([
     { ingrediente_id: 'ing:insalata', quantita: '250', tipo_data: 'stimata', movimenti: 1 },
-    { ingrediente_id: 'ing:yogurt', quantita: '300', tipo_data: 'scadenza', movimenti: 2 },
+    { ingrediente_id: 'ing:yogurt', quantita: '400', tipo_data: 'scadenza', movimenti: 2 },
   ]);
 
 });

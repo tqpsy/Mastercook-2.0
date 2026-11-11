@@ -1,6 +1,6 @@
 /**
  * Confezioni uguali in una riga: 2 confezioni da 500 g sono «500 g × 2», con quelle già in casa della stessa data.
- * «Usata una confezione» ne toglie una intera.
+ * Nella scheda le confezioni una per una: «Usa» su una e si scrivono i grammi usati.
  */
 import { expect, type Page, test } from '@playwright/test';
 import { apri, creaFamiglia, nuovoUtente, sql } from './aiuti';
@@ -19,7 +19,7 @@ async function aggiungiSpaghetti(page: Page, confezioni: number) {
   await salvato(page);
 }
 
-test('confezioni uguali: una riga «500 g × 3», poi una confezione usata', async ({ browser }, info) => {
+test('confezioni uguali: una riga «500 g × 3», poi 400 g usati da una: il totale in Casa, le confezioni nella scheda', async ({ browser }, info) => {
   const luca = await nuovoUtente('Luca');
   const { page } = await apri(browser, luca, info.project.use);
   await creaFamiglia(page, 'Casa Confezioni');
@@ -41,17 +41,30 @@ test('confezioni uguali: una riga «500 g × 3», poi una confezione usata', asy
 
   await riga.click();
   const scheda = page.getByRole('dialog', { name: /Spaghetti/ });
-  await expect(scheda).toContainText('in tutto 1,5 kg');
+  await expect(scheda).toContainText('3 confezioni: 3 da 500 g');
   if (process.env.MC_FOTO) await page.screenshot({ path: `${process.env.MC_FOTO}/${info.project.name}-2-scheda.png` });
-  await scheda.getByRole('button', { name: 'Usata una confezione' }).click();
+  // «Ho usato… 400 g»: se ne apre una, che resta aperta con 100 g nella stessa riga.
+  await scheda.getByRole('button', { name: 'Ho usato…' }).click();
+  await scheda.getByLabel('Quantità').fill('400');
+  await scheda.getByRole('button', { name: 'Conferma' }).click();
   await salvato(page);
-  await expect(scheda).toContainText('500 g × 2');
+  await expect(scheda).toContainText('3 confezioni: 2 da 500 g, 1 aperta con 100 g');
+  await expect(scheda.getByText('Aperta: restano 100 g di 500 g')).toBeVisible();
+  // Altri 150 g: prima i 100 rimasti della aperta, poi se ne apre un'altra.
+  await scheda.getByRole('button', { name: 'Ho usato…' }).click();
+  await scheda.getByLabel('Quantità').fill('150');
+  await scheda.getByRole('button', { name: 'Conferma' }).click();
+  await salvato(page);
+  await expect(scheda).toContainText('2 confezioni: 1 da 500 g, 1 aperta con 450 g');
+  if (process.env.MC_FOTO) await page.screenshot({ path: `${process.env.MC_FOTO}/${info.project.name}-3-usata.png` });
   await scheda.getByRole('button', { name: 'Chiudi' }).first().click();
-  await expect(riga).toContainText('500 g × 2');
+  // In Casa il totale, non «100 g × 11».
+  await expect(riga).toHaveCount(1);
+  await expect(riga).toContainText('950 g');
 
   const lotti = await sql<{ q: number; confezione: string | null }>(
     `select quantita::float as q, confezione from lotto where chiuso_il is null and famiglia_id in (select famiglia_id from utente_famiglia where utente_id = $1) order by quantita`,
     [luca.id],
   );
-  expect(lotti.reduce((s, l) => s + l.q, 0)).toBe(1000);
+  expect(lotti.reduce((s, l) => s + l.q, 0)).toBe(950);
 });
