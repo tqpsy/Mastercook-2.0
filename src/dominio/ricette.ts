@@ -80,7 +80,8 @@ export interface Ricetta {
 
 type RigaDb = Record<string, unknown> & { id: string; eliminato_il?: unknown; in_attesa?: boolean };
 
-const numero = (x: unknown) => (x === null || x === undefined || x === '' ? null : Number(x));
+/** Un numero letto da una riga del database: vuoto o assente diventa null. */
+export const numeroONull = (x: unknown) => (x === null || x === undefined || x === '' ? null : Number(x));
 
 export function ingredienteDiSistema(i: IngredienteCatalogo): Ingrediente {
   return { ...i, allergeni_noti: true, di_sistema: true };
@@ -94,7 +95,7 @@ export function ingredienteDellaFamiglia(r: RigaDb): Ingrediente {
     reparto: String(r.reparto ?? 'altro'),
     dimensione: r.dimensione as Dimensione,
     luogo: (r.luogo as Ingrediente['luogo']) ?? 'dispensa',
-    giorni: numero(r.giorni),
+    giorni: numeroONull(r.giorni),
     allergeni: (r.allergeni as string[]) ?? [],
     allergeni_noti: r.allergeni_noti !== false,
     classi: (r.classi as Classe[]) ?? [],
@@ -146,7 +147,7 @@ export function ricetteDellaFamiglia(ricette: RigaDb[], righe: RigaDb[], passi: 
   const ing = perRicetta(righe, (r) => ({
     id: r.id,
     ingrediente_id: String(r.ingrediente_id),
-    quantita: numero(r.quantita),
+    quantita: numeroONull(r.quantita),
     unita: r.unita as UnitaBase,
     qb: Boolean(r.qb),
     opzionale: Boolean(r.opzionale),
@@ -154,7 +155,7 @@ export function ricetteDellaFamiglia(ricette: RigaDb[], righe: RigaDb[], passi: 
     ordine: Number(r.ordine ?? 0),
     versione: Number(r.versione ?? 1),
     da_ricetta_id: (r.da_ricetta_id as string | null) ?? null,
-    dosi: numero(r.dosi),
+    dosi: numeroONull(r.dosi),
   }));
   const pas = perRicetta(passi, (r) => ({ id: r.id, ordine: Number(r.ordine ?? 0), testo: String(r.testo), versione: Number(r.versione ?? 1) }));
   return ricette.map((r) => ({
@@ -166,10 +167,10 @@ export function ricetteDellaFamiglia(ricette: RigaDb[], righe: RigaDb[], passi: 
     cucina: String(r.cucina ?? 'italiana'),
     provenienza: (r.provenienza as string | null) ?? null,
     porzioni: Number(r.porzioni),
-    minuti_preparazione: numero(r.minuti_preparazione),
-    minuti_cottura: numero(r.minuti_cottura),
-    minuti_totali: numero(r.minuti_totali),
-    difficolta: numero(r.difficolta),
+    minuti_preparazione: numeroONull(r.minuti_preparazione),
+    minuti_cottura: numeroONull(r.minuti_cottura),
+    minuti_totali: numeroONull(r.minuti_totali),
+    difficolta: numeroONull(r.difficolta),
     conservazione: (r.conservazione as string | null) ?? null,
     mesi: (r.mesi as number[] | null) ?? null,
     allergeni_dichiarati: (r.allergeni_dichiarati as string[]) ?? [],

@@ -7,7 +7,6 @@
 import { ESIGENZE_CRUDI } from './crudi';
 
 export type TipoVincolo = 'allergia' | 'intolleranza' | 'esigenza' | 'indicazione_medica';
-export type Severita = 'evitare' | 'evitare_anche_tracce';
 
 export interface VoceVincolo {
   oggetto: string;
@@ -52,10 +51,6 @@ const ELENCHI: Record<Exclude<TipoVincolo, 'indicazione_medica'>, VoceVincolo[]>
   intolleranza: INTOLLERANZE,
   esigenza: ESIGENZE,
 };
-
-export function vociPer(tipo: TipoVincolo): VoceVincolo[] {
-  return tipo === 'indicazione_medica' ? [] : ELENCHI[tipo];
-}
 
 export const NOME_TIPO: Record<TipoVincolo, string> = {
   allergia: 'Allergia',

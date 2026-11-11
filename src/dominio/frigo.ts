@@ -396,11 +396,6 @@ export function descriviPerFoto(frigo: Frigo, inquadrato: string | null): string
   ].join('\n');
 }
 
-/** Il codice di posto che arriva da Gemini, solo se esiste in questo frigo. */
-export function postoValido(frigo: Frigo | null, id: unknown): string | null {
-  return frigo && typeof id === 'string' && posto(frigo, id) ? id : null;
-}
-
 /** «Combinato, freezer sotto · 4 ripiani · 1 cassetto · sportello a destra»: la riga sotto la voce delle Impostazioni. */
 export function riassunto(frigo: Frigo | null): string {
   if (!frigo) return 'Non ancora configurato: dimmi com’è fatto e ti dico dove mettere le cose';

@@ -700,8 +700,7 @@ details > summary {
   overflow-wrap: break-word;
   hyphens: auto;
 }
-.piatto:focus-visible,
-.aggiungi-piatto:focus-visible {
+.piatto:focus-visible {
   outline: 2px solid var(--primario);
   outline-offset: 2px;
 }
@@ -729,17 +728,6 @@ details > summary {
 .piatto .piccolo {
   font-size: 0.8rem;
 }
-.aggiungi-piatto {
-  width: 100%;
-  min-height: 48px;
-  border: 1px dashed var(--bordo);
-  border-radius: 10px;
-  background: transparent;
-  color: var(--testo-tenue);
-  font: inherit;
-  font-size: 1.2rem;
-  cursor: pointer;
-}
 .giorno.oggi {
   border-color: var(--primario);
 }
@@ -753,52 +741,6 @@ details > summary {
 }
 .pasto:first-of-type {
   border-top: 0;
-}
-.nome-pasto {
-  padding-top: 10px;
-  font-size: 0.9rem;
-}
-/* La griglia esce dalla colonna della pagina e usa tutta la larghezza dello schermo; scorre solo lei. */
-.griglia-menu {
-  overflow-x: auto;
-  width: calc(100vw - 16px);
-  max-width: 1400px;
-  margin: 0 0 16px 50%;
-  transform: translateX(-50%);
-  padding: 0 8px;
-  box-sizing: border-box;
-}
-.griglia-menu table {
-  border-collapse: separate;
-  border-spacing: 6px;
-  min-width: 820px;
-  width: 100%;
-  table-layout: fixed;
-  font-size: 0.9rem;
-}
-.griglia-menu th {
-  font-weight: 600;
-  font-size: 0.85rem;
-  text-align: left;
-  vertical-align: top;
-  padding: 4px;
-}
-.griglia-menu thead th {
-  text-transform: capitalize;
-}
-.griglia-menu tbody th {
-  width: 92px;
-  position: sticky;
-  left: 0;
-  background: var(--sfondo);
-  z-index: 1;
-}
-.griglia-menu td {
-  vertical-align: top;
-  padding: 0;
-}
-.griglia-menu .oggi {
-  color: var(--primario);
 }
 .elenco > li.oggi strong {
   color: var(--primario);
@@ -1053,9 +995,6 @@ button.etichetta {
       calc(var(--margine) + env(safe-area-inset-right))
       calc(32px + env(safe-area-inset-bottom)) var(--margine);
   }
-  .griglia-menu {
-    width: calc(100vw - var(--larghezza-barra) - 16px);
-  }
   .avviso-uscita {
     left: calc(50% + var(--larghezza-barra) / 2);
     bottom: calc(24px + env(safe-area-inset-bottom));
@@ -1131,12 +1070,6 @@ button.etichetta {
 }
 .riga.spazio > .sopratitolo {
   margin-bottom: 4px;
-}
-.testa-pasto h3 {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 0;
 }
 /* Oggi: i pasti come riquadri colorati. Telefono: due per riga; con 3 o 5 pasti l'ultimo (la cena) prende tutta
    la riga, e con 5 i pasti principali stanno larghi a sinistra e le merende strette a destra. */
@@ -1714,24 +1647,11 @@ div.piatto-riquadro {
 .striscia-giorni button[aria-pressed='true'] small {
   color: inherit;
 }
-.bottone.fluttuante {
-  position: fixed;
-  right: calc(16px + env(safe-area-inset-right));
-  bottom: calc(84px + env(safe-area-inset-bottom));
-  z-index: 6;
-  min-height: 56px;
-  border-radius: 16px;
-  box-shadow: 0 6px 18px rgb(0 0 0 / 0.18);
-}
 .pagina {
   padding-bottom: calc(160px + env(safe-area-inset-bottom));
 }
 @media (min-width: 900px),
   (orientation: landscape) and (min-width: 560px) and (max-height: 600px) {
-  .bottone.fluttuante {
-    bottom: calc(24px + env(safe-area-inset-bottom));
-    right: calc(24px + env(safe-area-inset-right));
-  }
   .pagina {
     padding-bottom: calc(96px + env(safe-area-inset-bottom));
   }
@@ -2913,12 +2833,6 @@ details > summary:has(.primo-presto) {
   padding: 9px 12px;
   font-size: 0.92rem;
 }
-.bottone.fluttuante.con-antonino {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding-left: 8px;
-}
 .idea-pasto:has(.antonino-faccia) {
   border: 2px solid var(--primario);
 }
@@ -3147,9 +3061,6 @@ details > summary:has(.primo-presto) {
 }
 .non-si-toglie {
   padding: 8px 12px 12px;
-}
-.voce-rimedio {
-  display: block;
 }
 .senza-nel-piatto {
   gap: 10px;

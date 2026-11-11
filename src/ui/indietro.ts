@@ -117,6 +117,3 @@ export function togliPasso(id: number) {
 }
 
 installa();
-
-/** Solo per le prove. */
-export const _perProve = { pila, avvisaUscita };

@@ -2,9 +2,9 @@ import { type ReactNode, useMemo, useState } from 'react';
 import { IconaCibo } from '../ui/IconaCibo';
 import { iconaIngrediente } from '../dominio/iconeCibo';
 import { useFamiglia, useVista, type Vista } from '../dati/contesto';
-import { avanziDi, type ConfermaPasto as Conferma, type Consumo, type EsitoPasto, giorniAvanzo, NOME_ESITO, porzioniPortata, previstoPortata } from '../dominio/consumi';
+import { avanziDi, type ConfermaPasto as Conferma, confermeAttive, type Consumo, type EsitoPasto, giorniAvanzo, NOME_ESITO, porzioniPortata, previstoPortata } from '../dominio/consumi';
 import type { PortataMenu } from '../dominio/menu';
-import { iconaRicetta, type Indice, normalizza, type Ricetta } from '../dominio/ricette';
+import { iconaRicetta, type Indice, normalizza, numeroONull, type Ricetta } from '../dominio/ricette';
 import { oggi, piuGiorni } from '../dominio/scadenze';
 import { formatta, formattaGiorno, leggiNumero } from '../dominio/unita';
 import { Foglio } from '../ui/Foglio';
@@ -15,7 +15,6 @@ import { AggiornaAOcchio } from './Casa';
 import type { DatiMenu } from './Menu';
 import { useIcone } from './Ricette';
 
-const numero = (x: unknown) => (x === null || x === undefined ? null : Number(x));
 
 /** Le conferme dei pasti e le righe di consumo, come le vede l'app. */
 export function useConferme(vista: Vista) {
@@ -23,17 +22,17 @@ export function useConferme(vista: Vista) {
   return useMemo(() => {
     const conferme = (conferma_pasto ?? [])
       .filter((c) => !c.eliminato_il)
-      .map((c) => ({ ...(c as unknown as Conferma), porzioni: numero(c.porzioni), revisione: Number(c.revisione) }));
+      .map((c) => ({ ...(c as unknown as Conferma), porzioni: numeroONull(c.porzioni), revisione: Number(c.revisione) }));
     const righe = (consumo_riga ?? [])
       .filter((c) => !c.eliminato_il)
       .map((c) => ({
         conferma_id: String(c.conferma_id),
         ingrediente_id: String(c.ingrediente_id),
         unita: c.unita as Consumo['unita'],
-        prevista: numero(c.quantita_prevista),
+        prevista: numeroONull(c.quantita_prevista),
         usata: Number(c.quantita_usata),
       }));
-    return { conferme, righe, attive: new Map(conferme.filter((c) => c.attiva).map((c) => [c.portata_id, c])) };
+    return { conferme, righe, attive: confermeAttive(conferme) };
   }, [conferma_pasto, consumo_riga]);
 }
 

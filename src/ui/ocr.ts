@@ -199,15 +199,3 @@ export async function leggiTestoData(foto: Blob): Promise<string> {
   if (!funzionato) throw new Error('nessun lettore disponibile');
   return trovato.join('\n');
 }
-
-/** Legge il testo sparso di una foto (una data stampata sulla confezione, per esempio), sul telefono con Tesseract. */
-export async function leggiTestoSparso(foto: Blob): Promise<string> {
-  const { createWorker, PSM } = await import('tesseract.js');
-  const lettore = await createWorker('ita', 1);
-  try {
-    await lettore.setParameters({ tessedit_pageseg_mode: PSM.SPARSE_TEXT });
-    return (await lettore.recognize(foto, { rotateAuto: true })).data.text;
-  } finally {
-    await lettore.terminate();
-  }
-}

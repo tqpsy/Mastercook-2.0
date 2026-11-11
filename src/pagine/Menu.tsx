@@ -28,7 +28,7 @@ import { CATEGORIE, type Categoria } from '../catalogo/tipi';
 import { haPrincipale, type Principale, usaIngrediente } from '../dominio/principale';
 import { BottoniSegno, CercaRicetta, type Segno } from '../ui/FiltriRicetta';
 import { RICETTE_PER_PASTO } from '../dominio/proposte';
-import { filtra, iconaRicetta, type Indice, type Ricetta } from '../dominio/ricette';
+import { filtra, iconaRicetta, type Indice, numeroONull, type Ricetta } from '../dominio/ricette';
 import { ALLERGENI_UE, ESIGENZE, INTOLLERANZE, type VoceVincolo } from '../dominio/vincoli';
 import { IdeePerPasto, ProponiSettimana } from './Proposte';
 import { FacciaAntonino } from './Antonino';
@@ -274,7 +274,6 @@ export interface DatiMenu {
   ospiti: OspitiPasto[];
 }
 
-const numero = (x: unknown) => (x === null || x === undefined ? null : Number(x));
 
 export function useDatiMenu(vista: Vista): DatiMenu {
   // Solo le tabelle del menu: un cambio in casa o nella spesa non rifà questi calcoli.
@@ -302,7 +301,7 @@ export function useDatiMenu(vista: Vista): DatiMenu {
       portate: attive('portata')
         .map((p) => ({
           ...(p as unknown as PortataMenu),
-          porzioni: numero(p.porzioni),
+          porzioni: numeroONull(p.porzioni),
           ordine: Number(p.ordine ?? 0),
           bloccata: !!p.bloccata,
           ricetta_id: (p.ricetta_id as string | null) ?? null,
@@ -312,7 +311,7 @@ export function useDatiMenu(vista: Vista): DatiMenu {
         .sort((a, b) => a.ordine - b.ordine || String(a.id).localeCompare(String(b.id))),
       eccezioni: attive('eccezione_membro').map((e) => ({
         ...(e as unknown as Eccezione),
-        porzioni: numero(e.porzioni),
+        porzioni: numeroONull(e.porzioni),
       })),
       ospiti: attive('ospiti_pasto').map((o) => ({
         ...(o as unknown as OspitiPasto),
