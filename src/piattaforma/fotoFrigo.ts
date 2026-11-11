@@ -4,6 +4,7 @@
  * La foto non si salva da nessuna parte.
  */
 import { riconosci, riconosciZona as riconosciZonaGemini, testoFrigo, type VistoInZona } from '../../supabase/functions/foto-frigo/nucleo';
+import { type DataGemini, leggiDataDocumento } from '../../supabase/functions/foto-frigo/data';
 import { leggiPianoDocumento, MIME_PIANO, type PianoLetto } from '../../supabase/functions/foto-frigo/piano';
 import type { Riconosciuto } from '../dominio/fotoFrigo';
 import { chiamaLocale, chiaveGeminiLocale } from './locale/motore';
@@ -199,6 +200,31 @@ export async function leggiPianoConGemini(famiglia_id: string, file: Blob, mime:
       return { errore: e && ['quota', 'chiave', 'non_configurata', 'gemini', 'non_autorizzato', 'illeggibile'].includes(e) ? e : 'rete', dettaglio };
     }
     return data?.piano ? { piano: data.piano as PianoLetto } : { errore: 'illeggibile' };
+  } catch {
+    return { errore: 'rete' };
+  }
+}
+
+/**
+ * La data di scadenza stampata su una confezione, letta da Gemini con la chiave della famiglia (foto JPEG).
+ * La foto non si salva: passa a Google e basta. `data: null` se Gemini non la legge.
+ */
+export async function leggiDataConGemini(famiglia_id: string, foto: Blob, luogo: Luogo): Promise<{ data: DataGemini | null } | { errore: ErroreFoto; dettaglio?: string }> {
+  if (!navigator.onLine) return { errore: 'rete' };
+  try {
+    if (luogo.dove === 'locale') {
+      const chiave = await chiaveGeminiLocale(luogo.utenteId, famiglia_id);
+      if (!chiave) return { errore: 'non_configurata' };
+      const esito = await leggiDataDocumento(await base64(foto), chiave);
+      return 'errore' in esito ? { errore: esito.errore, dettaglio: esito.dettaglio } : { data: esito.data };
+    }
+    const { data, error } = await supabase().functions.invoke('foto-frigo', { body: { famiglia_id, tipo: 'data', immagine: await base64(foto) } });
+    if (error) {
+      const risposta = (error as { context?: Response }).context;
+      const corpo = risposta && typeof risposta.json === 'function' ? await risposta.json().catch(() => null) : null;
+      return { errore: erroreNoto(corpo?.errore), dettaglio: typeof corpo?.dettaglio === 'string' ? corpo.dettaglio.slice(0, 200) : undefined };
+    }
+    return { data: (data?.data as DataGemini | null | undefined) ?? null };
   } catch {
     return { errore: 'rete' };
   }

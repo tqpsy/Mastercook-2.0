@@ -1,14 +1,18 @@
 import { useId, useState } from 'react';
+import { useFamiglia } from '../dati/contesto';
 import { type DataLetta, dataDiScadenza } from '../dominio/dataDaTesto';
+import { leggiDataConGemini } from '../piattaforma/fotoFrigo';
 import { riduciFoto } from './Foto';
-import { leggiTestoSparso } from './ocr';
+import { leggiTestoData } from './ocr';
 
 /**
  * «Fotografa la data»: si scatta la data stampata sulla confezione e l'app la legge sul telefono
- * (la foto non esce dal dispositivo). Chi chiama controlla il risultato nel campo data.
+ * Prima la legge Gemini (chiave gratuita della famiglia, molto più brava con le stampe a puntini, sfocate o su metallo),
+ * poi, se non c'è rete o chiave, la legge il telefono. La foto non si salva. Chi chiama controlla il risultato nel campo data.
  */
 export function FotoData({ letta }: { letta: (d: DataLetta) => void }) {
   const id = useId();
+  const { famiglia, dove, utenteId } = useFamiglia();
   const [stato, setStato] = useState<'pronto' | 'leggo'>('pronto');
   const [errore, setErrore] = useState<string | null>(null);
 
@@ -17,7 +21,11 @@ export function FotoData({ letta }: { letta: (d: DataLetta) => void }) {
     setErrore(null);
     setStato('leggo');
     try {
-      const d = dataDiScadenza(await leggiTestoSparso(await riduciFoto(file, 2000)));
+      let d: DataLetta | null = null;
+      const g = await leggiDataConGemini(famiglia, await riduciFoto(file, 1600), { dove, utenteId });
+      if ('data' in g && g.data) d = { data: g.data.data, ...(g.data.tipo ? { tipo: g.data.tipo } : {}) };
+      // Senza rete, senza chiave o con la quota finita: la legge il telefono.
+      else d = dataDiScadenza(await leggiTestoData(file));
       if (d) letta(d);
       else setErrore('Non trovo una data nella foto. Riprova più da vicino, oppure scrivila a mano.');
     } catch {
