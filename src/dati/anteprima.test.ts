@@ -127,6 +127,11 @@ describe('anteprima della coda', () => {
     const c = vistaConAnteprima(attivo, [voce('cambia_ingrediente_riga', { id: 'r1', ingrediente_id: 'ing:panna' })]);
     expect(c.acquisto_riga?.map((r) => [r.ingrediente_id, r.lotto_id])).toEqual([['ing:panna', 'l1']]);
     expect(c.lotto?.map((l) => [l.ingrediente_id, l.quantita])).toEqual([['ing:panna', 1000]]);
+    // Una riga «non un alimento» diventa un alimento da completare: nessun lotto, nessuna quantità.
+    const nonCibo = { ...attivo, acquisto_riga: [{ id: 'r2', famiglia_id: F, seq: 4, acquisto_id: 'a1', ingrediente_id: null, nome: 'IPERAL SPATZLE', quantita: null, unita: null, lotto_id: null }] };
+    const d = vistaConAnteprima(nonCibo, [voce('cambia_ingrediente_riga', { id: 'r2', ingrediente_id: 'ing:pasta' })]);
+    expect(d.acquisto_riga?.map((r) => [r.ingrediente_id, r.quantita, r.lotto_id])).toEqual([['ing:pasta', null, null]]);
+    expect(d.lotto?.length).toBe(1);
     // Un acquisto annullato non si corregge.
     expect(vistaConAnteprima(base, [voce('cambia_ingrediente_riga', { id: 'r1', ingrediente_id: 'ing:panna' })]).acquisto_riga?.map((r) => r.ingrediente_id)).toEqual(['ing:latte']);
   });
