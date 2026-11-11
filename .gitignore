@@ -8,3 +8,4 @@ test-results
 !.env.example
 supabase/.temp
 supabase/.branches
+*.tsbuildinfo

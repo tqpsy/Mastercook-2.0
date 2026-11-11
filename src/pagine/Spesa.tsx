@@ -2,7 +2,7 @@ import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { LUOGHI, NOME_LUOGO } from '../catalogo/tipi';
 import { righeAttive, useFamiglia, useStatoSync, useVista, type Vista } from '../dati/contesto';
 import { useIndice } from '../dati/indice';
-import type { Indice, Ingrediente } from '../dominio/ricette';
+import { type Indice, type Ingrediente, numeroONull } from '../dominio/ricette';
 import { type Luogo, oggi, piuGiorni } from '../dominio/scadenze';
 import {
   type Acquisto,
@@ -35,7 +35,6 @@ import { Speso } from './Speso';
 /** Quanti giorni di menu guarda la lista. */
 export const GIORNI_SPESA = 7;
 
-const numero = (x: unknown) => (x === null || x === undefined ? null : Number(x));
 
 export function useDatiSpesa(vista: Vista) {
   const { voce_spesa, acquisto, acquisto_riga } = vista.righe;
@@ -44,11 +43,11 @@ export function useDatiSpesa(vista: Vista) {
     const vive = <T,>(t: keyof typeof r) => (r[t] ?? []).filter((x) => !x.eliminato_il) as unknown as T[];
     const voci = vive<VoceSpesa>('voce_spesa').map((v) => ({
       ...v,
-      quantita_richiesta: numero(v.quantita_richiesta),
-      quantita_scelta: numero(v.quantita_scelta),
+      quantita_richiesta: numeroONull(v.quantita_richiesta),
+      quantita_scelta: numeroONull(v.quantita_scelta),
     }));
     const acquisti = vive<Acquisto>('acquisto').sort((a, b) => b.data.localeCompare(a.data) || String(b.id).localeCompare(String(a.id)));
-    const righe = vive<RigaAcquisto>('acquisto_riga').map((x) => ({ ...x, quantita: numero(x.quantita), prezzo: numero(x.prezzo) }));
+    const righe = vive<RigaAcquisto>('acquisto_riga').map((x) => ({ ...x, quantita: numeroONull(x.quantita), prezzo: numeroONull(x.prezzo) }));
     return { voci, acquisti, righe, prezzi: prezziOsservati(acquisti, righe) };
   }, [voce_spesa, acquisto, acquisto_riga]);
 }

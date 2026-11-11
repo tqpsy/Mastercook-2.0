@@ -1,13 +1,12 @@
 import { useMemo, useState } from 'react';
 import type { Vista } from '../dati/contesto';
-import type { Indice } from '../dominio/ricette';
+import { type Indice, numeroONull } from '../dominio/ricette';
 import { oggi } from '../dominio/scadenze';
 import { type AcquistoConScontrino, ALTRO, DIFFERENZA, nomeMese, resocontoSpesa, type RigaScontrino, type Scontrino } from '../dominio/speso';
 import type { RigaAcquisto } from '../dominio/spesa';
 import { formattaEuro } from '../dominio/unita';
 import { Foglio } from '../ui/Foglio';
 
-const numero = (x: unknown) => (x === null || x === undefined ? null : Number(x));
 
 /** Il resoconto dai dati della vista (scontrini compresi). */
 function useResoconto(vista: Vista, indice: Indice, acquisti: AcquistoConScontrino[], righe: RigaAcquisto[]) {
@@ -15,11 +14,11 @@ function useResoconto(vista: Vista, indice: Indice, acquisti: AcquistoConScontri
   return useMemo(() => {
     const r = { scontrino, scontrino_riga };
     const vive = (t: 'scontrino' | 'scontrino_riga') => (r[t] ?? []).filter((x) => !x.eliminato_il);
-    const scontrini = vive('scontrino').map((s) => ({ id: String(s.id), data: String(s.data), totale: numero(s.totale), acquisto_id: (s.acquisto_id as string | null) ?? null })) as Scontrino[];
+    const scontrini = vive('scontrino').map((s) => ({ id: String(s.id), data: String(s.data), totale: numeroONull(s.totale), acquisto_id: (s.acquisto_id as string | null) ?? null })) as Scontrino[];
     const righeScontrino = vive('scontrino_riga').map((s) => ({
       id: String(s.id),
       scontrino_id: String(s.scontrino_id),
-      prezzo: numero(s.prezzo),
+      prezzo: numeroONull(s.prezzo),
       acquisto_riga_id: (s.acquisto_riga_id as string | null) ?? null,
     })) as RigaScontrino[];
     return resocontoSpesa({ acquisti, righe, scontrini, righeScontrino, repartoDi: (id) => indice.ingrediente(id)?.reparto, oggi: oggi() });

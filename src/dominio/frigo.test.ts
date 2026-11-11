@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cosaCiVa, descriviPerFoto, etilene, temperatura, zonaPerGuida, FRIGO_BASE, frigoDa, livelli, posti, postoDelLotto, postoIngrediente, postoPiatto, postoValido, riassunto } from './frigo';
+import { cosaCiVa, descriviPerFoto, etilene, temperatura, zonaPerGuida, FRIGO_BASE, frigoDa, livelli, posti, postoDelLotto, postoIngrediente, postoPiatto, riassunto } from './frigo';
 
 describe('il mio frigorifero', () => {
   it('senza configurazione: null; valori strani tornano quelli di base', () => {
@@ -93,9 +93,6 @@ describe('il mio frigorifero', () => {
     const d = descriviPerFoto(FRIGO_BASE, 's2');
     expect(d).toContain('- r1: Ripiano 1, in alto');
     expect(d).toContain('Nella foto c\'è solo questa parte: s2');
-    expect(postoValido(FRIGO_BASE, 'r4')).toBe('r4');
-    expect(postoValido(FRIGO_BASE, 'r9')).toBeNull();
-    expect(postoValido(null, 'r1')).toBeNull();
   });
 
   it('il posto di un lotto vale solo nel suo luogo e se il ripiano c\'è ancora', () => {

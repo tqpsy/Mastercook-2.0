@@ -37,28 +37,3 @@ export function abbinaAlimenti(indice: Indice, alimenti: Riconosciuto[]): Propos
   // Prima quelli riconosciuti, poi quelli da aggiungere a mano.
   return [...esito.filter((x) => x.ingrediente), ...esito.filter((x) => !x.ingrediente)];
 }
-
-/** Un lotto aperto, quanto basta per sapere cosa c'è già in casa. */
-export interface LottoInCasa {
-  ingrediente_id: string;
-  luogo: string;
-  unita: string;
-  quantita: number;
-  livello?: string | null;
-}
-
-/**
- * Cosa c'è già in casa, nello stesso posto, dello stesso ingrediente: la foto potrebbe mostrare cose già
- * registrate, e aggiungerle di nuovo le conterebbe due volte. `null` se non c'è niente.
- */
-export function giaInCasa(lotti: LottoInCasa[], ingredienteId: string, luogo: string): { lotti: number; quantita: number; unita: string; aOcchio: boolean } | null {
-  const uguali = lotti.filter((l) => l.ingrediente_id === ingredienteId && l.luogo === luogo && l.quantita > 0);
-  if (uguali.length === 0) return null;
-  const misurati = uguali.filter((l) => !l.livello);
-  return {
-    lotti: uguali.length,
-    quantita: misurati.reduce((t, l) => t + l.quantita, 0),
-    unita: misurati[0]?.unita ?? uguali[0].unita,
-    aOcchio: misurati.length === 0,
-  };
-}

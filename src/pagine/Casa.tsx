@@ -937,18 +937,11 @@ function SchedaLotto({ indice, lotto: l, lotti, giorno, chiudi }: { indice: Indi
     setNuovoLivello({ pezzi: Math.min(99, Math.max(1, quante)), livello: 'tanto' });
   }
 
-  /** Toglie da più lotti della riga, uno alla volta (prima la confezione aperta). */
-  async function scarica(prese: { lotto_id: string; quantita: number }[], causale: string) {
-    for (const p of prese) await esegui('scarica_lotto', { lotto_id: p.lotto_id, causale, quantita: p.quantita });
-  }
-
-
-
   async function conferma(e: FormEvent) {
     e.preventDefault();
     setErrore(null);
-    if (azione === 'usa') {
-      // «Ho usato 400 g»: si toglie prima dalla confezione aperta, poi se ne apre una chiusa (o più, se non basta).
+    if (azione === 'usa' || azione === 'spreco') {
+      // «Ho usato 400 g» (o buttato): si toglie prima dalla confezione aperta, poi se ne apre una chiusa (o più).
       let quantita = totale;
       if (!tutto) {
         const q = quantitaDa(scritta, ing);
@@ -956,23 +949,14 @@ function SchedaLotto({ indice, lotto: l, lotti, giorno, chiudi }: { indice: Indi
         if (q.valore > totale) return setErrore(`Ce n’è solo ${f(totale)}. Se ce n’era di più, usa «Correggi il totale» in «Altro».`);
         quantita = q.valore;
       }
+      const causale = azione === 'usa' ? 'consumo' : eraScaduto ? 'scaduto' : 'spreco';
       for (const p of daPrendere(g, quantita)) {
         const x = g.lotti.find((y) => y.id === p.lotto_id)!;
         // Il lotto non sapeva quanto contiene una confezione: era una sola, intera. Lo ricorda, così quella aperta
         // resta nella stessa riga delle altre.
         if (p.quantita < x.quantita && !x.confezione) await esegui('modifica_lotto', { id: x.id, versione_attesa: x.versione, campi: { confezione: x.quantita } });
-        await esegui('scarica_lotto', { lotto_id: x.id, causale: 'consumo', quantita: p.quantita });
+        await esegui('scarica_lotto', { lotto_id: x.id, causale, quantita: p.quantita });
       }
-      if (quantita >= totale) return chiudi();
-    } else if (azione === 'spreco') {
-      let quantita = totale;
-      if (!tutto) {
-        const q = quantitaDa(scritta, ing);
-        if (typeof q === 'string') return setErrore(q);
-        if (q.valore > totale) return setErrore(`Ce n’è solo ${formatta({ valore: totale, unita: l.unita })}. Se ce n’era di più, usa «Correggi».`);
-        quantita = q.valore;
-      }
-      await scarica(daPrendere(g, quantita), eraScaduto ? 'scaduto' : 'spreco');
       if (quantita >= totale) return chiudi();
     } else if (azione === 'correggi') {
       const n = leggiNumero(scritta.numero);
@@ -1067,8 +1051,8 @@ function SchedaLotto({ indice, lotto: l, lotti, giorno, chiudi }: { indice: Indi
           Ho usato…
         </button>
       )}
-      {!occhio && !azione && (
-        // Le confezioni una per una, per sapere cosa c'è: chiuse e quella aperta.
+      {!occhio && !azione && (confezioni.length > 1 || confezioni.some((c) => c.aperta)) && (
+        // Le confezioni una per una, per sapere cosa c'è: chiuse e quella aperta. Con una sola chiusa basta la riga sopra.
         <section className="scheda confezioni" aria-label="Confezioni" style={{ background: 'var(--superficie-2)' }}>
           <h3 style={{ marginTop: 0 }}>{riassuntoConfezioni(g)}</h3>
           <ul className="elenco">
@@ -1191,9 +1175,7 @@ function SchedaLotto({ indice, lotto: l, lotti, giorno, chiudi }: { indice: Indi
 
       {azione && (
         <form onSubmit={conferma} className="scheda" style={{ background: 'var(--superficie-2)' }} noValidate>
-          <h3 style={{ marginTop: 0 }}>
-            {TITOLI[azione]}
-          </h3>
+          <h3 style={{ marginTop: 0 }}>{TITOLI[azione]}</h3>
           {azione === 'sposta' && (
             <div className="scelte">
               {LUOGHI.filter((x) => x !== l.luogo).map((x) => (

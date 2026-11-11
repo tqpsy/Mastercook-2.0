@@ -37,15 +37,7 @@ function segna(utenteId: string, presente: boolean) {
 
 const nomeDati = (utenteId: string) => `mastercook-locale-${utenteId}`;
 
-type Ascoltatore = (fatte: number, totali: number) => void;
-const ascoltatori = new Set<Ascoltatore>();
 let aperto: { utenteId: string; db: Promise<PGliteWorker> } | null = null;
-
-/** Segue la preparazione del database (la prima volta richiede qualche secondo). */
-export function seguiPreparazione(f: Ascoltatore): () => void {
-  ascoltatori.add(f);
-  return () => ascoltatori.delete(f);
-}
 
 /** Apre (una volta per pagina) il database dell'utente, applicando le migrazioni che mancano. */
 export function database(utenteId: string): Promise<PGliteWorker> {
@@ -53,7 +45,7 @@ export function database(utenteId: string): Promise<PGliteWorker> {
   const db = (async () => {
     const w = new Worker(new URL('./motore.worker.ts', import.meta.url), { type: 'module' });
     const pg = await PGliteWorker.create(w, { dataDir: `idb://${nomeDati(utenteId)}` });
-    await preparaDatabase(pg, await migrazioni(), utenteId, (fatte, totali) => ascoltatori.forEach((a) => a(fatte, totali)));
+    await preparaDatabase(pg, await migrazioni(), utenteId);
     return pg;
   })();
   aperto = { utenteId, db };

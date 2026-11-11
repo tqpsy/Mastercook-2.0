@@ -48,8 +48,3 @@ async function scarica(codice: string): Promise<RispostaOff | undefined> {
     clearTimeout(timer);
   }
 }
-
-/** Solo nome e formato, per proporre l'ingrediente di un codice nuovo. */
-export async function cercaSuOpenFoodFacts(codice: string): Promise<ProdottoEsterno | undefined> {
-  return (await chiediAOpenFoodFacts(codice))?.esterno;
-}
