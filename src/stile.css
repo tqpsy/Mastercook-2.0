@@ -1343,9 +1343,6 @@ div.piatto-riquadro {
 .oggi-presto .mattonelle {
   margin-top: 6px;
 }
-.oggi-vuoto {
-  margin-top: 8px;
-}
 
 /* Da usare presto: tre mattonelle, arancio se scade entro domani, senape entro tre giorni, salvia dopo. */
 .mattonelle {
@@ -1409,7 +1406,6 @@ div.piatto-riquadro {
     align-self: end;
   }
   .oggi-pasti,
-  .oggi-vuoto,
   .oggi-lato {
     grid-column: 1 / -1;
   }
@@ -1777,7 +1773,8 @@ div.piatto-riquadro {
 /* Spesa: un solo selettore dei giorni e la barra «4 di 16 nel carrello». */
 .scelte.segmenti.larghi {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  /* L'ultima («Personalizza») larga quanto il suo nome: con quattro colonne uguali sul telefono usciva dal bordo. */
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
   border-radius: 14px;
   margin-bottom: 8px;
 }
@@ -4038,6 +4035,27 @@ details.sezione > summary::after {
   transition: transform 0.15s;
 }
 details.sezione[open] > summary::after {
+  transform: rotate(180deg);
+}
+/* Casa, scheda del prodotto: «Altro» si vede che si apre, e non si attacca alla cronologia. */
+details.altro-lotto {
+  margin-bottom: 16px;
+}
+details.altro-lotto > summary {
+  list-style: none;
+  gap: 6px;
+  color: var(--testo);
+  font-weight: 600;
+}
+details.altro-lotto > summary::-webkit-details-marker {
+  display: none;
+}
+details.altro-lotto > summary::after {
+  content: '▾';
+  color: var(--testo-tenue);
+  transition: transform 0.15s;
+}
+details.altro-lotto[open] > summary::after {
   transform: rotate(180deg);
 }
 details.sezione > summary > h2 {

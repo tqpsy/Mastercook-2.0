@@ -112,7 +112,7 @@ export function AntoninoImpostazioni() {
             <FacciaAntonino piccola />
           </span>
           <span className="cresce">
-            <strong>Antonino</strong>
+            <strong>Regole e piano</strong>
             <span className="tenue" style={{ display: 'block' }}>
               Il menu della settimana, il piano del nutrizionista e quello che ha imparato
             </span>

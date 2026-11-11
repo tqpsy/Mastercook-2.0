@@ -20,7 +20,7 @@ export function VoceMioFrigo() {
             🧊
           </span>
           <span className="cresce">
-            <strong>{frigo ? 'Il mio frigorifero' : 'Configura il tuo frigorifero'}</strong>
+            <strong>{frigo ? 'Modifica il frigorifero' : 'Configura il tuo frigorifero'}</strong>
             <span className="tenue" style={{ display: 'block' }}>
               {riassunto(frigo)}
             </span>
