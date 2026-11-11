@@ -200,8 +200,7 @@ test('casa: aggiunge, mostra cosa usare presto, scala la quantità usata e stima
   const lotto = page.getByRole('dialog', { name: /Yogurt/ });
   // 4 vasetti chiusi: si usa una parte di uno.
   await expect(lotto).toContainText('4 confezioni: 4 da 125 g');
-  await lotto.getByRole('button', { name: 'Usa la confezione chiusa da 125 g' }).first().click();
-  await lotto.getByRole('button', { name: 'Una parte' }).click();
+  await lotto.getByRole('button', { name: 'Ho usato…' }).click();
   await lotto.getByLabel('Quantità').fill('100');
   await lotto.getByRole('button', { name: 'Conferma' }).click();
   // Restano 3 vasetti chiusi e uno aperto.

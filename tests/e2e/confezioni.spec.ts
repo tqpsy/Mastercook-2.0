@@ -43,23 +43,28 @@ test('confezioni uguali: una riga «500 g × 3», poi 400 g usati da una: il tot
   const scheda = page.getByRole('dialog', { name: /Spaghetti/ });
   await expect(scheda).toContainText('3 confezioni: 3 da 500 g');
   if (process.env.MC_FOTO) await page.screenshot({ path: `${process.env.MC_FOTO}/${info.project.name}-2-scheda.png` });
-  // Usati 400 g da una confezione (quella aggiunta a parte): resta aperta con 100 g, nella stessa riga.
-  await scheda.getByRole('button', { name: 'Usa la confezione chiusa da 500 g' }).last().click();
-  await scheda.getByRole('button', { name: 'Una parte' }).click();
+  // «Ho usato… 400 g»: se ne apre una, che resta aperta con 100 g nella stessa riga.
+  await scheda.getByRole('button', { name: 'Ho usato…' }).click();
   await scheda.getByLabel('Quantità').fill('400');
   await scheda.getByRole('button', { name: 'Conferma' }).click();
   await salvato(page);
   await expect(scheda).toContainText('3 confezioni: 2 da 500 g, 1 aperta con 100 g');
   await expect(scheda.getByText('Aperta: restano 100 g di 500 g')).toBeVisible();
+  // Altri 150 g: prima i 100 rimasti della aperta, poi se ne apre un'altra.
+  await scheda.getByRole('button', { name: 'Ho usato…' }).click();
+  await scheda.getByLabel('Quantità').fill('150');
+  await scheda.getByRole('button', { name: 'Conferma' }).click();
+  await salvato(page);
+  await expect(scheda).toContainText('2 confezioni: 1 da 500 g, 1 aperta con 450 g');
   if (process.env.MC_FOTO) await page.screenshot({ path: `${process.env.MC_FOTO}/${info.project.name}-3-usata.png` });
   await scheda.getByRole('button', { name: 'Chiudi' }).first().click();
   // In Casa il totale, non «100 g × 11».
   await expect(riga).toHaveCount(1);
-  await expect(riga).toContainText('1,1 kg');
+  await expect(riga).toContainText('950 g');
 
   const lotti = await sql<{ q: number; confezione: string | null }>(
     `select quantita::float as q, confezione from lotto where chiuso_il is null and famiglia_id in (select famiglia_id from utente_famiglia where utente_id = $1) order by quantita`,
     [luca.id],
   );
-  expect(lotti.reduce((s, l) => s + l.q, 0)).toBe(1100);
+  expect(lotti.reduce((s, l) => s + l.q, 0)).toBe(950);
 });
