@@ -186,15 +186,12 @@ export async function leggiTestoData(foto: Blob): Promise<string> {
   const { createWorker, PSM } = await import('tesseract.js');
   const lettore = await createWorker('ita', 1);
   try {
-    for (const [lato, bn] of [[2000, false], [2000, true], [1200, true]] as const) {
-      const tela = await telaDaFoto(foto, lato, bn);
-      for (const modo of [PSM.SPARSE_TEXT, PSM.AUTO]) {
-        await lettore.setParameters({ tessedit_pageseg_mode: modo });
-        const t = (await lettore.recognize(tela, { rotateAuto: true })).data.text;
-        funzionato = true;
-        trovato.push(t);
-        if (buona(t)) return t;
-      }
+    for (const bn of [false, true]) {
+      await lettore.setParameters({ tessedit_pageseg_mode: PSM.SPARSE_TEXT });
+      const t = (await lettore.recognize(await telaDaFoto(foto, 2000, bn), { rotateAuto: true })).data.text;
+      funzionato = true;
+      trovato.push(t);
+      if (buona(t)) return t;
     }
   } finally {
     await lettore.terminate();

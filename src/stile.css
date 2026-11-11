@@ -860,6 +860,23 @@ button.etichetta {
   background: #000;
 }
 
+.scanner-cornice {
+  position: relative;
+}
+
+/* Il riquadro dove tenere la data: la fascia letta è la stessa (LettoreData). */
+.scanner-cornice .mirino {
+  position: absolute;
+  left: 5%;
+  top: 30%;
+  width: 90%;
+  height: 40%;
+  border: 2px solid var(--primario);
+  border-radius: 10px;
+  box-shadow: 0 0 0 9999px rgb(0 0 0 / 35%);
+  pointer-events: none;
+}
+
 .testo-letto {
   white-space: pre-wrap;
   font-size: 0.8rem;

@@ -52,7 +52,7 @@ export async function leggiDataDocumento(
   modelli = MODELLI,
 ): Promise<{ data: DataGemini | null; modello: string } | { errore: 'quota' | 'chiave' | 'gemini'; dettaglio?: string }> {
   const parti: Parte[] = [{ inline_data: { mime_type: 'image/jpeg', data: immagine } }, { text: ISTRUZIONI_DATA }];
-  const r = await chiediGemini(parti, SCHEMA_DATA, chiave, chiama, modelli, { preciso: true });
+  const r = await chiediGemini(parti, SCHEMA_DATA, chiave, chiama, modelli);
   if ('errore' in r) return r;
   return { data: leggiDataGemini(r.testo), modello: r.modello };
 }
