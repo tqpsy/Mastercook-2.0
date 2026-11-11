@@ -164,6 +164,7 @@ const EFFETTI: Record<string, Effetto> = {
     quantita: Number(d.quantita),
     unita: d.livello ? 'pz' : d.unita,
     livello: d.livello ?? null,
+    confezione: d.livello ? null : (d.confezione ?? null),
     luogo: d.luogo,
     data_acquisto: d.data_acquisto ?? null,
     data_limite: d.data_limite ?? null,

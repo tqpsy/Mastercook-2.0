@@ -19,6 +19,7 @@ import {
   type VoceSpesa,
 } from '../dominio/spesa';
 import { formatta, formattaEuro, formattaGiorno, leggiNumero, type PerNegozio, quantitaDaNegozio, type Scritta, scrittaVuota, type Unita, UNITA_BASE } from '../dominio/unita';
+import { confezioneDa } from '../dominio/confezioni';
 import { CampoQuantita } from '../ui/CampoQuantita';
 import { CercaIngrediente } from '../ui/CercaIngrediente';
 import { Foglio } from '../ui/Foglio';
@@ -598,19 +599,22 @@ function ConfermaSpesa({ indice, carrello, chiudi }: { indice: Indice; carrello:
       const ing = r.ingrediente_id ? indice.ingrediente(r.ingrediente_id) : undefined;
       let quantita: number | null = null;
       let unita = r.unita;
+      let confezione: number | null = null;
       if (ing && r.unita) {
         // Scritta in kg o in pezzi: si salva in unità base (i pezzi di un ingrediente che si pesa diventano grammi).
         const q = quantitaDa({ numero: r.numero, unita: r.scelta ?? r.unita, quante: r.quante ?? '1' }, ing);
         if (typeof q === 'string') return setErrore(`Scrivi quanto ${nome} hai comprato.`);
         quantita = q.valore;
         unita = q.unita;
+        // 2 confezioni da 500 g: in casa una riga «500 g × 2».
+        confezione = confezioneDa({ numero: r.numero, unita: r.scelta ?? r.unita, quante: r.quante ?? '1' }, ing.dimensione, ing.peso_pz);
       } else if (r.ingrediente_id) {
         quantita = leggiNumero(r.numero);
         if (quantita === null || quantita <= 0) return setErrore(`Scrivi quanto ${nome} hai comprato.`);
       }
       const prezzo = r.euro.trim() ? leggiNumero(r.euro) : null;
       if (r.euro.trim() && prezzo === null) return setErrore(`Il prezzo di ${nome} non è un numero.`);
-      const riga: Record<string, unknown> = { ...r, quantita, unita, prezzo };
+      const riga: Record<string, unknown> = { ...r, quantita, unita, prezzo, ...(confezione ? { confezione } : {}) };
       delete riga.numero;
       delete riga.euro;
       delete riga.scelta;

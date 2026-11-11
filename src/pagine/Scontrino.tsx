@@ -6,8 +6,9 @@ import { useFamiglia, useVista } from '../dati/contesto';
 import type { Indice, Ingrediente } from '../dominio/ricette';
 import { normalizza } from '../dominio/ricette';
 import { eFresco, giorniTra, type Luogo, oggi, stima } from '../dominio/scadenze';
-import { abbinaRighe, leggiScontrino, quantitaProposta, type RigaDaAbbinare, type RigaLetta, suggerisciIngrediente, unisciDescrizioni } from '../dominio/scontrini';
+import { abbinaRighe, leggiScontrino, quantitaProposta, type RigaDaAbbinare, type RigaLetta, suggerisciIngrediente, unisciDescrizioni, unisciRipetute } from '../dominio/scontrini';
 import { formattaEuro, formattaGiorno, leggiNumero, type Unita, UNITA_BASE } from '../dominio/unita';
+import { confezioneDa } from '../dominio/confezioni';
 import { CampoQuantita } from '../ui/CampoQuantita';
 import { CercaIngrediente } from '../ui/CercaIngrediente';
 import { Foglio } from '../ui/Foglio';
@@ -109,7 +110,7 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
     setOra(s.ora ?? '');
     setTotale(testoEuro(s.totale));
     setCorretti(s.corretti);
-    setRighe(proposte(s.righe.map((r) => ({ id: crypto.randomUUID(), riga: r })), giorno));
+    setRighe(unisciRipetute(proposte(s.righe.map((r) => ({ id: crypto.randomUUID(), riga: r })), giorno)));
     setRevisione(true);
   }
 
@@ -204,8 +205,10 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
           pronte.push({ ...base, nuova: { id: crypto.randomUUID(), ingrediente_id: r.ing.id, luogo: r.luogo } });
           continue;
         }
-        const q = quantitaDa({ numero: r.numero, unita: r.unita, quante: r.quante ?? '1' }, r.ing);
+        const scritta = { numero: r.numero, unita: r.unita, quante: r.quante ?? '1' };
+        const q = quantitaDa(scritta, r.ing);
         if (typeof q === 'string') return setErrore(`${r.ing.nome}: ${q}`);
+        const confezione = confezioneDa(scritta, r.ing.dimensione, r.ing.peso_pz);
         const s = eFresco(r.ing) ? stima(r.ing, r.luogo, data) : null;
         pronte.push({
           ...base,
@@ -215,6 +218,7 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
             ingrediente_id: r.ing.id,
             quantita: q.valore,
             unita: q.unita,
+            ...(confezione ? { confezione } : {}),
             luogo: r.luogo,
             ...(s ? { data_limite: s.data_limite, tipo_data: 'stimata', fonte_data: 'app', calcolata_il: s.calcolata_il, affidabilita: 'bassa' } : { tipo_data: 'sconosciuta' }),
           },
