@@ -22,4 +22,22 @@ describe('dataDiScadenza', () => {
     expect(dataDiScadenza('Da consumarsi preferibilmente entro fine: 10/2027')).toEqual({ data: '2027-10-31', tipo: 'tmc' });
     expect(dataDiScadenza('nessuna data')).toBeNull();
   });
+  it('legge l’anno per primo (2026-03-15)', () => {
+    expect(dateNelTesto('EXP 2027-03-15')).toEqual(['2027-03-15']);
+    expect(dateNelTesto('2027.3.5')).toEqual(['2027-03-05']);
+  });
+  it('mesi attaccati ai numeri e mesi in inglese', () => {
+    expect(dateNelTesto('12OTT2027')).toEqual(['2027-10-12']);
+    expect(dateNelTesto('AGO2027')).toEqual(['2027-08-31']);
+    expect(dateNelTesto('EXP 12 OCT 2027')).toEqual(['2027-10-12']);
+    expect(dateNelTesto('DEC 2027')).toEqual(['2027-12-31']);
+  });
+  it('corregge la O letta al posto dello zero solo dentro i numeri', () => {
+    expect(dateNelTesto('scad. 15/O3/2027')).toEqual(['2027-03-15']);
+    expect(dateNelTesto('15/03/2O27')).toEqual(['2027-03-15']);
+  });
+  it('una parola prima della data non la fa perdere', () => {
+    expect(dateNelTesto('LOTTO 5 SCAD 12/2027')).toEqual(['2027-12-31']);
+    expect(dataDiScadenza('L 12 05 24 SCAD 10.2027')?.data).toBe('2027-10-31');
+  });
 });
