@@ -187,7 +187,7 @@ test('casa: aggiunge, mostra cosa usare presto, scala la quantità usata e stima
   await expect(nuovo).toContainText('Ognuna da');
   await expect(nuovo).toContainText('In tutto circa 500 g');
   await nuovo.getByRole('button', { name: 'Da consumarsi entro' }).click();
-  await nuovo.getByLabel('Data').fill(domani());
+  await nuovo.getByLabel('Data', { exact: true }).fill(domani());
   await nuovo.getByRole('button', { name: 'Aggiungi', exact: true }).click();
 
   const presto = page.getByRole('region', { name: 'Da usare presto' });

@@ -4,7 +4,7 @@
  */
 import { expect, test } from '@playwright/test';
 import { fileVecchio } from '../vecchio-esempio';
-import { aggiungiPersona, apri, creaFamiglia, nuovoUtente, sql, vaiAFamiglia } from './aiuti';
+import { aggiungiPersona, apri, apriSezione, creaFamiglia, nuovoUtente, sql, vaiAFamiglia } from './aiuti';
 
 test('primo accesso: crea la famiglia, aggiunge una persona con un’allergia, tutto resta dopo la riapertura', async ({ browser }, info) => {
   const luca = await nuovoUtente('Luca');
@@ -96,6 +96,7 @@ test('invito: chi apre il link entra con un tocco e vede la famiglia; le modific
   // Prima che il tablet chieda gli aggiornamenti, la Nonna deve essere arrivata al server.
   await expect(telefono.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
   await tablet.getByRole('button', { name: 'Impostazioni' }).click();
+  await apriSezione(tablet, 'Famiglia');
   await tablet.getByRole('button', { name: /Stato del salvataggio/ }).click();
   await tablet.getByRole('button', { name: 'Aggiorna adesso' }).click();
   await tablet.getByRole('button', { name: 'Chiudi' }).click();

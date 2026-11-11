@@ -5,7 +5,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import { dataLunga } from '../../src/dominio/menu';
 import { oggi } from '../../src/dominio/scadenze';
-import { apri, nuovoUtente } from './aiuti';
+import { apri, apriSezione, nuovoUtente } from './aiuti';
 import { DriveFinto } from './google-finto';
 
 async function aggiungiCena(page: Page, cerca: string, titolo: string) {
@@ -19,6 +19,7 @@ async function aggiungiCena(page: Page, cerca: string, titolo: string) {
 
 async function salvaOra(page: Page) {
   await page.getByRole('button', { name: 'Impostazioni' }).click();
+  await apriSezione(page, 'Google Drive');
   await page.getByRole('button', { name: 'Salva ora sul Drive' }).click();
 }
 
