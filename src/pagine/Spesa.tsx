@@ -840,7 +840,7 @@ function RigaComprata({ indice, riga: r, modificabile, letta }: { indice: Indice
       return setErrore(`«${ing.nome}» non va bene: ${nome} è registrato in ${r.unita} e ${ing.nome} ${ing.dimensione === 'massa' ? 'si pesa' : ing.dimensione === 'volume' ? 'si misura in ml' : 'si conta a pezzi'}.`);
     }
     setErrore(null);
-    await esegui('cambia_ingrediente_riga', { id: r.id, ingrediente_id: ing.id, ingrediente_visto: r.ingrediente_id });
+    await esegui('cambia_ingrediente_riga', { id: r.id, ingrediente_id: ing.id, ...(r.ingrediente_id ? { ingrediente_visto: r.ingrediente_id } : {}) });
     setCambia(false);
   }
 
@@ -860,25 +860,29 @@ function RigaComprata({ indice, riga: r, modificabile, letta }: { indice: Indice
         </label>
         {modificabile && cambiata && <button className="bottone primario piccolo">Correggi</button>}
       </form>
-      {letta && r.ingrediente_id && (
+      {letta && (
         <p className="tenue" style={{ margin: '4px 0 0' }}>
           Letto sullo scontrino: «{letta}»
         </p>
       )}
-      {modificabile && r.ingrediente_id &&
+      {modificabile &&
         (cambia ? (
           <div style={{ marginTop: 6 }}>
             <CercaIngrediente indice={indice} etichetta={letta ? `Cos’è «${letta}»?` : 'Che cosa hai comprato?'} autoFocus scegli={scegli} />
-            <button type="button" className="bottone piccolo" onClick={() => {
+            <button
+              type="button"
+              className="bottone piccolo"
+              onClick={() => {
                 setCambia(false);
                 setErrore(null);
-              }}>
+              }}
+            >
               Lascia {nome}
             </button>
           </div>
         ) : (
-          <button type="button" className="bottone piccolo" style={{ marginTop: 6 }} onClick={() => setCambia(true)} aria-label={`Cambia l’alimento di ${nome}`}>
-            Cambia alimento
+          <button type="button" className="bottone piccolo" style={{ marginTop: 6 }} onClick={() => setCambia(true)} aria-label={r.ingrediente_id ? `Cambia l’alimento di ${nome}` : `${nome} è un alimento`}>
+            {r.ingrediente_id ? 'Cambia alimento' : 'È un alimento'}
           </button>
         ))}
       {!r.ingrediente_id && <p className="tenue" style={{ margin: '4px 0 0' }}>Non è un alimento: non va in casa.</p>}

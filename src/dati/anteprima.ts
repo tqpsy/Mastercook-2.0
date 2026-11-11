@@ -583,8 +583,13 @@ const EFFETTI: Record<string, Effetto> = {
   },
   cambia_ingrediente_riga: (righe, d) => {
     const riga = (righe.acquisto_riga ?? []).find((r) => r.id === d.id);
-    if (!riga || !riga.ingrediente_id) return;
+    if (!riga) return;
     if ((righe.acquisto ?? []).find((a) => a.id === riga.acquisto_id)?.stato === 'annullato') return;
+    if (!riga.ingrediente_id) {
+      // Era «non un alimento»: ora ha un alimento ma niente quantità né lotto, come ogni riga «da completare».
+      righe.acquisto_riga = (righe.acquisto_riga ?? []).map((r) => (r === riga ? { ...r, ingrediente_id: d.ingrediente_id, quantita: null, unita: null, in_attesa: true } : r));
+      return;
+    }
     righe.acquisto_riga = (righe.acquisto_riga ?? []).map((r) => (r === riga ? { ...r, ingrediente_id: d.ingrediente_id, in_attesa: true } : r));
     if (riga.lotto_id) righe.lotto = (righe.lotto ?? []).map((l) => (l.id === riga.lotto_id ? { ...l, ingrediente_id: d.ingrediente_id, in_attesa: true } : l));
   },

@@ -324,3 +324,39 @@ test('dopo la conferma: si cambia l’alimento di una riga guardando il testo le
   expect(await lotti()).toEqual([{ ing: 'ing:panna', q: '1000' }]);
   await expect(page.getByRole('region', { name: 'Acquisti recenti' })).not.toContainText('annullato');
 });
+
+test('una riga segnata «non è un alimento» per errore si riporta tra gli alimenti e finisce in «Da completare»', async ({ browser }, info) => {
+  const luca = await nuovoUtente('Luca');
+  const { page } = await apri(browser, luca, info.project.use);
+  await creaFamiglia(page, 'Casa Spatzle');
+  await page.getByRole('button', { name: 'Spesa', exact: true }).click();
+  await page.getByRole('button', { name: 'Aggiungi uno scontrino' }).click();
+  await page.getByLabel('Oppure incolla il testo dello scontrino').fill('SUPERMERCATO ROSSI\nDESCRIZIONE   Prezzo\nIPERAL SPATZLE   1,99\nTOTALE   1,99\n05-11-2026 18:30');
+  await page.getByRole('button', { name: 'Leggi le righe' }).click();
+  await page.getByRole('dialog', { name: 'Controlla lo scontrino' }).getByRole('button', { name: 'Importa lo scontrino' }).click();
+  await expect(page.getByRole('region', { name: 'Acquisti recenti' })).toContainText('IPERAL SPATZLE');
+  await salvato(page);
+
+  await page.getByRole('button', { name: /Apri l’acquisto di/ }).click();
+  const foglio = page.getByRole('dialog', { name: /Spesa di/ });
+  await expect(foglio).toContainText('Non è un alimento: non va in casa.');
+  await foglio.getByRole('button', { name: 'IPERAL SPATZLE è un alimento' }).click();
+  await foglio.getByLabel('Cos’è «IPERAL SPATZLE»?').fill('pasta');
+  await foglio.getByRole('button', { name: /Pasta$/ }).first().click();
+  await expect(foglio).not.toContainText('Non è un alimento');
+  await expect(foglio).toContainText('Quantità da scrivere in Casa');
+  await salvato(page);
+  const righe = await sql<{ ing: string | null; q: string | null; lotto: string | null }>(
+    `select ingrediente_id as ing, quantita::text as q, lotto_id::text as lotto from acquisto_riga where famiglia_id = ${famigliaDi}`,
+    [luca.id],
+  );
+  expect(righe).toHaveLength(1);
+  expect(righe[0].ing).toMatch(/^ing:pasta/);
+  expect(righe[0].q).toBeNull();
+  expect(righe[0].lotto).toBeNull();
+
+  // In casa non c'è ancora niente: la quantità si scrive in Casa › Da completare.
+  await foglio.getByRole('button', { name: 'Chiudi' }).click();
+  await page.getByRole('button', { name: 'Casa', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Da completare' })).toContainText('Pasta');
+});
