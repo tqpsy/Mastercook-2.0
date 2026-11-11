@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import catalogo from '../catalogo/catalogo.json';
 import type { Catalogo } from '../catalogo/tipi';
 import { Indice } from './ricette';
-import { abbinaRighe, daOpenFoodFacts, formatoDaDescrizione, leggiScontrino, pulisciLinea, quantitaProposta, suggerisciIngrediente, unisciDescrizioni } from './scontrini';
+import { abbinaRighe, daOpenFoodFacts, formatoDaDescrizione, leggiScontrino, pulisciLinea, quantitaProposta, type RigaRipetibile, suggerisciIngrediente, unisciDescrizioni, unisciRipetute } from './scontrini';
 
 const indice = new Indice(catalogo as Catalogo);
 
@@ -247,5 +247,31 @@ describe('Open Food Facts', () => {
     expect(daOpenFoodFacts({ status: 0 })).toBeUndefined();
     expect(daOpenFoodFacts({ status: 1, product: { product_name: '' } })).toBeUndefined();
     expect(daOpenFoodFacts(null)).toBeUndefined();
+  });
+});
+
+describe('righe ripetute dello scontrino', () => {
+  const riga = (id: string, x: Partial<RigaRipetibile> = {}): RigaRipetibile => ({
+    id,
+    descrizione: 'YOGURT GRECO 200G',
+    euro: '1,29',
+    azione: 'casa',
+    ing: { id: 'ing:yogurt' },
+    numero: '200',
+    unita: 'g',
+    luogo: 'frigo',
+    quante: '1',
+    ...x,
+  });
+
+  it('due righe uguali diventano una «× 2» con i prezzi sommati', () => {
+    expect(unisciRipetute([riga('a'), riga('b'), riga('c', { descrizione: 'LATTE', ing: { id: 'ing:latte' }, numero: '1', unita: 'l' })])).toEqual([
+      riga('a', { quante: '2', euro: '2,58' }),
+      riga('c', { descrizione: 'LATTE', ing: { id: 'ing:latte' }, numero: '1', unita: 'l' }),
+    ]);
+  });
+
+  it('prezzo, quantità o destinazione diversi restano righe separate', () => {
+    expect(unisciRipetute([riga('a'), riga('b', { euro: '0,99' }), riga('c', { numero: '500' }), riga('d', { azione: 'altro' }), riga('e', { azione: 'altro' })])).toHaveLength(5);
   });
 });

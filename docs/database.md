@@ -69,10 +69,12 @@ I comandi sono registrati in `interno.tipo_comando` (tipo → funzione); tutti r
 | `scarica_lotto` | `lotto_id`, `quantita`, `causale` (consumo/spreco/scaduto) |
 | `correggi_lotto` | `lotto_id`, `quantita_vista`, `quantita_nuova` (conflitto `quantita_cambiata` se nel frattempo è cambiata) |
 | `sposta_lotto` | `lotto_id`, `luogo`, `quantita?` + `nuovo_id?` (spostamento parziale), `stima?` |
-| `modifica_lotto` | `id`, `versione_attesa`, `campi` (nome, note, date, posto) |
+| `modifica_lotto` | `id`, `versione_attesa`, `campi` (nome, note, date, posto, confezione) |
 | `imposta_frigo` | `frigo` (oggetto di src/dominio/frigo.ts, al più 1000 caratteri) o `null` per toglierlo: va in `famiglia.impostazioni.frigo` |
 | `imposta_zone_verifica` | `zone` (1–20 `{id, nome, luogo, posti?}`) o `null` per tornare a quelle del frigo: va in `famiglia.impostazioni.verifica.zone` |
 | `verifica_inventario` | `data?`, `zone` (fotografate), `operazioni` (`quantita` {lotto_id, quantita} · `aggiungi` {id, ingrediente_id, quantita, unita, luogo, posto, date} con origine `foto` · `presente`/`non_verificabile` {lotto_id}; `quantita` e `presente` anche con `posto` se spostato), `impara` {alias, errori, posizioni}: solo ciò che la persona ha confermato; nota in cronologia «Verifica con foto: da X a Y». Vedi docs/foto-frigo.md |
+
+Confezioni uguali: ogni comando che crea un lotto (`aggiungi_lotto`, `conferma_acquisto`, `importa_scontrino`, `completa_riga_acquisto`, `verifica_inventario`) accetta `confezione` accanto all'id del lotto: quanto contiene una confezione, nell'unità del lotto (2 × 500 g = `quantita` 1000, `confezione` 500). La quantità resta il totale; l'app mostra «500 g × 2». Un trigger la legge dal comando in corso; una parte spostata tiene quella del lotto di partenza; i lotti a occhio non ne hanno.
 
 Regole principali, tutte nel database e coperte da test (`tests/db/ricette.test.ts`, `tests/db/casa.test.ts`):
 

@@ -11,7 +11,7 @@
  */
 import { correggiPrezzi } from './quadratura';
 import { type Indice, type Ingrediente, normalizza } from './ricette';
-import type { UnitaBase } from './unita';
+import { leggiNumero, type UnitaBase } from './unita';
 
 export interface RigaLetta {
   descrizione: string;
@@ -496,4 +496,40 @@ export function daOpenFoodFacts(risposta: unknown): ProdottoEsterno | undefined 
   if (q > 0 && (u === 'g' || u === 'ml')) formato = { quantita: q, unita: u };
   else if (typeof p.quantity === 'string') formato = formatoDaDescrizione(p.quantity);
   return { nome: tutto.slice(0, 120), ...(formato ? { formato } : {}) };
+}
+
+/** Una riga dello scontrino in revisione, per quel che serve a unirla con le sue ripetizioni. */
+export interface RigaRipetibile {
+  id: string;
+  descrizione: string;
+  /** Il prezzo come lo si scrive («1,29»), vuoto se non c'è. */
+  euro: string;
+  azione: string;
+  ing: { id: string } | null;
+  numero: string;
+  unita: string;
+  luogo: string;
+  quante?: string;
+}
+
+/**
+ * La stessa riga ripetuta (l'Iper stampa ogni confezione a parte): una riga sola con «× 2» e i prezzi sommati, così in
+ * casa entra una riga «200 g × 2». Solo le righe che entrano in casa con la stessa descrizione, lo stesso prodotto, la
+ * stessa quantità, lo stesso posto e lo stesso prezzo.
+ */
+export function unisciRipetute<T extends RigaRipetibile>(righe: T[]): T[] {
+  const chiave = (r: T) => (r.azione === 'casa' && r.ing ? [normalizza(r.descrizione), r.ing.id, r.numero.trim(), r.unita, r.luogo].join('|') : null);
+  const unite: { riga: T; chiave: string | null; euro: string }[] = [];
+  for (const r of righe) {
+    const k = chiave(r);
+    const stessa = k ? unite.find((u) => u.chiave === k && u.euro === r.euro.trim()) : undefined;
+    if (!stessa) {
+      unite.push({ riga: { ...r }, chiave: k, euro: r.euro.trim() });
+      continue;
+    }
+    const s = stessa.riga;
+    s.quante = String((leggiNumero(s.quante || '1') ?? 1) + (leggiNumero(r.quante || '1') ?? 1));
+    if (s.euro.trim()) s.euro = (Math.round(((leggiNumero(s.euro) ?? 0) + (leggiNumero(r.euro) ?? 0)) * 100) / 100).toFixed(2).replace('.', ',');
+  }
+  return unite.map((u) => u.riga);
 }

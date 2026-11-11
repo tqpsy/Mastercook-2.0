@@ -202,7 +202,9 @@ test('casa: aggiunge, mostra cosa usare presto, scala la quantità usata e stima
   await lotto.getByRole('button', { name: 'Una parte' }).click();
   await lotto.getByLabel('Quantità').fill('200');
   await lotto.getByRole('button', { name: 'Conferma' }).click();
-  await expect(lotto.getByText('300 g', { exact: true })).toBeVisible();
+  // Restano 2 vasetti chiusi e uno aperto: la riga lo dice, con il totale.
+  await expect(lotto).toContainText('125 g × 2 + 50 g aperta');
+  await expect(lotto).toContainText('in tutto 300 g');
   await expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
   await lotto.getByRole('button', { name: 'Chiudi' }).click();
 
