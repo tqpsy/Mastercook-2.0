@@ -279,7 +279,6 @@ export function Oggi({ vai }: { vai: (scheda: 'spesa' | 'casa' | 'menu') => void
           ))
         )}
       </section>
-      {indice && diOggi.length === 0 && <div className="avviso info oggi-vuoto">Niente in menu per oggi: lo prepari dalla scheda Menu.</div>}
 
       <div className="oggi-lato">
         <button className="bottone pieno primario spesa-oggi" onClick={() => setSpesa(true)} disabled={!indice}>
