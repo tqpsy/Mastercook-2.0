@@ -209,8 +209,14 @@ export async function leggiPianoConGemini(famiglia_id: string, file: Blob, mime:
  * La data di scadenza stampata su una confezione, letta da Gemini con la chiave della famiglia (foto JPEG).
  * La foto non si salva: passa a Google e basta. `data: null` se Gemini non la legge.
  */
-export async function leggiDataConGemini(famiglia_id: string, foto: Blob, luogo: Luogo): Promise<{ data: DataGemini | null } | { errore: ErroreFoto; dettaglio?: string }> {
+export async function leggiDataConGemini(famiglia_id: string, foto: Blob, luogo: Luogo, attesaMs = 12_000): Promise<{ data: DataGemini | null } | { errore: ErroreFoto; dettaglio?: string }> {
   if (!navigator.onLine) return { errore: 'rete' };
+  // Una foto di data deve dare risposta in pochi secondi: oltre il limite si passa alla lettura sul telefono.
+  const scaduto = new Promise<{ errore: ErroreFoto }>((ok) => setTimeout(() => ok({ errore: 'rete' }), attesaMs));
+  return Promise.race([leggiDataConGeminiSenzaLimite(famiglia_id, foto, luogo), scaduto]);
+}
+
+async function leggiDataConGeminiSenzaLimite(famiglia_id: string, foto: Blob, luogo: Luogo): Promise<{ data: DataGemini | null } | { errore: ErroreFoto; dettaglio?: string }> {
   try {
     if (luogo.dove === 'locale') {
       const chiave = await chiaveGeminiLocale(luogo.utenteId, famiglia_id);
