@@ -1,23 +1,24 @@
-import { useId, useState } from 'react';
+import { useState } from 'react';
 import { useFamiglia } from '../dati/contesto';
 import { type DataLetta, dataDiScadenza } from '../dominio/dataDaTesto';
 import { leggiDataConGemini } from '../piattaforma/fotoFrigo';
 import { riduciFoto } from './Foto';
+import { LettoreData } from './LettoreData';
 import { leggiTestoData } from './ocr';
 
 /**
- * «Fotografa la data»: si scatta la data stampata sulla confezione e l'app la legge sul telefono
- * Prima la legge Gemini (chiave gratuita della famiglia, molto più brava con le stampe a puntini, sfocate o su metallo),
- * poi, se non c'è rete o chiave, la legge il telefono. La foto non si salva. Chi chiama controlla il risultato nel campo data.
+ * «Fotografa la data»: si apre la fotocamera dal vivo (LettoreData) e l'app legge la data stampata sulla confezione sul telefono.
+ * Se così non si trova, si scatta una foto: la legge Gemini (chiave gratuita della famiglia, brava con le stampe a puntini,
+ * sfocate o su metallo) e, senza rete o chiave, il telefono. Le foto non si salvano. Chi chiama controlla il risultato nel campo data.
  */
 export function FotoData({ letta }: { letta: (d: DataLetta) => void }) {
-  const id = useId();
   const { famiglia, dove, utenteId } = useFamiglia();
   const [stato, setStato] = useState<'pronto' | 'leggo'>('pronto');
+  const [aperto, setAperto] = useState(false);
   const [errore, setErrore] = useState<string | null>(null);
 
-  async function scelta(file: File | undefined) {
-    if (!file) return;
+  /** Dalla foto scattata (dopo che dal vivo non si è trovato nulla): Gemini, poi il telefono. */
+  async function daFoto(file: Blob) {
     setErrore(null);
     setStato('leggo');
     try {
@@ -37,18 +38,10 @@ export function FotoData({ letta }: { letta: (d: DataLetta) => void }) {
 
   return (
     <div>
-      <label htmlFor={id} className="bottone piccolo" aria-disabled={stato === 'leggo'}>
+      <button type="button" className="bottone piccolo" disabled={stato === 'leggo'} onClick={() => setAperto(true)}>
         <span aria-hidden>📷</span> {stato === 'leggo' ? 'Leggo la data…' : 'Fotografa la data'}
-      </label>
-      <input
-        id={id}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        hidden
-        disabled={stato === 'leggo'}
-        onChange={(e) => (void scelta(e.target.files?.[0]), (e.target.value = ''))}
-      />
+      </button>
+      {aperto && <LettoreData trovata={letta} foto={(f) => void daFoto(f)} chiudi={() => setAperto(false)} />}
       {errore && (
         <div className="avviso errore" role="alert" style={{ marginTop: 8 }}>
           {errore}
