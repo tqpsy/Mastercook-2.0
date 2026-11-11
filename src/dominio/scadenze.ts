@@ -151,6 +151,8 @@ export function scadutoVero(l: LottoData, oggiData: string): boolean {
 }
 
 /** Testo breve per l'etichetta della data. */
+const MESE_ANNO = new Intl.DateTimeFormat('it-IT', { month: 'long', year: 'numeric' });
+
 export function descriviData(l: LottoData, oggiData: string): string {
   const s = statoData(l, oggiData);
   if (s === 'sconosciuta') return 'Data sconosciuta';
@@ -163,8 +165,12 @@ export function descriviData(l: LottoData, oggiData: string): string {
       return `Oltre il «preferibilmente entro» da ${-mancano} ${-mancano === 1 ? 'giorno' : 'giorni'}`;
     case 'oggi':
       return l.tipo_data === 'tmc' ? 'Preferibilmente entro oggi' : `Da usare oggi${stimata}`;
-    default:
-      return `${l.tipo_data === 'tmc' ? 'Preferibilmente entro' : 'Entro'} ${mancano} ${mancano === 1 ? 'giorno' : 'giorni'}${stimata}`;
+    default: {
+      const entro = l.tipo_data === 'tmc' ? 'Preferibilmente entro' : 'Entro';
+      // Oltre due mesi i giorni non dicono niente («Entro 902 giorni»): meglio il mese e l'anno.
+      if (mancano > 60) return `${entro} ${MESE_ANNO.format(new Date(`${l.data_limite}T12:00:00`))}${stimata}`;
+      return `${entro} ${mancano} ${mancano === 1 ? 'giorno' : 'giorni'}${stimata}`;
+    }
   }
 }
 

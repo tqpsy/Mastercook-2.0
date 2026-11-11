@@ -117,14 +117,47 @@ export function gruppoDi<T extends LottoContato>(lotti: T[], l: T): Gruppo<T> {
 /** Quante confezioni (intere e aperte) ci sono nella riga. */
 export const quanteConfezioni = (g: Gruppo<LottoContato>) => g.piene + g.aperte.length;
 
-/** «500 g», «500 g × 2», «500 g × 2 + 300 g aperta», «300 g aperta (da 500 g)». */
+/**
+ * La riga in Casa: «500 g» o «500 g × 2» quando le confezioni sono tutte intere e uguali; appena una è aperta, solo il
+ * totale («600 g»), che è quello che serve guardando la dispensa. Il dettaglio sta nella scheda.
+ */
 export function descriviGruppo(g: Gruppo<LottoContato>): string {
+  if (g.aperte.length || g.piene === 0) return formatta({ valore: g.totale, unita: g.unita });
   const una = formatta({ valore: g.taglia, unita: g.unita });
-  const parti: string[] = [];
-  if (g.piene > 0) parti.push(g.piene > 1 ? `${una} × ${g.piene}` : una);
-  for (const a of g.aperte) parti.push(`${formatta({ valore: a, unita: g.unita })} aperta`);
-  if (g.piene === 0 && g.aperte.length === 1) return `${parti[0]} (da ${una})`;
-  return parti.join(' + ') || formatta({ valore: 0, unita: g.unita });
+  return g.piene > 1 ? `${una} × ${g.piene}` : una;
+}
+
+export interface Confezione {
+  lotto_id: string;
+  /** Quanto c'è dentro adesso. */
+  quantita: number;
+  /** Quanto conteneva da chiusa (null se non lo si sa). */
+  da: number | null;
+  aperta: boolean;
+}
+
+/** Le confezioni della riga una per una: prima le chiuse, poi quelle aperte. */
+export function elencoConfezioni(g: Gruppo<LottoContato>): Confezione[] {
+  const chiuse: Confezione[] = [];
+  const aperte: Confezione[] = [];
+  for (const l of g.lotti) {
+    const c = l.confezione && l.confezione > 0 ? l.confezione : null;
+    const p = pezziDelLotto(l);
+    for (let i = 0; i < p.piene; i++) chiuse.push({ lotto_id: l.id, quantita: c ?? l.quantita, da: c, aperta: false });
+    if (p.aperta) aperte.push({ lotto_id: l.id, quantita: p.aperta, da: c, aperta: true });
+  }
+  return [...chiuse, ...aperte];
+}
+
+/** «2 confezioni: 1 da 500 g, 1 aperta con 100 g». */
+export function riassuntoConfezioni(g: Gruppo<LottoContato>): string {
+  const elenco = elencoConfezioni(g);
+  const f = (n: number) => formatta({ valore: n, unita: g.unita });
+  const chiuse = new Map<number, number>();
+  for (const c of elenco) if (!c.aperta) chiuse.set(c.quantita, (chiuse.get(c.quantita) ?? 0) + 1);
+  const parti = [...chiuse].map(([q, n]) => `${n} da ${f(q)}`);
+  for (const c of elenco) if (c.aperta) parti.push(`1 aperta con ${f(c.quantita)}`);
+  return `${elenco.length} ${elenco.length === 1 ? 'confezione' : 'confezioni'}: ${parti.join(', ')}`;
 }
 
 export interface Presa {
@@ -144,17 +177,4 @@ export function daPrendere(g: Gruppo<LottoContato>, quanto: number): Presa[] {
     resta = arrotonda(resta - q);
   }
   return prese;
-}
-
-/** Una confezione intera usata (o buttata): da un lotto che ne ha una chiusa, prima quelli senza confezione aperta. */
-export function unaConfezione(g: Gruppo<LottoContato>): Presa | null {
-  const conPiene = g.lotti.filter((l) => pezziDelLotto(l).piene > 0);
-  const l = conPiene.find((x) => pezziDelLotto(x).aperta === 0) ?? conPiene[0];
-  return l ? { lotto_id: l.id, quantita: Math.min(taglia(l), l.quantita) } : null;
-}
-
-/** Quella aperta finita: quel che ne resta, dal lotto con la confezione aperta più vuota. */
-export function quellaAperta(g: Gruppo<LottoContato>): Presa | null {
-  const l = g.lotti.filter((x) => pezziDelLotto(x).aperta > 0).sort((a, b) => pezziDelLotto(a).aperta - pezziDelLotto(b).aperta)[0];
-  return l ? { lotto_id: l.id, quantita: pezziDelLotto(l).aperta } : null;
 }

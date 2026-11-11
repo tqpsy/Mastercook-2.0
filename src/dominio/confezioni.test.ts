@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { confezioneDa, daPrendere, descriviGruppo, gruppoDi, type LottoContato, quellaAperta, quanteConfezioni, raggruppa, unaConfezione } from './confezioni';
+import { confezioneDa, daPrendere, descriviGruppo, elencoConfezioni, riassuntoConfezioni, gruppoDi, type LottoContato, quanteConfezioni, raggruppa } from './confezioni';
 
 const lotto = (id: string, quantita: number, x: Partial<LottoContato> = {}): LottoContato => ({
   id,
@@ -31,18 +31,25 @@ describe('confezioni uguali', () => {
     expect(quanteConfezioni(g)).toBe(2);
   });
 
-  it('un lotto con la confezione: intere e quella aperta', () => {
+  it('un lotto con la confezione: intere uguali «× 2», con una aperta solo il totale', () => {
     expect(descriviGruppo(raggruppa([lotto('a', 1000, { confezione: 500 })])[0])).toBe('500 g × 2');
-    const g = raggruppa([lotto('a', 800, { confezione: 500 })])[0];
-    expect(descriviGruppo(g)).toBe('500 g + 300 g aperta');
-    expect(descriviGruppo(raggruppa([lotto('a', 300, { confezione: 500 })])[0])).toBe('300 g aperta (da 500 g)');
-    expect(descriviGruppo(raggruppa([lotto('a', 300)])[0])).toBe('300 g');
+    // Farfalle: 2 da 500 g, usati 400 g da una: in Casa 600 g, nella scheda 1 da 500 g e 1 aperta con 100 g.
+    const g = raggruppa([lotto('a', 600, { confezione: 500 })])[0];
+    expect(descriviGruppo(g)).toBe('600 g');
+    expect(riassuntoConfezioni(g)).toBe('2 confezioni: 1 da 500 g, 1 aperta con 100 g');
+    expect(elencoConfezioni(g)).toEqual([
+      { lotto_id: 'a', quantita: 500, da: 500, aperta: false },
+      { lotto_id: 'a', quantita: 100, da: 500, aperta: true },
+    ]);
+    expect(descriviGruppo(raggruppa([lotto('a', 300, { confezione: 500 })])[0])).toBe('300 g');
+    expect(riassuntoConfezioni(raggruppa([lotto('a', 300)])[0])).toBe('1 confezione: 1 da 300 g');
   });
 
   it('un lotto con la confezione e uno senza della stessa misura stanno insieme; la riga si apre sulla confezione aperta', () => {
     const lotti = [lotto('a', 500), lotto('b', 700, { confezione: 500 })];
     const [g] = raggruppa(lotti);
-    expect(descriviGruppo(g)).toBe('500 g × 2 + 200 g aperta');
+    expect(descriviGruppo(g)).toBe('1,2 kg');
+    expect(riassuntoConfezioni(g)).toBe('3 confezioni: 2 da 500 g, 1 aperta con 200 g');
     expect(g.primo.id).toBe('b');
     expect(gruppoDi(lotti, lotti[0]).lotti.map((l) => l.id)).toEqual(['a', 'b']);
   });
@@ -69,15 +76,5 @@ describe('confezioni uguali', () => {
       { lotto_id: 'a', quantita: 100 },
     ]);
     expect(daPrendere(g, 2000).reduce((s, p) => s + p.quantita, 0)).toBe(700);
-  });
-
-  it('una confezione intera e quella aperta finita', () => {
-    const g = raggruppa([lotto('a', 800, { confezione: 500 }), lotto('b', 500)])[0];
-    expect(unaConfezione(g)).toEqual({ lotto_id: 'b', quantita: 500 });
-    expect(quellaAperta(g)).toEqual({ lotto_id: 'a', quantita: 300 });
-    const solo = raggruppa([lotto('a', 1500, { confezione: 500 })])[0];
-    expect(unaConfezione(solo)).toEqual({ lotto_id: 'a', quantita: 500 });
-    expect(quellaAperta(solo)).toBeNull();
-    expect(unaConfezione(raggruppa([lotto('a', 300, { confezione: 500 })])[0])).toBeNull();
   });
 });
