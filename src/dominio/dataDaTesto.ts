@@ -43,10 +43,10 @@ export function dateNelTesto(testo: string): string[] {
   const ISO = /(?<!\d)(20\d{2})\s*[./-]\s*(\d{1,2})\s*[./-]\s*(\d{1,2})(?!\d)/g;
   for (const x of t.matchAll(ISO)) aggiungi(Number(x[3]), Number(x[2]), Number(x[1]));
   t = t.replace(ISO, ' ');
-  for (const x of t.matchAll(/(?<!\d)(\d{1,2})\s*[./\-\s]\s*(\d{1,2})\s*[./\-\s]\s*(\d{4}|\d{2})(?!\d)/g)) aggiungi(Number(x[1]), Number(x[2]), anno4(x[3]!));
+  for (const x of t.matchAll(/(?<!\d)(\d{1,2})\s*[./:\-\s]\s*(\d{1,2})\s*[./:\-\s]\s*(\d{4}|\d{2})(?!\d)/g)) aggiungi(Number(x[1]), Number(x[2]), anno4(x[3]!));
   for (const x of t.matchAll(GIORNO_MESE_ANNO)) aggiungi(Number(x[1]), MESI[x[2]!]!, anno4(x[3]!));
   // Le date complete già lette non si rileggono come «mese e anno».
-  t = t.replace(/(\d{1,2})\s*[./\-\s]\s*(\d{1,2})\s*[./\-\s]\s*(\d{4}|\d{2})(?!\d)/g, ' ').replace(GIORNO_MESE_ANNO, ' ');
+  t = t.replace(/(\d{1,2})\s*[./:\-\s]\s*(\d{1,2})\s*[./:\-\s]\s*(\d{4}|\d{2})(?!\d)/g, ' ').replace(GIORNO_MESE_ANNO, ' ');
   for (const x of t.matchAll(/(?<![\d./-])(\d{1,2})\s*[./-]\s*(\d{4})(?!\d)/g)) aggiungi(null, Number(x[1]), Number(x[2]));
   for (const x of t.matchAll(MESE_ANNO)) aggiungi(null, MESI[x[1]!]!, Number(x[2]));
   return [...new Set(trovate)];
