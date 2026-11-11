@@ -279,3 +279,48 @@ test('codice a barre: la prima volta si sceglie (con Open Food Facts), poi si ri
   await salvato(page);
   expect(richieste).toBe(chieste);
 });
+
+test('dopo la conferma: si cambia l’alimento di una riga guardando il testo letto, si annulla e si riattiva l’acquisto', async ({ browser }, info) => {
+  const luca = await nuovoUtente('Luca');
+  const { page } = await apri(browser, luca, info.project.use);
+  await creaFamiglia(page, 'Casa Correzioni');
+  await page.getByRole('button', { name: 'Spesa', exact: true }).click();
+  await page.getByRole('button', { name: 'Aggiungi uno scontrino' }).click();
+  await page.getByLabel('Oppure incolla il testo dello scontrino').fill('SUPERMERCATO ROSSI\nDESCRIZIONE   Prezzo\nLATTE INTERO 1L   1,29\nTOTALE   1,29\n05-11-2026 18:30');
+  await page.getByRole('button', { name: 'Leggi le righe' }).click();
+  await page.getByRole('dialog', { name: 'Controlla lo scontrino' }).getByRole('button', { name: 'Importa lo scontrino' }).click();
+  await expect(page.getByRole('region', { name: 'Acquisti recenti' })).toContainText('Latte');
+  await salvato(page);
+  const lotti = () => sql<{ ing: string; q: string }>(`select ingrediente_id as ing, quantita::text as q from lotto where famiglia_id = ${famigliaDi}`, [luca.id]);
+  expect(await lotti()).toEqual([{ ing: 'ing:latte', q: '1000' }]);
+
+  // «Se sfugge all'inizio si può sempre correggere»: la riga mostra cosa c'era scritto sullo scontrino.
+  await page.getByRole('button', { name: /Apri l’acquisto di/ }).click();
+  const foglio = page.getByRole('dialog', { name: /Spesa di/ });
+  await expect(foglio).toContainText('Letto sullo scontrino: «LATTE INTERO 1L»');
+  await foglio.getByRole('button', { name: 'Cambia l’alimento di Latte' }).click();
+  // Un alimento che si conta a pezzi non va (il lotto è in ml): lo dice, senza cambiare niente.
+  await foglio.getByLabel('Cos’è «LATTE INTERO 1L»?').fill('uova');
+  await foglio.getByRole('button', { name: /^.*Uova/ }).first().click();
+  await expect(foglio.getByRole('alert')).toContainText('non va bene');
+  await foglio.getByLabel('Cos’è «LATTE INTERO 1L»?').fill('panna da cucina');
+  await foglio.getByRole('button', { name: /Panna da cucina/ }).click();
+  await expect(foglio.getByText('Panna da cucina').first()).toBeVisible();
+  await expect(foglio.getByRole('button', { name: 'Cambia l’alimento di Panna da cucina' })).toBeVisible();
+  await salvato(page);
+  expect(await lotti()).toEqual([{ ing: 'ing:panna', q: '1000' }]);
+
+  // Annullato per errore: si riattiva e le quantità tornano.
+  page.once('dialog', (d) => d.accept());
+  await foglio.getByRole('button', { name: 'Annulla l’acquisto' }).click();
+  await expect(page.getByRole('region', { name: 'Acquisti recenti' })).toContainText('annullato');
+  await salvato(page);
+  expect(await lotti()).toEqual([{ ing: 'ing:panna', q: '0' }]);
+  await page.getByRole('button', { name: /Apri l’acquisto di/ }).click();
+  page.once('dialog', (d) => d.accept());
+  await page.getByRole('dialog', { name: /Spesa di/ }).getByRole('button', { name: 'Riattiva l’acquisto' }).click();
+  await expect(page.getByRole('region', { name: 'Acquisti recenti' })).not.toContainText('annullato');
+  await salvato(page);
+  expect(await lotti()).toEqual([{ ing: 'ing:panna', q: '1000' }]);
+  await expect(page.getByRole('region', { name: 'Acquisti recenti' })).not.toContainText('annullato');
+});

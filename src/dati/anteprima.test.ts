@@ -110,6 +110,27 @@ describe('anteprima della coda', () => {
     expect(v.acquisto_riga?.map((r) => [r.quantita, r.lotto_id])).toEqual([[null, 'l1']]);
   });
 
+  it('riattivare un acquisto annullato rimette le quantità in casa e lo segna confermato; cambiare alimento sposta riga e lotto', () => {
+    const base = {
+      acquisto: [{ id: 'a1', famiglia_id: F, seq: 1, data: '2026-11-10', fonte: 'scontrino', stato: 'annullato' }],
+      acquisto_riga: [{ id: 'r1', famiglia_id: F, seq: 2, acquisto_id: 'a1', ingrediente_id: 'ing:latte', quantita: 1000, unita: 'ml', lotto_id: 'l1' }],
+      lotto: [{ id: 'l1', famiglia_id: F, seq: 3, ingrediente_id: 'ing:latte', quantita: 0, unita: 'ml', livello: null, luogo: 'frigo', chiuso_il: 'x' }],
+    };
+    const v = vistaConAnteprima(base, [voce('riattiva_acquisto', { id: 'a1' })]);
+    expect(v.acquisto?.map((a) => a.stato)).toEqual(['confermato']);
+    expect(v.lotto?.map((l) => [l.quantita, l.chiuso_il])).toEqual([[1000, null]]);
+    // Già attivo: niente da fare (e il lotto non cresce).
+    const due = vistaConAnteprima(base, [voce('riattiva_acquisto', { id: 'a1' }), voce('riattiva_acquisto', { id: 'a1' })]);
+    expect(due.lotto?.map((l) => l.quantita)).toEqual([1000]);
+
+    const attivo = { ...base, acquisto: [{ ...base.acquisto[0], stato: 'confermato' }], lotto: [{ ...base.lotto[0], quantita: 1000, chiuso_il: null }] };
+    const c = vistaConAnteprima(attivo, [voce('cambia_ingrediente_riga', { id: 'r1', ingrediente_id: 'ing:panna' })]);
+    expect(c.acquisto_riga?.map((r) => [r.ingrediente_id, r.lotto_id])).toEqual([['ing:panna', 'l1']]);
+    expect(c.lotto?.map((l) => [l.ingrediente_id, l.quantita])).toEqual([['ing:panna', 1000]]);
+    // Un acquisto annullato non si corregge.
+    expect(vistaConAnteprima(base, [voce('cambia_ingrediente_riga', { id: 'r1', ingrediente_id: 'ing:panna' })]).acquisto_riga?.map((r) => r.ingrediente_id)).toEqual(['ing:latte']);
+  });
+
   it('ricette: una ricetta nuova compare con righe e passaggi; le modifiche riga per riga si vedono', () => {
     const v = vistaConAnteprima({}, [
       voce('salva_ricetta', {

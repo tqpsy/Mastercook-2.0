@@ -572,6 +572,22 @@ const EFFETTI: Record<string, Effetto> = {
       cambiaQuantita(righe, String(r.lotto_id), (q) => (r.quantita == null ? 0 : q - Math.min(q, Number(r.quantita))));
     }
   },
+  riattiva_acquisto: (righe, d) => {
+    const acquisto = (righe.acquisto ?? []).find((a) => a.id === d.id);
+    if (!acquisto || acquisto.stato !== 'annullato') return;
+    righe.acquisto = (righe.acquisto ?? []).map((a) => (a === acquisto ? { ...a, stato: 'confermato', annullato_il: null, in_attesa: true } : a));
+    // Il server rimette quanto l'annullo aveva tolto (qui non si sa: si mostra la quantità comprata, che è il caso normale).
+    for (const r of (righe.acquisto_riga ?? []).filter((x) => x.acquisto_id === d.id && x.lotto_id)) {
+      cambiaQuantita(righe, String(r.lotto_id), (q) => (q > 0 ? q : Number(r.quantita ?? 1)));
+    }
+  },
+  cambia_ingrediente_riga: (righe, d) => {
+    const riga = (righe.acquisto_riga ?? []).find((r) => r.id === d.id);
+    if (!riga || !riga.ingrediente_id) return;
+    if ((righe.acquisto ?? []).find((a) => a.id === riga.acquisto_id)?.stato === 'annullato') return;
+    righe.acquisto_riga = (righe.acquisto_riga ?? []).map((r) => (r === riga ? { ...r, ingrediente_id: d.ingrediente_id, in_attesa: true } : r));
+    if (riga.lotto_id) righe.lotto = (righe.lotto ?? []).map((l) => (l.id === riga.lotto_id ? { ...l, ingrediente_id: d.ingrediente_id, in_attesa: true } : l));
+  },
   completa_riga_acquisto: (righe, d, famiglia) => {
     const riga = (righe.acquisto_riga ?? []).find((r) => r.id === d.id);
     if (!riga || riga.lotto_id || !riga.ingrediente_id) return;
