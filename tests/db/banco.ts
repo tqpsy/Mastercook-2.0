@@ -34,14 +34,6 @@ export function comando(tipo: string, famiglia_id: string, dati: Record<string, 
   return { id: randomUUID(), famiglia_id, tipo, dati, versione_app: VERSIONE_APP, dispositivo: 'test' };
 }
 
-/** Il giorno di Roma (aaaa-mm-gg), spostato di `giorni`: per le scadenze «tra poco» che non devono dipendere dal giorno in cui si prova. */
-export function giornoRoma(giorni = 0): string {
-  const oggi = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Rome' });
-  const d = new Date(`${oggi}T12:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + giorni);
-  return d.toISOString().slice(0, 10);
-}
-
 export function fileMigrazioni(): string[] {
   const cartella = join(RADICE, 'supabase', 'migrations');
   return readdirSync(cartella)

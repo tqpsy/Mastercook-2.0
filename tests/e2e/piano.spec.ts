@@ -3,7 +3,7 @@
  * porta le regole di pranzo e cena e le ricette del piano (senza doppioni ricaricandolo).
  */
 import { expect, test } from '@playwright/test';
-import { apri, creaFamiglia, nuovoUtente, sql } from './aiuti';
+import { apri, apriSezione, creaFamiglia, nuovoUtente, sql } from './aiuti';
 
 const piano = {
   formato: 'mastercook-piano',
@@ -96,10 +96,13 @@ test('piano del nutrizionista da un PDF: lo legge Gemini con la chiave della fam
   await sezione.getByLabel('File del piano').setInputFiles(pdf);
   await expect(sezione.getByRole('status')).toContainText('serve la chiave Gemini della famiglia');
 
-  await page.getByRole('heading', { name: 'Foto del frigo' }).click();
+  // La chiave sta in «Foto del frigo», fuori dal foglio di Antonino: si chiude il foglio e poi si riapre.
+  await page.getByRole('dialog').getByRole('button', { name: 'Chiudi' }).click();
+  await apriSezione(page, 'Foto del frigo');
   await page.getByLabel('Chiave Gemini della famiglia').fill('AIzaProva_chiave-della-famiglia-1234');
   await page.getByRole('button', { name: 'Salva la chiave' }).click();
   await expect(page.getByLabel('Chiave Gemini', { exact: true })).toContainText('finisce con …1234');
+  await page.getByRole('button', { name: /Il menu della settimana, il piano/ }).click();
 
   await sezione.getByLabel('File del piano').setInputFiles(pdf);
   await expect(sezione.getByRole('status')).toHaveText(/Piano caricato\. 1 ricetta aggiunta\./);

@@ -3,7 +3,10 @@
  */
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { type Banco, comando, creaFamiglia, giornoRoma, nuovoBanco } from './banco';
+import { type Banco, comando, creaFamiglia, nuovoBanco } from './banco';
+
+/** Una data a `n` giorni da oggi: le prove non devono scadere col calendario (un lotto scaduto non si scala più). */
+const traGiorni = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
 
 let banco: Banco;
 beforeAll(async () => {
@@ -21,8 +24,8 @@ describe('ricetta cucinata fuori dal menu', () => {
     const { famiglia } = await creaFamiglia(u);
     const vecchi = randomUUID();
     const nuovi = randomUUID();
-    await u.applica(comando('aggiungi_lotto', famiglia, { id: vecchi, ingrediente_id: 'ing:spaghetti', quantita: 100, unita: 'g', luogo: 'dispensa', data_limite: giornoRoma(1), tipo_data: 'scadenza' }));
-    await u.applica(comando('aggiungi_lotto', famiglia, { id: nuovi, ingrediente_id: 'ing:spaghetti', quantita: 500, unita: 'g', luogo: 'dispensa', data_limite: '2027-05-01', tipo_data: 'scadenza' }));
+    await u.applica(comando('aggiungi_lotto', famiglia, { id: vecchi, ingrediente_id: 'ing:spaghetti', quantita: 100, unita: 'g', luogo: 'dispensa', data_limite: traGiorni(30), tipo_data: 'scadenza' }));
+    await u.applica(comando('aggiungi_lotto', famiglia, { id: nuovi, ingrediente_id: 'ing:spaghetti', quantita: 500, unita: 'g', luogo: 'dispensa', data_limite: traGiorni(400), tipo_data: 'scadenza' }));
 
     // La carbonara del catalogo: 320 g di spaghetti per 4 porzioni → 160 g per 2.
     const c = comando('usa_ricetta', famiglia, { id: randomUUID(), ricetta_id: 'sys:carbonara', porzioni: 2 });
