@@ -78,9 +78,16 @@ export async function scegliGiorno(page: Page, data: string) {
   await giorno.click();
 }
 
+/** Apre una sezione delle Impostazioni (sono chiuse all'inizio); se è già aperta la lascia com'è. */
+export async function apriSezione(page: Page, titolo: string) {
+  const sezione = page.locator('details.sezione', { has: page.getByRole('heading', { name: titolo, exact: true }) });
+  if (!(await sezione.evaluate((d) => (d as HTMLDetailsElement).open))) await sezione.getByRole('heading', { name: titolo, exact: true }).click();
+}
+
 /** Famiglia sta dentro Impostazioni (la barra in basso ha cinque schede). */
 export async function vaiAFamiglia(page: Page) {
   await page.getByRole('button', { name: 'Impostazioni' }).click();
+  await apriSezione(page, 'Famiglia');
   await page.getByRole('button', { name: /^Famiglia/ }).click();
 }
 

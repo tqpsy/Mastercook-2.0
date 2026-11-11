@@ -118,7 +118,7 @@ test('ciò che scade: in Casa le ricette che lo usano, «stasera» in un tocco, 
   await nuovo.getByRole('button', { name: /Guanciale$/ }).first().click();
   await nuovo.getByLabel('Quantità').fill('150');
   await nuovo.getByRole('button', { name: 'Da consumarsi entro' }).click();
-  await nuovo.getByLabel('Data').fill(oggi());
+  await nuovo.getByLabel('Data', { exact: true }).fill(oggi());
   await nuovo.getByRole('button', { name: 'Aggiungi', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Casa', exact: true })).toHaveAccessibleDescription('1 prodotto scaduto o da usare oggi');
 

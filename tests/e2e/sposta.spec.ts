@@ -19,7 +19,7 @@ test('sposta: dal freezer alla dispensa, con la data della confezione', async ({
   await nuovo.getByLabel('Quantità').fill('21');
   await nuovo.getByRole('button', { name: 'Freezer' }).click();
   await nuovo.getByRole('button', { name: 'Preferibilmente entro' }).click();
-  await nuovo.getByLabel('Data').fill(fra(669));
+  await nuovo.getByLabel('Data', { exact: true }).fill(fra(669));
   await nuovo.getByRole('button', { name: 'Aggiungi', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
 
@@ -58,7 +58,7 @@ test('sposta solo sul telefono: dal freezer alla dispensa', async ({ browser }, 
   await nuovo.getByLabel('Quantità').fill('21');
   await nuovo.getByRole('button', { name: 'Freezer' }).click();
   await nuovo.getByRole('button', { name: 'Preferibilmente entro' }).click();
-  await nuovo.getByLabel('Data').fill(fra(669));
+  await nuovo.getByLabel('Data', { exact: true }).fill(fra(669));
   await nuovo.getByRole('button', { name: 'Aggiungi', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
 
