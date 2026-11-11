@@ -1,7 +1,6 @@
 import { useId, useState } from 'react';
 import { type DataLetta, dataDiScadenza } from '../dominio/dataDaTesto';
-import { riduciFoto } from './Foto';
-import { leggiTestoSparso } from './ocr';
+import { leggiTestoData } from './ocr';
 
 /**
  * «Fotografa la data»: si scatta la data stampata sulla confezione e l'app la legge sul telefono
@@ -17,7 +16,7 @@ export function FotoData({ letta }: { letta: (d: DataLetta) => void }) {
     setErrore(null);
     setStato('leggo');
     try {
-      const d = dataDiScadenza(await leggiTestoSparso(await riduciFoto(file, 2000)));
+      const d = dataDiScadenza(await leggiTestoData(file));
       if (d) letta(d);
       else setErrore('Non trovo una data nella foto. Riprova più da vicino, oppure scrivila a mano.');
     } catch {

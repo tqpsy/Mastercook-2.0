@@ -14,11 +14,12 @@
  * prezzo finisce accanto al nome sbagliato. Se ancora non torna si rilegge la foto così com'è.
  * Si tiene sempre la lettura migliore.
  */
+import { dateNelTesto } from '../dominio/dataDaTesto';
 import { inizioColonnaPrezzi, type ParolaLetta, prezziDaColonna, unisciColonne } from '../dominio/colonne';
 import { impagina, inclinazione, inizioPrezzi, type Scatola } from '../dominio/paddle';
 import { leggiScontrino } from '../dominio/scontrini';
 import { leggiScatole, liberaPaddle, ruotaFoto } from './paddle';
-import { preparaFoto } from './preparaScontrino';
+import { binarizza, daGrigi, grigi, preparaFoto } from './preparaScontrino';
 
 /** Quanto è buona una lettura: il conto che torna vale più di tutto, poi le righe trovate. */
 function punteggio(testo: string): number {
@@ -138,6 +139,68 @@ async function leggiConTesseract(foto: Blob, avanzamento: (frazione: number) => 
   } finally {
     await lettore.terminate();
   }
+}
+
+/** La foto su un canvas (al più `lato` punti), a colori o in bianco e nero senza ombre. */
+async function telaDaFoto(foto: Blob, lato: number, biancoNero: boolean): Promise<HTMLCanvasElement> {
+  const img = await createImageBitmap(foto);
+  const scala = Math.min(1, lato / Math.max(img.width, img.height));
+  const tela = document.createElement('canvas');
+  tela.width = Math.max(1, Math.round(img.width * scala));
+  tela.height = Math.max(1, Math.round(img.height * scala));
+  const ctx = tela.getContext('2d', { willReadFrequently: true })!;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(img, 0, 0, tela.width, tela.height);
+  img.close();
+  if (biancoNero) {
+    const g = grigi(ctx.getImageData(0, 0, tela.width, tela.height));
+    const bn = daGrigi(binarizza(g, tela.width, tela.height, 12, 0.25), tela.width, tela.height);
+    const dati = ctx.createImageData(bn.width, bn.height);
+    dati.data.set(bn.data);
+    ctx.putImageData(dati, 0, 0);
+  }
+  return tela;
+}
+
+/**
+ * Legge il testo di una foto della data stampata su una confezione. Si prova in ordine PaddleOCR (legge bene
+ * anche i caratteri a puntini e il testo piccolo), poi Tesseract sulla foto com'è e in bianco e nero senza ombre;
+ * ci si ferma alla prima lettura che contiene una data, altrimenti si restituisce tutto il testo trovato.
+ * Lancia un errore solo se nessun lettore ha funzionato.
+ */
+export async function leggiTestoData(foto: Blob): Promise<string> {
+  const trovato: string[] = [];
+  let funzionato = false;
+  const buona = (t: string) => dateNelTesto(t).length > 0;
+  try {
+    const lettura = await leggiScatole(await telaDaFoto(foto, 1600, false), () => undefined);
+    const t = lettura.scatole.map((x) => x.testo).join('\n');
+    funzionato = true;
+    trovato.push(t);
+    if (buona(t)) return t;
+  } catch {
+    // Modelli non scaricabili o memoria finita: si passa a Tesseract.
+  } finally {
+    await liberaPaddle().catch(() => undefined);
+  }
+  const { createWorker, PSM } = await import('tesseract.js');
+  const lettore = await createWorker('ita', 1);
+  try {
+    for (const [lato, bn] of [[2000, false], [2000, true], [1200, true]] as const) {
+      const tela = await telaDaFoto(foto, lato, bn);
+      for (const modo of [PSM.SPARSE_TEXT, PSM.AUTO]) {
+        await lettore.setParameters({ tessedit_pageseg_mode: modo });
+        const t = (await lettore.recognize(tela, { rotateAuto: true })).data.text;
+        funzionato = true;
+        trovato.push(t);
+        if (buona(t)) return t;
+      }
+    }
+  } finally {
+    await lettore.terminate();
+  }
+  if (!funzionato) throw new Error('nessun lettore disponibile');
+  return trovato.join('\n');
 }
 
 /** Legge il testo sparso di una foto (una data stampata sulla confezione, per esempio), sul telefono con Tesseract. */
