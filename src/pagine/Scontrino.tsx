@@ -14,7 +14,7 @@ import { CercaIngrediente } from '../ui/CercaIngrediente';
 import { Foglio } from '../ui/Foglio';
 import { leggiTestoDaFoto } from '../ui/ocr';
 import { Scanner } from '../ui/Scanner';
-import { quantitaDa } from './Casa';
+import { quantitaDa } from '../dati/lotti';
 import { useDatiSpesa } from './Spesa';
 
 /** Cosa fare di una riga: dare il prezzo a una riga già confermata, metterla in casa, solo spesa, o niente. */

@@ -8,10 +8,11 @@ import { giorniTra, oggi } from '../dominio/scadenze';
 import { formattaGiorno, leggiNumero } from '../dominio/unita';
 import { Foglio } from '../ui/Foglio';
 import { ConsiglioRipiano } from '../ui/Frigo';
-import { AggiornaAOcchio, type Lotto, useLotti } from './Casa';
+import { AggiornaAOcchio } from '../ui/AggiornaAOcchio';
+import { type Lotto, useLotti } from '../dati/lotti';
 import { PorzioniAvanzate, SceltaLuogo, SegnaMangiato, TestaPiatto, testoNumero, useConferme } from './ConfermaPasto';
 import { useIcone, useInCasa } from './Ricette';
-import { type DatiMenu, useDatiMenu } from './Menu';
+import { type DatiMenu, useDatiMenu } from '../dati/menu';
 
 /** Il piatto pronto in casa di una portata cucinata in anticipo (anche già finito), se c'è. */
 export function usePronti(): Map<string, Lotto> {

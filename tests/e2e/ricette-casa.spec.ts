@@ -382,7 +382,8 @@ test('foto del frigo: prima l’avviso su Google, poi si controlla e in casa ent
   const { page } = await apri(browser, luca, info.project.use);
   await creaFamiglia(page, 'Casa Foto');
   await page.getByRole('button', { name: 'Casa', exact: true }).click();
-  await page.getByRole('button', { name: '📷 Foto del frigo' }).click();
+  // Casa vuota: «Foto» porta dritto alla foto del frigo.
+  await page.getByRole('button', { name: '📷 Foto', exact: true }).click();
   const foglio = page.getByRole('dialog', { name: 'Foto del frigo' });
   await expect(foglio.getByRole('note')).toContainText('Google non la usa per addestrare i suoi modelli');
   await foglio.getByRole('button', { name: 'Ho capito, continua' }).click();
@@ -403,7 +404,7 @@ test('foto del frigo: prima l’avviso su Google, poi si controlla e in casa ent
   await expect(page.getByLabel('Chiave Gemini della famiglia')).toHaveValue('');
 
   await page.getByRole('button', { name: 'Casa', exact: true }).click();
-  await page.getByRole('button', { name: '📷 Foto del frigo' }).click();
+  await page.getByRole('button', { name: '📷 Foto', exact: true }).click();
   await foglio.getByLabel('Foto del frigo').setInputFiles(foto);
   const elenco = foglio.getByRole('list', { name: 'Alimenti nella foto' });
   await expect(elenco).toContainText('«oggetto misterioso»: non lo trovo nel catalogo');
@@ -427,7 +428,9 @@ test('foto del frigo: prima l’avviso su Google, poi si controlla e in casa ent
       { ingrediente_id: 'ing:zucchina', q: 300, unita: 'g', luogo: 'frigo' },
     ]);
   // La seconda volta l'avviso non si ripete.
-  await page.getByRole('button', { name: '📷 Foto del frigo' }).click();
+  // Ora in frigo c'è qualcosa: «Foto» chiede se aggiungere o verificare.
+  await page.getByRole('button', { name: '📷 Foto', exact: true }).click();
+  await page.getByRole('dialog', { name: 'Foto' }).getByRole('button', { name: /Aggiungi quello che vedi/ }).click();
   await expect(foglio.getByLabel('Foto del frigo')).toBeAttached();
 });
 

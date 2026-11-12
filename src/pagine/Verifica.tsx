@@ -35,9 +35,9 @@ import { CercaIngrediente } from '../ui/CercaIngrediente';
 import { Foglio } from '../ui/Foglio';
 import { LATO_ANALISI, riduciFoto } from '../ui/Foto';
 import { IconaCibo } from '../ui/IconaCibo';
-import { useLotti } from './Casa';
+import { useLotti } from '../dati/lotti';
 import { avvisoLetto, CHIAVE_AVVISO, SPIEGA_ERRORE } from './FotoFrigo';
-import { useDatiMenu } from './Menu';
+import { useDatiMenu } from '../dati/menu';
 import { useFrigo } from './MioFrigo';
 
 type Passo = 'zone' | 'gestione' | 'scatta' | 'leggo' | 'risultato' | 'riepilogo' | 'fatto';
