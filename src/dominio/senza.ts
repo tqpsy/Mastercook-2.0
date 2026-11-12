@@ -192,6 +192,28 @@ function pesoRighe(indice: Indice, r: Ricetta): Map<string, number> {
   return pesi;
 }
 
+/** «Sara», «Sara e Luca», «Anna, Sara e Luca». */
+export const nomiInFila = (nomi: string[]) => (nomi.length > 1 ? `${nomi.slice(0, -1).join(', ')} e ${nomi[nomi.length - 1]}` : (nomi[0] ?? ''));
+
+/** «Senza panna per Sara · senza burro»: cosa è tolto da una portata, in breve. */
+export function testoSenza(indice: Indice, senza: Senza[] | undefined, persone: { id: string; nome: string }[]): string {
+  if (!senza?.length) return '';
+  const perTutti = senza.filter((s) => s.membro_id === null).map((s) => s.ingrediente_id);
+  const perChi = new Map<string, string[]>();
+  for (const s of senza) {
+    if (s.membro_id === null || perTutti.includes(s.ingrediente_id)) continue;
+    const nome = persone.find((p) => p.id === s.membro_id)?.nome;
+    if (nome) perChi.set(s.ingrediente_id, [...(perChi.get(s.ingrediente_id) ?? []), nome]);
+  }
+  // Raggruppa gli ingredienti tolti alle stesse persone: «senza panna e burro per Sara».
+  const gruppi = new Map<string, string[]>();
+  for (const [id, nomi] of perChi) gruppi.set(nomiInFila(nomi), [...(gruppi.get(nomiInFila(nomi)) ?? []), id]);
+  return [
+    ...(perTutti.length ? [`senza ${elencoNomi(indice, perTutti)}`] : []),
+    ...[...gruppi].map(([chi, ids]) => `senza ${elencoNomi(indice, ids)} per ${chi}`),
+  ].join(' · ');
+}
+
 /** «panna» oppure «panna e burro». */
 export function elencoNomi(indice: Indice, ids: string[]): string {
   const nomi = ids.map((id) => indice.nome(id).toLowerCase());

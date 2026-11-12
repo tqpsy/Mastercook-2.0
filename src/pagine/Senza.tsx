@@ -7,35 +7,14 @@ import { useState } from 'react';
 import { ingredientiPiatto } from '../dominio/consumi';
 import type { Persona } from '../dominio/menu';
 import type { Indice, Ricetta } from '../dominio/ricette';
-import { elencoNomi, quotaSenza, type Rimedio, type Senza, senzaDaScegliere, testoRimedio } from '../dominio/senza';
+import { elencoNomi, nomiInFila, quotaSenza, type Rimedio, type Senza, senzaDaScegliere, testoRimedio } from '../dominio/senza';
 import { formatta } from '../dominio/unita';
 import { Foglio } from '../ui/Foglio';
 import { Sigla, sigleDi } from '../ui/Sigla';
 
-const nomiInFila = (nomi: string[]) => (nomi.length > 1 ? `${nomi.slice(0, -1).join(', ')} e ${nomi[nomi.length - 1]}` : (nomi[0] ?? ''));
-
 /** L'etichetta gialla «✂️ Si fa senza panna per Sara». */
 export function EtichettaRimedio({ indice, rimedio }: { indice: Indice; rimedio: Rimedio }) {
   return <span className="etichetta-taglio">✂️ {testoRimedio(indice, rimedio)}</span>;
-}
-
-/** «Senza panna per Sara · senza burro»: cosa è tolto da una portata, in breve. */
-export function testoSenza(indice: Indice, senza: Senza[] | undefined, persone: { id: string; nome: string }[]): string {
-  if (!senza?.length) return '';
-  const perTutti = senza.filter((s) => s.membro_id === null).map((s) => s.ingrediente_id);
-  const perChi = new Map<string, string[]>();
-  for (const s of senza) {
-    if (s.membro_id === null || perTutti.includes(s.ingrediente_id)) continue;
-    const nome = persone.find((p) => p.id === s.membro_id)?.nome;
-    if (nome) perChi.set(s.ingrediente_id, [...(perChi.get(s.ingrediente_id) ?? []), nome]);
-  }
-  // Raggruppa gli ingredienti tolti alle stesse persone: «senza panna e burro per Sara».
-  const gruppi = new Map<string, string[]>();
-  for (const [id, nomi] of perChi) gruppi.set(nomiInFila(nomi), [...(gruppi.get(nomiInFila(nomi)) ?? []), id]);
-  return [
-    ...(perTutti.length ? [`senza ${elencoNomi(indice, perTutti)}`] : []),
-    ...[...gruppi].map(([chi, ids]) => `senza ${elencoNomi(indice, ids)} per ${chi}`),
-  ].join(' · ');
 }
 
 /** Per ogni ingrediente tolto: l'etichetta da mostrare nella ricetta e quanta parte se ne usa. */

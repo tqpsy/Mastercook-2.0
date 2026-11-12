@@ -11,8 +11,8 @@ import { Foglio } from '../ui/Foglio';
 import { ConsiglioRipiano } from '../ui/Frigo';
 import { ripianoPer } from '../dominio/cucinato';
 import { usePronti } from './Cucinato';
-import { AggiornaAOcchio } from './Casa';
-import type { DatiMenu } from './Menu';
+import { AggiornaAOcchio } from '../ui/AggiornaAOcchio';
+import type { DatiMenu } from '../dati/menu';
 import { useIcone } from './Ricette';
 
 

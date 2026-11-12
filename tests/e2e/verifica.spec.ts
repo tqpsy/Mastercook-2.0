@@ -43,7 +43,8 @@ test('verifica con le foto: solo le anomalie, decido io, riepilogo e poi la casa
   await page.reload();
   await page.getByRole('button', { name: 'Casa', exact: true }).click();
 
-  await page.getByRole('button', { name: /Verifica con le foto/ }).click();
+  await page.getByRole('button', { name: '📷 Foto', exact: true }).click();
+  await page.getByRole('dialog', { name: 'Foto' }).getByRole('button', { name: /Verifica con le foto/ }).click();
   const foglio = page.getByRole('dialog', { name: 'Verifica con le foto' });
   await expect(foglio.getByRole('note')).toContainText('non le usa per addestrare');
   await foglio.getByRole('button', { name: 'Ho capito, continua' }).click();
@@ -138,7 +139,9 @@ test('verifica con le foto: solo le anomalie, decido io, riepilogo e poi la casa
   await foglio.getByRole('button', { name: 'Chiudi' }).last().click();
   await page.getByRole('button', { name: /Apri Uova/ }).first().click();
   await expect(page.getByRole('dialog', { name: /Uova/ })).toContainText('Verifica con foto: da 6 pz a 2 pz');
-  await expect(page.getByRole('button', { name: /Verifica con le foto/ })).toContainText('verificata oggi');
+  await page.getByRole('dialog', { name: /Uova/ }).getByRole('button', { name: 'Chiudi' }).click();
+  await page.getByRole('button', { name: '📷 Foto', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Foto' }).getByRole('button', { name: /Verifica con le foto/ })).toContainText('verificata oggi');
 });
 
 test('verifica con le foto: il pollo crudo sul ripiano alto è al posto sbagliato, spostandolo cambia il posto in Casa', async ({ browser }, info) => {
@@ -159,7 +162,8 @@ test('verifica con le foto: il pollo crudo sul ripiano alto è al posto sbagliat
   await page.reload();
   await page.getByRole('button', { name: 'Casa', exact: true }).click();
 
-  await page.getByRole('button', { name: /Verifica con le foto/ }).click();
+  await page.getByRole('button', { name: '📷 Foto', exact: true }).click();
+  await page.getByRole('dialog', { name: 'Foto' }).getByRole('button', { name: /Verifica con le foto/ }).click();
   const foglio = page.getByRole('dialog', { name: 'Verifica con le foto' });
   await foglio.getByRole('button', { name: 'Ho capito, continua' }).click();
   await foglio.getByRole('button', { name: /Ripiano 1/ }).click();

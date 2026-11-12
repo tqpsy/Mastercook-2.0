@@ -25,7 +25,7 @@ import { CercaIngrediente } from '../ui/CercaIngrediente';
 import { Foglio } from '../ui/Foglio';
 import { ScansionaProdotto } from '../ui/CodiceProdotto';
 import { FoglioSchedaProdotto } from '../ui/SchedaProdotto';
-import { quantitaDa, useLotti, useScorteAOcchio } from './Casa';
+import { quantitaDa, useLotti, useScorteAOcchio } from '../dati/lotti';
 import { avvisoScorta, NOME_LIVELLO } from '../dominio/livello';
 import { IconaCibo } from '../ui/IconaCibo';
 import { iconaIngrediente } from '../dominio/iconeCibo';

@@ -13,10 +13,10 @@ import { Foglio } from '../ui/Foglio';
 import { Foto, riduciFoto } from '../ui/Foto';
 import { Icona } from '../ui/Icona';
 import { Sigla, type SiglaPersona, sigleDi } from '../ui/Sigla';
-import { useLotti } from './Casa';
+import { useLotti } from '../dati/lotti';
 import { ConfermaPasto, SegnaMangiato, useConferme } from './ConfermaPasto';
 import { SegnaCucinato, usePronti } from './Cucinato';
-import { chiLoMangia, type DatiMenu, descrivi, useDatiMenu, useProlungaFissi } from './Menu';
+import { chiLoMangia, type DatiMenu, descrivi, useDatiMenu, useProlungaFissi } from '../dati/menu';
 import { ICONA_ESITO, motiviInBreve, type PiattoAperto, RicettaDelPiatto } from './Ricette';
 import { useDatiSpesa } from './Spesa';
 
