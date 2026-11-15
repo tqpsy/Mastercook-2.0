@@ -383,3 +383,28 @@ test('scontrino con un prezzo ricavato dal totale: la riga è segnalata e non si
   await expect(importa).toBeEnabled();
   await expect(foglio.getByRole('status')).toHaveCount(0);
 });
+
+test('lo stesso scontrino letto un po’ diverso (ora e negozio) non entra in casa due volte senza una conferma', async ({ browser }, info) => {
+  const luca = await nuovoUtente('Luca');
+  const { page } = await apri(browser, luca, info.project.use);
+  await creaFamiglia(page, 'Casa Doppione');
+  await page.getByRole('button', { name: 'Spesa', exact: true }).click();
+  const prima = scontrino(new Date().toLocaleDateString('sv-SE'));
+  await page.getByRole('button', { name: 'Aggiungi uno scontrino' }).click();
+  await page.getByLabel('Oppure incolla il testo dello scontrino').fill(prima);
+  await page.getByRole('button', { name: 'Leggi le righe' }).click();
+  await page.getByRole('dialog', { name: 'Controlla lo scontrino' }).getByRole('button', { name: 'Importa lo scontrino' }).click();
+  await salvato(page);
+
+  // Un’altra foto dello stesso scontrino: l’ora è letta 18:03 e il negozio storpiato.
+  await page.getByRole('button', { name: 'Aggiungi uno scontrino' }).click();
+  await page.getByLabel('Oppure incolla il testo dello scontrino').fill(prima.replace('18:30', '18:03').replace('SUPERMERCATO ROSSI', 'SUPERMERCATO R0SSI'));
+  await page.getByRole('button', { name: 'Leggi le righe' }).click();
+  const foglio = page.getByRole('dialog', { name: 'Controlla lo scontrino' });
+  await expect(foglio.getByText(/Sembra lo stesso scontrino già importato/)).toBeVisible();
+  const importa = foglio.getByRole('button', { name: 'Importa lo scontrino' });
+  await expect(importa).toBeDisabled();
+  await expect(foglio).toContainText('Prima di importare controlla se è già stato importato.');
+  await foglio.getByRole('button', { name: 'È un altro scontrino' }).click();
+  await expect(importa).toBeEnabled();
+});

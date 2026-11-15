@@ -4,12 +4,12 @@ import { iconaIngrediente } from '../dominio/iconeCibo';
 import { LUOGHI, NOME_LUOGO } from '../catalogo/tipi';
 import { useFamiglia, useVista } from '../dati/contesto';
 import type { Indice, Ingrediente } from '../dominio/ricette';
-import { normalizza } from '../dominio/ricette';
 import { eFresco, giorniTra, type Luogo, oggi, stima } from '../dominio/scadenze';
 import { abbinaRighe, leggiScontrino, quantitaProposta, type RigaDaAbbinare, type RigaLetta, suggerisciIngrediente, unisciDescrizioni, unisciRipetute } from '../dominio/scontrini';
 import { formattaEuro, formattaGiorno, leggiNumero, type Unita, UNITA_BASE } from '../dominio/unita';
 import { confezioneDa } from '../dominio/confezioni';
 import { confrontaLetture, type ControlloLettura } from '../dominio/doppiaLettura';
+import { type ScontrinoNoto, trovaDoppione } from '../dominio/doppioni';
 import { CampoQuantita } from '../ui/CampoQuantita';
 import { CercaIngrediente } from '../ui/CercaIngrediente';
 import { Foglio } from '../ui/Foglio';
@@ -88,6 +88,10 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
   /** La data è incerta (non letta, o le due letture non concordano): va confermata prima di importare. */
   const [dataIncerta, setDataIncerta] = useState<string | null>(null);
   const [dataConfermata, setDataConfermata] = useState(false);
+  /** Lo scontrino sembra uno già importato ma chi lo importa dice che è un altro. */
+  const [altroScontrino, setAltroScontrino] = useState(false);
+  /** Si sta importando: un secondo tocco non deve accodare un secondo comando. */
+  const [importando, setImportando] = useState(false);
   /** Le righe che vanno in casa senza quantità: si possono scrivere ora o saltare e completarle dopo in Casa. */
   const [senzaQuantita, setSenzaQuantita] = useState<string[] | null>(null);
   const daAbbinare = useDaAbbinare(indice);
@@ -126,6 +130,7 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
     setDaFoto(fotografata);
     setDataIncerta(fotografata ? (s.data === null ? 'Non ho letto la data: ho messo oggi.' : c.campi.data ? 'Le due letture della foto non coincidono sulla data.' : null) : null);
     setDataConfermata(false);
+    setAltroScontrino(false);
     const dubbia = (r: RigaLetta, i: number) => (r.corretta ? 'il prezzo è ricavato dal totale, non letto' : c.disponibile && !c.righe[i].concorde ? 'le due letture della foto non coincidono' : undefined);
     setRighe(unisciRipetute(proposte(s.righe.map((r, i) => ({ id: crypto.randomUUID(), riga: r, dubbia: dubbia(r, i) })), giorno)));
     setRevisione(true);
@@ -184,22 +189,23 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
   /** Righe già spuntate o confermate a mano che nessuna riga dello scontrino ha preso. */
   const giaInCasa = candidate.filter((c) => !righe.some((r) => r.azione === `abbina:${c.id}`));
   const nuoveInCasa = righe.filter((r) => r.azione === 'casa');
-  /** Le righe segnalate non ancora controllate, e la data incerta non ancora confermata: finché ci sono, non si importa. */
   const daControllare = righe.filter((r) => r.dubbia && !r.controllata).length;
-  const bloccato = daControllare > 0 || (dataIncerta !== null && !dataConfermata);
-  const motivoBlocco = [daControllare ? (daControllare === 1 ? 'la riga segnalata' : `le ${daControllare} righe segnalate`) : '', dataIncerta !== null && !dataConfermata ? 'la data' : ''].filter(Boolean).join(' e ');
   const somma = Math.round(righe.filter((r) => r.azione !== 'ignora').reduce((s, r) => s + (leggiNumero(r.euro) ?? 0), 0) * 100) / 100;
   const tot = totale.trim() ? leggiNumero(totale) : null;
-  const giaImportato = (vista.righe.scontrino ?? []).find(
-    (s) =>
-      !s.eliminato_il &&
-      s.data === data &&
-      (s.ora ?? '') === ora &&
-      (s.totale == null ? null : Number(s.totale)) === tot &&
-      normalizza(String(s.negozio ?? '')).replace(/ /g, '') === normalizza(negozio).replace(/ /g, ''),
-  );
+  // Gli scontrini già importati, con i nomi delle loro righe: serve a capire se questo è lo stesso letto un po' diverso.
+  const nomiRighe = new Map<string, string[]>();
+  for (const r of vista.righe.scontrino_riga ?? []) if (!r.eliminato_il) nomiRighe.set(String(r.scontrino_id), [...(nomiRighe.get(String(r.scontrino_id)) ?? []), String(r.descrizione ?? '')]);
+  const noti: ScontrinoNoto[] = (vista.righe.scontrino ?? [])
+    .filter((x) => !x.eliminato_il)
+    .map((x) => ({ data: String(x.data), ora: x.ora ? String(x.ora) : null, totale: x.totale == null ? null : Number(x.totale), negozio: x.negozio ? String(x.negozio) : null, descrizioni: nomiRighe.get(String(x.id)) ?? [] }));
+  const doppione = revisione ? trovaDoppione({ data, ora, totale: tot, negozio, descrizioni: righe.map((r) => r.descrizione) }, noti) : null;
+  const sembraDoppio = doppione !== null && !doppione.esatto && !altroScontrino;
+  /** Finché ci sono righe segnalate da controllare, una data incerta da confermare o un possibile doppione da escludere, non si importa. */
+  const bloccato = daControllare > 0 || (dataIncerta !== null && !dataConfermata) || sembraDoppio;
+  const motivoBlocco = [daControllare ? (daControllare === 1 ? 'la riga segnalata' : `le ${daControllare} righe segnalate`) : '', dataIncerta !== null && !dataConfermata ? 'la data' : '', sembraDoppio ? 'se è già stato importato' : ''].filter(Boolean).join(' e ');
 
   async function importa(saltaQuantita = false) {
+    if (importando) return;
     setSenzaQuantita(null);
     if (bloccato) return setErrore(`Prima di importare controlla ${motivoBlocco}.`);
     const mancanti: string[] = [];
@@ -252,17 +258,23 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
     if (!pronte.length) return setErrore('Non ci sono righe da importare.');
     setErrore(null);
     if (mancanti.length && !saltaQuantita) return setSenzaQuantita(mancanti);
-    await esegui('importa_scontrino', {
-      id: crypto.randomUUID(),
-      acquisto_id: crypto.randomUUID(),
-      negozio: negozio.trim() || null,
-      data,
-      ora: ora || null,
-      totale: tot,
-      qr,
-      testo: testo.slice(0, 20000) || null,
-      righe: pronte,
-    });
+    setImportando(true);
+    try {
+      await esegui('importa_scontrino', {
+        id: crypto.randomUUID(),
+        acquisto_id: crypto.randomUUID(),
+        negozio: negozio.trim() || null,
+        data,
+        ora: ora || null,
+        totale: tot,
+        qr,
+        testo: testo.slice(0, 20000) || null,
+        righe: pronte,
+      });
+    } catch {
+      setImportando(false);
+      return setErrore('Non sono riuscito a importare lo scontrino. Riprova.');
+    }
     chiudi();
   }
 
@@ -396,7 +408,19 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
           Hai già messo in casa con le spunte {elencoNomi(giaInCasa.map((c) => c.nome))}. Se sono su questo scontrino, scegli «Prezzo a … già comprato» sulla riga giusta, così non entrano in casa due volte.
         </div>
       )}
-      {giaImportato && <div className="avviso attenzione">Sembra uno scontrino già importato il {formattaGiorno(String(giaImportato.data))}: importarlo di nuovo non cambierà niente.</div>}
+      {doppione?.esatto && <div className="avviso attenzione">Sembra uno scontrino già importato il {formattaGiorno(doppione.noto.data)}: importarlo di nuovo non cambierà niente.</div>}
+      {doppione && !doppione.esatto && (
+        <div className="avviso attenzione">
+          <p style={{ margin: 0 }}>
+            Sembra lo stesso scontrino già importato il {formattaGiorno(doppione.noto.data)}{doppione.noto.totale !== null ? ` (stesso totale, ${formattaEuro(doppione.noto.totale)})` : ''}, letto un po’ diverso. Se lo importi di nuovo le stesse cose entrano in casa due volte.
+          </p>
+          {!altroScontrino && (
+            <button className="bottone piccolo" style={{ marginTop: 8 }} onClick={() => setAltroScontrino(true)}>
+              È un altro scontrino
+            </button>
+          )}
+        </div>
+      )}
 
       <ul className="elenco" aria-label="Righe dello scontrino">
         {righe.map((r, i) => (
@@ -491,7 +515,7 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
       ) : (
         <>
           {bloccato && <p className="tenue">Prima di importare controlla {motivoBlocco}.</p>}
-          <button className="bottone primario pieno" onClick={() => importa()} disabled={bloccato}>
+          <button className="bottone primario pieno" onClick={() => importa()} disabled={bloccato || importando}>
             Importa lo scontrino
           </button>
         </>
