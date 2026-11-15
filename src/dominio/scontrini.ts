@@ -411,8 +411,16 @@ function parole(descrizione: string): string[] {
     .filter((p) => p.length >= 3 && !/\d/.test(p) && !PAROLE_VUOTE.has(p));
 }
 
+/**
+ * Ciò che sullo scontrino non è un alimento né una scorta di casa: sacchetti del banco e shopper, abiti, spazzolino e collutorio.
+ * Mai un ingrediente: il prefisso di una parola («dent» come dentice, «sacchetto» come ghiaccio) li farebbe entrare in casa.
+ */
+const NON_ALIMENTO =
+  /\b(SHOPPER|SACCHETTO DI CONFEZ\w*|NS SACCHETTO|SACCH\.? ?ORTOFR\w*|SACCHETTO COMPOST\w*|GONNA|CARDIGAN|MAGLIA|MAGLIETTA|CAMICIA|CAMICETTA|PANTALON\w*|GIACCA|CALZINI|COLLANT|MENTADENT|COLLUTORIO|DENTIFRICIO|TESTINE|SALVASLIP)\b/;
+
 /** L'ingrediente più probabile per una descrizione dello scontrino, o undefined se non c'è un buon candidato. */
 export function suggerisciIngrediente(descrizione: string, indice: Indice): Ingrediente | undefined {
+  if (NON_ALIMENTO.test(descrizione.toUpperCase())) return undefined;
   const p = parole(descrizione);
   const tentativi = [p.join(' '), ...p.slice(0, -1).map((x, i) => `${x} ${p[i + 1]}`), ...p, ...p.filter((x) => x.length >= 5).map((x) => x.slice(0, -1))];
   // Quante parole della descrizione ha il nome (o sinonimo) che ne ha di più: «macinato tacchino pollo»
@@ -438,11 +446,22 @@ export interface RigaDaAbbinare {
   nome: string;
 }
 
-/** Due parole si somigliano se iniziano uguali: «mozz» è mozzarella, «yog» è yogurt, «pane» non è «panna». */
-function parolaSimile(dalloScontrino: string, nota: string): boolean {
+/** La parola senza la vocale finale: «mele» e «mela» sono la stessa, «latte» e «lattuga» no. */
+const radice = (w: string) => w.replace(/[aeio]$/, '');
+
+/**
+ * Due parole si somigliano se iniziano uguali: «mozz» è mozzarella, «yog» è yogurt, «pane» non è «panna». Ma una parola
+ * scritta per intero, che è già il nome di un ingrediente («latte», «mela», «pane», «riso»), non è l'inizio di un'altra:
+ * «latte» non è «lattuga», «mela» non è «melanzane», «pane» non è «panettone». Quella si confronta con la radice.
+ */
+function parolaSimile(dalloScontrino: string, nota: string, intera: boolean): boolean {
+  if (intera) return radice(dalloScontrino) === radice(nota);
   if (dalloScontrino.length === 3) return nota.startsWith(dalloScontrino);
   return dalloScontrino.slice(0, 4) === nota.slice(0, 4);
 }
+
+/** La parola è, per intero, una parola del nome o dei sinonimi di un ingrediente. */
+const eParolaIntera = (w: string, indice: Indice) => indice.cercaIngredienti(w, 60).some((i) => [i.nome, ...i.sinonimi].some((n) => normalizza(n).split(' ').includes(w)));
 
 /** Descrizione senza spazi e punteggiatura, per riconoscere la stessa riga ripetuta sullo scontrino. */
 const chiaveRiga = (descrizione: string) => normalizza(descrizione).replace(/[^a-z0-9]/g, '');
@@ -483,7 +502,7 @@ export function abbinaRighe(lette: RigaLetta[], candidate: RigaDaAbbinare[], ind
       libere().find((x) => {
         const ing = x.ingrediente_id ? indice.ingrediente(x.ingrediente_id) : undefined;
         const note = [x.nome, ...(ing ? [ing.nome, ...ing.sinonimi] : [])].flatMap(parole);
-        return note.some((w) => mie.some((m) => parolaSimile(m, w)));
+        return note.some((w) => mie.some((m) => parolaSimile(m, w, eParolaIntera(m, indice))));
       }),
     );
   }

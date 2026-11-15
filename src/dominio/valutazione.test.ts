@@ -166,24 +166,30 @@ describe('conversione in prodotti', () => {
   });
 
   it('una quantità non letta è «mancata» (si scrive dopo), non sbagliata', () => {
-    const v = valuta({ ...verita, righe: [{ descrizione: 'PASTA 500G', prezzo: 1, ingrediente: 'ing:pasta', carico: { quantita: 500, unita: 'g' } }], totale: 1 }, leggiPerValutare(['IPER S.P.A.', 'DOCUMENTO COMMERCIALE', 'DESCRIZIONE PREZZO IVA', 'PASTA 5OOG 1,00 C', 'TOTALE COMPLESSIVO 1,00', '02-11-2026 18:41'].join('\n'), indice));
+    const v = valuta({ ...verita, righe: [{ descrizione: 'PASTA', prezzo: 1, ingrediente: 'ing:pasta', carico: { quantita: 500, unita: 'g' } }], totale: 1 }, leggiPerValutare(['IPER S.P.A.', 'DOCUMENTO COMMERCIALE', 'DESCRIZIONE PREZZO IVA', 'PASTA 1,00 C', 'TOTALE COMPLESSIVO 1,00', '02-11-2026 18:41'].join('\n'), indice));
     expect(v.giacenza).toMatchObject({ misurate: 1, mancata: 1, sbagliata: 0 });
     expect(v.sicura).toBe(true);
   });
 });
 
 describe('abbinamento alle righe già comprate', () => {
-  it('conta gli abbinamenti sbagliati (LATTE preso per Lattuga)', () => {
+  it('conta gli abbinamenti sbagliati (la lettura abbina una riga che la verità dice nuova)', () => {
     const verita: Verita = {
       ...VERITA,
       totale: 1.29,
-      carrello: [{ id: 'r-lattuga', ingrediente_id: 'ing:lattuga', nome: 'Lattuga' }],
+      carrello: [{ id: 'r-latte', ingrediente_id: 'ing:latte', nome: 'Latte' }],
       righe: [{ descrizione: 'LATTE', prezzo: 1.29, abbina: null }],
     };
     const testo = ['IPER S.P.A.', 'DOCUMENTO COMMERCIALE', 'DESCRIZIONE PREZZO IVA', 'LATTE 1,29 C', 'TOTALE COMPLESSIVO 1,29', '02-11-2026 18:41'].join('\n');
     const v = valuta(verita, leggiPerValutare(testo, indice, verita.carrello));
     expect(v.abbinamenti).toMatchObject({ misurate: 1, sbagliati: 1 });
     expect(v.sicura).toBe(false);
+  });
+
+  it('LATTE non prende il prezzo di Lattuga: la riga resta nuova', () => {
+    const verita: Verita = { ...VERITA, totale: 1.29, carrello: [{ id: 'r-lattuga', ingrediente_id: null, nome: 'Lattuga' }], righe: [{ descrizione: 'LATTE', prezzo: 1.29, abbina: null }] };
+    const testo = ['IPER S.P.A.', 'DOCUMENTO COMMERCIALE', 'DESCRIZIONE PREZZO IVA', 'LATTE 1,29 C', 'TOTALE COMPLESSIVO 1,29', '02-11-2026 18:41'].join('\n');
+    expect(valuta(verita, leggiPerValutare(testo, indice, verita.carrello)).abbinamenti).toMatchObject({ misurate: 1, ok: 1, sbagliati: 0 });
   });
 });
 

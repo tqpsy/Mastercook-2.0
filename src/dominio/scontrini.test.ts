@@ -249,6 +249,25 @@ describe('ingredienti e abbinamenti', () => {
     expect(t('YOGURT 0,89', 'COUPON 0,30').righe).toMatchObject([{ prezzo: 0.59 }]);
   });
 
+  it('LATTE non è Lattuga, MELE non è Melanzane, PANE non è Panettone; le abbreviazioni e i plurali sì', () => {
+    const abbina = (d: string, nota: string) => abbinaRighe([{ descrizione: d, prezzo: 1 }], [{ id: 'x', ingrediente_id: null, nome: nota }], indice)[0] === 'x';
+    expect(abbina('LATTE INTERO 1L', 'Lattuga')).toBe(false);
+    expect(abbina('MELA GOLDEN', 'Melanzane')).toBe(false);
+    expect(abbina('PANE COMUNE', 'Panettone')).toBe(false);
+    expect(abbina('RISO CARNAROLI', 'Risotto')).toBe(false);
+    expect(abbina('MELE GOLDEN 1KG', 'Mela')).toBe(true);
+    expect(abbina('LATTE INTERO 1L', 'Latte')).toBe(true);
+    expect(abbina('MOZZ BUFALA', 'Mozzarella')).toBe(true);
+    expect(abbina('YOG BIANCO', 'Yogurt')).toBe(true);
+  });
+
+  it('sacchetti, shopper e abiti non sono ingredienti (niente ghiaccio, vino rosso o cernia)', () => {
+    for (const d of ['SACCHETTO DI CONFEZ.', 'NS SACCHETTO COMPOST', 'SACCH.ORTOFR.BIOGRAD', 'SHOPPER COMPOSTABILE', 'GONNA MIDI NERO S-0487526', 'CARDIGAN NAVY S-0469699', 'MENTADENT DENT KIDS', 'PRIMIA TESTINE X4'])
+      expect(suggerisciIngrediente(d, indice), d).toBeUndefined();
+    expect(suggerisciIngrediente('SACCHETTI FREEZER', indice)).toBeDefined();
+    expect(suggerisciIngrediente('DENTICE FILETTO', indice)?.id).toBe('ing:cernia'); // «dentice» è un sinonimo di cernia nel catalogo
+  });
+
   it('un numero di una o due cifre in testa al nome è la quantità; uno di tre (un codice) no', () => {
     const t = (riga: string) => leggiScontrino(['DESCRIZIONE PREZZO IVA', riga, 'TOTALE 0,76'].join('\n')).righe[0];
     expect(t('4 PASTA DI SEMOLA 500G   0,76')).toMatchObject({ descrizione: 'PASTA DI SEMOLA 500G', pezzi: 4, formato: { quantita: 500, unita: 'g' } });
