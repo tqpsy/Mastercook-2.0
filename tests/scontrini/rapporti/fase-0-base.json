@@ -2,12 +2,12 @@
  "versione": 1,
  "livello": "foto",
  "etichetta": "fase-0-base",
- "creato": "2026-11-15T20:25:36.630Z",
+ "creato": "2026-11-15T20:30:49.599Z",
  "ambiente": {
   "browser": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.12 Safari/537.36",
   "tesseract": "locale",
   "varianti": "7",
-  "tempoMedioLetturaMs": "5911"
+  "tempoMedioLetturaMs": "6026"
  },
  "sintesi": {
   "perfette": {
@@ -104,7 +104,7 @@
   },
   "falsiQuadra": {
    "etichetta": "«Il conto torna» ma la lettura è sbagliata (su 43 che tornano)",
-   "valore": 42,
+   "valore": 11,
    "verso": "meno"
   },
   "giacenzaSbagliata": {
