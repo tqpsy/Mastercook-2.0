@@ -1,0 +1,279 @@
+{
+  "versione": 1,
+  "id": "bennet-albano-sfondo-blu",
+  "origine": "scontrino-reale",
+  "verita": "carta",
+  "totale": 132.01,
+  "note": "Stesso scontrino Bennet (15/11/2026 12:52, totale 132,01 €, 48 righe) fotografato in quattro modi. «Sconto Art. 30%» (GRANMIX, -0,60) e «Sconto Art. 10%» (LIEN, -0,15) sono già tolti dai prezzi. Foto con lo sfondo blu e una macchia di luce; arriva al totale ma non alla data.",
+  "righe": [
+    {
+      "descrizione": "437 CALAMARO K.3",
+      "prezzo": 16.63
+    },
+    {
+      "descrizione": "RICOTTA CASEIFICIO PUGLI",
+      "prezzo": 1.99
+    },
+    {
+      "descrizione": "CBOC.M.BUF.DOP SG TW",
+      "prezzo": 4.99
+    },
+    {
+      "descrizione": "CBOC.M.BUF.DOP SG TW",
+      "prezzo": 4.99
+    },
+    {
+      "descrizione": "TAGLIATELLE SPEC.GOURMET",
+      "prezzo": 1.99
+    },
+    {
+      "descrizione": "CAPPELLACCI ZUCCA SEL.GO",
+      "prezzo": 2.99
+    },
+    {
+      "descrizione": "CAPPELLACCI ZUCCA SEL.GO",
+      "prezzo": 2.99
+    },
+    {
+      "descrizione": "TAGLIATELLE SPEC.GOURMET",
+      "prezzo": 1.99
+    },
+    {
+      "descrizione": "GRANMIX FERRARI GR 100",
+      "prezzo": 1.39,
+      "formato": {
+        "quantita": 100,
+        "unita": "g"
+      }
+    },
+    {
+      "descrizione": "BROCCOLI ROSET. BENNET G",
+      "prezzo": 2.39
+    },
+    {
+      "descrizione": "PISELLI FINI BIO BENN. G",
+      "prezzo": 1.99
+    },
+    {
+      "descrizione": "BROCCOLI ROSET. BENNET G",
+      "prezzo": 2.39
+    },
+    {
+      "descrizione": "PISELLI FINI BIO BENN. G",
+      "prezzo": 1.99
+    },
+    {
+      "descrizione": "208 SALAMELLE",
+      "prezzo": 3.66
+    },
+    {
+      "descrizione": "209 SALSICCIA",
+      "prezzo": 4.76
+    },
+    {
+      "descrizione": "209 SALSICCIA",
+      "prezzo": 4.21
+    },
+    {
+      "descrizione": "CARNE MACINATA RAGU'",
+      "prezzo": 8.79
+    },
+    {
+      "descrizione": "VERMENTINO DI SARDEGNA M",
+      "prezzo": 3.48
+    },
+    {
+      "descrizione": "BARBERA ROCCA BADESSA ML",
+      "prezzo": 3.99
+    },
+    {
+      "descrizione": "PEPERONE GIALLO",
+      "prezzo": 1.34
+    },
+    {
+      "descrizione": "SACCHETTO DI CONFEZ.",
+      "prezzo": 0.02,
+      "ingrediente": null
+    },
+    {
+      "descrizione": "PORRI",
+      "prezzo": 1.68
+    },
+    {
+      "descrizione": "SACCHETTO DI CONFEZ.",
+      "prezzo": 0.02,
+      "ingrediente": null
+    },
+    {
+      "descrizione": "CECI BIO SELECT GR 290",
+      "prezzo": 1.89,
+      "formato": {
+        "quantita": 290,
+        "unita": "g"
+      },
+      "ingrediente": "ing:ceci",
+      "carico": {
+        "quantita": 290,
+        "unita": "g"
+      }
+    },
+    {
+      "descrizione": "MAY SOY SAL.SOIA -SALE M",
+      "prezzo": 3.89
+    },
+    {
+      "descrizione": "PREZZEMOLO",
+      "prezzo": 0.22
+    },
+    {
+      "descrizione": "SACCHETTO DI CONFEZ.",
+      "prezzo": 0.02,
+      "ingrediente": null
+    },
+    {
+      "descrizione": "POMODORO COSTOLUTO FIL.V",
+      "prezzo": 2.99
+    },
+    {
+      "descrizione": "POMODORO COSTOLUTO FIL.V",
+      "prezzo": 2.99
+    },
+    {
+      "descrizione": "POM.DATTERINO GIALLO G 2",
+      "prezzo": 2.99
+    },
+    {
+      "descrizione": "PEPERONE ROSSO",
+      "prezzo": 1.25
+    },
+    {
+      "descrizione": "SACCHETTO DI CONFEZ.",
+      "prezzo": 0.02,
+      "ingrediente": null
+    },
+    {
+      "descrizione": "LATTE A.Q.GRANAROLO LT.1",
+      "prezzo": 1.99,
+      "formato": {
+        "quantita": 1000,
+        "unita": "ml"
+      },
+      "ingrediente": "ing:latte",
+      "carico": {
+        "quantita": 1000,
+        "unita": "ml"
+      }
+    },
+    {
+      "descrizione": "LATTE A.Q.GRANAROLO LT.1",
+      "prezzo": 1.99,
+      "formato": {
+        "quantita": 1000,
+        "unita": "ml"
+      },
+      "ingrediente": "ing:latte",
+      "carico": {
+        "quantita": 1000,
+        "unita": "ml"
+      }
+    },
+    {
+      "descrizione": "PATATE BENNET A PASTA GI",
+      "prezzo": 2.34
+    },
+    {
+      "descrizione": "AVOCADO HASS G 200",
+      "prezzo": 4.47,
+      "pezzi": 3,
+      "formato": {
+        "quantita": 200,
+        "unita": "g"
+      }
+    },
+    {
+      "descrizione": "MELANZANE SFUSE",
+      "prezzo": 2.52
+    },
+    {
+      "descrizione": "SACCHETTO DI CONFEZ.",
+      "prezzo": 0.02,
+      "ingrediente": null
+    },
+    {
+      "descrizione": "BANANE BENNET BIO VAS.G",
+      "prezzo": 1.95
+    },
+    {
+      "descrizione": "LIEN CARTA DI RISO GR",
+      "prezzo": 1.34
+    },
+    {
+      "descrizione": "MISTO FUNGHI TAGLIATI GR",
+      "prezzo": 2.48
+    },
+    {
+      "descrizione": "PATATE PRECOTTE AL VAPOR",
+      "prezzo": 1.95
+    },
+    {
+      "descrizione": "SPUNTINELLE CUBO MORAT G",
+      "prezzo": 2.29
+    },
+    {
+      "descrizione": "SPUNTINELLE CUBO MORAT G",
+      "prezzo": 2.29
+    },
+    {
+      "descrizione": "LATTE A.Q.GRANAROLO LT.1",
+      "prezzo": 1.99,
+      "formato": {
+        "quantita": 1000,
+        "unita": "ml"
+      },
+      "ingrediente": "ing:latte",
+      "carico": {
+        "quantita": 1000,
+        "unita": "ml"
+      }
+    },
+    {
+      "descrizione": "UOVA BIOLOGICHE M X4",
+      "prezzo": 2.49,
+      "formato": {
+        "quantita": 4,
+        "unita": "pz"
+      },
+      "ingrediente": "ing:uova",
+      "carico": {
+        "quantita": 4,
+        "unita": "pz"
+      }
+    },
+    {
+      "descrizione": "UOVA BIOLOGICHE M X4",
+      "prezzo": 2.49,
+      "formato": {
+        "quantita": 4,
+        "unita": "pz"
+      },
+      "ingrediente": "ing:uova",
+      "carico": {
+        "quantita": 4,
+        "unita": "pz"
+      }
+    },
+    {
+      "descrizione": "UOVA BIOLOGICHE M X4",
+      "prezzo": 2.49,
+      "formato": {
+        "quantita": 4,
+        "unita": "pz"
+      },
+      "ingrediente": "ing:uova",
+      "carico": {
+        "quantita": 4,
+        "unita": "pz"
+      }
+    }
+  ]
+}

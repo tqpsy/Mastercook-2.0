@@ -1,0 +1,136 @@
+{
+  "versione": 1,
+  "id": "conad-superstore",
+  "origine": "esempio-reale",
+  "verita": "carta",
+  "data": "2003-06-25",
+  "ora": "12:47",
+  "totale": 13.65,
+  "note": "Foto di un documento commerciale Conad con le colonne QTA, PREZZO e TOTALE (esempio trovato in rete, data 25/06/2003). Verità controllata sulla foto e sul conto (somma righe = 13,65). Le scatole OCR in letture/ erano già nel repo (scontrini-reali.test.ts). Per BANANE e le righe a quantità 1 non si dichiara la quantità in casa: dipende da come si legge la colonna QTA.",
+  "righe": [
+    {
+      "descrizione": "PANE BAULETTO",
+      "prezzo": 0.98,
+      "pezzi": 2
+    },
+    {
+      "descrizione": "LATTE PARZ.SCREM.1L",
+      "prezzo": 1.17,
+      "pezzi": 3,
+      "formato": {
+        "quantita": 1000,
+        "unita": "ml"
+      },
+      "ingrediente": "ing:latte",
+      "carico": {
+        "quantita": 3000,
+        "unita": "ml"
+      }
+    },
+    {
+      "descrizione": "PASTA DI SEMOLA 500G",
+      "prezzo": 0.76,
+      "pezzi": 4,
+      "formato": {
+        "quantita": 500,
+        "unita": "g"
+      },
+      "ingrediente": "ing:pasta",
+      "carico": {
+        "quantita": 2000,
+        "unita": "g"
+      }
+    },
+    {
+      "descrizione": "PASSATA POMODORO 700G",
+      "prezzo": 0.58,
+      "pezzi": 2,
+      "formato": {
+        "quantita": 700,
+        "unita": "g"
+      },
+      "ingrediente": "ing:passata",
+      "carico": {
+        "quantita": 1400,
+        "unita": "g"
+      }
+    },
+    {
+      "descrizione": "MOZZARELLA 125G",
+      "prezzo": 1.18,
+      "pezzi": 2,
+      "formato": {
+        "quantita": 125,
+        "unita": "g"
+      },
+      "ingrediente": "ing:mozzarella",
+      "carico": {
+        "quantita": 250,
+        "unita": "g"
+      }
+    },
+    {
+      "descrizione": "PETTO DI POLLO 500G",
+      "prezzo": 2.49,
+      "formato": {
+        "quantita": 500,
+        "unita": "g"
+      },
+      "ingrediente": "ing:petto_pollo",
+      "carico": {
+        "quantita": 500,
+        "unita": "g"
+      }
+    },
+    {
+      "descrizione": "BANANE",
+      "prezzo": 0.69,
+      "ingrediente": "ing:banana"
+    },
+    {
+      "descrizione": "MELE GOLDEN 1KG",
+      "prezzo": 0.79,
+      "formato": {
+        "quantita": 1000,
+        "unita": "g"
+      },
+      "ingrediente": "ing:mela",
+      "carico": {
+        "quantita": 1000,
+        "unita": "g"
+      }
+    },
+    {
+      "descrizione": "DETERSIVO LAVATRICE",
+      "prezzo": 1.19,
+      "ingrediente": "ing:detersivo_bucato"
+    },
+    {
+      "descrizione": "CARTA IGIENICA 12R",
+      "prezzo": 1.29,
+      "ingrediente": "ing:carta_igienica"
+    },
+    {
+      "descrizione": "NUTELLA 750G",
+      "prezzo": 1.99,
+      "formato": {
+        "quantita": 750,
+        "unita": "g"
+      }
+    },
+    {
+      "descrizione": "ACQUA NATURALE 1.5L",
+      "prezzo": 0.54,
+      "pezzi": 6,
+      "formato": {
+        "quantita": 1500,
+        "unita": "ml"
+      },
+      "ingrediente": "ing:acqua",
+      "carico": {
+        "quantita": 9000,
+        "unita": "ml"
+      }
+    }
+  ]
+}

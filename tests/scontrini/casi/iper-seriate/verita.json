@@ -1,0 +1,83 @@
+{
+  "versione": 1,
+  "id": "iper-seriate",
+  "origine": "esempio-reale",
+  "verita": "ricavata",
+  "negozio": "Iper Montebello S.P.A",
+  "data": "2026-11-02",
+  "ora": "18:41",
+  "totale": 19.88,
+  "note": "Scontrino digitale Iper (screenshot) e lettura della stessa foto preparata per Tesseract, già in src/dominio/scontrini-esempi. Verità ricavata dai due testi e dal conto (19,88), non dalla carta. Il carrello è quello del test «spesa fatta con le spunte».",
+  "carrello": [
+    {
+      "id": "r-pane",
+      "ingrediente_id": "ing:pane_grattugiato",
+      "nome": "Pane grattugiato"
+    },
+    {
+      "id": "r-mozz",
+      "ingrediente_id": "ing:mozzarella_bufala",
+      "nome": "Mozzarella di bufala"
+    },
+    {
+      "id": "r-olive",
+      "ingrediente_id": "ing:olive",
+      "nome": "Olive"
+    },
+    {
+      "id": "r-pollo",
+      "ingrediente_id": "ing:petto_pollo",
+      "nome": "Petto di pollo"
+    }
+  ],
+  "righe": [
+    {
+      "descrizione": "PANE GRATTUG.BARAT.I",
+      "prezzo": 1.65,
+      "ingrediente": "ing:pane_grattugiato",
+      "carico": null,
+      "abbina": "r-pane"
+    },
+    {
+      "descrizione": "BOCCONCINO IPER",
+      "prezzo": 1.89,
+      "abbina": "r-mozz"
+    },
+    {
+      "descrizione": "SFIZIOSO OLIVE",
+      "prezzo": 3.01,
+      "ingrediente": "ing:olive",
+      "carico": {
+        "quantita": 276,
+        "unita": "g"
+      },
+      "abbina": "r-olive"
+    },
+    {
+      "descrizione": "PETTO POLLO FETTE",
+      "prezzo": 4.36,
+      "ingrediente": "ing:petto_pollo",
+      "carico": {
+        "quantita": 314,
+        "unita": "g"
+      },
+      "abbina": "r-pollo"
+    },
+    {
+      "descrizione": "PETTO POLLO FETTE",
+      "prezzo": 8.87,
+      "ingrediente": "ing:petto_pollo",
+      "carico": {
+        "quantita": 638,
+        "unita": "g"
+      },
+      "abbina": "r-pollo"
+    },
+    {
+      "descrizione": "SHOPPER 30X55 INATEC",
+      "prezzo": 0.1,
+      "ingrediente": null,
+      "abbina": null
+    }
+  ]
+}

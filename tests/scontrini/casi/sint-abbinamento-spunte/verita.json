@@ -1,0 +1,119 @@
+{
+  "versione": 1,
+  "id": "sint-abbinamento-spunte",
+  "origine": "sintetico",
+  "verita": "costruzione",
+  "data": "2026-11-02",
+  "ora": "18:41",
+  "negozio": "Coop Lombardia S.C.",
+  "totale": 9.1,
+  "note": "Nel carrello (già comprato con le spunte) ci sono Lattuga, Melanzane, Panettone e Risotto: Latte, Mele, Pane e Riso dello scontrino NON sono quelle righe e devono entrare in casa, non prendere il loro prezzo.",
+  "carrello": [
+    {
+      "id": "r-lattuga",
+      "ingrediente_id": null,
+      "nome": "Lattuga"
+    },
+    {
+      "id": "r-melanzane",
+      "ingrediente_id": "ing:melanzana",
+      "nome": "Melanzane"
+    },
+    {
+      "id": "r-panettone",
+      "ingrediente_id": null,
+      "nome": "Panettone"
+    },
+    {
+      "id": "r-risotto",
+      "ingrediente_id": null,
+      "nome": "Risotto"
+    }
+  ],
+  "righe": [
+    {
+      "descrizione": "LATTE INTERO 1L",
+      "prezzo": 1.45,
+      "abbina": null
+    },
+    {
+      "descrizione": "LATTUGA ROMANA",
+      "prezzo": 0.99,
+      "abbina": "r-lattuga"
+    },
+    {
+      "descrizione": "MELE GOLDEN 1KG",
+      "prezzo": 2.19,
+      "abbina": null
+    },
+    {
+      "descrizione": "MELANZANE",
+      "prezzo": 1.29,
+      "abbina": "r-melanzane"
+    },
+    {
+      "descrizione": "PANE COMUNE",
+      "prezzo": 0.99,
+      "abbina": null
+    },
+    {
+      "descrizione": "RISO CARNAROLI 1KG",
+      "prezzo": 2.19,
+      "abbina": null
+    }
+  ],
+  "stampa": [
+    [
+      "COOP LOMBARDIA S.C."
+    ],
+    [
+      "VIA ROMA 12 - 20100 MILANO"
+    ],
+    [
+      "DOCUMENTO COMMERCIALE"
+    ],
+    [
+      "DESCRIZIONE",
+      "PREZZO IVA"
+    ],
+    [
+      "LATTE INTERO 1L",
+      "1,45 C"
+    ],
+    [
+      "LATTUGA ROMANA",
+      "0,99 C"
+    ],
+    [
+      "MELE GOLDEN 1KG",
+      "2,19 C"
+    ],
+    [
+      "MELANZANE",
+      "1,29 C"
+    ],
+    [
+      "PANE COMUNE",
+      "0,99 C"
+    ],
+    [
+      "RISO CARNAROLI 1KG",
+      "2,19 C"
+    ],
+    [
+      "TOTALE COMPLESSIVO",
+      "9,10"
+    ],
+    [
+      "PAGAMENTO ELETTRONICO",
+      "9,10"
+    ],
+    [
+      "DI CUI IVA",
+      "0,55"
+    ],
+    [
+      "02-11-2026 18:41"
+    ]
+  ]
+}

@@ -1,0 +1,132 @@
+{
+  "versione": 1,
+  "id": "sint-promo-nei-nomi",
+  "origine": "sintetico",
+  "verita": "costruzione",
+  "data": "2026-11-02",
+  "ora": "18:41",
+  "negozio": "Esselunga S.P.A.",
+  "totale": 8.2,
+  "note": "PROMO e OFFERTA fanno parte del nome di tre prodotti; solo «SCONTO FEDELTA» è uno sconto (il caffè costa 3,49 - 0,35).",
+  "righe": [
+    {
+      "descrizione": "PASTA PROMO 500G",
+      "prezzo": 0.79,
+      "formato": {
+        "quantita": 500,
+        "unita": "g"
+      },
+      "ingrediente": "ing:pasta",
+      "carico": {
+        "quantita": 500,
+        "unita": "g"
+      }
+    },
+    {
+      "descrizione": "BISCOTTI OFFERTA 700G",
+      "prezzo": 1.99,
+      "formato": {
+        "quantita": 700,
+        "unita": "g"
+      },
+      "ingrediente": "ing:biscotti",
+      "carico": {
+        "quantita": 700,
+        "unita": "g"
+      }
+    },
+    {
+      "descrizione": "YOGURT GRECO PROMO 150G",
+      "prezzo": 0.89,
+      "formato": {
+        "quantita": 150,
+        "unita": "g"
+      },
+      "ingrediente": "ing:yogurt_greco",
+      "carico": {
+        "quantita": 150,
+        "unita": "g"
+      }
+    },
+    {
+      "descrizione": "CAFFE MACINATO 250G",
+      "prezzo": 3.14,
+      "formato": {
+        "quantita": 250,
+        "unita": "g"
+      },
+      "ingrediente": "ing:caffe",
+      "carico": {
+        "quantita": 250,
+        "unita": "g"
+      }
+    },
+    {
+      "descrizione": "LATTE INTERO 1L",
+      "prezzo": 1.39,
+      "formato": {
+        "quantita": 1000,
+        "unita": "ml"
+      },
+      "ingrediente": "ing:latte",
+      "carico": {
+        "quantita": 1000,
+        "unita": "ml"
+      }
+    }
+  ],
+  "stampa": [
+    [
+      "ESSELUNGA S.P.A."
+    ],
+    [
+      "VIA ROMA 12 - 20100 MILANO"
+    ],
+    [
+      "DOCUMENTO COMMERCIALE"
+    ],
+    [
+      "DESCRIZIONE",
+      "PREZZO IVA"
+    ],
+    [
+      "PASTA PROMO 500G",
+      "0,79 C"
+    ],
+    [
+      "BISCOTTI OFFERTA 700G",
+      "1,99 C"
+    ],
+    [
+      "YOGURT GRECO PROMO 150G",
+      "0,89 C"
+    ],
+    [
+      "CAFFE MACINATO 250G",
+      "3,49 C"
+    ],
+    [
+      "SCONTO FEDELTA",
+      "-0,35"
+    ],
+    [
+      "LATTE INTERO 1L",
+      "1,39 C"
+    ],
+    [
+      "TOTALE COMPLESSIVO",
+      "8,20"
+    ],
+    [
+      "PAGAMENTO ELETTRONICO",
+      "8,20"
+    ],
+    [
+      "DI CUI IVA",
+      "0,49"
+    ],
+    [
+      "02-11-2026 18:41"
+    ]
+  ]
+}

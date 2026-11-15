@@ -1,0 +1,204 @@
+{
+  "versione": 1,
+  "id": "sint-date-e-righe-lunghe",
+  "origine": "sintetico",
+  "verita": "costruzione",
+  "data": "2026-11-02",
+  "ora": "18:41",
+  "negozio": "Carrefour Italia S.P.A.",
+  "totale": 40.24,
+  "note": "Diciannove righe e, prima del totale, due date che non sono quella dello scontrino (validità offerta, scadenza tessera).",
+  "righe": [
+    {
+      "descrizione": "LATTE PARZ.SCREM. 1L",
+      "prezzo": 1.29
+    },
+    {
+      "descrizione": "PANE COMUNE",
+      "prezzo": 0.99
+    },
+    {
+      "descrizione": "PASTA SEMOLA 500G",
+      "prezzo": 0.89
+    },
+    {
+      "descrizione": "PASSATA POMODORO 700G",
+      "prezzo": 1.19
+    },
+    {
+      "descrizione": "MOZZARELLA 125G",
+      "prezzo": 0.79
+    },
+    {
+      "descrizione": "UOVA FRESCHE X6",
+      "prezzo": 2.49
+    },
+    {
+      "descrizione": "YOGURT BIANCO 125G",
+      "prezzo": 0.55
+    },
+    {
+      "descrizione": "BURRO 250G",
+      "prezzo": 2.29
+    },
+    {
+      "descrizione": "FARINA 00 1KG",
+      "prezzo": 0.89
+    },
+    {
+      "descrizione": "ZUCCHERO 1KG",
+      "prezzo": 1.19
+    },
+    {
+      "descrizione": "RISO CARNAROLI 1KG",
+      "prezzo": 2.19
+    },
+    {
+      "descrizione": "CAFFE MACINATO 250G",
+      "prezzo": 2.99
+    },
+    {
+      "descrizione": "BISCOTTI FROLLINI 700G",
+      "prezzo": 2.35
+    },
+    {
+      "descrizione": "TONNO ALL OLIO OLIVA 160G",
+      "prezzo": 3.19
+    },
+    {
+      "descrizione": "OLIO EXTRAVERGINE 1L",
+      "prezzo": 7.99
+    },
+    {
+      "descrizione": "ACQUA NATURALE 1,5L",
+      "prezzo": 0.39
+    },
+    {
+      "descrizione": "CARTA IGIENICA 12R",
+      "prezzo": 3.99
+    },
+    {
+      "descrizione": "DETERSIVO LAVATRICE",
+      "prezzo": 4.49
+    },
+    {
+      "descrizione": "SHOPPER CARTA",
+      "prezzo": 0.1
+    }
+  ],
+  "stampa": [
+    [
+      "CARREFOUR ITALIA S.P.A."
+    ],
+    [
+      "VIA ROMA 12 - 20100 MILANO"
+    ],
+    [
+      "DOCUMENTO COMMERCIALE"
+    ],
+    [
+      "DESCRIZIONE",
+      "PREZZO IVA"
+    ],
+    [
+      "OFFERTA VALIDA DAL 01/11/2026 AL 30/11/2026"
+    ],
+    [
+      "TESSERA VALIDA FINO AL 31/12/2027"
+    ],
+    [
+      "LATTE PARZ.SCREM. 1L",
+      "1,29 C"
+    ],
+    [
+      "PANE COMUNE",
+      "0,99 C"
+    ],
+    [
+      "PASTA SEMOLA 500G",
+      "0,89 C"
+    ],
+    [
+      "PASSATA POMODORO 700G",
+      "1,19 C"
+    ],
+    [
+      "MOZZARELLA 125G",
+      "0,79 C"
+    ],
+    [
+      "UOVA FRESCHE X6",
+      "2,49 C"
+    ],
+    [
+      "YOGURT BIANCO 125G",
+      "0,55 C"
+    ],
+    [
+      "BURRO 250G",
+      "2,29 C"
+    ],
+    [
+      "FARINA 00 1KG",
+      "0,89 C"
+    ],
+    [
+      "ZUCCHERO 1KG",
+      "1,19 C"
+    ],
+    [
+      "RISO CARNAROLI 1KG",
+      "2,19 C"
+    ],
+    [
+      "CAFFE MACINATO 250G",
+      "2,99 C"
+    ],
+    [
+      "BISCOTTI FROLLINI 700G",
+      "2,35 C"
+    ],
+    [
+      "TONNO ALL OLIO OLIVA 160G",
+      "3,19 C"
+    ],
+    [
+      "OLIO EXTRAVERGINE 1L",
+      "7,99 C"
+    ],
+    [
+      "ACQUA NATURALE 1,5L",
+      "0,39 C"
+    ],
+    [
+      "CARTA IGIENICA 12R",
+      "3,99 C"
+    ],
+    [
+      "DETERSIVO LAVATRICE",
+      "4,49 C"
+    ],
+    [
+      "SHOPPER CARTA",
+      "0,10 C"
+    ],
+    [
+      "SALDO PUNTI 1250"
+    ],
+    [
+      "TOTALE COMPLESSIVO",
+      "40,24"
+    ],
+    [
+      "PAGAMENTO ELETTRONICO",
+      "40,24"
+    ],
+    [
+      "DI CUI IVA",
+      "2,41"
+    ],
+    [
+      "02-11-2026 18:41"
+    ]
+  ]
+}

@@ -1,0 +1,197 @@
+{
+  "versione": 1,
+  "id": "sint-spesa-semplice",
+  "origine": "sintetico",
+  "verita": "costruzione",
+  "data": "2026-11-02",
+  "ora": "18:41",
+  "negozio": "Iperal Supermercati S.P.A.",
+  "totale": 17.98,
+  "note": "Spesa di tutti i giorni, nomi e prezzi senza trabocchetti: il minimo che la lettura deve fare sempre.",
+  "righe": [
+    {
+      "descrizione": "LATTE PARZ.SCREM. 1L",
+      "prezzo": 1.29,
+      "formato": {
+        "quantita": 1000,
+        "unita": "ml"
+      },
+      "ingrediente": "ing:latte",
+      "carico": {
+        "quantita": 1000,
+        "unita": "ml"
+      }
+    },
+    {
+      "descrizione": "PANE COMUNE",
+      "prezzo": 0.99,
+      "ingrediente": "ing:pane",
+      "carico": null
+    },
+    {
+      "descrizione": "PASTA SEMOLA 500G",
+      "prezzo": 0.89,
+      "formato": {
+        "quantita": 500,
+        "unita": "g"
+      },
+      "ingrediente": "ing:pasta",
+      "carico": {
+        "quantita": 500,
+        "unita": "g"
+      }
+    },
+    {
+      "descrizione": "PASSATA POMODORO 700G",
+      "prezzo": 1.19,
+      "formato": {
+        "quantita": 700,
+        "unita": "g"
+      },
+      "ingrediente": "ing:passata",
+      "carico": {
+        "quantita": 700,
+        "unita": "g"
+      }
+    },
+    {
+      "descrizione": "MOZZARELLA 125G",
+      "prezzo": 0.79,
+      "formato": {
+        "quantita": 125,
+        "unita": "g"
+      },
+      "ingrediente": "ing:mozzarella",
+      "carico": {
+        "quantita": 125,
+        "unita": "g"
+      }
+    },
+    {
+      "descrizione": "BANANE",
+      "prezzo": 1.7,
+      "ingrediente": "ing:banana",
+      "carico": {
+        "quantita": 856,
+        "unita": "g"
+      }
+    },
+    {
+      "descrizione": "UOVA FRESCHE X6",
+      "prezzo": 2.49,
+      "formato": {
+        "quantita": 6,
+        "unita": "pz"
+      },
+      "ingrediente": "ing:uova",
+      "carico": {
+        "quantita": 6,
+        "unita": "pz"
+      }
+    },
+    {
+      "descrizione": "YOGURT BIANCO 125G",
+      "prezzo": 0.55,
+      "formato": {
+        "quantita": 125,
+        "unita": "g"
+      },
+      "ingrediente": "ing:yogurt",
+      "carico": {
+        "quantita": 125,
+        "unita": "g"
+      }
+    },
+    {
+      "descrizione": "OLIO EXTRAVERGINE 1L",
+      "prezzo": 7.99,
+      "formato": {
+        "quantita": 1000,
+        "unita": "ml"
+      },
+      "ingrediente": "ing:olio_evo",
+      "carico": {
+        "quantita": 1000,
+        "unita": "ml"
+      }
+    },
+    {
+      "descrizione": "SHOPPER CARTA",
+      "prezzo": 0.1,
+      "ingrediente": null
+    }
+  ],
+  "stampa": [
+    [
+      "IPERAL SUPERMERCATI S.P.A."
+    ],
+    [
+      "VIA ROMA 12 - 20100 MILANO"
+    ],
+    [
+      "DOCUMENTO COMMERCIALE"
+    ],
+    [
+      "DESCRIZIONE",
+      "PREZZO IVA"
+    ],
+    [
+      "LATTE PARZ.SCREM. 1L",
+      "1,29 C"
+    ],
+    [
+      "PANE COMUNE",
+      "0,99 C"
+    ],
+    [
+      "PASTA SEMOLA 500G",
+      "0,89 C"
+    ],
+    [
+      "PASSATA POMODORO 700G",
+      "1,19 C"
+    ],
+    [
+      "MOZZARELLA 125G",
+      "0,79 C"
+    ],
+    [
+      "BANANE"
+    ],
+    [
+      "0,856 kg x 1,99 EUR/kg",
+      "1,70 B"
+    ],
+    [
+      "UOVA FRESCHE X6",
+      "2,49 C"
+    ],
+    [
+      "YOGURT BIANCO 125G",
+      "0,55 C"
+    ],
+    [
+      "OLIO EXTRAVERGINE 1L",
+      "7,99 C"
+    ],
+    [
+      "SHOPPER CARTA",
+      "0,10 A"
+    ],
+    [
+      "TOTALE COMPLESSIVO",
+      "17,98"
+    ],
+    [
+      "PAGAMENTO ELETTRONICO",
+      "17,98"
+    ],
+    [
+      "DI CUI IVA",
+      "1,08"
+    ],
+    [
+      "02-11-2026 18:41"
+    ]
+  ]
+}

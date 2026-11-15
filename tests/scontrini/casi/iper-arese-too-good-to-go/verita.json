@@ -1,0 +1,42 @@
+{
+  "versione": 1,
+  "id": "iper-arese-too-good-to-go",
+  "origine": "scontrino-reale",
+  "verita": "carta",
+  "negozio": "Iper Montebello S.P.A.",
+  "data": "2025-06-06",
+  "ora": "09:51",
+  "totale": 3.99,
+  "note": "Foto piccola (533×916) di un documento commerciale Iper pagato quasi tutto con «Too Good To Go»: ogni riga ha uno sconto che la azzera (tranne il formaggio e metà del Cuneesi). I nomi delle righe 3, 4 e 5 si leggono a fatica nella foto. La riga «***TOO GOOD TO GO 3.» a 0,00 E non è un prodotto e non è nella verità.",
+  "righe": [
+    {
+      "descrizione": "SHOPPER CART32+17X45",
+      "prezzo": 0,
+      "ingrediente": null
+    },
+    {
+      "descrizione": "VERDURA MISTA CUOCER",
+      "prezzo": 0
+    },
+    {
+      "descrizione": "INSALATA CAPRIC.TA A",
+      "prezzo": 0
+    },
+    {
+      "descrizione": "FORM.ERBI FIANDINO C",
+      "prezzo": 3.7
+    },
+    {
+      "descrizione": "CUNEESI RHUM VG 200G",
+      "prezzo": 0.29,
+      "formato": {
+        "quantita": 200,
+        "unita": "g"
+      }
+    },
+    {
+      "descrizione": "BARBABIETOLE A JULIE",
+      "prezzo": 0
+    }
+  ]
+}
