@@ -34,6 +34,7 @@ npm test            # dominio (funzioni pure)
 npm run test:db     # migrazioni + SQL su Postgres 16 (MC_DATABASE_URL, vedi docs/sviluppo.md)
 npm run test:e2e    # Playwright, server di prova sulla porta 14400
 npm run build
+npm run valuta:scontrini   # misura la lettura degli scontrini (corpus in tests/scontrini); `:foto` legge le foto, vedi docs/valutazione-scontrini.md
 ```
 Velocità: `scripts/velocita/` (semina una famiglia sul server di prova, serve una build, misura su un telefono simulato lento; istruzioni in testa ai file).
 La CI (`.github/workflows/ci.yml`) esegue gli stessi passi. A ogni push su `main`, `pubblica.yml` applica le migrazioni (Supabase CLI fissata a 2.122.1) e pubblica su GitHub Pages.

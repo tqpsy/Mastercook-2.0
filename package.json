@@ -13,7 +13,9 @@
     "test": "vitest run --project dominio --passWithNoTests",
     "test:db": "vitest run --project db",
     "test:tutti": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "valuta:scontrini": "vitest run --project dominio valutazione-corpus",
+    "valuta:scontrini:foto": "node scripts/valuta-scontrini/foto.mjs"
   },
   "engines": {
     "node": ">=22"

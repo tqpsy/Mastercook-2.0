@@ -13,6 +13,8 @@ npm run lint           # controllo dello stile
 npm run typecheck      # controllo dei tipi
 npm test               # test del dominio (funzioni pure)
 npm run test:db        # test del database su un Postgres vero
+npm run valuta:scontrini        # misura la lettura degli scontrini sul corpus (testi congelati); vedi docs/valutazione-scontrini.md
+npm run valuta:scontrini:foto   # lo stesso, leggendo le foto con PaddleOCR in Chromium (lento, a mano)
 ```
 
 `npm run test:db` crea un database nuovo per ogni file di test, applica

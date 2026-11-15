@@ -1,0 +1,1017 @@
+{
+ "versione": 1,
+ "livello": "testo",
+ "etichetta": "base",
+ "creato": "2026-11-15T20:26:06.902Z",
+ "sintesi": {
+  "perfette": {
+   "etichetta": "Letture perfette (al primo tentativo)",
+   "valore": 9,
+   "su": 59,
+   "verso": "piu"
+  },
+  "sicure": {
+   "etichetta": "Letture sicure per la giacenza",
+   "valore": 50,
+   "su": 59,
+   "verso": "piu"
+  },
+  "righeOk": {
+   "etichetta": "Righe giuste (nome e prezzo)",
+   "valore": 485,
+   "su": 512,
+   "verso": "piu"
+  },
+  "data": {
+   "etichetta": "Data giusta",
+   "valore": 15,
+   "su": 59,
+   "verso": "piu"
+  },
+  "ora": {
+   "etichetta": "Ora giusta",
+   "valore": 15,
+   "su": 59,
+   "verso": "piu"
+  },
+  "totale": {
+   "etichetta": "Totale giusto",
+   "valore": 59,
+   "su": 59,
+   "verso": "piu"
+  },
+  "pezzi": {
+   "etichetta": "Pezzi letti",
+   "valore": 38,
+   "su": 38,
+   "verso": "piu"
+  },
+  "formato": {
+   "etichetta": "Formato letto (peso o volume)",
+   "valore": 135,
+   "su": 202,
+   "verso": "piu"
+  },
+  "ingrediente": {
+   "etichetta": "Ingrediente giusto",
+   "valore": 221,
+   "su": 300,
+   "verso": "piu"
+  },
+  "giacenzaOk": {
+   "etichetta": "Quantità in casa giusta",
+   "valore": 144,
+   "su": 271,
+   "verso": "piu"
+  },
+  "abbinamentiOk": {
+   "etichetta": "Abbinamenti alle spunte giusti",
+   "valore": 28,
+   "su": 60,
+   "verso": "piu"
+  },
+  "stabilita": {
+   "etichetta": "Stesso esito tra letture dello stesso scontrino",
+   "valore": 22,
+   "su": 58,
+   "verso": "piu"
+  },
+  "prezzoSilenzioso": {
+   "etichetta": "Prezzi sbagliati senza avviso",
+   "valore": 5,
+   "verso": "meno"
+  },
+  "righeMancanti": {
+   "etichetta": "Righe perse",
+   "valore": 14,
+   "verso": "meno"
+  },
+  "righeInPiu": {
+   "etichetta": "Righe in più",
+   "valore": 16,
+   "verso": "meno"
+  },
+  "nomiSbagliati": {
+   "etichetta": "Nomi letti male (prezzo giusto)",
+   "valore": 7,
+   "verso": "meno"
+  },
+  "falsiQuadra": {
+   "etichetta": "«Il conto torna» ma la lettura è sbagliata (su 52 che tornano)",
+   "valore": 12,
+   "verso": "meno"
+  },
+  "giacenzaSbagliata": {
+   "etichetta": "Quantità sbagliate che entrerebbero in casa",
+   "valore": 1,
+   "verso": "meno"
+  },
+  "giacenzaInPiu": {
+   "etichetta": "Righe in più che entrerebbero in casa",
+   "valore": 0,
+   "verso": "meno"
+  },
+  "giacenzaPersa": {
+   "etichetta": "Righe di casa perse",
+   "valore": 14,
+   "verso": "meno"
+  },
+  "abbinamentiSbagliati": {
+   "etichetta": "Abbinamenti alle spunte sbagliati",
+   "valore": 32,
+   "verso": "meno"
+  },
+  "lettureFallite": {
+   "etichetta": "Letture fallite (errore al posto del testo)",
+   "valore": 0,
+   "verso": "meno"
+  }
+ },
+ "casi": [
+  {
+   "caso": "conad-superstore",
+   "lettura": "paddle",
+   "perfetta": true,
+   "sicura": true,
+   "righeOk": 12,
+   "righeVere": 12,
+   "errori": [
+    "riga 3 «PASTA DI SEMOLA 500G»: formato niente invece di 500 g",
+    "riga 4 «PASSATA POMODORO 700G»: formato niente invece di 700 g",
+    "riga 6 «PETTO DI POLLO 500G»: formato niente invece di 500 g",
+    "riga 6 «PETTO DI POLLO 500G»: ingrediente ing:tacchino_affettato invece di ing:petto_pollo"
+   ]
+  },
+  {
+   "caso": "iper-seriate",
+   "lettura": "foto-preparata",
+   "perfetta": true,
+   "sicura": true,
+   "righeOk": 6,
+   "righeVere": 6,
+   "errori": [
+    "riga 4 «PETTO POLLO FETTE»: ingrediente ing:tacchino_affettato invece di ing:petto_pollo",
+    "riga 5 «PETTO POLLO FETTE»: ingrediente ing:tacchino_affettato invece di ing:petto_pollo"
+   ]
+  },
+  {
+   "caso": "iper-seriate",
+   "lettura": "screenshot",
+   "perfetta": true,
+   "sicura": true,
+   "righeOk": 6,
+   "righeVere": 6,
+   "errori": [
+    "riga 4 «PETTO POLLO FETTE»: ingrediente ing:tacchino_affettato invece di ing:petto_pollo",
+    "riga 5 «PETTO POLLO FETTE»: ingrediente ing:tacchino_affettato invece di ing:petto_pollo"
+   ]
+  },
+  {
+   "caso": "sint-abbinamento-spunte",
+   "lettura": "ideale",
+   "perfetta": true,
+   "sicura": false,
+   "righeOk": 6,
+   "righeVere": 6,
+   "errori": [
+    "riga 1 «LATTE INTERO 1L»: abbinata a r-lattuga invece di nessuna",
+    "riga 2 «LATTUGA ROMANA»: abbinata a nessuna invece di r-lattuga",
+    "riga 5 «PANE COMUNE»: abbinata a r-panettone invece di nessuna",
+    "riga 6 «RISO CARNAROLI 1KG»: abbinata a r-risotto invece di nessuna"
+   ]
+  },
+  {
+   "caso": "sint-abbinamento-spunte",
+   "lettura": "sintetica-jpeg60",
+   "perfetta": false,
+   "sicura": false,
+   "righeOk": 6,
+   "righeVere": 6,
+   "errori": [
+    "riga 1 «LATTE INTERO 1L»: abbinata a r-lattuga invece di nessuna",
+    "riga 2 «LATTUGA ROMANA»: abbinata a nessuna invece di r-lattuga",
+    "riga 5 «PANE COMUNE»: abbinata a r-panettone invece di nessuna",
+    "riga 6 «RISO CARNAROLI 1KG»: abbinata a r-risotto invece di nessuna",
+    "data non letta invece di 2026-11-02",
+    "ora non letta invece di 18:41"
+   ]
+  },
+  {
+   "caso": "sint-abbinamento-spunte",
+   "lettura": "sintetica-ombra",
+   "perfetta": false,
+   "sicura": false,
+   "righeOk": 6,
+   "righeVere": 6,
+   "errori": [
+    "riga 1 «LATTE INTERO 1L»: abbinata a r-lattuga invece di nessuna",
+    "riga 2 «LATTUGA ROMANA»: abbinata a nessuna invece di r-lattuga",
+    "riga 5 «PANE COMUNE»: abbinata a r-panettone invece di nessuna",
+    "riga 6 «RISO CARNAROLI 1KG»: abbinata a r-risotto invece di nessuna",
+    "data non letta invece di 2026-11-02",
+    "ora non letta invece di 18:41"
+   ]
+  },
+  {
+   "caso": "sint-abbinamento-spunte",
+   "lettura": "sintetica-originale-bis",
+   "perfetta": false,
+   "sicura": false,
+   "righeOk": 6,
+   "righeVere": 6,
+   "errori": [
+    "riga 1 «LATTE INTERO 1L»: abbinata a r-lattuga invece di nessuna",
+    "riga 2 «LATTUGA ROMANA»: abbinata a nessuna invece di r-lattuga",
+    "riga 5 «PANE COMUNE»: abbinata a r-panettone invece di nessuna",
+    "riga 6 «RISO CARNAROLI 1KG»: abbinata a r-risotto invece di nessuna",
+    "data non letta invece di 2026-11-02",
+    "ora non letta invece di 18:41"
+   ]
+  },
+  {
+   "caso": "sint-abbinamento-spunte",
+   "lettura": "sintetica-originale",
+   "perfetta": false,
+   "sicura": false,
+   "righeOk": 6,
+   "righeVere": 6,
+   "errori": [
+    "riga 1 «LATTE INTERO 1L»: abbinata a r-lattuga invece di nessuna",
+    "riga 2 «LATTUGA ROMANA»: abbinata a nessuna invece di r-lattuga",
+    "riga 5 «PANE COMUNE»: abbinata a r-panettone invece di nessuna",
+    "riga 6 «RISO CARNAROLI 1KG»: abbinata a r-risotto invece di nessuna",
+    "data non letta invece di 2026-11-02",
+    "ora non letta invece di 18:41"
+   ]
+  },
+  {
+   "caso": "sint-abbinamento-spunte",
+   "lettura": "sintetica-piu-piccola",
+   "perfetta": false,
+   "sicura": false,
+   "righeOk": 6,
+   "righeVere": 6,
+   "errori": [
+    "riga 1 «LATTE INTERO 1L»: abbinata a r-lattuga invece di nessuna",
+    "riga 2 «LATTUGA ROMANA»: abbinata a nessuna invece di r-lattuga",
+    "riga 5 «PANE COMUNE»: abbinata a r-panettone invece di nessuna",
+    "riga 6 «RISO CARNAROLI 1KG»: abbinata a r-risotto invece di nessuna",
+    "data non letta invece di 2026-11-02",
+    "ora non letta invece di 18:41"
+   ]
+  },
+  {
+   "caso": "sint-abbinamento-spunte",
+   "lettura": "sintetica-spostata",
+   "perfetta": false,
+   "sicura": false,
+   "righeOk": 6,
+   "righeVere": 6,
+   "errori": [
+    "riga 1 «LATTE INTERO 1L»: abbinata a r-lattuga invece di nessuna",
+    "riga 2 «LATTUGA ROMANA»: abbinata a nessuna invece di r-lattuga",
+    "riga 5 «PANE COMUNE»: abbinata a r-panettone invece di nessuna",
+    "riga 6 «RISO CARNAROLI 1KG»: abbinata a r-risotto invece di nessuna",
+    "data non letta invece di 2026-11-02",
+    "ora non letta invece di 18:41"
+   ]
+  },
+  {
+   "caso": "sint-abbinamento-spunte",
+   "lettura": "sintetica-storta-1-5",
+   "perfetta": true,
+   "sicura": false,
+   "righeOk": 6,
+   "righeVere": 6,
+   "errori": [
+    "riga 1 «LATTE INTERO 1L»: abbinata a r-lattuga invece di nessuna",
+    "riga 2 «LATTUGA ROMANA»: abbinata a nessuna invece di r-lattuga",
+    "riga 5 «PANE COMUNE»: abbinata a r-panettone invece di nessuna",
+    "riga 6 «RISO CARNAROLI 1KG»: abbinata a r-risotto invece di nessuna"
+   ]
+  },
+  {
+   "caso": "sint-colonne-quantita",
+   "lettura": "ideale",
+   "perfetta": true,
+   "sicura": true,
+   "righeOk": 6,
+   "righeVere": 6,
+   "errori": [
+    "riga 4 «PETTO DI POLLO 500G»: ingrediente ing:tacchino_affettato invece di ing:petto_pollo"
+   ]
+  },
+  {
+   "caso": "sint-colonne-quantita",
+   "lettura": "sintetica-jpeg60",
+   "perfetta": false,
+   "sicura": true,
+   "righeOk": 6,
+   "righeVere": 6,
+   "errori": [
+    "riga 3 «PASTA DI SEMOLA 500G»: formato niente invece di 500 g",
+    "riga 4 «PETTO DI POLLO 500G»: formato niente invece di 500 g",
+    "riga 4 «PETTO DI POLLO 500G»: ingrediente ing:tacchino_affettato invece di ing:petto_pollo",
+    "riga 5 «YOGURT BIANCO 125G»: ingrediente nessuno invece di ing:yogurt",
+    "data non letta invece di 2026-06-25",
+    "ora non letta invece di 12:47"
+   ]
+  },
+  {
+   "caso": "sint-colonne-quantita",
+   "lettura": "sintetica-ombra",
+   "perfetta": false,
+   "sicura": true,
+   "righeOk": 6,
+   "righeVere": 6,
+   "errori": [
+    "riga 3 «PASTA DI SEMOLA 500G»: formato niente invece di 500 g",
+    "riga 4 «PETTO DI POLLO 500G»: formato niente invece di 500 g",
+    "riga 4 «PETTO DI POLLO 500G»: ingrediente ing:tacchino_affettato invece di ing:petto_pollo",
+    "data non letta invece di 2026-06-25",
+    "ora non letta invece di 12:47"
+   ]
+  },
+  {
+   "caso": "sint-colonne-quantita",
+   "lettura": "sintetica-originale-bis",
+   "perfetta": false,
+   "sicura": true,
+   "righeOk": 6,
+   "righeVere": 6,
+   "errori": [
+    "riga 3 «PASTA DI SEMOLA 500G»: formato niente invece di 500 g",
+    "riga 4 «PETTO DI POLLO 500G»: formato niente invece di 500 g",
+    "riga 4 «PETTO DI POLLO 500G»: ingrediente ing:tacchino_affettato invece di ing:petto_pollo",
+    "riga 5 «YOGURT BIANCO 125G»: ingrediente nessuno invece di ing:yogurt",
+    "data non letta invece di 2026-06-25",
+    "ora non letta invece di 12:47"
+   ]
+  },
+  {
+   "caso": "sint-colonne-quantita",
+   "lettura": "sintetica-originale",
+   "perfetta": false,
+   "sicura": true,
+   "righeOk": 6,
+   "righeVere": 6,
+   "errori": [
+    "riga 3 «PASTA DI SEMOLA 500G»: formato niente invece di 500 g",
+    "riga 4 «PETTO DI POLLO 500G»: formato niente invece di 500 g",
+    "riga 4 «PETTO DI POLLO 500G»: ingrediente ing:tacchino_affettato invece di ing:petto_pollo",
+    "riga 5 «YOGURT BIANCO 125G»: ingrediente nessuno invece di ing:yogurt",
+    "data non letta invece di 2026-06-25",
+    "ora non letta invece di 12:47"
+   ]
+  },
+  {
+   "caso": "sint-colonne-quantita",
+   "lettura": "sintetica-piu-piccola",
+   "perfetta": false,
+   "sicura": true,
+   "righeOk": 6,
+   "righeVere": 6,
+   "errori": [
+    "riga 3 «PASTA DI SEMOLA 500G»: formato niente invece di 500 g",
+    "riga 4 «PETTO DI POLLO 500G»: formato niente invece di 500 g",
+    "riga 4 «PETTO DI POLLO 500G»: ingrediente ing:anatra invece di ing:petto_pollo",
+    "data non letta invece di 2026-06-25",
+    "ora non letta invece di 12:47"
+   ]
+  },
+  {
+   "caso": "sint-colonne-quantita",
+   "lettura": "sintetica-spostata",
+   "perfetta": false,
+   "sicura": true,
+   "righeOk": 6,
+   "righeVere": 6,
+   "errori": [
+    "riga 3 «PASTA DI SEMOLA 500G»: formato niente invece di 500 g",
+    "riga 4 «PETTO DI POLLO 500G»: formato niente invece di 500 g",
+    "riga 4 «PETTO DI POLLO 500G»: ingrediente ing:anatra invece di ing:petto_pollo",
+    "data non letta invece di 2026-06-25",
+    "ora non letta invece di 12:47"
+   ]
+  },
+  {
+   "caso": "sint-colonne-quantita",
+   "lettura": "sintetica-storta-1-5",
+   "perfetta": false,
+   "sicura": true,
+   "righeOk": 6,
+   "righeVere": 6,
+   "errori": [
+    "riga 3 «PASTA DI SEMOLA 500G»: formato niente invece di 500 g",
+    "riga 4 «PETTO DI POLLO 500G»: formato niente invece di 500 g",
+    "riga 4 «PETTO DI POLLO 500G»: ingrediente ing:tacchino_affettato invece di ing:petto_pollo",
+    "data non letta invece di 2026-06-25",
+    "ora non letta invece di 12:47"
+   ]
+  },
+  {
+   "caso": "sint-date-e-righe-lunghe",
+   "lettura": "ideale",
+   "perfetta": false,
+   "sicura": true,
+   "righeOk": 19,
+   "righeVere": 19,
+   "errori": [
+    "riga in più «OFFERTA VALIDA DAL» 0,00"
+   ]
+  },
+  {
+   "caso": "sint-date-e-righe-lunghe",
+   "lettura": "sintetica-jpeg60",
+   "perfetta": false,
+   "sicura": true,
+   "righeOk": 17,
+   "righeVere": 19,
+   "errori": [
+    "riga 8 «BURRO 250G»: nome «BURR025OG»",
+    "riga 9 «FARINA 00 1KG»: nome «FARINA OO KG»",
+    "riga in più «0FFERTAVALIDA» 0,00",
+    "riga in più «TESSERAVALIDAFINO» 0,00",
+    "riga in più «SALDOPUNTI1250» 0,00",
+    "data 2026-11-30 invece di 2026-11-02",
+    "ora non letta invece di 18:41"
+   ]
+  },
+  {
+   "caso": "sint-date-e-righe-lunghe",
+   "lettura": "sintetica-ombra",
+   "perfetta": false,
+   "sicura": true,
+   "righeOk": 17,
+   "righeVere": 19,
+   "errori": [
+    "riga 8 «BURRO 250G»: nome «BURR025OG»",
+    "riga 9 «FARINA 00 1KG»: nome «FARINA OO 1KG»",
+    "riga in più «0FFERTAVALIDA» 0,00",
+    "riga in più «TESSERAVALIDAFINOAL31/12/2027» 0,00",
+    "riga in più «SALD0PUNTI1250» 0,00",
+    "data non letta invece di 2026-11-02",
+    "ora non letta invece di 18:41"
+   ]
+  },
+  {
+   "caso": "sint-date-e-righe-lunghe",
+   "lettura": "sintetica-originale-bis",
+   "perfetta": false,
+   "sicura": true,
+   "righeOk": 19,
+   "righeVere": 19,
+   "errori": [
+    "riga in più «OFFERTAVALIDADAL01/11/2026AL30/11/2026» 0,00",
+    "riga in più «TESSERAVALIDAFIN0AL31/12/2027» 0,00",
+    "riga in più «SALD0PUNTI1250» 0,00",
+    "data non letta invece di 2026-11-02",
+    "ora non letta invece di 18:41"
+   ]
+  },
+  {
+   "caso": "sint-date-e-righe-lunghe",
+   "lettura": "sintetica-originale",
+   "perfetta": false,
+   "sicura": true,
+   "righeOk": 19,
+   "righeVere": 19,
+   "errori": [
+    "riga in più «OFFERTAVALIDADAL01/11/2026AL30/11/2026» 0,00",
+    "riga in più «TESSERAVALIDAFIN0AL31/12/2027» 0,00",
+    "riga in più «SALD0PUNTI1250» 0,00",
+    "data non letta invece di 2026-11-02",
+    "ora non letta invece di 18:41"
+   ]
+  },
+  {
+   "caso": "sint-date-e-righe-lunghe",
+   "lettura": "sintetica-piu-piccola",
+   "perfetta": false,
+   "sicura": true,
+   "righeOk": 19,
+   "righeVere": 19,
+   "errori": [
+    "riga in più «OFFERTA VALIDA DAL» 0,00"
+   ]
+  },
+  {
+   "caso": "sint-date-e-righe-lunghe",
+   "lettura": "sintetica-spostata",
+   "perfetta": false,
+   "sicura": true,
+   "righeOk": 19,
+   "righeVere": 19,
+   "errori": [
+    "riga in più «OFFERTA VALIDA DAL» 0,00"
+   ]
+  },
+  {
+   "caso": "sint-date-e-righe-lunghe",
+   "lettura": "sintetica-storta-1-5",
+   "perfetta": false,
+   "sicura": true,
+   "righeOk": 19,
+   "righeVere": 19,
+   "errori": [
+    "riga in più «OFFERTA VALIDA DAL» 0,00"
+   ]
+  },
+  {
+   "caso": "sint-formati-nei-nomi",
+   "lettura": "ideale",
+   "perfetta": true,
+   "sicura": true,
+   "righeOk": 10,
+   "righeVere": 10,
+   "errori": []
+  },
+  {
+   "caso": "sint-formati-nei-nomi",
+   "lettura": "sintetica-jpeg60",
+   "perfetta": false,
+   "sicura": false,
+   "righeOk": 10,
+   "righeVere": 10,
+   "errori": [
+    "riga 1 «TONNO ALL OLIO OLIVA 3X80G»: formato niente invece di 240 g",
+    "riga 2 «ACQUA NATURALE 6X1,5L»: formato 90000 ml invece di 9000 ml",
+    "riga 2 «ACQUA NATURALE 6X1,5L»: in casa 90000 ml invece di 9000 ml",
+    "riga 4 «LATTE UHT 1L»: formato niente invece di 1000 ml",
+    "riga 4 «LATTE UHT 1L»: ingrediente nessuno invece di ing:latte",
+    "riga 5 «BISCOTTI FROLLINI 700G»: formato niente invece di 700 g",
+    "riga 7 «ZUCCHERO 1KG»: ingrediente nessuno invece di ing:zucchero",
+    "riga 9 «BURRO 250G»: ingrediente nessuno invece di ing:burro",
+    "riga 10 «OLIO DI SEMI 1L»: formato niente invece di 1000 ml",
+    "data non letta invece di 2026-11-02",
+    "ora non letta invece di 18:41"
+   ]
+  },
+  {
+   "caso": "sint-formati-nei-nomi",
+   "lettura": "sintetica-ombra",
+   "perfetta": false,
+   "sicura": true,
+   "righeOk": 9,
+   "righeVere": 10,
+   "errori": [
+    "riga 1 «TONNO ALL OLIO OLIVA 3X80G»: formato niente invece di 240 g",
+    "riga 5 «BISCOTTI FROLLINI 700G»: formato niente invece di 700 g",
+    "riga 6 «FARINA 00 1KG»: nome «FARINA OO 1KG»",
+    "riga 9 «BURRO 250G»: ingrediente nessuno invece di ing:burro",
+    "data non letta invece di 2026-11-02",
+    "ora non letta invece di 18:41"
+   ]
+  },
+  {
+   "caso": "sint-formati-nei-nomi",
+   "lettura": "sintetica-originale-bis",
+   "perfetta": false,
+   "sicura": true,
+   "righeOk": 9,
+   "righeVere": 10,
+   "errori": [
+    "riga 1 «TONNO ALL OLIO OLIVA 3X80G»: formato niente invece di 240 g",
+    "riga 5 «BISCOTTI FROLLINI 700G»: formato niente invece di 700 g",
+    "riga 6 «FARINA 00 1KG»: nome «FARINA OO 1KG»",
+    "riga 8 «CAFFE MACINATO 250G»: formato niente invece di 250 g",
+    "riga 9 «BURRO 250G»: ingrediente nessuno invece di ing:burro",
+    "data non letta invece di 2026-11-02",
+    "ora non letta invece di 18:41"
+   ]
+  },
+  {
+   "caso": "sint-formati-nei-nomi",
+   "lettura": "sintetica-originale",
+   "perfetta": false,
+   "sicura": true,
+   "righeOk": 9,
+   "righeVere": 10,
+   "errori": [
+    "riga 1 «TONNO ALL OLIO OLIVA 3X80G»: formato niente invece di 240 g",
+    "riga 5 «BISCOTTI FROLLINI 700G»: formato niente invece di 700 g",
+    "riga 6 «FARINA 00 1KG»: nome «FARINA OO 1KG»",
+    "riga 8 «CAFFE MACINATO 250G»: formato niente invece di 250 g",
+    "riga 9 «BURRO 250G»: ingrediente nessuno invece di ing:burro",
+    "data non letta invece di 2026-11-02",
+    "ora non letta invece di 18:41"
+   ]
+  },
+  {
+   "caso": "sint-formati-nei-nomi",
+   "lettura": "sintetica-piu-piccola",
+   "perfetta": false,
+   "sicura": true,
+   "righeOk": 10,
+   "righeVere": 10,
+   "errori": [
+    "riga 1 «TONNO ALL OLIO OLIVA 3X80G»: formato niente invece di 240 g",
+    "riga 2 «ACQUA NATURALE 6X1,5L»: ingrediente nessuno invece di ing:acqua",
+    "riga 5 «BISCOTTI FROLLINI 700G»: formato niente invece di 700 g",
+    "riga 5 «BISCOTTI FROLLINI 700G»: ingrediente nessuno invece di ing:biscotti",
+    "riga 8 «CAFFE MACINATO 250G»: formato niente invece di 250 g",
+    "riga 9 «BURRO 250G»: ingrediente nessuno invece di ing:burro",
+    "riga 10 «OLIO DI SEMI 1L»: ingrediente ing:olio_evo invece di ing:olio_semi",
+    "data non letta invece di 2026-11-02",
+    "ora non letta invece di 18:41"
+   ]
+  },
+  {
+   "caso": "sint-formati-nei-nomi",
+   "lettura": "sintetica-spostata",
+   "perfetta": false,
+   "sicura": true,
+   "righeOk": 10,
+   "righeVere": 10,
+   "errori": [
+    "riga 1 «TONNO ALL OLIO OLIVA 3X80G»: formato niente invece di 240 g",
+    "riga 5 «BISCOTTI FROLLINI 700G»: formato niente invece di 700 g",
+    "riga 8 «CAFFE MACINATO 250G»: formato niente invece di 250 g",
+    "riga 9 «BURRO 250G»: ingrediente nessuno invece di ing:burro",
+    "data non letta invece di 2026-11-02",
+    "ora non letta invece di 18:41"
+   ]
+  },
+  {
+   "caso": "sint-formati-nei-nomi",
+   "lettura": "sintetica-storta-1-5",
+   "perfetta": false,
+   "sicura": true,
+   "righeOk": 10,
+   "righeVere": 10,
+   "errori": [
+    "riga 10 «OLIO DI SEMI 1L»: ingrediente ing:cumino invece di ing:olio_semi",
+    "data non letta invece di 2026-11-02",
+    "ora non letta invece di 18:41"
+   ]
+  },
+  {
+   "caso": "sint-pesi-e-sconti",
+   "lettura": "ideale",
+   "perfetta": true,
+   "sicura": true,
+   "righeOk": 5,
+   "righeVere": 5,
+   "errori": [
+    "riga 2 «PETTO POLLO FETTE»: ingrediente ing:tacchino_affettato invece di ing:petto_pollo"
+   ]
+  },
+  {
+   "caso": "sint-pesi-e-sconti",
+   "lettura": "sintetica-jpeg60",
+   "perfetta": false,
+   "sicura": true,
+   "righeOk": 5,
+   "righeVere": 5,
+   "errori": [
+    "riga 2 «PETTO POLLO FETTE»: ingrediente ing:tacchino_affettato invece di ing:petto_pollo",
+    "data non letta invece di 2026-11-02",
+    "ora non letta invece di 18:41"
+   ]
+  },
+  {
+   "caso": "sint-pesi-e-sconti",
+   "lettura": "sintetica-ombra",
+   "perfetta": false,
+   "sicura": true,
+   "righeOk": 5,
+   "righeVere": 5,
+   "errori": [
+    "riga 2 «PETTO POLLO FETTE»: ingrediente ing:tacchino_affettato invece di ing:petto_pollo",
+    "data non letta invece di 2026-11-02",
+    "ora non letta invece di 18:41"
+   ]
+  },
+  {
+   "caso": "sint-pesi-e-sconti",
+   "lettura": "sintetica-originale-bis",
+   "perfetta": false,
+   "sicura": true,
+   "righeOk": 5,
+   "righeVere": 5,
+   "errori": [
+    "riga 2 «PETTO POLLO FETTE»: ingrediente ing:tacchino_affettato invece di ing:petto_pollo",
+    "data non letta invece di 2026-11-02",
+    "ora non letta invece di 18:41"
+   ]
+  },
+  {
+   "caso": "sint-pesi-e-sconti",
+   "lettura": "sintetica-originale",
+   "perfetta": false,
+   "sicura": true,
+   "righeOk": 5,
+   "righeVere": 5,
+   "errori": [
+    "riga 2 «PETTO POLLO FETTE»: ingrediente ing:tacchino_affettato invece di ing:petto_pollo",
+    "data non letta invece di 2026-11-02",
+    "ora non letta invece di 18:41"
+   ]
+  },
+  {
+   "caso": "sint-pesi-e-sconti",
+   "lettura": "sintetica-piu-piccola",
+   "perfetta": false,
+   "sicura": true,
+   "righeOk": 5,
+   "righeVere": 5,
+   "errori": [
+    "riga 2 «PETTO POLLO FETTE»: ingrediente ing:tacchino_affettato invece di ing:petto_pollo",
+    "data non letta invece di 2026-11-02",
+    "ora non letta invece di 18:41"
+   ]
+  },
+  {
+   "caso": "sint-pesi-e-sconti",
+   "lettura": "sintetica-spostata",
+   "perfetta": false,
+   "sicura": true,
+   "righeOk": 5,
+   "righeVere": 5,
+   "errori": [
+    "riga 2 «PETTO POLLO FETTE»: ingrediente ing:tacchino_affettato invece di ing:petto_pollo",
+    "data non letta invece di 2026-11-02",
+    "ora non letta invece di 18:41"
+   ]
+  },
+  {
+   "caso": "sint-pesi-e-sconti",
+   "lettura": "sintetica-storta-1-5",
+   "perfetta": false,
+   "sicura": true,
+   "righeOk": 5,
+   "righeVere": 5,
+   "errori": [
+    "riga 2 «PETTO POLLO FETTE»: ingrediente ing:tacchino_affettato invece di ing:petto_pollo",
+    "data non letta invece di 2026-11-02",
+    "ora non letta invece di 18:41"
+   ]
+  },
+  {
+   "caso": "sint-promo-nei-nomi",
+   "lettura": "ideale",
+   "perfetta": false,
+   "sicura": true,
+   "righeOk": 2,
+   "righeVere": 5,
+   "errori": [
+    "riga 1 «PASTA PROMO 500G» 0,79: non letta",
+    "riga 2 «BISCOTTI OFFERTA 700G» 1,99: non letta",
+    "riga 3 «YOGURT GRECO PROMO 150G» 0,89: non letta"
+   ]
+  },
+  {
+   "caso": "sint-promo-nei-nomi",
+   "lettura": "sintetica-jpeg60",
+   "perfetta": false,
+   "sicura": true,
+   "righeOk": 2,
+   "righeVere": 5,
+   "errori": [
+    "riga 1 «PASTA PROMO 500G» 0,79: non letta",
+    "riga 2 «BISCOTTI OFFERTA 700G» 1,99: non letta",
+    "riga 3 «YOGURT GRECO PROMO 150G» 0,89: non letta",
+    "riga 5 «LATTE INTERO 1L»: formato niente invece di 1000 ml",
+    "riga 5 «LATTE INTERO 1L»: ingrediente nessuno invece di ing:latte",
+    "data non letta invece di 2026-11-02",
+    "ora non letta invece di 18:41"
+   ]
+  },
+  {
+   "caso": "sint-promo-nei-nomi",
+   "lettura": "sintetica-ombra",
+   "perfetta": false,
+   "sicura": true,
+   "righeOk": 3,
+   "righeVere": 5,
+   "errori": [
+    "riga 1 «PASTA PROMO 500G»: formato niente invece di 500 g",
+    "riga 1 «PASTA PROMO 500G»: ingrediente nessuno invece di ing:pasta",
+    "riga 2 «BISCOTTI OFFERTA 700G»: prezzo 1,10 invece di 1,99",
+    "riga 2 «BISCOTTI OFFERTA 700G»: formato niente invece di 700 g",
+    "riga 2 «BISCOTTI OFFERTA 700G»: ingrediente nessuno invece di ing:biscotti",
+    "riga 3 «YOGURT GRECO PROMO 150G» 0,89: non letta",
+    "riga 4 «CAFFE MACINATO 250G»: formato niente invece di 250 g",
+    "riga 4 «CAFFE MACINATO 250G»: ingrediente nessuno invece di ing:caffe",
+    "riga 5 «LATTE INTERO 1L»: formato niente invece di 1000 ml",
+    "data non letta invece di 2026-11-02",
+    "ora non letta invece di 18:41"
+   ]
+  },
+  {
+   "caso": "sint-promo-nei-nomi",
+   "lettura": "sintetica-originale-bis",
+   "perfetta": false,
+   "sicura": true,
+   "righeOk": 3,
+   "righeVere": 5,
+   "errori": [
+    "riga 1 «PASTA PROMO 500G»: formato niente invece di 500 g",
+    "riga 1 «PASTA PROMO 500G»: ingrediente nessuno invece di ing:pasta",
+    "riga 2 «BISCOTTI OFFERTA 700G»: prezzo 1,10 invece di 1,99",
+    "riga 2 «BISCOTTI OFFERTA 700G»: formato niente invece di 700 g",
+    "riga 2 «BISCOTTI OFFERTA 700G»: ingrediente nessuno invece di ing:biscotti",
+    "riga 3 «YOGURT GRECO PROMO 150G» 0,89: non letta",
+    "riga 5 «LATTE INTERO 1L»: formato niente invece di 1000 ml",
+    "data non letta invece di 2026-11-02",
+    "ora non letta invece di 18:41"
+   ]
+  },
+  {
+   "caso": "sint-promo-nei-nomi",
+   "lettura": "sintetica-originale",
+   "perfetta": false,
+   "sicura": true,
+   "righeOk": 3,
+   "righeVere": 5,
+   "errori": [
+    "riga 1 «PASTA PROMO 500G»: formato niente invece di 500 g",
+    "riga 1 «PASTA PROMO 500G»: ingrediente nessuno invece di ing:pasta",
+    "riga 2 «BISCOTTI OFFERTA 700G»: prezzo 1,10 invece di 1,99",
+    "riga 2 «BISCOTTI OFFERTA 700G»: formato niente invece di 700 g",
+    "riga 2 «BISCOTTI OFFERTA 700G»: ingrediente nessuno invece di ing:biscotti",
+    "riga 3 «YOGURT GRECO PROMO 150G» 0,89: non letta",
+    "riga 5 «LATTE INTERO 1L»: formato niente invece di 1000 ml",
+    "data non letta invece di 2026-11-02",
+    "ora non letta invece di 18:41"
+   ]
+  },
+  {
+   "caso": "sint-promo-nei-nomi",
+   "lettura": "sintetica-piu-piccola",
+   "perfetta": false,
+   "sicura": true,
+   "righeOk": 3,
+   "righeVere": 5,
+   "errori": [
+    "riga 1 «PASTA PROMO 500G»: prezzo 0,00 invece di 0,79",
+    "riga 1 «PASTA PROMO 500G»: formato niente invece di 500 g",
+    "riga 1 «PASTA PROMO 500G»: ingrediente nessuno invece di ing:pasta",
+    "riga 2 «BISCOTTI OFFERTA 700G» 1,99: non letta",
+    "riga 3 «YOGURT GRECO PROMO 150G»: formato niente invece di 150 g",
+    "riga 3 «YOGURT GRECO PROMO 150G»: ingrediente nessuno invece di ing:yogurt_greco",
+    "riga 4 «CAFFE MACINATO 250G»: formato niente invece di 250 g",
+    "data non letta invece di 2026-11-02",
+    "ora non letta invece di 18:41"
+   ]
+  },
+  {
+   "caso": "sint-promo-nei-nomi",
+   "lettura": "sintetica-spostata",
+   "perfetta": false,
+   "sicura": true,
+   "righeOk": 2,
+   "righeVere": 5,
+   "errori": [
+    "riga 1 «PASTA PROMO 500G»: prezzo 0,00 invece di 0,79",
+    "riga 1 «PASTA PROMO 500G»: formato niente invece di 500 g",
+    "riga 2 «BISCOTTI OFFERTA 700G» 1,99: non letta",
+    "riga 3 «YOGURT GRECO PROMO 150G» 0,89: non letta",
+    "data non letta invece di 2026-11-02",
+    "ora non letta invece di 18:41"
+   ]
+  },
+  {
+   "caso": "sint-promo-nei-nomi",
+   "lettura": "sintetica-storta-1-5",
+   "perfetta": false,
+   "sicura": true,
+   "righeOk": 2,
+   "righeVere": 5,
+   "errori": [
+    "riga 1 «PASTA PROMO 500G»: prezzo 3,67 invece di 0,79 (segnalato: corretto)",
+    "riga 1 «PASTA PROMO 500G»: formato niente invece di 500 g",
+    "riga 2 «BISCOTTI OFFERTA 700G» 1,99: non letta",
+    "riga 3 «YOGURT GRECO PROMO 150G» 0,89: non letta"
+   ]
+  },
+  {
+   "caso": "sint-spesa-semplice",
+   "lettura": "ideale",
+   "perfetta": true,
+   "sicura": true,
+   "righeOk": 10,
+   "righeVere": 10,
+   "errori": [
+    "riga 10 «SHOPPER CARTA»: ingrediente ing:carta_cucina invece di nessuno"
+   ]
+  },
+  {
+   "caso": "sint-spesa-semplice",
+   "lettura": "sintetica-jpeg60",
+   "perfetta": false,
+   "sicura": true,
+   "righeOk": 10,
+   "righeVere": 10,
+   "errori": [
+    "riga 3 «PASTA SEMOLA 500G»: formato niente invece di 500 g",
+    "riga 3 «PASTA SEMOLA 500G»: ingrediente nessuno invece di ing:pasta",
+    "riga 4 «PASSATA POMODORO 700G»: formato niente invece di 700 g",
+    "riga 9 «OLIO EXTRAVERGINE 1L»: formato niente invece di 1000 ml",
+    "riga 10 «SHOPPER CARTA»: ingrediente ing:carta_cucina invece di nessuno",
+    "data non letta invece di 2026-11-02",
+    "ora non letta invece di 18:41"
+   ]
+  },
+  {
+   "caso": "sint-spesa-semplice",
+   "lettura": "sintetica-ombra",
+   "perfetta": false,
+   "sicura": true,
+   "righeOk": 10,
+   "righeVere": 10,
+   "errori": [
+    "riga 3 «PASTA SEMOLA 500G»: formato niente invece di 500 g",
+    "riga 3 «PASTA SEMOLA 500G»: ingrediente nessuno invece di ing:pasta",
+    "riga 4 «PASSATA POMODORO 700G»: formato niente invece di 700 g",
+    "riga 5 «MOZZARELLA 125G»: ingrediente nessuno invece di ing:mozzarella",
+    "riga 10 «SHOPPER CARTA»: ingrediente ing:carta_cucina invece di nessuno",
+    "data non letta invece di 2026-11-02",
+    "ora non letta invece di 18:41"
+   ]
+  },
+  {
+   "caso": "sint-spesa-semplice",
+   "lettura": "sintetica-originale-bis",
+   "perfetta": false,
+   "sicura": true,
+   "righeOk": 10,
+   "righeVere": 10,
+   "errori": [
+    "riga 3 «PASTA SEMOLA 500G»: formato niente invece di 500 g",
+    "riga 4 «PASSATA POMODORO 700G»: formato niente invece di 700 g",
+    "riga 5 «MOZZARELLA 125G»: ingrediente nessuno invece di ing:mozzarella",
+    "riga 10 «SHOPPER CARTA»: ingrediente ing:carta_cucina invece di nessuno",
+    "data non letta invece di 2026-11-02",
+    "ora non letta invece di 18:41"
+   ]
+  },
+  {
+   "caso": "sint-spesa-semplice",
+   "lettura": "sintetica-originale",
+   "perfetta": false,
+   "sicura": true,
+   "righeOk": 10,
+   "righeVere": 10,
+   "errori": [
+    "riga 3 «PASTA SEMOLA 500G»: formato niente invece di 500 g",
+    "riga 4 «PASSATA POMODORO 700G»: formato niente invece di 700 g",
+    "riga 5 «MOZZARELLA 125G»: ingrediente nessuno invece di ing:mozzarella",
+    "riga 10 «SHOPPER CARTA»: ingrediente ing:carta_cucina invece di nessuno",
+    "data non letta invece di 2026-11-02",
+    "ora non letta invece di 18:41"
+   ]
+  },
+  {
+   "caso": "sint-spesa-semplice",
+   "lettura": "sintetica-piu-piccola",
+   "perfetta": false,
+   "sicura": true,
+   "righeOk": 10,
+   "righeVere": 10,
+   "errori": [
+    "riga 3 «PASTA SEMOLA 500G»: formato niente invece di 500 g",
+    "riga 3 «PASTA SEMOLA 500G»: ingrediente nessuno invece di ing:pasta",
+    "riga 4 «PASSATA POMODORO 700G»: formato niente invece di 700 g",
+    "riga 5 «MOZZARELLA 125G»: ingrediente nessuno invece di ing:mozzarella",
+    "riga 7 «UOVA FRESCHE X6»: formato niente invece di 6 pz",
+    "riga 7 «UOVA FRESCHE X6»: ingrediente nessuno invece di ing:uova",
+    "riga 8 «YOGURT BIANCO 125G»: ingrediente nessuno invece di ing:yogurt",
+    "riga 10 «SHOPPER CARTA»: ingrediente ing:carta_cucina invece di nessuno",
+    "data non letta invece di 2026-11-02",
+    "ora non letta invece di 18:41"
+   ]
+  },
+  {
+   "caso": "sint-spesa-semplice",
+   "lettura": "sintetica-spostata",
+   "perfetta": false,
+   "sicura": true,
+   "righeOk": 10,
+   "righeVere": 10,
+   "errori": [
+    "riga 3 «PASTA SEMOLA 500G»: formato niente invece di 500 g",
+    "riga 4 «PASSATA POMODORO 700G»: formato niente invece di 700 g",
+    "riga 5 «MOZZARELLA 125G»: ingrediente nessuno invece di ing:mozzarella",
+    "riga 8 «YOGURT BIANCO 125G»: ingrediente nessuno invece di ing:yogurt",
+    "riga 10 «SHOPPER CARTA»: ingrediente ing:carta_cucina invece di nessuno",
+    "data non letta invece di 2026-11-02",
+    "ora non letta invece di 18:41"
+   ]
+  },
+  {
+   "caso": "sint-spesa-semplice",
+   "lettura": "sintetica-storta-1-5",
+   "perfetta": false,
+   "sicura": true,
+   "righeOk": 10,
+   "righeVere": 10,
+   "errori": [
+    "riga 4 «PASSATA POMODORO 700G»: formato niente invece di 700 g",
+    "riga 10 «SHOPPER CARTA»: ingrediente ing:carta_cucina invece di nessuno",
+    "data non letta invece di 2026-11-02",
+    "ora non letta invece di 18:41"
+   ]
+  }
+ ]
+}

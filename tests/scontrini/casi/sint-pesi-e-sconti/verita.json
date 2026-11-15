@@ -1,0 +1,117 @@
+{
+  "versione": 1,
+  "id": "sint-pesi-e-sconti",
+  "origine": "sintetico",
+  "verita": "costruzione",
+  "data": "2026-11-02",
+  "ora": "18:41",
+  "negozio": "Iper Montebello S.P.A.",
+  "totale": 9.49,
+  "note": "Righe a peso («0,276 * 10,91Kg») e uno sconto «Too Good To Go» che azzera una riga: la riga resta, a prezzo 0.",
+  "righe": [
+    {
+      "descrizione": "SFIZIOSO OLIVE",
+      "prezzo": 3.01,
+      "ingrediente": "ing:olive",
+      "carico": {
+        "quantita": 276,
+        "unita": "g"
+      }
+    },
+    {
+      "descrizione": "PETTO POLLO FETTE",
+      "prezzo": 4.36,
+      "ingrediente": "ing:petto_pollo",
+      "carico": {
+        "quantita": 314,
+        "unita": "g"
+      }
+    },
+    {
+      "descrizione": "INSALATA CAPRICCIOSA",
+      "prezzo": 0,
+      "ingrediente": "ing:insalata",
+      "carico": null
+    },
+    {
+      "descrizione": "MELE GOLDEN",
+      "prezzo": 2.02,
+      "ingrediente": "ing:mela",
+      "carico": {
+        "quantita": 812,
+        "unita": "g"
+      }
+    },
+    {
+      "descrizione": "SHOPPER 30X55 INATEC",
+      "prezzo": 0.1,
+      "ingrediente": null
+    }
+  ],
+  "stampa": [
+    [
+      "IPER MONTEBELLO S.P.A."
+    ],
+    [
+      "VIA ROMA 12 - 20100 MILANO"
+    ],
+    [
+      "DOCUMENTO COMMERCIALE"
+    ],
+    [
+      "DESCRIZIONE",
+      "PREZZO IVA"
+    ],
+    [
+      "SFIZIOSO OLIVE"
+    ],
+    [
+      "0,276 * 10,91Kg",
+      "3,01 A"
+    ],
+    [
+      "PETTO POLLO FETTE"
+    ],
+    [
+      "0,314 * 13,89Kg",
+      "4,36 B"
+    ],
+    [
+      "INSALATA CAPRICCIOSA",
+      "2,50 B"
+    ],
+    [
+      "Too Good To Go",
+      "-2,50"
+    ],
+    [
+      "MELE GOLDEN"
+    ],
+    [
+      "0,812 * 2,49Kg",
+      "2,02 B"
+    ],
+    [
+      "SHOPPER 30X55 INATEC",
+      "0,10 D"
+    ],
+    [
+      "Articoli 005"
+    ],
+    [
+      "TOTALE COMPLESSIVO",
+      "9,49"
+    ],
+    [
+      "PAGAMENTO ELETTRONICO",
+      "9,49"
+    ],
+    [
+      "DI CUI IVA",
+      "0,57"
+    ],
+    [
+      "02-11-2026 18:41"
+    ]
+  ]
+}

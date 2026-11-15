@@ -1,0 +1,213 @@
+{
+  "versione": 1,
+  "id": "sint-formati-nei-nomi",
+  "origine": "sintetico",
+  "verita": "costruzione",
+  "data": "2026-11-02",
+  "ora": "18:41",
+  "negozio": "Coop Lombardia S.C.",
+  "totale": 22.22,
+  "note": "Pesi, volumi e multipli nelle descrizioni: la lettura di «500G» e «6X1,5L» decide la quantità che entra in casa.",
+  "righe": [
+    {
+      "descrizione": "TONNO ALL OLIO OLIVA 3X80G",
+      "prezzo": 4.29,
+      "formato": {
+        "quantita": 240,
+        "unita": "g"
+      },
+      "ingrediente": "ing:tonno_scatola",
+      "carico": {
+        "quantita": 240,
+        "unita": "g"
+      }
+    },
+    {
+      "descrizione": "ACQUA NATURALE 6X1,5L",
+      "prezzo": 2.39,
+      "formato": {
+        "quantita": 9000,
+        "unita": "ml"
+      },
+      "ingrediente": "ing:acqua",
+      "carico": {
+        "quantita": 9000,
+        "unita": "ml"
+      }
+    },
+    {
+      "descrizione": "RISO CARNAROLI 1KG",
+      "prezzo": 2.19,
+      "formato": {
+        "quantita": 1000,
+        "unita": "g"
+      },
+      "ingrediente": "ing:riso",
+      "carico": {
+        "quantita": 1000,
+        "unita": "g"
+      }
+    },
+    {
+      "descrizione": "LATTE UHT 1L",
+      "prezzo": 1.45,
+      "formato": {
+        "quantita": 1000,
+        "unita": "ml"
+      },
+      "ingrediente": "ing:latte",
+      "carico": {
+        "quantita": 1000,
+        "unita": "ml"
+      }
+    },
+    {
+      "descrizione": "BISCOTTI FROLLINI 700G",
+      "prezzo": 2.35,
+      "formato": {
+        "quantita": 700,
+        "unita": "g"
+      },
+      "ingrediente": "ing:biscotti",
+      "carico": {
+        "quantita": 700,
+        "unita": "g"
+      }
+    },
+    {
+      "descrizione": "FARINA 00 1KG",
+      "prezzo": 0.89,
+      "formato": {
+        "quantita": 1000,
+        "unita": "g"
+      },
+      "ingrediente": "ing:farina",
+      "carico": {
+        "quantita": 1000,
+        "unita": "g"
+      }
+    },
+    {
+      "descrizione": "ZUCCHERO 1KG",
+      "prezzo": 1.19,
+      "formato": {
+        "quantita": 1000,
+        "unita": "g"
+      },
+      "ingrediente": "ing:zucchero",
+      "carico": {
+        "quantita": 1000,
+        "unita": "g"
+      }
+    },
+    {
+      "descrizione": "CAFFE MACINATO 250G",
+      "prezzo": 2.99,
+      "formato": {
+        "quantita": 250,
+        "unita": "g"
+      },
+      "ingrediente": "ing:caffe",
+      "carico": {
+        "quantita": 250,
+        "unita": "g"
+      }
+    },
+    {
+      "descrizione": "BURRO 250G",
+      "prezzo": 2.29,
+      "formato": {
+        "quantita": 250,
+        "unita": "g"
+      },
+      "ingrediente": "ing:burro",
+      "carico": {
+        "quantita": 250,
+        "unita": "g"
+      }
+    },
+    {
+      "descrizione": "OLIO DI SEMI 1L",
+      "prezzo": 2.19,
+      "formato": {
+        "quantita": 1000,
+        "unita": "ml"
+      },
+      "ingrediente": "ing:olio_semi",
+      "carico": {
+        "quantita": 1000,
+        "unita": "ml"
+      }
+    }
+  ],
+  "stampa": [
+    [
+      "COOP LOMBARDIA S.C."
+    ],
+    [
+      "VIA ROMA 12 - 20100 MILANO"
+    ],
+    [
+      "DOCUMENTO COMMERCIALE"
+    ],
+    [
+      "DESCRIZIONE",
+      "PREZZO IVA"
+    ],
+    [
+      "TONNO ALL OLIO OLIVA 3X80G",
+      "4,29 C"
+    ],
+    [
+      "ACQUA NATURALE 6X1,5L",
+      "2,39 C"
+    ],
+    [
+      "RISO CARNAROLI 1KG",
+      "2,19 C"
+    ],
+    [
+      "LATTE UHT 1L",
+      "1,45 C"
+    ],
+    [
+      "BISCOTTI FROLLINI 700G",
+      "2,35 C"
+    ],
+    [
+      "FARINA 00 1KG",
+      "0,89 C"
+    ],
+    [
+      "ZUCCHERO 1KG",
+      "1,19 C"
+    ],
+    [
+      "CAFFE MACINATO 250G",
+      "2,99 C"
+    ],
+    [
+      "BURRO 250G",
+      "2,29 C"
+    ],
+    [
+      "OLIO DI SEMI 1L",
+      "2,19 C"
+    ],
+    [
+      "TOTALE COMPLESSIVO",
+      "22,22"
+    ],
+    [
+      "PAGAMENTO ELETTRONICO",
+      "22,22"
+    ],
+    [
+      "DI CUI IVA",
+      "1,33"
+    ],
+    [
+      "02-11-2026 18:41"
+    ]
+  ]
+}
