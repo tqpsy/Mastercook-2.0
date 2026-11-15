@@ -268,6 +268,13 @@ describe('ingredienti e abbinamenti', () => {
     expect(suggerisciIngrediente('DENTICE FILETTO', indice)?.id).toBe('ing:cernia'); // «dentice» è un sinonimo di cernia nel catalogo
   });
 
+  it('il prezzo senza la virgola, attaccato alla lettera dell’IVA («366C»), si legge', () => {
+    const t = leggiScontrino(['DESCRIZIONE PREZZO IVA', '208 SALAMELLE   366C', 'BARBERA ROCCA BADESSA ML   399D', 'PEPERONE GIALLO   1,34 B', 'TOTALE COMPLESSIVO 9,99'].join('\n'));
+    expect(t.righe.map((r) => [r.descrizione, r.prezzo])).toEqual([['208 SALAMELLE', 3.66], ['BARBERA ROCCA BADESSA ML', 3.99], ['PEPERONE GIALLO', 1.34]]);
+    // Un peso o un formato non è un prezzo: «500G» non cambia.
+    expect(leggiScontrino(['DESCRIZIONE', 'PASTA 500G   0,89 A', 'TOTALE 0,89'].join('\n')).righe[0]).toMatchObject({ descrizione: 'PASTA 500G', prezzo: 0.89 });
+  });
+
   it('un numero di una o due cifre in testa al nome è la quantità; uno di tre (un codice) no', () => {
     const t = (riga: string) => leggiScontrino(['DESCRIZIONE PREZZO IVA', riga, 'TOTALE 0,76'].join('\n')).righe[0];
     expect(t('4 PASTA DI SEMOLA 500G   0,76')).toMatchObject({ descrizione: 'PASTA DI SEMOLA 500G', pezzi: 4, formato: { quantita: 500, unita: 'g' } });

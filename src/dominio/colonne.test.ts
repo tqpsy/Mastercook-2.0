@@ -290,3 +290,18 @@ describe('correzione delle cifre confuse', () => {
     expect(correggiPrezzi(righe, { totale: 1400, ivaTotale: iva(500, 900), aliquote })).toEqual([500, 900]);
   });
 });
+
+describe('righe della tessera fedeltà prima dei prodotti', () => {
+  const pagina = ['BENNET', 'DESCRIZIONE', 'TOTALE COMPLESSIVO 4,18'].join('\n');
+  const prezzi = prezziDaColonna(['1,99 B', '2,19 C'].join('\n'));
+  it('«BENNET CLUB» e «CARTA NUM.» non hanno prezzo: si tolgono e i nomi si abbinano ai prezzi per ordine', () => {
+    const nomi = ['DESCRIZIONE   PREZZO IVA', 'BENNET CLUB', 'CARTA NUM.0420***21', 'RICOTTA CASEIFICIO PUGLI', 'TAGLIATELLE SPEC.GOURMET', 'TOTALE COMPLESSIVO'].join('\n');
+    const t = unisciColonne(pagina, prezzi, nomi);
+    expect(t).not.toBeNull();
+    expect(leggiScontrino(t!).righe.map((r) => [r.descrizione, r.prezzo])).toEqual([['RICOTTA CASEIFICIO PUGLI', 1.99], ['TAGLIATELLE SPEC.GOURMET', 2.19]]);
+  });
+  it('un nome in più che non è della tessera resta un nome in più: non si abbina niente', () => {
+    const nomi = ['DESCRIZIONE   PREZZO IVA', 'RICOTTA CASEIFICIO PUGLI', 'PASTA FRESCA', 'TAGLIATELLE SPEC.GOURMET', 'TOTALE COMPLESSIVO'].join('\n');
+    expect(unisciColonne(pagina, prezzi, nomi)).toBeNull();
+  });
+});

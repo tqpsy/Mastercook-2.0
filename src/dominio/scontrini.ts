@@ -63,7 +63,7 @@ function quasiUguali(a: string, b: string): boolean {
 const eTotale = (linea: string) => linea.split(/[^A-Z0-9]+/).some((p) => p === 'TOTALE' || (p.length >= 5 && quasiUguali(p, 'TOTALE')));
 export const fineRighe = (linea: string) => FINE_RIGHE.test(linea) || eTotale(linea);
 export const DA_SALTARE =
-  /\b(IVA|CONTANTE|CONTANTI|RESTO|PAGAMENTO|PAGATO|BANCOMAT|ELETTRONICO|RESO|ARROTONDAMENTO|IMPORTO|NUMERO|DOCUMENTO|SCONTRINO|BUONO|BUONI|PUNTI|SALDO|CASSA|CASSIERE|OPERATORE|TEL|TESSERA|ARTICOLI|VISA|MASTERCARD|MAESTRO|P\.?\s?IVA|C\.?F\.?|VALIDA|VALIDO|VALIDE)\b|CARTA (DI )?(CREDITO|DEBITO)/;
+  /\b(IVA|CONTANTE|CONTANTI|RESTO|PAGAMENTO|PAGATO|BANCOMAT|ELETTRONICO|RESO|ARROTONDAMENTO|IMPORTO|NUMERO|DOCUMENTO|SCONTRINO|BUONO|BUONI|PUNTI|SALDO|CASSA|CASSIERE|OPERATORE|TEL|TESSERA|ARTICOLI|VISA|MASTERCARD|MAESTRO|P\.?\s?IVA|C\.?F\.?|VALIDA|VALIDO|VALIDE|CAMSCANNER|SCANSIONATO)\b|CARTA (DI )?(CREDITO|DEBITO)/;
 export const SCONTO = /\b(SCONTO|SC\.|SCONT|PROMO|OFFERTA|RIBASSO|RIDUZIONE|STORNO|COUPON)\b|TOO\s?GOO?D|TO\s?GO\b/;
 const SCONTO_IN_TESTA = /^[^A-Z0-9]*(?:\d{1,3}\s?%\s*)?(?:SCONTO|SC\.|SCONT|PROMO|OFFERTA|RIBASSO|RIDUZIONE|STORNO|COUPON)\b|TOO\s?GOO?D|TO\s?GO\b/;
 export const INTESTAZIONE_RIGHE = /\bDESCRIZIONE\b|\bPREZZO\s*\(?€?\)?\s*$/;
@@ -110,6 +110,8 @@ export function pulisciLinea(linea: string): string {
     // Il prezzo letto con una barra o un apice al posto della virgola («1/35 A»), o con la barra letta 7 prima della lettera dell'IVA («1720 A»).
     .replace(/(\s\d{1,3})[/'’`´](\d{2})(?=\s?[A-Z]?$)/, '$1,$2')
     .replace(/(\s\d)7(\d{2})(?=\s[ABC]$)/, '$1,$2')
+    // Il prezzo senza la virgola, attaccato alla lettera dell'IVA («366C» per «3,66 C»): se dopo c'è solo quella lettera, in fondo alla riga.
+    .replace(/(\s)(\d{1,3})(\d{2})\s?([A-D])$/, '$1$2,$3 $4')
     // Dopo il prezzo, una cifra sola al posto della lettera dell'IVA («0,20 0» per «0,20 D»).
     .replace(/(^|\s)(-?\d{1,4}[.,]\d{2}) [0468]$/, '$1$2')
     // La lettera dell'IVA attaccata al prezzo e letta come cifra («0,994» per «0,99 A», «4,990» per «4,99 C»).

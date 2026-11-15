@@ -93,6 +93,17 @@ function prendiNomi(testo: string, quanti: number, taglia: boolean): { testa: st
   return { testa: [...linee.slice(0, scelte[0].i).filter((l) => !eIntestazione(l)), 'DESCRIZIONE'], nomi: scelte.map((x) => x.nome), qta: scelte.map((x) => x.qta) };
 }
 
+/** Le righe della tessera fedeltà e simili, che stanno prima dei prodotti e non hanno prezzo. */
+const TESSERA = /(CARTA\s?NUM\w*|CLUB\b|\bTESSERA|\bFEDELT\w*|\bCARD\b)/;
+
+/** Toglie fino a `extra` righe di tessera tra le prime sei: se non bastano, resta com'era (non si sa quale nome manca). */
+function senzaTessera<T extends { nomi: string[]; qta: (number | undefined)[] }>(letti: T, extra: number): T {
+  const via = new Set<number>();
+  for (const [i, n] of letti.nomi.slice(0, 6).entries()) if (via.size < extra && TESSERA.test(n)) via.add(i);
+  if (via.size < extra) return letti;
+  return { ...letti, nomi: letti.nomi.filter((_, i) => !via.has(i)), qta: letti.qta.filter((_, i) => !via.has(i)) };
+}
+
 /**
  * Il testo con i nomi (da `nomiDa`, di solito la colonna di sinistra riletta a parte; se manca, dalla prima
  * lettura) e i prezzi della colonna di destra, abbinati per ordine; dopo, il resto della prima lettura
@@ -102,9 +113,11 @@ function prendiNomi(testo: string, quanti: number, taglia: boolean): { testa: st
  */
 export function unisciColonne(primo: string, prezzi: PrezzoColonna[], nomiDa = primo): string | null {
   if (!prezzi.length) return null;
-  const letti = prendiNomi(nomiDa, prezzi.length, nomiDa === primo);
-  // Più nomi che prezzi: ne manca uno, non si sa quale. Più prezzi che nomi: i prezzi di troppo in fondo sono quelli del
-  // totale, dell'IVA e del pagamento, e si tolgono.
+  let letti = prendiNomi(nomiDa, prezzi.length, nomiDa === primo);
+  // Più nomi che prezzi: ne manca uno, non si sa quale. Ma le righe della tessera fedeltà all'inizio («BENNET CLUB», «CARTA NUM.
+  // 0420***») non hanno prezzo e non sono prodotti: si tolgono, e se poi i conti tornano si abbina. Più prezzi che nomi: i prezzi
+  // di troppo in fondo sono quelli del totale, dell'IVA e del pagamento, e si tolgono.
+  if (letti && letti.nomi.length > prezzi.length) letti = senzaTessera(letti, letti.nomi.length - prezzi.length);
   if (!letti || letti.nomi.length > prezzi.length) return null;
   prezzi = prezzi.slice(0, letti.nomi.length);
   // Uno sconto è negativo: se al prezzo è caduto il segno meno, lo si rimette (il nome dice che è uno sconto).

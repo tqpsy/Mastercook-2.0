@@ -391,6 +391,24 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
       {daControllare > 0 && (
         <div className="avviso attenzione" role="status">
           {daControllare === 1 ? 'Una riga è segnalata' : `${daControllare} righe sono segnalate`} (bordo colorato): nome o prezzo possono essere sbagliati, il motivo è scritto sotto la riga. Guardale sullo scontrino e segna «Controllata», o correggile.
+          {righe.length >= 6 && daControllare * 2 > righe.length && (
+            <>
+              {' '}
+              Sono molte: la foto può essere troppo lontana o storta, e conviene rifarla.
+            </>
+          )}
+          {daControllare >= 4 && (
+            <div className="riga" style={{ flexWrap: 'wrap', marginTop: 8 }}>
+              <button className="bottone piccolo" onClick={() => setRighe(righe.map((r) => (r.dubbia ? { ...r, controllata: true } : r)))}>
+                Le ho controllate tutte
+              </button>
+              {daFoto && (
+                <button className="bottone piccolo" onClick={() => setRevisione(false)}>
+                  Rifaccio la foto
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
       {righe.some((r) => !r.euro.trim()) && (

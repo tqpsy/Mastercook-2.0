@@ -151,7 +151,12 @@ export async function leggiTestoDaFoto(foto: Blob, avanzamento: (frazione: numbe
     if (scelta === null) throw e;
     // Tesseract non c'è (niente rete): la lettura di Paddle resta, con il suo controllo.
   }
-  if (tesseract !== null && (scelta === null || punteggio(tesseract) > punteggio(scelta))) return { testo: tesseract, controllo: scelta };
+  // Tesseract legge le foto molto peggio di Paddle: sostituisce una lettura di Paddle solo se questa è povera (meno di tre righe),
+  // o se il suo conto torna da solo e quello di Paddle no. Una lettura di Tesseract con più righe o un conto forzato non basta.
+  if (tesseract !== null) {
+    const [t, p] = [leggiScontrino(tesseract), scelta === null ? null : leggiScontrino(scelta)];
+    if (p === null || p.righe.length < 3 || (t.quadraDaSola && !p.quadraDaSola)) return { testo: tesseract, controllo: scelta };
+  }
   return { testo: scelta!, controllo: altra ?? tesseract };
 }
 
