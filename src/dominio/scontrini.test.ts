@@ -217,6 +217,53 @@ describe('ingredienti e abbinamenti', () => {
     expect(unisciRipetute([riga('a'), riga('b')])[0].dubbia).toBeUndefined();
   });
 
+  it('formato con l’unità prima del numero, moltiplicatore dopo e zeri letti O', () => {
+    const f = formatoDaDescrizione;
+    expect(f('LATTE A.Q.GRANAROLO LT.1')).toEqual({ quantita: 1000, unita: 'ml' });
+    expect(f('CECI BIO SELECT GR 290')).toEqual({ quantita: 290, unita: 'g' });
+    expect(f('AVOCADO HASS G 200')).toEqual({ quantita: 200, unita: 'g' });
+    expect(f('POMODORINI FF G400')).toEqual({ quantita: 400, unita: 'g' });
+    expect(f('MENABREA BIRRA CL66')).toEqual({ quantita: 660, unita: 'ml' });
+    expect(f('ALTU.LAVAZZA250GX2')).toEqual({ quantita: 500, unita: 'g' });
+    expect(f('PASTA DISEMOLA 5OOG')).toEqual({ quantita: 500, unita: 'g' });
+    expect(f('PANE BAULETTO4OOG')).toEqual({ quantita: 400, unita: 'g' });
+    // Già letti bene, come prima.
+    expect(f('TONNO ALL OLIO OLIVA 3X80G')).toEqual({ quantita: 240, unita: 'g' });
+    expect(f('ACQUA NATURALE 1.5L')).toEqual({ quantita: 1500, unita: 'ml' });
+    expect(f('UOVA BIOLOGICHE M X4')).toEqual({ quantita: 4, unita: 'pz' });
+  });
+
+  it('la data incollata all’ora si legge; quella di una validità o di una tessera non è la data dello scontrino', () => {
+    const t = (coda: string) => ['IPER S.P.A.', 'DOCUMENTO COMMERCIALE', 'DESCRIZIONE PREZZO IVA', 'PANE 1,50 A', 'TOTALE COMPLESSIVO 1,50', coda].join('\n');
+    expect(leggiScontrino(t('02-11-202618:41'))).toMatchObject({ data: '2026-11-02', ora: '18:41' });
+    expect(leggiScontrino(t('15/11/202612:52 DOC.NUM. 0467'))).toMatchObject({ data: '2026-11-15', ora: '12:52' });
+    expect(leggiScontrino(t('VALIDO FINO AL 31/12/2026\n02/11/2026')).data).toBe('2026-11-02');
+    expect(leggiScontrino(t('TESSERA SCADE 31/12/2027\n02/11/2026')).data).toBe('2026-11-02');
+  });
+
+  it('PROMO e OFFERTA dentro il nome di un prodotto non sono sconti; all’inizio della riga o con il prezzo negativo sì', () => {
+    const t = (...righe: string[]) => leggiScontrino(['DESCRIZIONE PREZZO IVA', ...righe, 'TOTALE 9,99'].join('\n'));
+    expect(t('LATTE 1,50 C', 'BISCOTTI PROMO 500G 2,50 C').righe.map((r) => [r.descrizione, r.prezzo])).toEqual([['LATTE', 1.5], ['BISCOTTI PROMO 500G', 2.5]]);
+    expect(t('CAFFE 250G 3,49 C', 'SCONTO FEDELTA -0,35').righe).toMatchObject([{ descrizione: 'CAFFE 250G', prezzo: 3.14, sconto: 0.35 }]);
+    expect(t('FETTE DORATE 2,35', 'OFFERTA LIDL PLUS -0,56').righe).toMatchObject([{ prezzo: 1.79 }]);
+    expect(t('YOGURT 0,89', 'COUPON 0,30').righe).toMatchObject([{ prezzo: 0.59 }]);
+  });
+
+  it('un numero di una o due cifre in testa al nome è la quantità; uno di tre (un codice) no', () => {
+    const t = (riga: string) => leggiScontrino(['DESCRIZIONE PREZZO IVA', riga, 'TOTALE 0,76'].join('\n')).righe[0];
+    expect(t('4 PASTA DI SEMOLA 500G   0,76')).toMatchObject({ descrizione: 'PASTA DI SEMOLA 500G', pezzi: 4, formato: { quantita: 500, unita: 'g' } });
+    expect(t('437 CALAMARO K.3   0,76')).toMatchObject({ descrizione: '437 CALAMARO K.3' });
+    expect(t('5 X 0,10   0,76')?.pezzi).toBeUndefined();
+  });
+
+  it('un «G 2» o un numero senza unità non è un formato', () => {
+    expect(formatoDaDescrizione('POM.DATTERINO GIALLO G 2')).toBeUndefined();
+    expect(formatoDaDescrizione('SPLEG PANCETTA CUB.')).toBeUndefined();
+    expect(formatoDaDescrizione('IPERAL VALT LATTE PS')).toBeUndefined();
+    expect(formatoDaDescrizione('VALSOIA CREMA SPALM')).toBeUndefined();
+    expect(formatoDaDescrizione('GUM BIDIRECTION SCOV')).toBeUndefined();
+  });
+
   it('conto tornato da solo o a forza: quadraDaSola dice la differenza', () => {
     expect(leggiScontrino('DESCRIZIONE\nPANE   1,50 A\nLATTE   1,39 A\nTOTALE 2,89')).toMatchObject({ quadra: true, quadraDaSola: true });
     expect(leggiScontrino('DESCRIZIONE\nPANE   1,50 A\nLATTE   ip: |\nTOTALE 2,89')).toMatchObject({ quadra: true, quadraDaSola: false });

@@ -63,8 +63,9 @@ function quasiUguali(a: string, b: string): boolean {
 const eTotale = (linea: string) => linea.split(/[^A-Z0-9]+/).some((p) => p === 'TOTALE' || (p.length >= 5 && quasiUguali(p, 'TOTALE')));
 export const fineRighe = (linea: string) => FINE_RIGHE.test(linea) || eTotale(linea);
 export const DA_SALTARE =
-  /\b(IVA|CONTANTE|CONTANTI|RESTO|PAGAMENTO|PAGATO|BANCOMAT|ELETTRONICO|RESO|ARROTONDAMENTO|IMPORTO|NUMERO|DOCUMENTO|SCONTRINO|BUONO|BUONI|PUNTI|SALDO|CASSA|CASSIERE|OPERATORE|TEL|TESSERA|ARTICOLI|VISA|MASTERCARD|MAESTRO|P\.?\s?IVA|C\.?F\.?)\b|CARTA (DI )?(CREDITO|DEBITO)/;
+  /\b(IVA|CONTANTE|CONTANTI|RESTO|PAGAMENTO|PAGATO|BANCOMAT|ELETTRONICO|RESO|ARROTONDAMENTO|IMPORTO|NUMERO|DOCUMENTO|SCONTRINO|BUONO|BUONI|PUNTI|SALDO|CASSA|CASSIERE|OPERATORE|TEL|TESSERA|ARTICOLI|VISA|MASTERCARD|MAESTRO|P\.?\s?IVA|C\.?F\.?|VALIDA|VALIDO|VALIDE)\b|CARTA (DI )?(CREDITO|DEBITO)/;
 export const SCONTO = /\b(SCONTO|SC\.|SCONT|PROMO|OFFERTA|RIBASSO|RIDUZIONE|STORNO|COUPON)\b|TOO\s?GOO?D|TO\s?GO\b/;
+const SCONTO_IN_TESTA = /^[^A-Z0-9]*(?:\d{1,3}\s?%\s*)?(?:SCONTO|SC\.|SCONT|PROMO|OFFERTA|RIBASSO|RIDUZIONE|STORNO|COUPON)\b|TOO\s?GOO?D|TO\s?GO\b/;
 export const INTESTAZIONE_RIGHE = /\bDESCRIZIONE\b|\bPREZZO\s*\(?€?\)?\s*$/;
 
 /** Quante lettere diverse (sostituite, in più o in meno) ci sono tra due parole. */
@@ -124,24 +125,44 @@ export function pulisciLinea(linea: string): string {
 export const numero = (s: string) => Number(s.replace(/\s/g, '').replace(',', '.'));
 export const centesimi = (n: number) => Math.round(n * 100) / 100;
 
-/** Il formato della confezione scritto nella descrizione, in unità base. */
+/** Misura in unità base da un numero, un'unità e un moltiplicatore («2X125G» → 250 g). Null se non è una misura credibile. */
+function misura(valore: string, unita: string, confezioni = 1): RigaLetta['formato'] {
+  const n = numero(valore);
+  const U = unita.toUpperCase();
+  // Un «G 2» è un pezzo di scritta tagliato, non due grammi: sotto questi valori non è una confezione.
+  const minimo = U === 'G' || U === 'GR' || U === 'ML' || U === 'CL' ? 10 : 0;
+  const massimo = U === 'KG' ? 50 : U === 'L' || U === 'LT' ? 20 : 5000;
+  if (!(n > 0) || n < minimo || n > massimo) return undefined;
+  const [fattore, base]: [number, UnitaBase] = U === 'KG' ? [1000, 'g'] : U === 'G' || U === 'GR' ? [1, 'g'] : U === 'L' || U === 'LT' ? [1000, 'ml'] : U === 'CL' ? [10, 'ml'] : [1, 'ml'];
+  const quantita = Math.round(n * fattore * confezioni * 1000) / 1000;
+  return quantita > 0 ? { quantita, unita: base } : undefined;
+}
+
+const UNITA = 'KG|GR|G|LT|L|ML|CL';
+/** La lettura scrive la O al posto dello zero nei numeri di un formato («5OOG», «BAULETTO4OOG»). */
+const conZeri = (d: string) => d.replace(new RegExp(`(\\d[\\dO]{0,3})(?=\\s?(?:${UNITA})\\b)`, 'g'), (x) => x.replace(/O/g, '0'));
+
+/**
+ * Il formato della confezione scritto nella descrizione, in unità base: «500G», «1,5L», «2X125G», «250GX2» (due da 250 g),
+ * ma anche con l'unità prima del numero («LT.1», «GR 290», «G400», «CL66») e «UOVA X6» (pezzi).
+ */
 export function formatoDaDescrizione(descrizione: string): RigaLetta['formato'] {
-  const d = descrizione.toUpperCase();
-  const m = d.match(/(?:(\d{1,2})\s*X\s*)?(\d{1,4}(?:[.,]\d{1,3})?)\s*(KG|GR|G|LT|L|ML|CL)\b/);
-  if (!m) {
-    // «UOVA X6», «6 PZ»: una confezione di pezzi.
-    const pz = d.match(/(?:\bX\s?(\d{1,2})\b|\b(\d{1,2})\s?PZ\b)/);
-    return pz ? { quantita: Number(pz[1] ?? pz[2]), unita: 'pz' } : undefined;
-  }
-  const confezioni = m[1] ? Number(m[1]) : 1;
-  const valore = numero(m[2]);
-  const [fattore, unita]: [number, UnitaBase] =
-    m[3] === 'KG' ? [1000, 'g'] : m[3] === 'G' || m[3] === 'GR' ? [1, 'g'] : m[3] === 'L' || m[3] === 'LT' ? [1000, 'ml'] : m[3] === 'CL' ? [10, 'ml'] : [1, 'ml'];
-  const quantita = Math.round(valore * fattore * confezioni * 1000) / 1000;
-  return quantita > 0 ? { quantita, unita } : undefined;
+  const d = conZeri(descrizione.toUpperCase());
+  const dopo = d.match(new RegExp(`(\\d{1,4}(?:[.,]\\d{1,3})?)\\s*(${UNITA})\\s*X\\s*(\\d{1,2})\\b`));
+  if (dopo) return misura(dopo[1], dopo[2], Number(dopo[3]));
+  const m = d.match(new RegExp(`(?:(\\d{1,2})\\s*X\\s*)?(\\d{1,4}(?:[.,]\\d{1,3})?)\\s*(${UNITA})\\b`));
+  if (m) return misura(m[2], m[3], m[1] ? Number(m[1]) : 1);
+  const prima = d.match(new RegExp(`\\b(${UNITA})\\.?\\s?(\\d{1,4}(?:[.,]\\d{1,3})?)\\b(?!\\s?[A-Z%])`));
+  const daUnita = prima ? misura(prima[2], prima[1]) : undefined;
+  if (daUnita) return daUnita;
+  // «UOVA X6», «6 PZ»: una confezione di pezzi.
+  const pz = d.match(/(?:\bX\s?(\d{1,2})\b|\b(\d{1,2})\s?PZ\b)/);
+  return pz ? { quantita: Number(pz[1] ?? pz[2]), unita: 'pz' } : undefined;
 }
 
 const DATA = /\b(\d{1,2})[/.-](\d{1,2})[/.-](\d{4}|\d{2})\b/g;
+/** Righe con una data che non è quella dello scontrino. */
+const DATA_DI_ALTRO = /\b(VALID[AOI]?|SCAD\w*|FINO AL|ENTRO|DAL)\b/i;
 
 function giornoValido(m: RegExpMatchArray): string | null {
   const g = Number(m[1]);
@@ -157,14 +178,20 @@ function giornoValido(m: RegExpMatchArray): string | null {
  * Data e ora dello scontrino. Prima si cerca una data con l'ora accanto («02-11-2026 18:41»): un'ora da sola
  * può essere altro (l'orologio del telefono in uno screenshot, gli orari del negozio).
  */
-function dataOraDa(testo: string): { data: string | null; ora: string | null } {
+function dataOraDa(grezzo: string): { data: string | null; ora: string | null } {
+  // La lettura perde lo spazio tra data e ora («02-11-202618:41»).
+  const testo = grezzo.replace(/(\b\d{1,2}[/.-]\d{1,2}[/.-]20\d{2})(?=[0-2]\d[:.][0-5]\d\b)/g, '$1 ');
   for (const m of testo.matchAll(new RegExp(`${DATA.source}\\s+([01]?\\d|2[0-3])[:.]([0-5]\\d)\\b`, 'g'))) {
     const data = giornoValido(m);
     if (data) return { data, ora: `${m[4].padStart(2, '0')}:${m[5]}` };
   }
   let data: string | null = null;
-  for (const m of testo.matchAll(DATA)) {
-    data = giornoValido(m);
+  // Senza un'ora accanto, la prima data: ma non quella di una riga che parla d'altro (validità di un'offerta, scadenza della tessera).
+  for (const linea of testo.split('\n').filter((l) => !DATA_DI_ALTRO.test(l))) {
+    for (const m of linea.matchAll(DATA)) {
+      data = giornoValido(m);
+      if (data) break;
+    }
     if (data) break;
   }
   const ora = testo.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/);
@@ -231,7 +258,13 @@ export function leggiScontrino(testo: string): ScontrinoLetto {
     if (pezziSospesi && riga.pezzi === undefined) riga.pezzi = pezziSospesi;
     pezziSospesi = null;
     descrizioneSospesa = null;
-    const formato = formatoDaDescrizione(descrizione);
+    // «4 PASTA DI SEMOLA 500G»: il numero in testa è la quantità (colonna QTA letta attaccata al nome), non parte del nome.
+    const qta = riga.descrizione.match(/^(\d{1,2})\s+([A-Z].*)$/);
+    if (qta && riga.pezzi === undefined && Number(qta[1]) > 0 && (qta[2].match(/[A-Z]/g) ?? []).length >= 4) {
+      riga.pezzi = Number(qta[1]);
+      riga.descrizione = qta[2];
+    }
+    const formato = formatoDaDescrizione(riga.descrizione);
     if (formato) riga.formato = formato;
     righe.push(riga);
   };
@@ -302,7 +335,8 @@ export function leggiScontrino(testo: string): ScontrinoLetto {
       .replace(/\s+/g, ' ')
       .trim();
 
-    if (SCONTO.test(linea) || valore < 0) {
+    // Uno sconto ha il prezzo negativo, o comincia con la parola («SCONTO FEDELTA»): «PROMO» o «OFFERTA» in mezzo al nome di un prodotto no.
+    if (valore < 0 || (SCONTO.test(linea) && SCONTO_IN_TESTA.test(linea))) {
       const precedente = righe.at(-1);
       if (precedente) {
         precedente.prezzo = centesimi(Math.max(0, precedente.prezzo - Math.abs(valore)));
