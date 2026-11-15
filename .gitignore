@@ -10,5 +10,3 @@ supabase/.temp
 supabase/.branches
 *.tsbuildinfo
 
-# Foto vere degli scontrini: contengono dati personali, restano sul computer di chi le fa.
-tests/scontrini/casi/*/foto.*

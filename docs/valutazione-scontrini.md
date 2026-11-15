@@ -40,7 +40,7 @@ tests/scontrini/
   casi/<id>/verita.json       la verità, scritta a mano (si committa)
   casi/<id>/letture/*.txt     testi già letti, congelati (si committano)
   casi/<id>/letture/*-scatole.json   pezzi di testo di PaddleOCR, ricomposti come fa l'app
-  casi/<id>/foto.jpg          la foto vera: resta sul computer, ignorata da git
+  casi/<id>/foto.jpg          la foto vera dello scontrino (si committa, vedi «Foto e dati personali»)
   base.json                   i numeri di adesso del livello testo (il freno)
   rapporti/<fase>.json        rapporti del livello foto, uno per fase, per confrontarli
   carica.ts                   caricamento e controlli di coerenza
@@ -48,14 +48,19 @@ tests/scontrini/
 
 Tre origini, dichiarate in ogni `verita.json`:
 
-- `scontrino-reale` con `verita: "carta"`: uno scontrino vero della famiglia, con la verità scritta **guardando lo scontrino**, mai l'uscita del lettore.
+- `scontrino-reale` con `verita: "carta"`: uno scontrino vero della famiglia, con la verità scritta **guardando lo scontrino** (e controllata con le somme), mai l'uscita del lettore.
 - `esempio-reale` con `verita: "ricavata"`: esempi veri già nel repo (Conad, Iper) la cui verità è ricavata dai testi e dal conto, non dalla carta. Valgono meno: i nomi potrebbero essere sbagliati in modo coerente con il lettore.
 - `sintetico` con `verita: "costruzione"`: scontrini costruiti con trabocchetti noti (PROMO nel nome, date che non sono lo scontrino, formati, abbinamenti). La verità è esatta per costruzione. Servono a isolare un difetto; **non misurano la qualità su foto vere**: per quella servono scontrini veri.
+
+### Foto e dati personali
+
+Le foto degli scontrini veri stanno nel repository, così ogni sessione di lavoro le ritrova e le prove sono ripetibili. Sono state preparate così: orientamento applicato, **metadati EXIF (posizione GPS compresa) non copiati**, JPEG qualità 85 con le stesse dimensioni dell'originale. Uno scontrino può contenere il nome del negozio, la città, i numeri di carta fedeltà (di solito mascherati: `0420*******21`), il numero del documento e la firma elettronica: prima di aggiungerne uno guarda che non ci sia altro (nome del cliente, carta di pagamento in chiaro). Se il repository è pubblico queste informazioni sono pubbliche.
 
 ### Aggiungere uno scontrino vero
 
 1. Crea `tests/scontrini/casi/<id>/` (un nome breve: `esselunga-2026-11-03`).
-2. Metti la foto come `foto.jpg` nella cartella (non va su git). Togli prima, se vuoi, il numero della carta e della tessera.
+2. Metti la foto come `foto.jpg` nella cartella. Preparala come sopra (senza EXIF, JPEG ~85), e se vedi dati che non vuoi nel repository ritagliali o coprili.
+   Un solo scontrino fotografato più volte (ritaglio diverso, sfondo diverso) è un caso per ogni foto: se in una foto manca il totale o la data, nel `verita.json` di quel caso ometti `totale` e `data` e il metro non li misura.
 3. Scrivi `verita.json` **guardando lo scontrino**: negozio, data, ora, totale e ogni riga come è stampata (anche se si ripete), con il prezzo dopo gli sconti. Con `ingrediente` (id del catalogo) e `carico` (quanto dovrebbe entrare in casa; `null` se non si può sapere) si misura anche la conversione in prodotti; con `carrello` e `abbina` anche l'abbinamento alle spunte. Chiavi che mancano non si misurano. Il controllo `npm run valuta:scontrini` rifiuta una verità incoerente (righe che non fanno il totale, ingredienti inesistenti, unità sbagliate).
 4. `npm run valuta:scontrini:foto -- --casi <id> --congela` legge la foto, la misura e salva i testi in `letture/`. Controlla i testi congelati prima di committarli: la lettura può contenere numeri di carta, di tessera o il nome del cliente.
 5. `MC_AGGIORNA_BASE=1 npm run valuta:scontrini` per rifare la base, perché il corpus è cambiato.

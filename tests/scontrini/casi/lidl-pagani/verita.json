@@ -1,0 +1,77 @@
+{
+  "versione": 1,
+  "id": "lidl-pagani",
+  "origine": "scontrino-reale",
+  "verita": "carta",
+  "negozio": "Lidl Italia S.r.l. a socio unico",
+  "data": "2025-10-27",
+  "ora": "11:51",
+  "totale": 43.18,
+  "note": "Foto di uno scontrino Lidl piegato e in prospettiva, con colonne IVA e prezzo, offerte e coupon Lidl Plus sotto le righe e due capi di abbigliamento. Prezzi netti: FETTE DORATE 2,35-0,56; ZUCCHERO 2,97 (3×0,99)-0,45; FILETTI TONNO 3,79-0,80 (due volte); LATTE 0,65-0,32 (coupon); LATTUGHINO 0,99-0,20; MOZZARELLA 1,49-0,30. Lo sconto sulla mozzarella è -0,30 (il 20% di 1,49), non -0,38: con questo le righe fanno 43,18 e «valore sconti» 3,43.",
+  "righe": [
+    {
+      "descrizione": "FETTE DORATE",
+      "prezzo": 1.79
+    },
+    {
+      "descrizione": "ZUCCHERO SEMOLATO",
+      "prezzo": 2.52,
+      "pezzi": 3
+    },
+    {
+      "descrizione": "FILETTI TONNO SURG.",
+      "prezzo": 2.99
+    },
+    {
+      "descrizione": "FILETTI TONNO SURG.",
+      "prezzo": 2.99
+    },
+    {
+      "descrizione": "LATTE PS UHT",
+      "prezzo": 0.33,
+      "ingrediente": "ing:latte"
+    },
+    {
+      "descrizione": "LATTUGHINO BIO",
+      "prezzo": 0.79
+    },
+    {
+      "descrizione": "UVA RED GLOBE",
+      "prezzo": 1.72
+    },
+    {
+      "descrizione": "SACCH.ORTOFR.BIOGRAD",
+      "prezzo": 0.01,
+      "ingrediente": null
+    },
+    {
+      "descrizione": "YOGURT BIO FRAGOLA",
+      "prezzo": 0.69,
+      "ingrediente": "ing:yogurt"
+    },
+    {
+      "descrizione": "YOGURT BIO CILIEGIA",
+      "prezzo": 0.69,
+      "ingrediente": "ing:yogurt"
+    },
+    {
+      "descrizione": "EQUILIBRA VITAMINA C",
+      "prezzo": 3.49
+    },
+    {
+      "descrizione": "MOZZARELLA DI BUFALA",
+      "prezzo": 1.19,
+      "ingrediente": "ing:mozzarella_bufala"
+    },
+    {
+      "descrizione": "GONNA MIDI NERO S-0487526",
+      "prezzo": 8.99,
+      "ingrediente": null
+    },
+    {
+      "descrizione": "CARDIGAN NAVY S-0469699",
+      "prezzo": 14.99,
+      "ingrediente": null
+    }
+  ]
+}

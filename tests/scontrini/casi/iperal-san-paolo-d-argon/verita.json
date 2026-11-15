@@ -1,0 +1,176 @@
+{
+  "versione": 1,
+  "id": "iperal-san-paolo-d-argon",
+  "origine": "scontrino-reale",
+  "verita": "carta",
+  "negozio": "Iperal Supermercati Spa",
+  "data": "2026-11-10",
+  "ora": "18:18",
+  "totale": 60.07,
+  "note": "Foto di un documento commerciale Iperal con la carta curva: nella parte alta la colonna dei prezzi sta più in basso dei nomi di oltre una riga, poi la differenza si riduce. L’abbinamento nome-prezzo è per ordine (le righe doppie — Valsoia, yogurt, pancetta, spatzle — hanno prezzi uguali solo così) e le somme tornano al centesimo. «CARTAMICA.DIGITALE» è la tessera digitale a 0,00; «Articoli 33» conta 3 shopper bio in una riga. Gli sconti sono già tolti dai prezzi.",
+  "righe": [
+    {
+      "descrizione": "CARTAMICA.DIGITALE",
+      "prezzo": 0
+    },
+    {
+      "descrizione": "MENABREA BIRRA CL66",
+      "prezzo": 1.39
+    },
+    {
+      "descrizione": "PRIMIA DISG LIQ LT1",
+      "prezzo": 1.99
+    },
+    {
+      "descrizione": "PRIMIA.SUCCHIETTI",
+      "prezzo": 0.65
+    },
+    {
+      "descrizione": "MOLISANA PENNONI RIG",
+      "prezzo": 0.9
+    },
+    {
+      "descrizione": "UOVA X6",
+      "prezzo": 1.99,
+      "formato": {
+        "quantita": 6,
+        "unita": "pz"
+      },
+      "ingrediente": "ing:uova",
+      "carico": {
+        "quantita": 6,
+        "unita": "pz"
+      }
+    },
+    {
+      "descrizione": "VALSOIA CREMA SPALM",
+      "prezzo": 2.85
+    },
+    {
+      "descrizione": "VALSOIA CREMA SPALM",
+      "prezzo": 2.85
+    },
+    {
+      "descrizione": "PRIMIA YOGURT GRECO",
+      "prezzo": 0.89,
+      "ingrediente": "ing:yogurt_greco",
+      "carico": null
+    },
+    {
+      "descrizione": "PRIMIA YOGURT GRECO",
+      "prezzo": 0.89,
+      "ingrediente": "ing:yogurt_greco",
+      "carico": null
+    },
+    {
+      "descrizione": "IPERAL VALT LATTE PS",
+      "prezzo": 1.35
+    },
+    {
+      "descrizione": "IPERAL VALT LATTE PS",
+      "prezzo": 1.35
+    },
+    {
+      "descrizione": "BIO PRIMIA POLPA FIN",
+      "prezzo": 1.2
+    },
+    {
+      "descrizione": "BIO PRIMIA POLPA FIN",
+      "prezzo": 1.2
+    },
+    {
+      "descrizione": "IPERAL SALM.AFF.NORV",
+      "prezzo": 5.95
+    },
+    {
+      "descrizione": "PERE WILLIAMS G500",
+      "prezzo": 0.99,
+      "formato": {
+        "quantita": 500,
+        "unita": "g"
+      },
+      "ingrediente": "ing:pera",
+      "carico": {
+        "quantita": 500,
+        "unita": "g"
+      }
+    },
+    {
+      "descrizione": "BANANE CONFEZIONATE",
+      "prezzo": 1.8,
+      "ingrediente": "ing:banana",
+      "carico": null
+    },
+    {
+      "descrizione": "ZUCCA DELICA",
+      "prezzo": 2.09,
+      "ingrediente": "ing:zucca",
+      "carico": null
+    },
+    {
+      "descrizione": "ZUCCHINE",
+      "prezzo": 2.22,
+      "ingrediente": "ing:zucchina",
+      "carico": null
+    },
+    {
+      "descrizione": "SHOPPER COMPOSTABILE",
+      "prezzo": 0.01,
+      "ingrediente": null
+    },
+    {
+      "descrizione": "PRIMIA TESTINE X4",
+      "prezzo": 3.49
+    },
+    {
+      "descrizione": "PRIMIA FORCELLE C/FI",
+      "prezzo": 1.55
+    },
+    {
+      "descrizione": "MENTADENT DENT KIDS",
+      "prezzo": 2.35
+    },
+    {
+      "descrizione": "SPLEG PANCETTA CUB.",
+      "prezzo": 1.59
+    },
+    {
+      "descrizione": "SPLEG PANCETTA CUB.",
+      "prezzo": 1.59
+    },
+    {
+      "descrizione": "IPERAL SPATZLE",
+      "prezzo": 1.99
+    },
+    {
+      "descrizione": "IPERAL SPATZLE",
+      "prezzo": 1.99
+    },
+    {
+      "descrizione": "IPERAL VALERIANA",
+      "prezzo": 0.99
+    },
+    {
+      "descrizione": "GUM BIDIRECTION SCOV",
+      "prezzo": 4.69
+    },
+    {
+      "descrizione": "MENTADENT COLLUTORIO",
+      "prezzo": 4.99
+    },
+    {
+      "descrizione": "TIGULLIO PESTO G190",
+      "prezzo": 1.99,
+      "formato": {
+        "quantita": 190,
+        "unita": "g"
+      }
+    },
+    {
+      "descrizione": "SHOPPER BIO SELF",
+      "prezzo": 0.3,
+      "pezzi": 3,
+      "ingrediente": null
+    }
+  ]
+}

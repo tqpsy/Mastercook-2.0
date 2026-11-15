@@ -21,6 +21,8 @@ export interface LetturaCongelata {
 export interface Caso {
   verita: Verita;
   letture: LetturaCongelata[];
+  /** Percorso della foto vera del caso (`foto.jpg`…), se c'è. */
+  foto: string | null;
 }
 
 /** Il testo che darebbe una lettura perfetta di ciò che è stampato: sinistra, tre spazi, destra. */
@@ -47,7 +49,8 @@ export function caricaCaso(id: string, radice = join(CARTELLA, 'casi')): Caso {
       else if (f.endsWith('.txt')) letture.push({ nome: f.replace(/\.txt$/, ''), testo: readFileSync(join(dir, f), 'utf8') });
     }
   }
-  return { verita, letture };
+  const nomeFoto = readdirSync(cartella).find((f) => /^foto\.(jpe?g|png|webp)$/i.test(f));
+  return { verita, letture, foto: nomeFoto ? join(cartella, nomeFoto) : null };
 }
 
 export function elencoCasi(radice = join(CARTELLA, 'casi')): string[] {
@@ -72,11 +75,12 @@ export function controllaVerita(v: Verita, id: string, catalogo: Catalogo): stri
   if (!['carta', 'ricavata', 'costruzione'].includes(v.verita)) p.push(`verita «${v.verita}» sconosciuta`);
   if (v.origine === 'sintetico' && v.verita !== 'costruzione') p.push('uno scontrino sintetico ha verità «costruzione»');
   if (v.origine === 'scontrino-reale' && v.verita !== 'carta') p.push('uno scontrino reale ha verità «carta»: scritta guardando lo scontrino, non l’uscita del lettore');
-  if (!DATA.test(v.data)) p.push(`data «${v.data}» non valida`);
+  if (v.data !== undefined && !DATA.test(v.data)) p.push(`data «${v.data}» non valida`);
+  if (v.origine === 'sintetico' && (v.data === undefined || v.totale === undefined)) p.push('uno scontrino sintetico ha data e totale');
   if (v.ora && !/^[0-2]\d:[0-5]\d$/.test(v.ora)) p.push(`ora «${v.ora}» non valida`);
   if (!v.righe.length) p.push('nessuna riga');
   const somma = Math.round(v.righe.reduce((s, r) => s + r.prezzo, 0) * 100) / 100;
-  if (Math.abs(somma - v.totale) > 0.001) p.push(`le righe fanno ${somma} ma il totale è ${v.totale}`);
+  if (v.totale !== undefined && Math.abs(somma - v.totale) > 0.001) p.push(`le righe fanno ${somma} ma il totale è ${v.totale}`);
   const idCarrello = new Set((v.carrello ?? []).map((c) => c.id));
   for (const c of v.carrello ?? []) if (c.ingrediente_id && !ing.has(c.ingrediente_id)) p.push(`carrello: ingrediente «${c.ingrediente_id}» non è nel catalogo`);
   for (const [i, r] of v.righe.entries()) {

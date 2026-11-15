@@ -91,6 +91,17 @@ describe('valutazione di una lettura', () => {
   });
 });
 
+describe('scontrino ritagliato: i campi che non si vedono non si misurano', () => {
+  it('senza data e totale nella verità, una lettura senza data né totale può essere perfetta', () => {
+    const ritagliata: Verita = { ...VERITA, data: undefined, ora: undefined, totale: undefined };
+    const v = valuta(ritagliata, leggiPerValutare(TESTO(GIUSTO, ''), indice));
+    expect(v.campi).toMatchObject({ data: null, ora: null, totale: null });
+    expect(v.perfetta).toBe(true);
+    const s = riassumi([{ caso: 'a', lettura: '1', valutazione: v }]);
+    expect(s.data).toMatchObject({ valore: 0, su: 0 });
+  });
+});
+
 describe('conversione in prodotti', () => {
   const verita: Verita = {
     ...VERITA,

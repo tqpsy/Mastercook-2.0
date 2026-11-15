@@ -1,0 +1,139 @@
+{
+  "versione": 1,
+  "id": "coop-ritaglio-righe",
+  "origine": "scontrino-reale",
+  "verita": "carta",
+  "note": "Screenshot (CamScanner) di una parte di uno scontrino Coop: solo venti righe e la legenda IVA, senza negozio, data né totale (le righe fanno 42,84 €). Sconti già tolti: PENNE RIGATE -0,39 (35% clienti), ALTU.LAVAZZA -3,00 (sconto soci).",
+  "righe": [
+    {
+      "descrizione": "LATTE ESL BIO INT 1L",
+      "prezzo": 3.12,
+      "formato": {
+        "quantita": 1000,
+        "unita": "ml"
+      },
+      "ingrediente": "ing:latte",
+      "carico": {
+        "quantita": 1000,
+        "unita": "ml"
+      }
+    },
+    {
+      "descrizione": "ZUCCHINE BIO IT 14-2",
+      "prezzo": 2.18,
+      "ingrediente": "ing:zucchina"
+    },
+    {
+      "descrizione": "RADICCHIO ROSSO PREC",
+      "prezzo": 1.18
+    },
+    {
+      "descrizione": "NS SACCHETTO COMPOST",
+      "prezzo": 0.01,
+      "ingrediente": null
+    },
+    {
+      "descrizione": "CAROTE SAN ROCCO IT",
+      "prezzo": 3.05,
+      "ingrediente": "ing:carota"
+    },
+    {
+      "descrizione": "POMODORINI FF G400",
+      "prezzo": 2.78,
+      "formato": {
+        "quantita": 400,
+        "unita": "g"
+      },
+      "ingrediente": "ing:pomodorini",
+      "carico": {
+        "quantita": 400,
+        "unita": "g"
+      }
+    },
+    {
+      "descrizione": "POMODORINI FF G400",
+      "prezzo": 2.78,
+      "formato": {
+        "quantita": 400,
+        "unita": "g"
+      },
+      "ingrediente": "ing:pomodorini",
+      "carico": {
+        "quantita": 400,
+        "unita": "g"
+      }
+    },
+    {
+      "descrizione": "POMODORINI FF G400",
+      "prezzo": 2.78,
+      "formato": {
+        "quantita": 400,
+        "unita": "g"
+      },
+      "ingrediente": "ing:pomodorini",
+      "carico": {
+        "quantita": 400,
+        "unita": "g"
+      }
+    },
+    {
+      "descrizione": "SALVASLIP COOP MAXI",
+      "prezzo": 2.16,
+      "ingrediente": null
+    },
+    {
+      "descrizione": "KIWI COOP IT 75-85 I",
+      "prezzo": 2.58,
+      "ingrediente": "ing:kiwi"
+    },
+    {
+      "descrizione": "PENNE RIGATE",
+      "prezzo": 0.7
+    },
+    {
+      "descrizione": "FILETTI DI SGOMBRO P",
+      "prezzo": 1.41
+    },
+    {
+      "descrizione": "FILETTI DI SGOMBRO P",
+      "prezzo": 1.41
+    },
+    {
+      "descrizione": "FILETTI DI SGOMBRO P",
+      "prezzo": 1.41
+    },
+    {
+      "descrizione": "FILETTI DI SGOMBRO P",
+      "prezzo": 1.41
+    },
+    {
+      "descrizione": "ALTU.LAVAZZA250GX2",
+      "prezzo": 5.99,
+      "formato": {
+        "quantita": 500,
+        "unita": "g"
+      },
+      "ingrediente": "ing:caffe",
+      "carico": {
+        "quantita": 500,
+        "unita": "g"
+      }
+    },
+    {
+      "descrizione": "LENT.GIGANTI VVERDEB",
+      "prezzo": 1.98
+    },
+    {
+      "descrizione": "LENT.GIGANTI VVERDEB",
+      "prezzo": 1.98
+    },
+    {
+      "descrizione": "LENT.GIGANTI VVERDEB",
+      "prezzo": 1.98
+    },
+    {
+      "descrizione": "SFOGLIATISS.LORIANA",
+      "prezzo": 1.95
+    }
+  ]
+}

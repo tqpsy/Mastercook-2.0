@@ -7,8 +7,7 @@
  *
  * Per ogni scontrino del corpus (`tests/scontrini/casi/*`) si parte da una foto:
  * - scontrini sintetici: la foto si disegna dalla «stampa» del file di verità;
- * - scontrini veri: la foto che sta nella cartella del caso come `foto.jpg` (o .jpeg, .png, .webp). Le foto non si
- *   committano (dati personali): sono ignorate da git, ognuno tiene le sue.
+ * - scontrini veri: la foto che sta nella cartella del caso come `foto.jpg` (o .jpeg, .png, .webp).
  * Poi si legge la foto com'è (due volte, per vedere se il lettore è stabile) e con piccole variazioni che capitano
  * davvero in mano a una persona: JPEG più compresso, foto spostata, più piccola o un po' storta, ombra.
  * Ogni lettura si confronta riga per riga con la verità (src/dominio/valutazione.ts) e il rapporto va in

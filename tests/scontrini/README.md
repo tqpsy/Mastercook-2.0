@@ -5,6 +5,6 @@ scontrino vero: [docs/valutazione-scontrini.md](../../docs/valutazione-scontrini
 
 - `casi/<id>/verita.json`: la verità scritta a mano, con l'origine dichiarata.
 - `casi/<id>/letture/`: testi già letti, congelati.
-- `casi/<id>/foto.*`: foto vere; restano sul computer (ignorate da git, contengono dati personali).
+- `casi/<id>/foto.jpg`: la foto vera (senza EXIF; vedi «Foto e dati personali» nella guida).
 - `base.json`: i numeri attuali del livello testo; `npm test` fallisce se peggiorano.
 - `rapporti/`: rapporti del livello foto, uno per fase.

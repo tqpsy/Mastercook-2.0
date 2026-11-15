@@ -2,11 +2,11 @@
   "versione": 1,
   "id": "conad-superstore",
   "origine": "esempio-reale",
-  "verita": "ricavata",
+  "verita": "carta",
   "data": "2003-06-25",
   "ora": "12:47",
   "totale": 13.65,
-  "note": "Foto di un documento commerciale Conad con le colonne QTA, PREZZO e TOTALE. Verità ricavata dalle scatole OCR già nel repo (scontrini-reali.test.ts) e controllata con il conto (somma righe = 13,65), non guardando la carta.",
+  "note": "Foto di un documento commerciale Conad con le colonne QTA, PREZZO e TOTALE (esempio trovato in rete, data 25/06/2003). Verità controllata sulla foto e sul conto (somma righe = 13,65). Le scatole OCR in letture/ erano già nel repo (scontrini-reali.test.ts). Per BANANE e le righe a quantità 1 non si dichiara la quantità in casa: dipende da come si legge la colonna QTA.",
   "righe": [
     {
       "descrizione": "PANE BAULETTO",

@@ -48,9 +48,10 @@ export interface Verita {
   /** Come si è stabilita la verità: guardando la carta, ricavandola da testo e conti, o costruendo lo scontrino dalla verità. */
   verita: 'carta' | 'ricavata' | 'costruzione';
   negozio?: string | null;
-  data: string;
+  /** Assenti se nella foto non si vedono (scontrino ritagliato): allora non si misurano. */
+  data?: string;
   ora?: string | null;
-  totale: number;
+  totale?: number;
   righe: RigaVera[];
   carrello?: RigaDaAbbinare[];
   /** Solo per gli scontrini sintetici: le linee come sono stampate, `[testo a sinistra, testo a destra?]`. */
@@ -185,7 +186,8 @@ export interface Valutazione {
   perfetta: boolean;
   /** Niente in casa di sbagliato: nessuna quantità sbagliata, nessuna riga in più che entra in casa, nessun abbinamento sbagliato. */
   sicura: boolean;
-  campi: { data: boolean; ora: boolean | null; totale: boolean; negozio: boolean | null };
+  /** `null` = la verità non lo prevede (non visibile nella foto), non si misura. */
+  campi: { data: boolean | null; ora: boolean | null; totale: boolean | null; negozio: boolean | null };
   /** La lettura dice che il conto torna. */
   quadra: boolean;
   /** Dice che il conto torna ma qualche riga è sbagliata, persa o in più (la data non conta: non entra nel conto). */
@@ -227,7 +229,7 @@ export function valuta(verita: Verita, letta: LetturaValutata): Valutazione {
   const v: Valutazione = {
     perfetta: false,
     sicura: false,
-    campi: { data: false, ora: null, totale: false, negozio: null },
+    campi: { data: null, ora: null, totale: null, negozio: null },
     quadra: letta.quadra,
     falsoQuadra: false,
     righe: { vere: verita.righe.length, lette: letta.righe.length, ok: 0, prezzoSilenzioso: 0, prezzoSegnalato: 0, nome: 0, mancanti: 0, inPiu: 0 },
@@ -309,10 +311,14 @@ export function valuta(verita: Verita, letta: LetturaValutata): Valutazione {
     if (r.abbina) v.abbinamenti.sbagliati++;
   }
 
-  v.campi.data = letta.data === verita.data;
-  if (!v.campi.data) errori.push(`data ${letta.data ?? 'non letta'} invece di ${verita.data}`);
-  v.campi.totale = letta.totale !== null && stessoPrezzo(letta.totale, verita.totale);
-  if (!v.campi.totale) errori.push(`totale ${letta.totale === null ? 'non letto' : euro(letta.totale)} invece di ${euro(verita.totale)}`);
+  if (verita.data) {
+    v.campi.data = letta.data === verita.data;
+    if (!v.campi.data) errori.push(`data ${letta.data ?? 'non letta'} invece di ${verita.data}`);
+  }
+  if (verita.totale !== undefined) {
+    v.campi.totale = letta.totale !== null && stessoPrezzo(letta.totale, verita.totale);
+    if (!v.campi.totale) errori.push(`totale ${letta.totale === null ? 'non letto' : euro(letta.totale)} invece di ${euro(verita.totale)}`);
+  }
   if (verita.ora) {
     v.campi.ora = letta.ora === verita.ora;
     if (!v.campi.ora) errori.push(`ora ${letta.ora ?? 'non letta'} invece di ${verita.ora}`);
@@ -322,7 +328,7 @@ export function valuta(verita: Verita, letta: LetturaValutata): Valutazione {
     if (!v.campi.negozio) errori.push(`negozio «${letta.negozio ?? 'non letto'}» invece di «${verita.negozio}»`);
   }
 
-  v.perfetta = v.righe.ok === v.righe.vere && v.righe.inPiu === 0 && v.campi.data && v.campi.totale && v.campi.ora !== false;
+  v.perfetta = v.righe.ok === v.righe.vere && v.righe.inPiu === 0 && v.campi.data !== false && v.campi.totale !== false && v.campi.ora !== false;
   v.falsoQuadra = letta.quadra && (v.righe.ok < v.righe.vere || v.righe.inPiu > 0);
   v.sicura = v.giacenza.sbagliata === 0 && v.giacenza.inPiu === 0 && v.abbinamenti.sbagliati === 0;
   v.firma = JSON.stringify([letta.data, letta.ora, letta.totale, letta.righe.map((r) => [compatto(r.descrizione), r.prezzo, r.pezzi ?? null, r.carico, r.abbina])]);

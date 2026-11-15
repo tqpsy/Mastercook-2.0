@@ -25,10 +25,10 @@ const esiti: Esito[] = corpus.flatMap((c) => c.letture.map((l) => ({ caso: c.ver
 const rapporto = creaRapporto('testo', process.env.MC_ETICHETTA ?? 'testo', esiti);
 
 describe('corpus degli scontrini: dati di riferimento', () => {
-  it('ci sono scontrini veri e sintetici, ognuno con almeno una lettura', () => {
+  it('ci sono scontrini veri e sintetici, ognuno con una lettura congelata (o la foto da cui congelarla)', () => {
     expect(corpus.length).toBeGreaterThanOrEqual(8);
     expect(corpus.some((c) => c.verita.origine !== 'sintetico')).toBe(true);
-    for (const c of corpus) expect(c.letture.length, c.verita.id).toBeGreaterThan(0);
+    for (const c of corpus) expect(c.letture.length > 0 || c.foto !== null, c.verita.id).toBe(true);
   });
 
   it.each(corpus.map((c) => [c.verita.id, c] as const))('%s: la verità è coerente (somme, catalogo, unità)', (id, c) => {
