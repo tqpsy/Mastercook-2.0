@@ -819,6 +819,21 @@ button.etichetta {
   pointer-events: none;
 }
 
+/* Scontrino: riga «da controllare» (le due letture della foto non coincidono, o il prezzo è ricavato dal conto). */
+.elenco > li.dubbia {
+  padding-left: 10px;
+  border-left: 4px solid var(--attenzione);
+  border-radius: 8px;
+  background: var(--attenzione-tenue);
+}
+.dubbia-nota {
+  gap: 8px;
+  margin-top: 6px;
+  align-items: center;
+  font-size: 0.85rem;
+  color: var(--attenzione);
+}
+
 .testo-letto {
   white-space: pre-wrap;
   font-size: 0.8rem;

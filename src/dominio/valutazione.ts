@@ -15,7 +15,9 @@
  *
  * Qui non c'è I/O: i testi e la verità arrivano da fuori (test, script).
  */
+import { allinea, compatto, SOGLIA_NOME, somiglianza, stessoPrezzo } from './allineamento';
 import type { Indice } from './ricette';
+import { confrontaLetture } from './doppiaLettura';
 import { abbinaRighe, leggiScontrino, quantitaProposta, type RigaDaAbbinare, suggerisciIngrediente } from './scontrini';
 
 export type UnitaCarico = 'g' | 'ml' | 'pz';
@@ -70,6 +72,8 @@ export interface RigaLettaValutata {
   ingrediente: string | null;
   carico: Carico | null;
   abbina: string | null;
+  /** Le due letture della foto divergono su questa riga: l'app la mette «da controllare». */
+  dubbia: boolean;
 }
 export interface LetturaValutata {
   negozio: string | null;
@@ -79,11 +83,19 @@ export interface LetturaValutata {
   quadra: boolean;
   corretti: number;
   righe: RigaLettaValutata[];
+  /** Campi su cui le due letture divergono: l'app li mette in evidenza. */
+  campiDubbi: { data: boolean; ora: boolean; totale: boolean };
+  /** Quante righe la seconda lettura ha e la prima no: l'app avvisa che qualcuna può essere stata persa. */
+  mancantiSegnalate: number;
 }
 
-/** Dal testo letto a ciò che l'app propone (stesse funzioni della schermata «Scontrino»). */
-export function leggiPerValutare(testo: string, indice: Indice, carrello: RigaDaAbbinare[] = []): LetturaValutata {
+/**
+ * Dal testo letto a ciò che l'app propone (stesse funzioni della schermata «Scontrino»). `controllo` è la seconda lettura
+ * indipendente della stessa foto (`leggiTestoDaFoto`): senza, nessuna riga è segnalata come dubbia.
+ */
+export function leggiPerValutare(testo: string, indice: Indice, carrello: RigaDaAbbinare[] = [], controllo: string | null = null): LetturaValutata {
   const s = leggiScontrino(testo);
+  const c = confrontaLetture(s, controllo ? leggiScontrino(controllo) : null);
   const abbinate = carrello.length ? abbinaRighe(s.righe, carrello, indice) : s.righe.map(() => null);
   return {
     negozio: s.negozio,
@@ -92,6 +104,8 @@ export function leggiPerValutare(testo: string, indice: Indice, carrello: RigaDa
     totale: s.totale,
     quadra: s.quadra,
     corretti: s.corretti,
+    campiDubbi: c.campi,
+    mancantiSegnalate: c.mancanti.length,
     righe: s.righe.map((r, i) => {
       const ing = suggerisciIngrediente(r.descrizione, indice);
       const q = ing ? quantitaProposta(r, ing) : null;
@@ -105,6 +119,7 @@ export function leggiPerValutare(testo: string, indice: Indice, carrello: RigaDa
         ingrediente: ing?.id ?? null,
         carico: q,
         abbina: abbinate[i] ?? null,
+        dubbia: !c.righe[i].concorde,
       };
     }),
   };
@@ -112,69 +127,8 @@ export function leggiPerValutare(testo: string, indice: Indice, carrello: RigaDa
 
 // ───────────────────────── Confronto ─────────────────────────
 
-/** Il nome senza maiuscole, accenti, spazi e punteggiatura: gli spazi persi dalla lettura non sono il problema qui. */
-const compatto = (s: string) =>
-  s
-    .toUpperCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/[^A-Z0-9]/g, '');
-
-function distanza(a: string, b: string): number {
-  let prec = Array.from({ length: b.length + 1 }, (_, k) => k);
-  for (let x = 1; x <= a.length; x++) {
-    const riga = [x];
-    for (let y = 1; y <= b.length; y++) riga[y] = Math.min(prec[y] + 1, riga[y - 1] + 1, prec[y - 1] + (a[x - 1] === b[y - 1] ? 0 : 1));
-    prec = riga;
-  }
-  return prec[b.length];
-}
-
-/** Quanto due nomi si somigliano, da 0 a 1. */
-export function somiglianza(a: string, b: string): number {
-  const [x, y] = [compatto(a), compatto(b)];
-  if (!x && !y) return 1;
-  return 1 - distanza(x, y) / Math.max(x.length, y.length);
-}
-
-/** Da questa somiglianza in su il nome si considera letto bene (una lettera ogni sette). */
-export const SOGLIA_NOME = 0.85;
-const stessoPrezzo = (a: number, b: number) => Math.abs(a - b) < 0.005;
+export { allinea, SOGLIA_NOME, somiglianza };
 const stessoCarico = (a: Carico | null | undefined, b: Carico | null | undefined) => (!a || !b ? !a && !b : a.unita === b.unita && Math.abs(a.quantita - b.quantita) < 0.001);
-
-/**
- * Abbina le righe vere a quelle lette, nell'ordine dello scontrino: una riga letta è «la stessa» se il nome si
- * somiglia, oppure se il prezzo è uguale e il nome non è del tutto diverso (nome rovinato, prezzo giusto).
- * Massimizza la somiglianza totale; le righe senza coppia sono mancanti (vere) o in più (lette).
- */
-export function allinea(vere: RigaVera[], lette: RigaLettaValutata[]): (number | null)[] {
-  const punti = (t: RigaVera, r: RigaLettaValutata) => {
-    const nome = somiglianza(t.descrizione, r.descrizione);
-    const p = stessoPrezzo(t.prezzo, r.prezzo);
-    const s = nome * 0.7 + (p ? 0.3 : 0);
-    return nome >= 0.5 || (p && nome >= 0.25) ? s : -Infinity;
-  };
-  const n = vere.length;
-  const m = lette.length;
-  const tab = Array.from({ length: n + 1 }, () => new Float64Array(m + 1));
-  for (let i = n - 1; i >= 0; i--) {
-    for (let j = m - 1; j >= 0; j--) {
-      const coppia = punti(vere[i], lette[j]);
-      tab[i][j] = Math.max(tab[i + 1][j], tab[i][j + 1], coppia === -Infinity ? -Infinity : coppia + tab[i + 1][j + 1]);
-    }
-  }
-  const out: (number | null)[] = vere.map(() => null);
-  for (let i = 0, j = 0; i < n && j < m; ) {
-    const coppia = punti(vere[i], lette[j]);
-    if (coppia !== -Infinity && Math.abs(tab[i][j] - (coppia + tab[i + 1][j + 1])) < 1e-9) {
-      out[i] = j;
-      i++;
-      j++;
-    } else if (tab[i][j] === tab[i + 1][j]) i++;
-    else j++;
-  }
-  return out;
-}
 
 export interface Conta {
   misurate: number;
@@ -196,15 +150,28 @@ export interface Valutazione {
     vere: number;
     lette: number;
     ok: number;
-    /** Prezzo sbagliato senza nessun segnale (la riga non è «senza prezzo» né «corretta»). */
+    /** Prezzo sbagliato senza nessun segnale (la riga non è «senza prezzo», «corretta» né «dubbia»). */
     prezzoSilenzioso: number;
-    /** Prezzo sbagliato ma segnalato (senza prezzo, o corretto dal conto). */
+    /** Prezzo sbagliato ma segnalato (senza prezzo, corretto dal conto, o le due letture divergono). */
     prezzoSegnalato: number;
     /** Prezzo giusto, nome letto male. */
     nome: number;
     mancanti: number;
     inPiu: number;
+    /** Righe con nome o prezzo sbagliato che l'app NON segnala: arrivano all'import senza che nessuno le guardi. */
+    sbagliateSilenziose: number;
+    sbagliateSegnalate: number;
+    /** Righe giuste segnalate lo stesso (falsi allarmi: costano un controllo inutile). */
+    giusteSegnalate: number;
+    /** Righe perse che l'app non ha segnalato (la seconda lettura non ne ha trovate abbastanza in più). */
+    perseSilenziose: number;
+    /** Righe in più non segnalate. */
+    inPiuSilenziose: number;
   };
+  /** Data, ora o totale sbagliati che l'app non mette in evidenza. */
+  campiSilenziosi: number;
+  /** Ogni errore della lettura è visibile a chi controlla: nessuna riga, campo o riga persa sbagliati in silenzio. */
+  affidabile: boolean;
   pezzi: Conta;
   formato: Conta;
   ingrediente: Conta;
@@ -229,10 +196,12 @@ export function valuta(verita: Verita, letta: LetturaValutata): Valutazione {
   const v: Valutazione = {
     perfetta: false,
     sicura: false,
+    affidabile: false,
+    campiSilenziosi: 0,
     campi: { data: null, ora: null, totale: null, negozio: null },
     quadra: letta.quadra,
     falsoQuadra: false,
-    righe: { vere: verita.righe.length, lette: letta.righe.length, ok: 0, prezzoSilenzioso: 0, prezzoSegnalato: 0, nome: 0, mancanti: 0, inPiu: 0 },
+    righe: { vere: verita.righe.length, lette: letta.righe.length, ok: 0, prezzoSilenzioso: 0, prezzoSegnalato: 0, nome: 0, mancanti: 0, inPiu: 0, sbagliateSilenziose: 0, sbagliateSegnalate: 0, giusteSegnalate: 0, perseSilenziose: 0, inPiuSilenziose: 0 },
     pezzi: conta(),
     formato: conta(),
     ingrediente: conta(),
@@ -259,14 +228,20 @@ export function valuta(verita: Verita, letta: LetturaValutata): Valutazione {
     const r = letta.righe[k];
     const nomeOk = somiglianza(t.descrizione, r.descrizione) >= SOGLIA_NOME;
     const prezzoOk = stessoPrezzo(t.prezzo, r.prezzo);
-    if (nomeOk && prezzoOk) v.righe.ok++;
-    else {
+    const segnalata = r.senzaPrezzo || r.corretta || r.dubbia;
+    if (nomeOk && prezzoOk) {
+      v.righe.ok++;
+      if (segnalata) v.righe.giusteSegnalate++;
+    } else {
+      if (segnalata) v.righe.sbagliateSegnalate++;
+      else v.righe.sbagliateSilenziose++;
       if (!prezzoOk) {
-        if (r.senzaPrezzo || r.corretta) v.righe.prezzoSegnalato++;
+        if (segnalata) v.righe.prezzoSegnalato++;
         else v.righe.prezzoSilenzioso++;
       } else v.righe.nome++;
-      const cosa = [!prezzoOk ? `prezzo ${euro(r.prezzo)} invece di ${euro(t.prezzo)}${r.senzaPrezzo ? ' (segnalato: senza prezzo)' : r.corretta ? ' (segnalato: corretto)' : ''}` : '', !nomeOk ? `nome «${r.descrizione}»` : ''].filter(Boolean);
-      errori.push(`riga ${i + 1} «${t.descrizione}»: ${cosa.join(', ')}`);
+      const segnale = r.senzaPrezzo ? ' (segnalato: senza prezzo)' : r.corretta ? ' (segnalato: corretto)' : r.dubbia ? ' (segnalato: letture diverse)' : '';
+      const cosa = [!prezzoOk ? `prezzo ${euro(r.prezzo)} invece di ${euro(t.prezzo)}` : '', !nomeOk ? `nome «${r.descrizione}»` : ''].filter(Boolean);
+      errori.push(`riga ${i + 1} «${t.descrizione}»: ${cosa.join(', ')}${segnale}`);
     }
     if (t.pezzi !== undefined) {
       v.pezzi.misurate++;
@@ -305,6 +280,7 @@ export function valuta(verita: Verita, letta: LetturaValutata): Valutazione {
   for (const [j, r] of letta.righe.entries()) {
     if (usate.has(j)) continue;
     v.righe.inPiu++;
+    if (!(r.senzaPrezzo || r.corretta || r.dubbia)) v.righe.inPiuSilenziose++;
     errori.push(`riga in più «${r.descrizione}» ${euro(r.prezzo)}`);
     // Una riga in più con un ingrediente suggerito va in casa (anche senza quantità: «da completare»).
     if (r.ingrediente) v.giacenza.inPiu++;
@@ -313,21 +289,33 @@ export function valuta(verita: Verita, letta: LetturaValutata): Valutazione {
 
   if (verita.data) {
     v.campi.data = letta.data === verita.data;
-    if (!v.campi.data) errori.push(`data ${letta.data ?? 'non letta'} invece di ${verita.data}`);
+    if (!v.campi.data) {
+      errori.push(`data ${letta.data ?? 'non letta'} invece di ${verita.data}${letta.campiDubbi.data ? ' (segnalato: letture diverse)' : ''}`);
+      if (!letta.campiDubbi.data) v.campiSilenziosi++;
+    }
   }
   if (verita.totale !== undefined) {
     v.campi.totale = letta.totale !== null && stessoPrezzo(letta.totale, verita.totale);
-    if (!v.campi.totale) errori.push(`totale ${letta.totale === null ? 'non letto' : euro(letta.totale)} invece di ${euro(verita.totale)}`);
+    if (!v.campi.totale) {
+      errori.push(`totale ${letta.totale === null ? 'non letto' : euro(letta.totale)} invece di ${euro(verita.totale)}${letta.campiDubbi.totale ? ' (segnalato: letture diverse)' : ''}`);
+      if (!letta.campiDubbi.totale) v.campiSilenziosi++;
+    }
   }
   if (verita.ora) {
     v.campi.ora = letta.ora === verita.ora;
-    if (!v.campi.ora) errori.push(`ora ${letta.ora ?? 'non letta'} invece di ${verita.ora}`);
+    if (!v.campi.ora) {
+      errori.push(`ora ${letta.ora ?? 'non letta'} invece di ${verita.ora}${letta.campiDubbi.ora ? ' (segnalato: letture diverse)' : ''}`);
+      if (!letta.campiDubbi.ora) v.campiSilenziosi++;
+    }
   }
   if (verita.negozio) {
     v.campi.negozio = letta.negozio !== null && somiglianza(verita.negozio, letta.negozio) >= 0.8;
     if (!v.campi.negozio) errori.push(`negozio «${letta.negozio ?? 'non letto'}» invece di «${verita.negozio}»`);
   }
 
+  // Una riga persa è «segnalata» se la seconda lettura ne ha trovate in più almeno quante ne mancano.
+  v.righe.perseSilenziose = Math.max(0, v.righe.mancanti - letta.mancantiSegnalate);
+  v.affidabile = v.righe.sbagliateSilenziose === 0 && v.righe.perseSilenziose === 0 && v.righe.inPiuSilenziose === 0 && v.campiSilenziosi === 0;
   v.perfetta = v.righe.ok === v.righe.vere && v.righe.inPiu === 0 && v.campi.data !== false && v.campi.totale !== false && v.campi.ora !== false;
   v.falsoQuadra = letta.quadra && (v.righe.ok < v.righe.vere || v.righe.inPiu > 0);
   v.sicura = v.giacenza.sbagliata === 0 && v.giacenza.inPiu === 0 && v.abbinamenti.sbagliati === 0;
@@ -404,6 +392,11 @@ export function riassumi(esiti: Esito[]): Sintesi {
     giacenzaInPiu: conteggio('Righe in più che entrerebbero in casa', somma(V, (x) => x.giacenza.inPiu)),
     giacenzaPersa: conteggio('Righe di casa perse', somma(V, (x) => x.giacenza.persa)),
     abbinamentiSbagliati: conteggio('Abbinamenti alle spunte sbagliati', somma(V, (x) => x.abbinamenti.sbagliati)),
+    affidabili: percentuale('Letture affidabili (ogni errore è segnalato)', V.filter((x) => x.affidabile).length, n),
+    sbagliateSilenziose: conteggio('Righe sbagliate non segnalate', somma(V, (x) => x.righe.sbagliateSilenziose)),
+    perseSilenziose: conteggio('Righe perse non segnalate', somma(V, (x) => x.righe.perseSilenziose)),
+    campiSilenziosi: conteggio('Data, ora o totale sbagliati non segnalati', somma(V, (x) => x.campiSilenziosi)),
+    giusteSegnalate: conteggio('Righe giuste segnalate per prudenza (falsi allarmi)', somma(V, (x) => x.righe.giusteSegnalate)),
     lettureFallite: conteggio('Letture fallite (errore al posto del testo)', esiti.filter((e) => e.fallita).length),
   };
 }
@@ -417,7 +410,7 @@ export interface Rapporto {
   creato: string;
   ambiente?: Record<string, string>;
   sintesi: Sintesi;
-  casi: { caso: string; lettura: string; perfetta: boolean; sicura: boolean; fallita?: boolean; righeOk: number; righeVere: number; errori: string[] }[];
+  casi: { caso: string; lettura: string; perfetta: boolean; sicura: boolean; affidabile?: boolean; fallita?: boolean; righeOk: number; righeVere: number; errori: string[] }[];
 }
 
 export function creaRapporto(livello: Rapporto['livello'], etichetta: string, esiti: Esito[], ambiente?: Record<string, string>): Rapporto {
@@ -428,7 +421,7 @@ export function creaRapporto(livello: Rapporto['livello'], etichetta: string, es
     creato: new Date().toISOString(),
     ...(ambiente ? { ambiente } : {}),
     sintesi: riassumi(esiti),
-    casi: esiti.map((e) => ({ caso: e.caso, lettura: e.lettura, perfetta: e.valutazione.perfetta, sicura: e.valutazione.sicura, ...(e.fallita ? { fallita: true } : {}), righeOk: e.valutazione.righe.ok, righeVere: e.valutazione.righe.vere, errori: e.valutazione.errori })),
+    casi: esiti.map((e) => ({ caso: e.caso, lettura: e.lettura, perfetta: e.valutazione.perfetta, sicura: e.valutazione.sicura, affidabile: e.valutazione.affidabile, ...(e.fallita ? { fallita: true } : {}), righeOk: e.valutazione.righe.ok, righeVere: e.valutazione.righe.vere, errori: e.valutazione.errori })),
   };
 }
 

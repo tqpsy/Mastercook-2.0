@@ -9,6 +9,7 @@ import { eFresco, giorniTra, type Luogo, oggi, stima } from '../dominio/scadenze
 import { abbinaRighe, leggiScontrino, quantitaProposta, type RigaDaAbbinare, type RigaLetta, suggerisciIngrediente, unisciDescrizioni, unisciRipetute } from '../dominio/scontrini';
 import { formattaEuro, formattaGiorno, leggiNumero, type Unita, UNITA_BASE } from '../dominio/unita';
 import { confezioneDa } from '../dominio/confezioni';
+import { confrontaLetture, type ControlloLettura } from '../dominio/doppiaLettura';
 import { CampoQuantita } from '../ui/CampoQuantita';
 import { CercaIngrediente } from '../ui/CercaIngrediente';
 import { Foglio } from '../ui/Foglio';
@@ -34,6 +35,9 @@ interface RigaInRevisione {
   cerca: boolean;
   /** Scelta dall'app e non toccata: se cambia la data si riabbina con la spesa di quel giorno. */
   auto?: boolean;
+  /** Perché la riga è «da controllare»: le due letture della foto non coincidono, o il prezzo è stato ricavato dal conto. Va confermata prima di importare. */
+  dubbia?: string;
+  controllata?: boolean;
 }
 
 /** «pane», «pane e latte», «pane, latte e uova». */
@@ -78,6 +82,12 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
   const [leggiQr, setLeggiQr] = useState(false);
   const [righe, setRighe] = useState<RigaInRevisione[]>([]);
   const [errore, setErrore] = useState<string | null>(null);
+  /** Il confronto tra le due letture della foto (righe, campi e righe forse perse), o `null` se il testo è incollato. */
+  const [controllo, setControllo] = useState<ControlloLettura | null>(null);
+  const [daFoto, setDaFoto] = useState(false);
+  /** La data è incerta (non letta, o le due letture non concordano): va confermata prima di importare. */
+  const [dataIncerta, setDataIncerta] = useState<string | null>(null);
+  const [dataConfermata, setDataConfermata] = useState(false);
   /** Le righe che vanno in casa senza quantità: si possono scrivere ora o saltare e completarle dopo in Casa. */
   const [senzaQuantita, setSenzaQuantita] = useState<string[] | null>(null);
   const daAbbinare = useDaAbbinare(indice);
@@ -90,9 +100,9 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
     setErrore(null);
     setLettura(0);
     try {
-      const letto = await leggiTestoDaFoto(file, setLettura);
+      const { testo: letto, controllo: secondo } = await leggiTestoDaFoto(file, setLettura);
       setTesto(letto);
-      leggi(letto);
+      leggi(letto, secondo, true);
     } catch {
       setErrore('Non sono riuscito a leggere la foto (serve la rete la prima volta). Riprova o incolla il testo.');
     } finally {
@@ -100,7 +110,7 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
     }
   }
 
-  function leggi(t = testo) {
+  function leggi(t = testo, secondo: string | null = null, fotografata = false) {
     const s = leggiScontrino(t);
     if (!s.righe.length) return setErrore('Non ho trovato righe con un prezzo. Controlla il testo o rifai la foto, dritta e con buona luce.');
     setErrore(null);
@@ -110,12 +120,19 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
     setOra(s.ora ?? '');
     setTotale(testoEuro(s.totale));
     setCorretti(s.corretti);
-    setRighe(unisciRipetute(proposte(s.righe.map((r) => ({ id: crypto.randomUUID(), riga: r })), giorno)));
+    // Una foto si legge due volte: dove le due letture non coincidono una delle due sbaglia, e una persona guarda la riga.
+    const c = confrontaLetture(s, secondo ? leggiScontrino(secondo) : null);
+    setControllo(c);
+    setDaFoto(fotografata);
+    setDataIncerta(fotografata ? (s.data === null ? 'Non ho letto la data: ho messo oggi.' : c.campi.data ? 'Le due letture della foto non coincidono sulla data.' : null) : null);
+    setDataConfermata(false);
+    const dubbia = (r: RigaLetta, i: number) => (r.corretta ? 'il prezzo è ricavato dal totale, non letto' : c.disponibile && !c.righe[i].concorde ? 'le due letture della foto non coincidono' : undefined);
+    setRighe(unisciRipetute(proposte(s.righe.map((r, i) => ({ id: crypto.randomUUID(), riga: r, dubbia: dubbia(r, i) })), giorno)));
     setRevisione(true);
   }
 
   /** Per ogni riga: il prezzo a una riga già spuntata o confermata (niente doppioni in casa), oppure in casa. */
-  function proposte(lette: { id: string; riga: RigaLetta }[], giorno: string): RigaInRevisione[] {
+  function proposte(lette: { id: string; riga: RigaLetta; dubbia?: string }[], giorno: string): RigaInRevisione[] {
     const abbinate = abbinaRighe(
       lette.map((x) => x.riga),
       daAbbinare(giorno),
@@ -136,6 +153,7 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
         luogo: ing?.luogo ?? 'dispensa',
         cerca: false,
         auto: true,
+        dubbia: lette[i].dubbia,
       };
     });
   }
@@ -160,11 +178,16 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
 
   const cambia = (i: number, x: Partial<RigaInRevisione>) => {
     setSenzaQuantita(null);
-    setRighe(righe.map((r, j) => (j === i ? { ...r, ...x, auto: r.auto && !('azione' in x || 'ing' in x) } : r)));
+    // Chi corregge il nome o il prezzo di una riga segnalata l'ha guardata.
+    setRighe(righe.map((r, j) => (j === i ? { ...r, ...x, auto: r.auto && !('azione' in x || 'ing' in x), ...('euro' in x || 'descrizione' in x ? { controllata: true } : {}) } : r)));
   };
   /** Righe già spuntate o confermate a mano che nessuna riga dello scontrino ha preso. */
   const giaInCasa = candidate.filter((c) => !righe.some((r) => r.azione === `abbina:${c.id}`));
   const nuoveInCasa = righe.filter((r) => r.azione === 'casa');
+  /** Le righe segnalate non ancora controllate, e la data incerta non ancora confermata: finché ci sono, non si importa. */
+  const daControllare = righe.filter((r) => r.dubbia && !r.controllata).length;
+  const bloccato = daControllare > 0 || (dataIncerta !== null && !dataConfermata);
+  const motivoBlocco = [daControllare ? (daControllare === 1 ? 'la riga segnalata' : `le ${daControllare} righe segnalate`) : '', dataIncerta !== null && !dataConfermata ? 'la data' : ''].filter(Boolean).join(' e ');
   const somma = Math.round(righe.filter((r) => r.azione !== 'ignora').reduce((s, r) => s + (leggiNumero(r.euro) ?? 0), 0) * 100) / 100;
   const tot = totale.trim() ? leggiNumero(totale) : null;
   const giaImportato = (vista.righe.scontrino ?? []).find(
@@ -178,6 +201,7 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
 
   async function importa(saltaQuantita = false) {
     setSenzaQuantita(null);
+    if (bloccato) return setErrore(`Prima di importare controlla ${motivoBlocco}.`);
     const mancanti: string[] = [];
     if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return setErrore('Scrivi la data dello scontrino.');
     if (ora && !/^[0-2]\d:[0-5]\d$/.test(ora)) return setErrore('L’ora si scrive come 18:30.');
@@ -304,7 +328,14 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
         </label>
         <label className="campo">
           <span>Data</span>
-          <input type="date" value={data} onChange={(e) => cambiaData(e.target.value)} />
+          <input
+            type="date"
+            value={data}
+            onChange={(e) => {
+              cambiaData(e.target.value);
+              setDataConfermata(!!e.target.value);
+            }}
+          />
         </label>
         <label className="campo">
           <span>Ora</span>
@@ -326,6 +357,30 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
           {corretti === 1 ? 'Un prezzo era letto male e l’ho corretto' : `${corretti} prezzi erano letti male e li ho corretti`} perché il conto tornasse con il totale. Controlla sullo scontrino.
         </div>
       )}
+      {dataIncerta !== null && (
+        <div className="avviso attenzione">
+          <p style={{ margin: 0 }}>{dataIncerta} Guarda la data sullo scontrino: da lei dipendono le scadenze.</p>
+          {!dataConfermata && (
+            <button className="bottone piccolo" style={{ marginTop: 8 }} onClick={() => setDataConfermata(true)}>
+              La data è giusta
+            </button>
+          )}
+        </div>
+      )}
+      {controllo?.disponibile && (controllo.campi.ora || controllo.campi.totale) && (
+        <div className="avviso attenzione">Le due letture della foto non coincidono su {[controllo.campi.ora ? 'ora' : '', controllo.campi.totale ? 'totale' : ''].filter(Boolean).join(' e ')}: controllali sullo scontrino.</div>
+      )}
+      {controllo?.disponibile && controllo.mancanti.length > 0 && (
+        <div className="avviso attenzione">
+          Rileggendo la foto ho trovato anche {controllo.mancanti.map((m) => `${m.descrizione} (${testoEuro(m.prezzo)} €)`).join(', ')}, che nella prima lettura non ci sono. Se sono sullo scontrino, aggiungile con «+ Riga mancante».
+        </div>
+      )}
+      {daFoto && controllo && !controllo.disponibile && <div className="avviso info">Non sono riuscito a rileggere la foto per controllare la lettura: guarda ogni riga con attenzione.</div>}
+      {daControllare > 0 && (
+        <div className="avviso attenzione" role="status">
+          {daControllare === 1 ? 'Una riga è segnalata' : `${daControllare} righe sono segnalate`} (bordo colorato): nome o prezzo possono essere sbagliati, il motivo è scritto sotto la riga. Guardale sullo scontrino e segna «Controllata», o correggile.
+        </div>
+      )}
       {righe.some((r) => !r.euro.trim()) && (
         <div className="avviso attenzione">
           Di {righe.filter((r) => !r.euro.trim()).length} righe non sono riuscito a leggere il prezzo: scrivilo guardando lo scontrino.
@@ -345,7 +400,7 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
 
       <ul className="elenco" aria-label="Righe dello scontrino">
         {righe.map((r, i) => (
-          <li key={r.id}>
+          <li key={r.id} className={r.dubbia && !r.controllata ? 'dubbia' : undefined}>
             <div className="riga" style={{ flexWrap: 'wrap' }}>
               <input className="dato cresce" aria-label={`Descrizione della riga ${i + 1}`} value={r.descrizione} onChange={(e) => cambia(i, { descrizione: e.target.value })} maxLength={120} />
               <label className="riga">
@@ -353,6 +408,12 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
                 <span>€</span>
               </label>
             </div>
+            {r.dubbia && (
+              <label className="riga dubbia-nota">
+                <input type="checkbox" checked={!!r.controllata} onChange={(e) => cambia(i, { controllata: e.target.checked })} aria-label={`Ho controllato ${r.descrizione}`} />
+                <span>{r.controllata ? 'Controllata' : `Da controllare: ${r.dubbia}.`}</span>
+              </label>
+            )}
             <select className="dato" aria-label={`Cosa fare di ${r.descrizione}`} value={r.azione} onChange={(e) => cambia(i, { azione: e.target.value as Azione })} style={{ marginTop: 6 }}>
               {candidate.map((c) => (
                 <option key={c.id} value={`abbina:${c.id}`}>
@@ -428,9 +489,12 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
           </div>
         </div>
       ) : (
-        <button className="bottone primario pieno" onClick={() => importa()}>
-          Importa lo scontrino
-        </button>
+        <>
+          {bloccato && <p className="tenue">Prima di importare controlla {motivoBlocco}.</p>}
+          <button className="bottone primario pieno" onClick={() => importa()} disabled={bloccato}>
+            Importa lo scontrino
+          </button>
+        </>
       )}
     </Foglio>
   );

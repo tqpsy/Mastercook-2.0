@@ -1,7 +1,8 @@
 /**
  * Carica il corpus degli scontrini (`tests/scontrini/casi/*`) e controlla che i dati di riferimento siano coerenti.
  * Una lettura è un testo, come quello che la schermata «Scontrino» riceve dalla foto. Ogni caso ne ha:
- * - `letture/*.txt`: testi già letti, congelati (da una foto vera o da una prova);
+ * - `letture/*.txt`: testi già letti, congelati (da una foto vera o da una prova); `<nome>-controllo.txt` accanto a
+ *   `<nome>.txt` è la seconda lettura della stessa foto (il controllo), come la dà `leggiTestoDaFoto`;
  * - `letture/*-scatole.json`: i pezzi di testo di PaddleOCR con la loro posizione, ricomposti come fa l'app;
  * - `ideale` (solo scontrini sintetici): il testo che darebbe una lettura perfetta di ciò che è stampato.
  */
@@ -17,6 +18,8 @@ export const CARTELLA = new URL('./', import.meta.url).pathname;
 export interface LetturaCongelata {
   nome: string;
   testo: string;
+  /** La seconda lettura della stessa foto, se c'è (`<nome>-controllo.txt`). */
+  controllo?: string;
 }
 export interface Caso {
   verita: Verita;
@@ -46,7 +49,11 @@ export function caricaCaso(id: string, radice = join(CARTELLA, 'casi')): Caso {
   if (existsSync(dir)) {
     for (const f of readdirSync(dir).sort()) {
       if (f.endsWith('-scatole.json')) letture.push({ nome: f.replace(/-scatole\.json$/, ''), testo: testoDaScatole(JSON.parse(readFileSync(join(dir, f), 'utf8'))) });
-      else if (f.endsWith('.txt')) letture.push({ nome: f.replace(/\.txt$/, ''), testo: readFileSync(join(dir, f), 'utf8') });
+      else if (f.endsWith('.txt') && !f.endsWith('-controllo.txt')) {
+        const nome = f.replace(/\.txt$/, '');
+        const fileControllo = join(dir, `${nome}-controllo.txt`);
+        letture.push({ nome, testo: readFileSync(join(dir, f), 'utf8'), ...(existsSync(fileControllo) ? { controllo: readFileSync(fileControllo, 'utf8') } : {}) });
+      }
     }
   }
   const nomeFoto = readdirSync(cartella).find((f) => /^foto\.(jpe?g|png|webp)$/i.test(f));

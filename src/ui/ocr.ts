@@ -5,6 +5,8 @@
  *
  * Prima si prova con PaddleOCR (paddle.ts), che legge la foto vera molto meglio; se non si carica (niente rete
  * la prima volta, poca memoria) o il conto non torna, si passa a Tesseract. Si tiene sempre la lettura migliore.
+ * PaddleOCR legge la foto due volte (la seconda spostata di qualche punto): la migliore è la lettura, l'altra il
+ * controllo. Dove le due divergono una sbaglia (doppiaLettura.ts), e la schermata «Scontrino» mette la riga «da controllare».
  *
  * Con Tesseract: prima si prepara la foto (ritaglio, misura, ombre tolte, bianco e nero: preparaScontrino.ts), poi si legge
  * riga per riga in una sola colonna: con la lettura automatica delle colonne Tesseract metteva le descrizioni
@@ -21,12 +23,37 @@ import { leggiScontrino } from '../dominio/scontrini';
 import { leggiScatole, liberaPaddle, ruotaFoto } from './paddle';
 import { binarizza, daGrigi, grigi, preparaFoto } from './preparaScontrino';
 
-/** Quanto è buona una lettura: il conto che torna vale più di tutto, poi le righe trovate. */
+/**
+ * Quanto è buona una lettura: il conto che torna da solo vale più di tutto; un conto fatto tornare a forza (prezzi corretti o
+ * ricavati dal totale) vale molto meno, perché prova poco; poi le righe trovate.
+ */
 function punteggio(testo: string): number {
   const s = leggiScontrino(testo);
   const senza = s.righe.filter((r) => r.senzaPrezzo).length;
-  return (s.quadra ? 1000 : 0) + (s.totale !== null ? 100 : 0) + s.righe.length - senza - s.corretti * 0.1;
+  return (s.quadraDaSola ? 1000 : s.quadra ? 300 : 0) + (s.totale !== null ? 100 : 0) + s.righe.length - senza - s.corretti * 0.1;
 }
+
+/** La migliore tra più letture (la prima a parità). */
+function migliore(testi: string[]): string | null {
+  let m: string | null = null;
+  for (const t of testi) if (m === null || punteggio(t) > punteggio(m)) m = t;
+  return m;
+}
+
+/** La foto spostata di qualche punto (bordo bianco): un'altra lettura della stessa foto sbaglia in modo diverso. */
+function spostaTela(tela: HTMLCanvasElement, dx: number, dy: number): HTMLCanvasElement {
+  const out = document.createElement('canvas');
+  out.width = tela.width + dx;
+  out.height = tela.height + dy;
+  const ctx = out.getContext('2d', { willReadFrequently: true })!;
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, out.width, out.height);
+  ctx.drawImage(tela, dx, dy);
+  return out;
+}
+
+/** Di quanti punti si sposta la foto nella seconda lettura (non multipli di 4: la rete guarda la foto a blocchi). */
+const SPOSTAMENTO = { dx: 7, dy: 5 };
 
 /** Ritaglia una fascia verticale (da x0 a x1) della foto preparata. */
 function fascia(tela: HTMLCanvasElement, x0: number, x1: number): HTMLCanvasElement {
@@ -62,10 +89,11 @@ async function leggiAColonne(lettore: Lettore, PSM: typeof import('tesseract.js'
  * torna: se la foto è inclinata si raddrizza e si rilegge; se un prezzo non è stato rilevato si rilegge la sola
  * colonna dei prezzi con soglie più basse.
  */
-export async function leggiConPaddle(foto: Blob, avanzamento: (frazione: number) => void): Promise<string[]> {
+export async function leggiConPaddle(foto: Blob, avanzamento: (frazione: number) => void, opzioni: { sposta?: boolean } = {}): Promise<string[]> {
   let tela = await preparaFoto(foto, true);
   const larghezzaScontrino = tela.width;
-  let lettura = await leggiScatole(tela, (f) => avanzamento(f * 0.5));
+  if (opzioni.sposta) tela = spostaTela(tela, SPOSTAMENTO.dx, SPOSTAMENTO.dy);
+  let lettura = await leggiScatole(tela, (f) => avanzamento(f * 0.5), larghezzaScontrino);
   const testi = (scatole: Scatola[]) => {
     const { pagina, prezzi, nomi } = impagina(scatole, tela.width);
     const abbinata = unisciColonne(pagina, prezziDaColonna(prezzi), nomi);
@@ -88,20 +116,43 @@ export async function leggiConPaddle(foto: Blob, avanzamento: (frazione: number)
   return out;
 }
 
-export async function leggiTestoDaFoto(foto: Blob, avanzamento: (frazione: number) => void): Promise<string> {
-  let migliore = '';
+/** Ciò che dà la lettura di una foto: il testo scelto e, se c'è, un'altra lettura indipendente con cui confrontarlo. */
+export interface LetturaFoto {
+  /** La lettura migliore: il testo che va al parser. */
+  testo: string;
+  /** Un'altra lettura della stessa foto, fatta in modo indipendente (foto spostata, o l'altro lettore): `confrontaLetture` (doppiaLettura.ts) dice su quali righe divergono. `null` se non c'è stata. */
+  controllo: string | null;
+}
+
+/**
+ * Legge la foto due volte con PaddleOCR, la seconda spostata di qualche punto, e tiene la migliore come lettura e l'altra
+ * come controllo: dove divergono, una delle due sbaglia (doppiaLettura.ts). Se il conto non torna si prova anche Tesseract;
+ * se Tesseract non si carica (niente rete) si tiene la lettura di Paddle, non si butta.
+ */
+export async function leggiTestoDaFoto(foto: Blob, avanzamento: (frazione: number) => void): Promise<LetturaFoto> {
+  let a: string | null = null;
+  let b: string | null = null;
   try {
-    for (const testo of await leggiConPaddle(foto, (f) => avanzamento(f * 0.8))) {
-      if (!migliore || punteggio(testo) > punteggio(migliore)) migliore = testo;
-    }
-    if (migliore && leggiScontrino(migliore).quadra) return migliore;
+    a = migliore(await leggiConPaddle(foto, (f) => avanzamento(f * 0.4)));
+    // La seconda lettura è un controllo: se fallisce (poca memoria) si va avanti con la prima.
+    b = a === null ? null : await leggiConPaddle(foto, (f) => avanzamento(0.4 + f * 0.4), { sposta: true }).then(migliore, () => null);
   } catch {
     // Modelli non scaricabili o memoria finita: si legge con Tesseract.
   } finally {
     await liberaPaddle().catch(() => undefined);
   }
-  const tesseract = await leggiConTesseract(foto, (f) => avanzamento(migliore ? 0.8 + f * 0.2 : f));
-  return !migliore || punteggio(tesseract) > punteggio(migliore) ? tesseract : migliore;
+  // A parità la prima (foto com'è); la seconda solo se è migliore.
+  const [scelta, altra] = a !== null && b !== null && punteggio(b) > punteggio(a) ? [b, a] : [a, b];
+  if (scelta !== null && leggiScontrino(scelta).quadra) return { testo: scelta, controllo: altra };
+  let tesseract: string | null = null;
+  try {
+    tesseract = await leggiConTesseract(foto, (f) => avanzamento(scelta !== null ? 0.8 + f * 0.2 : f));
+  } catch (e) {
+    if (scelta === null) throw e;
+    // Tesseract non c'è (niente rete): la lettura di Paddle resta, con il suo controllo.
+  }
+  if (tesseract !== null && (scelta === null || punteggio(tesseract) > punteggio(scelta))) return { testo: tesseract, controllo: scelta };
+  return { testo: scelta!, controllo: altra ?? tesseract };
 }
 
 async function leggiConTesseract(foto: Blob, avanzamento: (frazione: number) => void): Promise<string> {

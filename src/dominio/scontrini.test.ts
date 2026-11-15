@@ -79,7 +79,7 @@ describe('lettura dello scontrino', () => {
   it('un solo prezzo illeggibile vale quanto manca al totale; se il pagamento smentisce il totale non si corregge niente', () => {
     const t = leggiScontrino('DESCRIZIONE\nPANE   1,50 A\nLATTE   ip: |\nTOTALE 2,89\nCARTA   2,89');
     expect(t.righe[1]).toMatchObject({ descrizione: 'LATTE', prezzo: 1.39, corretta: true });
-    expect(t).toMatchObject({ quadra: true, corretti: 1 });
+    expect(t).toMatchObject({ quadra: true, corretti: 1, quadraDaSola: false });
     // Il totale letto 5,00 ma il pagamento dice 2,89: è il totale a essere sbagliato, i prezzi restano.
     const u = leggiScontrino('DESCRIZIONE\nPANE   1,50 A\nLATTE   1,39 A\nTOTALE 5,00\nCARTA   2,89');
     expect(u.righe.map((r) => r.prezzo)).toEqual([1.5, 1.39]);
@@ -102,7 +102,7 @@ describe('lettura dello scontrino', () => {
   });
 
   it('un testo senza scontrino non inventa nulla', () => {
-    expect(leggiScontrino('ciao a tutti')).toEqual({ negozio: 'Ciao A Tutti', data: null, ora: null, totale: null, righe: [], corretti: 0, quadra: false });
+    expect(leggiScontrino('ciao a tutti')).toEqual({ negozio: 'Ciao A Tutti', data: null, ora: null, totale: null, righe: [], corretti: 0, quadra: false, quadraDaSola: false });
     expect(leggiScontrino('').righe).toEqual([]);
     // Il totale che non torna si segnala.
     expect(leggiScontrino('PANE 1,50\nTOTALE 3,00').quadra).toBe(false);
@@ -209,6 +209,18 @@ describe('ingredienti e abbinamenti', () => {
     expect(s.righe.map((r) => r.descrizione)).toEqual(['PANE GRATTUG.BARAT.I', 'BOCCONCINO IPER', 'SFIZIOSO OLIVE', 'PETTO POLLO FETTE', 'PETTO POLLO FETTE', 'SHOPPER 30X55 INATEC']);
     // Il bocconcino (mozzarella) va sulla mozzarella di bufala spuntata; le due confezioni di pollo sulla stessa riga.
     expect(abbinaRighe(s.righe, carrello, indice)).toEqual(['r-pane', 'r-mozz', 'r-olive', 'r-pollo', 'r-pollo', null]);
+  });
+
+  it('unendo righe ripetute, la riga unita resta «da controllare» se lo era una delle due', () => {
+    const riga = (id: string, dubbia?: string): RigaRipetibile => ({ id, descrizione: 'LATTE', euro: '1,29', azione: 'casa', ing: { id: 'ing:latte' }, numero: '1', unita: 'l', luogo: 'frigo', ...(dubbia ? { dubbia } : {}) });
+    expect(unisciRipetute([riga('a'), riga('b', 'le due letture non coincidono')])[0].dubbia).toBe('le due letture non coincidono');
+    expect(unisciRipetute([riga('a'), riga('b')])[0].dubbia).toBeUndefined();
+  });
+
+  it('conto tornato da solo o a forza: quadraDaSola dice la differenza', () => {
+    expect(leggiScontrino('DESCRIZIONE\nPANE   1,50 A\nLATTE   1,39 A\nTOTALE 2,89')).toMatchObject({ quadra: true, quadraDaSola: true });
+    expect(leggiScontrino('DESCRIZIONE\nPANE   1,50 A\nLATTE   ip: |\nTOTALE 2,89')).toMatchObject({ quadra: true, quadraDaSola: false });
+    expect(leggiScontrino('DESCRIZIONE\nPANE   1,50 A\nLATTE   1,39 A\nTOTALE 9,99')).toMatchObject({ quadra: false, quadraDaSola: false });
   });
 
   it('la stessa riga ripetuta si unisce in una', () => {
