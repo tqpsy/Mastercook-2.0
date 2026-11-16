@@ -66,6 +66,8 @@ export const DA_SALTARE =
   /\b(IVA|CONTANTE|CONTANTI|RESTO|PAGAMENTO|PAGATO|BANCOMAT|ELETTRONICO|RESO|ARROTONDAMENTO|IMPORTO|NUMERO|DOCUMENTO|SCONTRINO|BUONO|BUONI|PUNTI|SALDO|CASSA|CASSIERE|OPERATORE|TEL|TESSERA|ARTICOLI|VISA|MASTERCARD|MAESTRO|P\.?\s?IVA|C\.?F\.?|VALIDA|VALIDO|VALIDE|CAMSCANNER|SCANSIONATO)\b|CARTA (DI )?(CREDITO|DEBITO)/;
 export const SCONTO = /\b(SCONTO|SC\.|SCONT|PROMO|OFFERTA|RIBASSO|RIDUZIONE|STORNO|COUPON)\b|TOO\s?GOO?D|TO\s?GO\b/;
 const SCONTO_IN_TESTA = /^[^A-Z0-9]*(?:\d{1,3}\s?%\s*)?(?:SCONTO|SC\.|SCONT|PROMO|OFFERTA|RIBASSO|RIDUZIONE|STORNO|COUPON)\b|TOO\s?GOO?D|TO\s?GO\b/;
+/** Righe senza prezzo che non sono un prodotto, lette senza spazi e con gli zeri come O. */
+const NON_PRODOTTO = /VALID[AEIO]|SCADEN|TESSERA|SALDOPUNTI|PUNTIFEDELT|CAMSCANNER|SCANSIONATO|TOOGOOD|TOGO/;
 export const INTESTAZIONE_RIGHE = /\bDESCRIZIONE\b|\bPREZZO\s*\(?€?\)?\s*$/;
 
 /** Quante lettere diverse (sostituite, in più o in meno) ci sono tra due parole. */
@@ -142,7 +144,11 @@ function misura(valore: string, unita: string, confezioni = 1): RigaLetta['forma
 
 const UNITA = 'KG|GR|G|LT|L|ML|CL';
 /** La lettura scrive la O al posto dello zero nei numeri di un formato («5OOG», «BAULETTO4OOG»). */
-const conZeri = (d: string) => d.replace(new RegExp(`(\\d[\\dO]{0,3})(?=\\s?(?:${UNITA})\\b)`, 'g'), (x) => x.replace(/O/g, '0'));
+const conZeri = (d: string) =>
+  d
+    .replace(new RegExp(`(\\d[\\dO]{0,3})(?=\\s?(?:${UNITA})\\b)`, 'g'), (x) => x.replace(/O/g, '0'))
+    // Con l'unità prima del numero («G 2OO», «G4CO»): la O e la C dentro un numero sono zeri.
+    .replace(new RegExp(`(?<=\\b(?:${UNITA})\\.?\\s?)(\\d[\\dOC]{1,3})\\b`, 'g'), (x) => x.replace(/[OC]/g, '0'));
 
 /**
  * Il formato della confezione scritto nella descrizione, in unità base: «500G», «1,5L», «2X125G», «250GX2» (due da 250 g),
@@ -154,8 +160,9 @@ export function formatoDaDescrizione(descrizione: string): RigaLetta['formato'] 
   if (dopo) return misura(dopo[1], dopo[2], Number(dopo[3]));
   const m = d.match(new RegExp(`(?:(\\d{1,2})\\s*X\\s*)?(\\d{1,4}(?:[.,]\\d{1,3})?)\\s*(${UNITA})\\b`));
   if (m) return misura(m[2], m[3], m[1] ? Number(m[1]) : 1);
-  const prima = d.match(new RegExp(`\\b(${UNITA})\\.?\\s?(\\d{1,4}(?:[.,]\\d{1,3})?)\\b(?!\\s?[A-Z%])`));
-  const daUnita = prima ? misura(prima[2], prima[1]) : undefined;
+  // «LT.1» anche attaccato al nome («GRANAROLOLT.1»): con il punto l'unità non è parte di una parola.
+  const prima = d.match(new RegExp(`(?:\\b(${UNITA})\\.?\\s?|(LT|GR|KG|ML|CL)\\.\\s?)(\\d{1,4}(?:[.,]\\d{1,3})?)\\b(?!\\s?[A-Z%])`));
+  const daUnita = prima ? misura(prima[3], prima[1] ?? prima[2]) : undefined;
   if (daUnita) return daUnita;
   // «UOVA X6», «6 PZ»: una confezione di pezzi.
   const pz = d.match(/(?:\bX\s?(\d{1,2})\b|\b(\d{1,2})\s?PZ\b)/);
@@ -329,8 +336,9 @@ export function leggiScontrino(testo: string): ScontrinoLetto {
       continue;
     }
     if (!importo) {
-      // Una descrizione senza prezzo: il prezzo è sulla linea sotto (peso o solo importo).
-      if (!peso && (linea.match(/[A-Z]/g) ?? []).length >= 3) {
+      // Una descrizione senza prezzo: il prezzo è sulla linea sotto (peso o solo importo). Non lo è una riga di validità,
+      // di tessera o di punti, anche con gli spazi persi e gli zeri letti O («SALD0PUNTI1250»).
+      if (!peso && (linea.match(/[A-Z]/g) ?? []).length >= 3 && !NON_PRODOTTO.test(linea.replace(/[^A-Z0-9]/g, '').replace(/0/g, 'O'))) {
         chiudiSospesa();
         descrizioneSospesa = linea;
       }
@@ -436,7 +444,8 @@ export function suggerisciIngrediente(descrizione: string, indice: Indice): Ingr
   const tentativi = [p.join(' '), ...p.slice(0, -1).map((x, i) => `${x} ${p[i + 1]}`), ...p, ...p.filter((x) => x.length >= 5).map((x) => x.slice(0, -1))];
   // Quante parole della descrizione ha il nome (o sinonimo) che ne ha di più: «macinato tacchino pollo»
   // è il macinato di pollo o tacchino, non la carne macinata, anche se «macinato» da solo è quella.
-  const comuni = (i: Ingrediente) => Math.max(...[i.nome, ...i.sinonimi].map((n) => normalizza(n).split(' ')).map((w) => p.filter((x) => w.includes(x)).length));
+  // A parità di parole in comune vince il nome con meno parole in più: «petto di pollo» è il petto di pollo, non «petto di pollo arrosto».
+  const comuni = (i: Ingrediente) => Math.max(...[i.nome, ...i.sinonimi].map((n) => normalizza(n).split(' ')).map((w) => { const c = p.filter((x) => w.includes(x)).length; return c * 100 - (w.length - c); }));
   for (const t of tentativi) {
     if (!t) continue;
     // Solo se una parola del nome inizia con il testo cercato: «latte» sì, «atte» no.

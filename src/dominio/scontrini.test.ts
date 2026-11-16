@@ -287,6 +287,24 @@ describe('ingredienti e abbinamenti', () => {
     expect(t('5 X 0,10   0,76')?.pezzi).toBeUndefined();
   });
 
+  it('formato con spazi persi e cifre confuse dalla lettura', () => {
+    expect(formatoDaDescrizione('LATTEA.Q.GRANAROLOLT.1')).toEqual({ quantita: 1000, unita: 'ml' });
+    expect(formatoDaDescrizione('POMODORINI FF G4CO')).toEqual({ quantita: 400, unita: 'g' });
+    expect(formatoDaDescrizione('AVOCADO HASS G 2OO')).toEqual({ quantita: 200, unita: 'g' });
+    expect(formatoDaDescrizione('GRANMIX FERRARI GR 1OO')).toEqual({ quantita: 100, unita: 'g' });
+  });
+
+  it('petto di pollo è il petto di pollo, non il tacchino affettato', () => {
+    expect(suggerisciIngrediente('PETTO DI POLLO 500G', indice)?.id).toBe('ing:petto_pollo');
+    expect(suggerisciIngrediente('PETTO POLLO FETTE', indice)?.id).toBe('ing:petto_pollo');
+  });
+
+  it('righe senza prezzo di validità, tessera o punti non diventano prodotti, nemmeno con gli spazi persi', () => {
+    const t = leggiScontrino(['DESCRIZIONE PREZZO IVA', 'OFFERTAVALIDADAL01/11/2026AL30/11/2026', 'TESSERAVALIDAFIN0AL31/12/2027', 'LATTE   1,29 C', 'SALD0PUNTI1250', 'TOTALE COMPLESSIVO 1,29'].join('\n'));
+    expect(t.righe.map((r) => r.descrizione)).toEqual(['LATTE']);
+    expect(t.quadra).toBe(true);
+  });
+
   it('un «G 2» o un numero senza unità non è un formato', () => {
     expect(formatoDaDescrizione('POM.DATTERINO GIALLO G 2')).toBeUndefined();
     expect(formatoDaDescrizione('SPLEG PANCETTA CUB.')).toBeUndefined();

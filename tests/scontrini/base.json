@@ -2,11 +2,11 @@
  "versione": 1,
  "livello": "testo",
  "etichetta": "base",
- "creato": "2026-11-16T00:15:17.781Z",
+ "creato": "2026-11-16T00:17:31.260Z",
  "sintesi": {
   "perfette": {
    "etichetta": "Letture perfette (al primo tentativo)",
-   "valore": 105,
+   "valore": 107,
    "su": 131,
    "verso": "piu"
   },
@@ -48,19 +48,19 @@
   },
   "formato": {
    "etichetta": "Formato letto (peso o volume)",
-   "valore": 552,
+   "valore": 618,
    "su": 640,
    "verso": "piu"
   },
   "ingrediente": {
    "etichetta": "Ingrediente giusto",
-   "valore": 856,
+   "valore": 885,
    "su": 980,
    "verso": "piu"
   },
   "giacenzaOk": {
    "etichetta": "Quantità in casa giusta",
-   "valore": 499,
+   "valore": 543,
    "su": 647,
    "verso": "piu"
   },
@@ -88,7 +88,7 @@
   },
   "righeInPiu": {
    "etichetta": "Righe in più",
-   "valore": 55,
+   "valore": 37,
    "verso": "meno"
   },
   "nomiSbagliati": {
@@ -98,7 +98,7 @@
   },
   "falsiQuadra": {
    "etichetta": "«Il conto torna» ma la lettura è sbagliata (su 102 che tornano)",
-   "valore": 13,
+   "valore": 11,
    "verso": "meno"
   },
   "giacenzaSbagliata": {
@@ -123,7 +123,7 @@
   },
   "affidabili": {
    "etichetta": "Letture affidabili (ogni errore è segnalato)",
-   "valore": 111,
+   "valore": 112,
    "su": 131,
    "verso": "piu"
   },
@@ -134,7 +134,7 @@
   },
   "perseSilenziose": {
    "etichetta": "Righe perse non segnalate",
-   "valore": 18,
+   "valore": 20,
    "verso": "meno"
   },
   "campiSilenziosi": {
@@ -163,8 +163,7 @@
    "righeOk": 48,
    "righeVere": 48,
    "errori": [
-    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3",
-    "riga 36 «AVOCADO HASS G 200»: formato niente invece di 200 g"
+    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3"
    ]
   },
   {
@@ -176,8 +175,7 @@
    "righeOk": 48,
    "righeVere": 48,
    "errori": [
-    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3",
-    "riga 36 «AVOCADO HASS G 200»: formato niente invece di 200 g"
+    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3"
    ]
   },
   {
@@ -189,8 +187,7 @@
    "righeOk": 48,
    "righeVere": 48,
    "errori": [
-    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3",
-    "riga 36 «AVOCADO HASS G 200»: formato niente invece di 200 g"
+    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3"
    ]
   },
   {
@@ -202,8 +199,7 @@
    "righeOk": 48,
    "righeVere": 48,
    "errori": [
-    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3",
-    "riga 36 «AVOCADO HASS G 200»: formato niente invece di 200 g"
+    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3"
    ]
   },
   {
@@ -215,8 +211,7 @@
    "righeOk": 48,
    "righeVere": 48,
    "errori": [
-    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3",
-    "riga 36 «AVOCADO HASS G 200»: formato niente invece di 200 g"
+    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3"
    ]
   },
   {
@@ -228,8 +223,7 @@
    "righeOk": 48,
    "righeVere": 48,
    "errori": [
-    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3",
-    "riga 36 «AVOCADO HASS G 200»: formato niente invece di 200 g"
+    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3"
    ]
   },
   {
@@ -241,8 +235,7 @@
    "righeOk": 48,
    "righeVere": 48,
    "errori": [
-    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3",
-    "riga 36 «AVOCADO HASS G 200»: formato niente invece di 200 g"
+    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3"
    ]
   },
   {
@@ -253,9 +246,7 @@
    "affidabile": true,
    "righeOk": 48,
    "righeVere": 48,
-   "errori": [
-    "riga 36 «AVOCADO HASS G 200»: formato niente invece di 200 g"
-   ]
+   "errori": []
   },
   {
    "caso": "bennet-albano-ritaglio-alto",
@@ -266,8 +257,7 @@
    "righeOk": 48,
    "righeVere": 48,
    "errori": [
-    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3",
-    "riga 36 «AVOCADO HASS G 200»: formato niente invece di 200 g"
+    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3"
    ]
   },
   {
@@ -279,8 +269,7 @@
    "righeOk": 48,
    "righeVere": 48,
    "errori": [
-    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3",
-    "riga 36 «AVOCADO HASS G 200»: formato niente invece di 200 g"
+    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3"
    ]
   },
   {
@@ -292,8 +281,7 @@
    "righeOk": 48,
    "righeVere": 48,
    "errori": [
-    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3",
-    "riga 36 «AVOCADO HASS G 200»: formato niente invece di 200 g"
+    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3"
    ]
   },
   {
@@ -305,8 +293,7 @@
    "righeOk": 48,
    "righeVere": 48,
    "errori": [
-    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3",
-    "riga 36 «AVOCADO HASS G 200»: formato niente invece di 200 g"
+    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3"
    ]
   },
   {
@@ -353,9 +340,7 @@
    "affidabile": true,
    "righeOk": 48,
    "righeVere": 48,
-   "errori": [
-    "riga 36 «AVOCADO HASS G 200»: formato niente invece di 200 g"
-   ]
+   "errori": []
   },
   {
    "caso": "bennet-albano-ritaglio-basso",
@@ -367,10 +352,7 @@
    "righeVere": 48,
    "errori": [
     "riga 23 «SACCHETTO DI CONFEZ.»: ingrediente ing:ghiaccio invece di nessuno",
-    "riga 33 «LATTE A.Q.GRANAROLO LT.1»: formato niente invece di 1000 ml",
-    "riga 34 «LATTE A.Q.GRANAROLO LT.1»: formato niente invece di 1000 ml",
     "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3",
-    "riga 45 «LATTE A.Q.GRANAROLO LT.1»: formato niente invece di 1000 ml",
     "riga 46 «UOVA BIOLOGICHE M X4»: ingrediente nessuno invece di ing:uova"
    ]
   },
@@ -385,8 +367,6 @@
    "errori": [
     "riga 32 «SACCHETTO DI CONFEZ.»: ingrediente ing:ghiaccio invece di nessuno",
     "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3",
-    "riga 36 «AVOCADO HASS G 200»: formato niente invece di 200 g",
-    "riga 45 «LATTE A.Q.GRANAROLO LT.1»: formato niente invece di 1000 ml",
     "riga 46 «UOVA BIOLOGICHE M X4»: formato niente invece di 4 pz",
     "riga 46 «UOVA BIOLOGICHE M X4»: in casa 1 pz invece di 4 pz",
     "riga 47 «UOVA BIOLOGICHE M X4»: ingrediente nessuno invece di ing:uova"
@@ -403,8 +383,6 @@
    "errori": [
     "riga 32 «SACCHETTO DI CONFEZ.»: ingrediente ing:ghiaccio invece di nessuno",
     "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3",
-    "riga 36 «AVOCADO HASS G 200»: formato niente invece di 200 g",
-    "riga 45 «LATTE A.Q.GRANAROLO LT.1»: formato niente invece di 1000 ml",
     "riga 47 «UOVA BIOLOGICHE M X4»: ingrediente nessuno invece di ing:uova"
    ]
   },
@@ -419,8 +397,6 @@
    "errori": [
     "riga 32 «SACCHETTO DI CONFEZ.»: ingrediente ing:ghiaccio invece di nessuno",
     "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3",
-    "riga 36 «AVOCADO HASS G 200»: formato niente invece di 200 g",
-    "riga 45 «LATTE A.Q.GRANAROLO LT.1»: formato niente invece di 1000 ml",
     "riga 47 «UOVA BIOLOGICHE M X4»: ingrediente nessuno invece di ing:uova"
    ]
   },
@@ -434,11 +410,7 @@
    "righeVere": 48,
    "errori": [
     "riga 32 «SACCHETTO DI CONFEZ.»: ingrediente ing:ghiaccio invece di nessuno",
-    "riga 33 «LATTE A.Q.GRANAROLO LT.1»: formato niente invece di 1000 ml",
-    "riga 34 «LATTE A.Q.GRANAROLO LT.1»: formato niente invece di 1000 ml",
     "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3",
-    "riga 36 «AVOCADO HASS G 200»: formato niente invece di 200 g",
-    "riga 45 «LATTE A.Q.GRANAROLO LT.1»: formato niente invece di 1000 ml",
     "riga 47 «UOVA BIOLOGICHE M X4»: ingrediente nessuno invece di ing:uova"
    ]
   },
@@ -453,10 +425,7 @@
    "errori": [
     "riga 27 «SACCHETTO DI CONFEZ.»: ingrediente ing:marmellata invece di nessuno",
     "riga 32 «SACCHETTO DI CONFEZ.»: ingrediente ing:ghiaccio invece di nessuno",
-    "riga 34 «LATTE A.Q.GRANAROLO LT.1»: formato niente invece di 1000 ml",
     "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3",
-    "riga 36 «AVOCADO HASS G 200»: formato niente invece di 200 g",
-    "riga 45 «LATTE A.Q.GRANAROLO LT.1»: formato niente invece di 1000 ml",
     "riga 47 «UOVA BIOLOGICHE M X4»: ingrediente nessuno invece di ing:uova"
    ]
   },
@@ -470,11 +439,7 @@
    "righeVere": 48,
    "errori": [
     "riga 32 «SACCHETTO DI CONFEZ.»: ingrediente ing:ghiaccio invece di nessuno",
-    "riga 33 «LATTE A.Q.GRANAROLO LT.1»: formato niente invece di 1000 ml",
-    "riga 34 «LATTE A.Q.GRANAROLO LT.1»: formato niente invece di 1000 ml",
     "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3",
-    "riga 36 «AVOCADO HASS G 200»: formato niente invece di 200 g",
-    "riga 45 «LATTE A.Q.GRANAROLO LT.1»: formato niente invece di 1000 ml",
     "riga 47 «UOVA BIOLOGICHE M X4»: ingrediente nessuno invece di ing:uova"
    ]
   },
@@ -488,8 +453,6 @@
    "righeVere": 48,
    "errori": [
     "riga 32 «SACCHETTO DI CONFEZ.»: ingrediente ing:ghiaccio invece di nessuno",
-    "riga 36 «AVOCADO HASS G 200»: formato niente invece di 200 g",
-    "riga 45 «LATTE A.Q.GRANAROLO LT.1»: formato niente invece di 1000 ml",
     "riga 47 «UOVA BIOLOGICHE M X4»: ingrediente nessuno invece di ing:uova"
    ]
   },
@@ -502,7 +465,6 @@
    "righeOk": 48,
    "righeVere": 48,
    "errori": [
-    "riga 34 «LATTE A.Q.GRANAROLO LT.1»: formato niente invece di 1000 ml",
     "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3"
    ]
   },
@@ -515,10 +477,7 @@
    "righeOk": 48,
    "righeVere": 48,
    "errori": [
-    "riga 33 «LATTE A.Q.GRANAROLO LT.1»: formato niente invece di 1000 ml",
     "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3",
-    "riga 36 «AVOCADO HASS G 200»: formato niente invece di 200 g",
-    "riga 45 «LATTE A.Q.GRANAROLO LT.1»: formato niente invece di 1000 ml",
     "riga 47 «UOVA BIOLOGICHE M X4»: ingrediente nessuno invece di ing:uova"
    ]
   },
@@ -531,7 +490,6 @@
    "righeOk": 48,
    "righeVere": 48,
    "errori": [
-    "riga 34 «LATTE A.Q.GRANAROLO LT.1»: formato niente invece di 1000 ml",
     "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3"
    ]
   },
@@ -544,7 +502,6 @@
    "righeOk": 48,
    "righeVere": 48,
    "errori": [
-    "riga 34 «LATTE A.Q.GRANAROLO LT.1»: formato niente invece di 1000 ml",
     "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3"
    ]
   },
@@ -558,7 +515,6 @@
    "righeVere": 48,
    "errori": [
     "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3",
-    "riga 36 «AVOCADO HASS G 200»: formato niente invece di 200 g",
     "riga 47 «UOVA BIOLOGICHE M X4»: ingrediente nessuno invece di ing:uova"
    ]
   },
@@ -572,7 +528,6 @@
    "righeVere": 48,
    "errori": [
     "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3",
-    "riga 45 «LATTE A.Q.GRANAROLO LT.1»: formato niente invece di 1000 ml",
     "riga 46 «UOVA BIOLOGICHE M X4»: formato niente invece di 4 pz",
     "riga 46 «UOVA BIOLOGICHE M X4»: in casa 1 pz invece di 4 pz",
     "riga 47 «UOVA BIOLOGICHE M X4»: ingrediente nessuno invece di ing:uova"
@@ -633,9 +588,7 @@
    "affidabile": true,
    "righeOk": 12,
    "righeVere": 12,
-   "errori": [
-    "riga 6 «PETTO DI POLLO 500G»: ingrediente ing:tacchino_affettato invece di ing:petto_pollo"
-   ]
+   "errori": []
   },
   {
    "caso": "conad-superstore",
@@ -645,9 +598,7 @@
    "affidabile": true,
    "righeOk": 12,
    "righeVere": 12,
-   "errori": [
-    "riga 6 «PETTO DI POLLO 500G»: ingrediente ing:tacchino_affettato invece di ing:petto_pollo"
-   ]
+   "errori": []
   },
   {
    "caso": "conad-superstore",
@@ -657,9 +608,7 @@
    "affidabile": true,
    "righeOk": 12,
    "righeVere": 12,
-   "errori": [
-    "riga 6 «PETTO DI POLLO 500G»: ingrediente ing:tacchino_affettato invece di ing:petto_pollo"
-   ]
+   "errori": []
   },
   {
    "caso": "conad-superstore",
@@ -669,9 +618,7 @@
    "affidabile": true,
    "righeOk": 12,
    "righeVere": 12,
-   "errori": [
-    "riga 6 «PETTO DI POLLO 500G»: ingrediente ing:tacchino_affettato invece di ing:petto_pollo"
-   ]
+   "errori": []
   },
   {
    "caso": "conad-superstore",
@@ -681,9 +628,7 @@
    "affidabile": true,
    "righeOk": 12,
    "righeVere": 12,
-   "errori": [
-    "riga 6 «PETTO DI POLLO 500G»: ingrediente ing:tacchino_affettato invece di ing:petto_pollo"
-   ]
+   "errori": []
   },
   {
    "caso": "conad-superstore",
@@ -693,9 +638,7 @@
    "affidabile": true,
    "righeOk": 12,
    "righeVere": 12,
-   "errori": [
-    "riga 6 «PETTO DI POLLO 500G»: ingrediente ing:tacchino_affettato invece di ing:petto_pollo"
-   ]
+   "errori": []
   },
   {
    "caso": "conad-superstore",
@@ -712,7 +655,6 @@
     "riga 4 «PASSATA POMODORO 700G»: prezzo 290,58 invece di 0,58",
     "riga 5 «MOZZARELLA 125G»: prezzo 591,18 invece di 1,18",
     "riga 6 «PETTO DI POLLO 500G»: prezzo 492,49 invece di 2,49",
-    "riga 6 «PETTO DI POLLO 500G»: ingrediente ing:tacchino_affettato invece di ing:petto_pollo",
     "riga 7 «BANANE»: prezzo 690,69 invece di 0,69",
     "riga 8 «MELE GOLDEN 1KG»: prezzo 790,79 invece di 0,79",
     "riga 9 «DETERSIVO LAVATRICE»: prezzo 191,19 invece di 1,19",
@@ -730,9 +672,7 @@
    "affidabile": true,
    "righeOk": 12,
    "righeVere": 12,
-   "errori": [
-    "riga 6 «PETTO DI POLLO 500G»: ingrediente ing:tacchino_affettato invece di ing:petto_pollo"
-   ]
+   "errori": []
   },
   {
    "caso": "conad-superstore",
@@ -742,9 +682,7 @@
    "affidabile": true,
    "righeOk": 12,
    "righeVere": 12,
-   "errori": [
-    "riga 6 «PETTO DI POLLO 500G»: ingrediente ing:tacchino_affettato invece di ing:petto_pollo"
-   ]
+   "errori": []
   },
   {
    "caso": "coop-ritaglio-righe",
@@ -757,9 +695,6 @@
    "errori": [
     "riga 1 «LATTE ESL BIO INT 1L»: formato niente invece di 1000 ml",
     "riga 1 «LATTE ESL BIO INT 1L»: ingrediente nessuno invece di ing:latte",
-    "riga 6 «POMODORINI FF G400»: formato niente invece di 400 g",
-    "riga 7 «POMODORINI FF G400»: formato niente invece di 400 g",
-    "riga 8 «POMODORINI FF G400»: formato niente invece di 400 g",
     "riga 16 «ALTU.LAVAZZA250GX2»: ingrediente nessuno invece di ing:caffe"
    ]
   },
@@ -773,9 +708,6 @@
    "righeVere": 20,
    "errori": [
     "riga 1 «LATTE ESL BIO INT 1L»: formato niente invece di 1000 ml",
-    "riga 6 «POMODORINI FF G400»: formato niente invece di 400 g",
-    "riga 7 «POMODORINI FF G400»: formato niente invece di 400 g",
-    "riga 8 «POMODORINI FF G400»: formato niente invece di 400 g",
     "riga 16 «ALTU.LAVAZZA250GX2»: ingrediente nessuno invece di ing:caffe"
    ]
   },
@@ -790,9 +722,6 @@
    "errori": [
     "riga 1 «LATTE ESL BIO INT 1L»: formato niente invece di 1000 ml",
     "riga 1 «LATTE ESL BIO INT 1L»: ingrediente nessuno invece di ing:latte",
-    "riga 6 «POMODORINI FF G400»: formato niente invece di 400 g",
-    "riga 7 «POMODORINI FF G400»: formato niente invece di 400 g",
-    "riga 8 «POMODORINI FF G400»: formato niente invece di 400 g",
     "riga 16 «ALTU.LAVAZZA250GX2»: ingrediente nessuno invece di ing:caffe"
    ]
   },
@@ -807,9 +736,6 @@
    "errori": [
     "riga 1 «LATTE ESL BIO INT 1L»: formato niente invece di 1000 ml",
     "riga 1 «LATTE ESL BIO INT 1L»: ingrediente nessuno invece di ing:latte",
-    "riga 6 «POMODORINI FF G400»: formato niente invece di 400 g",
-    "riga 7 «POMODORINI FF G400»: formato niente invece di 400 g",
-    "riga 8 «POMODORINI FF G400»: formato niente invece di 400 g",
     "riga 16 «ALTU.LAVAZZA250GX2»: ingrediente nessuno invece di ing:caffe"
    ]
   },
@@ -824,9 +750,6 @@
    "errori": [
     "riga 1 «LATTE ESL BIO INT 1L»: formato niente invece di 1000 ml",
     "riga 2 «ZUCCHINE BIO IT 14-2»: ingrediente nessuno invece di ing:zucchina",
-    "riga 6 «POMODORINI FF G400»: formato niente invece di 400 g",
-    "riga 7 «POMODORINI FF G400»: formato niente invece di 400 g",
-    "riga 8 «POMODORINI FF G400»: formato niente invece di 400 g",
     "riga 16 «ALTU.LAVAZZA250GX2»: ingrediente nessuno invece di ing:caffe"
    ]
   },
@@ -841,9 +764,6 @@
    "errori": [
     "riga 1 «LATTE ESL BIO INT 1L»: formato niente invece di 1000 ml",
     "riga 1 «LATTE ESL BIO INT 1L»: ingrediente nessuno invece di ing:latte",
-    "riga 6 «POMODORINI FF G400»: formato niente invece di 400 g",
-    "riga 7 «POMODORINI FF G400»: formato niente invece di 400 g",
-    "riga 8 «POMODORINI FF G400»: formato niente invece di 400 g",
     "riga 16 «ALTU.LAVAZZA250GX2»: ingrediente nessuno invece di ing:caffe"
    ]
   },
@@ -858,9 +778,7 @@
    "errori": [
     "riga 1 «LATTE ESL BIO INT 1L»: formato niente invece di 1000 ml",
     "riga 2 «ZUCCHINE BIO IT 14-2»: ingrediente nessuno invece di ing:zucchina",
-    "riga 6 «POMODORINI FF G400»: formato niente invece di 400 g",
     "riga 7 «POMODORINI FF G400»: formato niente invece di 400 g",
-    "riga 8 «POMODORINI FF G400»: formato niente invece di 400 g",
     "riga 16 «ALTU.LAVAZZA250GX2»: ingrediente nessuno invece di ing:caffe"
    ]
   },
@@ -875,9 +793,6 @@
    "errori": [
     "riga 1 «LATTE ESL BIO INT 1L»: formato niente invece di 1000 ml",
     "riga 1 «LATTE ESL BIO INT 1L»: ingrediente nessuno invece di ing:latte",
-    "riga 6 «POMODORINI FF G400»: formato niente invece di 400 g",
-    "riga 7 «POMODORINI FF G400»: formato niente invece di 400 g",
-    "riga 8 «POMODORINI FF G400»: formato niente invece di 400 g",
     "riga 16 «ALTU.LAVAZZA250GX2»: ingrediente nessuno invece di ing:caffe"
    ]
   },
@@ -896,9 +811,7 @@
     "riga 5 «CUNEESI RHUM VG 200G»: prezzo 1,31 invece di 0,29 (segnalato: letture diverse)",
     "riga 6 «BARBABIETOLE A JULIE» 0,00: non letta",
     "riga in più «300K SACCHETTI T» 0,00",
-    "riga in più «TOA GOODTO» 0,00",
     "riga in più «1000 3.70KG» 3,59",
-    "riga in più «TO0GOODTOGO3.» 0,00",
     "totale 0,17 invece di 3,99 (segnalato: letture diverse)",
     "negozio «Per 0» invece di «Iper Montebello S.P.A.»"
    ]
@@ -917,9 +830,7 @@
     "riga 5 «CUNEESI RHUM VG 200G»: prezzo 1,32 invece di 0,29",
     "riga 6 «BARBABIETOLE A JULIE» 0,00: non letta",
     "riga in più «300% SOCHETTI T» 1,89",
-    "riga in più «TOO GOOD» 0,00",
     "riga in più «1.000 3.70HA» 3,59",
-    "riga in più «1006OCDTOGO3.» 0,00",
     "negozio «Per» invece di «Iper Montebello S.P.A.»"
    ]
   },
@@ -968,9 +879,7 @@
     "riga 5 «CUNEESI RHUM VG 200G»: prezzo 1,32 invece di 0,29",
     "riga 6 «BARBABIETOLE A JULIE» 0,00: non letta",
     "riga in più «100K SAOCHETTIT» 0,00",
-    "riga in più «TOO GOODTOGO» 0,00",
     "riga in più «1.000#3.7KG» 3,53",
-    "riga in più «$X100G0ODTOGO3.» 0,00",
     "totale 0,17 invece di 3,99 (segnalato: letture diverse)",
     "negozio «non letto» invece di «Iper Montebello S.P.A.»"
    ]
@@ -994,7 +903,7 @@
    "lettura": "foto-storta-1-5",
    "perfetta": false,
    "sicura": true,
-   "affidabile": false,
+   "affidabile": true,
    "righeOk": 5,
    "righeVere": 6,
    "errori": [
@@ -1026,10 +935,7 @@
    "affidabile": true,
    "righeOk": 6,
    "righeVere": 6,
-   "errori": [
-    "riga 4 «PETTO POLLO FETTE»: ingrediente ing:tacchino_affettato invece di ing:petto_pollo",
-    "riga 5 «PETTO POLLO FETTE»: ingrediente ing:tacchino_affettato invece di ing:petto_pollo"
-   ]
+   "errori": []
   },
   {
    "caso": "iper-seriate",
@@ -1039,10 +945,7 @@
    "affidabile": true,
    "righeOk": 6,
    "righeVere": 6,
-   "errori": [
-    "riga 4 «PETTO POLLO FETTE»: ingrediente ing:tacchino_affettato invece di ing:petto_pollo",
-    "riga 5 «PETTO POLLO FETTE»: ingrediente ing:tacchino_affettato invece di ing:petto_pollo"
-   ]
+   "errori": []
   },
   {
    "caso": "iperal-san-paolo-d-argon",
@@ -1159,7 +1062,7 @@
     "riga 6 «LATTUGHINO BIO»: prezzo 9,99 invece di 0,79 (segnalato: letture diverse)",
     "riga 7 «UVA RED GLOBE»: prezzo 0,00 invece di 1,72, nome «UVA RED GLOBE 451172» (segnalato: senza prezzo)",
     "riga 8 «SACCH.ORTOFR.BIOGRAD»: prezzo 0,00 invece di 0,01, nome «SACCH.CRTOFR.BIOGRAD 4%8.01 104» (segnalato: senza prezzo)",
-    "riga 8 «SACCH.ORTOFR.BIOGRAD»: ingrediente ing:pellicola invece di nessuno",
+    "riga 8 «SACCH.ORTOFR.BIOGRAD»: ingrediente ing:ghiaccio invece di nessuno",
     "riga 9 «YOGURT BIO FRAGOLA»: prezzo 70,69 invece di 0,69 (segnalato: letture diverse)",
     "riga 10 «YOGURT BIO CILIEGIA»: prezzo 8,69 invece di 0,69 (segnalato: letture diverse)",
     "riga 11 «EQUILIBRA VITAMINA C»: prezzo 0,00 invece di 3,49 (segnalato: senza prezzo)",
@@ -1192,10 +1095,10 @@
     "riga 4 «FILETTI TONNO SURG.»: prezzo 0,00 invece di 2,99 (segnalato: letture diverse)",
     "riga 5 «LATTE PS UHT»: prezzo 8,33 invece di 0,33 (segnalato: letture diverse)",
     "riga 6 «LATTUGHINO BIO»: nome «CATTUGHENO BIO» (segnalato: letture diverse)",
-    "riga 8 «SACCH.ORTOFR.BIOGRAD»: ingrediente ing:pellicola invece di nessuno",
+    "riga 8 «SACCH.ORTOFR.BIOGRAD»: ingrediente ing:ghiaccio invece di nessuno",
     "riga 9 «YOGURT BIO FRAGOLA»: prezzo 9,69 invece di 0,69 (segnalato: letture diverse)",
     "riga 12 «MOZZARELLA DI BUFALA»: prezzo 0,00 invece di 1,19 (segnalato: letture diverse)",
-    "riga 13 «GONNA MIDI NERO S-0487526»: ingrediente ing:vino_rosso invece di nessuno",
+    "riga 13 «GONNA MIDI NERO S-0487526»: ingrediente ing:cavolo_nero invece di nessuno",
     "data non letta invece di 2025-10-27",
     "ora non letta invece di 11:51",
     "negozio «B416-Via Nazionale, Snc» invece di «Lidl Italia S.r.l. a socio unico»"
@@ -1265,7 +1168,7 @@
     "riga 11 «EQUILIBRA VITAMINA C»: prezzo 0,00 invece di 3,49",
     "riga 12 «MOZZARELLA DI BUFALA» 1,19: non letta",
     "riga 13 «GONNA MIDI NERO S-0487526»: prezzo 14,99 invece di 8,99",
-    "riga 13 «GONNA MIDI NERO S-0487526»: ingrediente ing:vino_rosso invece di nessuno",
+    "riga 13 «GONNA MIDI NERO S-0487526»: ingrediente ing:cavolo_nero invece di nessuno",
     "riga 14 «CARDIGAN NAVY S-0469699»: prezzo 3,43 invece di 14,99",
     "riga in più «OFFERTALIDI PLUS» 0,00",
     "riga in più «SCUNTO» 8,99",
@@ -1440,9 +1343,7 @@
    "affidabile": true,
    "righeOk": 6,
    "righeVere": 6,
-   "errori": [
-    "riga 4 «PETTO DI POLLO 500G»: ingrediente ing:tacchino_affettato invece di ing:petto_pollo"
-   ]
+   "errori": []
   },
   {
    "caso": "sint-colonne-quantita",
@@ -1453,7 +1354,6 @@
    "righeOk": 6,
    "righeVere": 6,
    "errori": [
-    "riga 4 «PETTO DI POLLO 500G»: ingrediente ing:tacchino_affettato invece di ing:petto_pollo",
     "riga 5 «YOGURT BIANCO 125G»: ingrediente nessuno invece di ing:yogurt"
    ]
   },
@@ -1465,9 +1365,7 @@
    "affidabile": true,
    "righeOk": 6,
    "righeVere": 6,
-   "errori": [
-    "riga 4 «PETTO DI POLLO 500G»: ingrediente ing:tacchino_affettato invece di ing:petto_pollo"
-   ]
+   "errori": []
   },
   {
    "caso": "sint-colonne-quantita",
@@ -1478,7 +1376,6 @@
    "righeOk": 6,
    "righeVere": 6,
    "errori": [
-    "riga 4 «PETTO DI POLLO 500G»: ingrediente ing:tacchino_affettato invece di ing:petto_pollo",
     "riga 5 «YOGURT BIANCO 125G»: ingrediente nessuno invece di ing:yogurt"
    ]
   },
@@ -1491,7 +1388,6 @@
    "righeOk": 6,
    "righeVere": 6,
    "errori": [
-    "riga 4 «PETTO DI POLLO 500G»: ingrediente ing:tacchino_affettato invece di ing:petto_pollo",
     "riga 5 «YOGURT BIANCO 125G»: ingrediente nessuno invece di ing:yogurt"
    ]
   },
@@ -1503,9 +1399,7 @@
    "affidabile": true,
    "righeOk": 6,
    "righeVere": 6,
-   "errori": [
-    "riga 4 «PETTO DI POLLO 500G»: ingrediente ing:anatra invece di ing:petto_pollo"
-   ]
+   "errori": []
   },
   {
    "caso": "sint-colonne-quantita",
@@ -1515,9 +1409,7 @@
    "affidabile": true,
    "righeOk": 6,
    "righeVere": 6,
-   "errori": [
-    "riga 4 «PETTO DI POLLO 500G»: ingrediente ing:anatra invece di ing:petto_pollo"
-   ]
+   "errori": []
   },
   {
    "caso": "sint-colonne-quantita",
@@ -1527,9 +1419,7 @@
    "affidabile": true,
    "righeOk": 6,
    "righeVere": 6,
-   "errori": [
-    "riga 4 «PETTO DI POLLO 500G»: ingrediente ing:tacchino_affettato invece di ing:petto_pollo"
-   ]
+   "errori": []
   },
   {
    "caso": "sint-date-e-righe-lunghe",
@@ -1551,10 +1441,7 @@
    "righeVere": 19,
    "errori": [
     "riga 8 «BURRO 250G»: nome «BURR025OG»",
-    "riga 9 «FARINA 00 1KG»: nome «FARINA OO KG»",
-    "riga in più «0FFERTAVALIDA» 0,00",
-    "riga in più «TESSERAVALIDAFINO» 0,00",
-    "riga in più «SALDOPUNTI1250» 0,00"
+    "riga 9 «FARINA 00 1KG»: nome «FARINA OO KG»"
    ]
   },
   {
@@ -1567,39 +1454,28 @@
    "righeVere": 19,
    "errori": [
     "riga 8 «BURRO 250G»: nome «BURR025OG»",
-    "riga 9 «FARINA 00 1KG»: nome «FARINA OO 1KG»",
-    "riga in più «0FFERTAVALIDA» 0,00",
-    "riga in più «TESSERAVALIDAFINOAL31/12/2027» 0,00",
-    "riga in più «SALD0PUNTI1250» 0,00"
+    "riga 9 «FARINA 00 1KG»: nome «FARINA OO 1KG»"
    ]
   },
   {
    "caso": "sint-date-e-righe-lunghe",
    "lettura": "sintetica-originale-bis",
-   "perfetta": false,
+   "perfetta": true,
    "sicura": true,
    "affidabile": true,
    "righeOk": 19,
    "righeVere": 19,
-   "errori": [
-    "riga in più «OFFERTAVALIDADAL01/11/2026AL30/11/2026» 0,00",
-    "riga in più «TESSERAVALIDAFIN0AL31/12/2027» 0,00",
-    "riga in più «SALD0PUNTI1250» 0,00"
-   ]
+   "errori": []
   },
   {
    "caso": "sint-date-e-righe-lunghe",
    "lettura": "sintetica-originale",
-   "perfetta": false,
+   "perfetta": true,
    "sicura": true,
    "affidabile": true,
    "righeOk": 19,
    "righeVere": 19,
-   "errori": [
-    "riga in più «OFFERTAVALIDADAL01/11/2026AL30/11/2026» 0,00",
-    "riga in più «TESSERAVALIDAFIN0AL31/12/2027» 0,00",
-    "riga in più «SALD0PUNTI1250» 0,00"
-   ]
+   "errori": []
   },
   {
    "caso": "sint-date-e-righe-lunghe",
@@ -1734,7 +1610,7 @@
    "righeOk": 10,
    "righeVere": 10,
    "errori": [
-    "riga 10 «OLIO DI SEMI 1L»: ingrediente ing:cumino invece di ing:olio_semi"
+    "riga 10 «OLIO DI SEMI 1L»: ingrediente ing:semi_misti invece di ing:olio_semi"
    ]
   },
   {
@@ -1745,9 +1621,7 @@
    "affidabile": true,
    "righeOk": 5,
    "righeVere": 5,
-   "errori": [
-    "riga 2 «PETTO POLLO FETTE»: ingrediente ing:tacchino_affettato invece di ing:petto_pollo"
-   ]
+   "errori": []
   },
   {
    "caso": "sint-pesi-e-sconti",
@@ -1757,9 +1631,7 @@
    "affidabile": true,
    "righeOk": 5,
    "righeVere": 5,
-   "errori": [
-    "riga 2 «PETTO POLLO FETTE»: ingrediente ing:tacchino_affettato invece di ing:petto_pollo"
-   ]
+   "errori": []
   },
   {
    "caso": "sint-pesi-e-sconti",
@@ -1769,9 +1641,7 @@
    "affidabile": true,
    "righeOk": 5,
    "righeVere": 5,
-   "errori": [
-    "riga 2 «PETTO POLLO FETTE»: ingrediente ing:tacchino_affettato invece di ing:petto_pollo"
-   ]
+   "errori": []
   },
   {
    "caso": "sint-pesi-e-sconti",
@@ -1781,9 +1651,7 @@
    "affidabile": true,
    "righeOk": 5,
    "righeVere": 5,
-   "errori": [
-    "riga 2 «PETTO POLLO FETTE»: ingrediente ing:tacchino_affettato invece di ing:petto_pollo"
-   ]
+   "errori": []
   },
   {
    "caso": "sint-pesi-e-sconti",
@@ -1793,9 +1661,7 @@
    "affidabile": true,
    "righeOk": 5,
    "righeVere": 5,
-   "errori": [
-    "riga 2 «PETTO POLLO FETTE»: ingrediente ing:tacchino_affettato invece di ing:petto_pollo"
-   ]
+   "errori": []
   },
   {
    "caso": "sint-pesi-e-sconti",
@@ -1805,9 +1671,7 @@
    "affidabile": true,
    "righeOk": 5,
    "righeVere": 5,
-   "errori": [
-    "riga 2 «PETTO POLLO FETTE»: ingrediente ing:tacchino_affettato invece di ing:petto_pollo"
-   ]
+   "errori": []
   },
   {
    "caso": "sint-pesi-e-sconti",
@@ -1817,9 +1681,7 @@
    "affidabile": true,
    "righeOk": 5,
    "righeVere": 5,
-   "errori": [
-    "riga 2 «PETTO POLLO FETTE»: ingrediente ing:tacchino_affettato invece di ing:petto_pollo"
-   ]
+   "errori": []
   },
   {
    "caso": "sint-pesi-e-sconti",
@@ -1829,9 +1691,7 @@
    "affidabile": true,
    "righeOk": 5,
    "righeVere": 5,
-   "errori": [
-    "riga 2 «PETTO POLLO FETTE»: ingrediente ing:tacchino_affettato invece di ing:petto_pollo"
-   ]
+   "errori": []
   },
   {
    "caso": "sint-promo-nei-nomi",
