@@ -63,8 +63,11 @@ function quasiUguali(a: string, b: string): boolean {
 const eTotale = (linea: string) => linea.split(/[^A-Z0-9]+/).some((p) => p === 'TOTALE' || (p.length >= 5 && quasiUguali(p, 'TOTALE')));
 export const fineRighe = (linea: string) => FINE_RIGHE.test(linea) || eTotale(linea);
 export const DA_SALTARE =
-  /\b(IVA|CONTANTE|CONTANTI|RESTO|PAGAMENTO|PAGATO|BANCOMAT|ELETTRONICO|RESO|ARROTONDAMENTO|IMPORTO|NUMERO|DOCUMENTO|SCONTRINO|BUONO|BUONI|PUNTI|SALDO|CASSA|CASSIERE|OPERATORE|TEL|TESSERA|ARTICOLI|VISA|MASTERCARD|MAESTRO|P\.?\s?IVA|C\.?F\.?)\b|CARTA (DI )?(CREDITO|DEBITO)/;
+  /\b(IVA|CONTANTE|CONTANTI|RESTO|PAGAMENTO|PAGATO|BANCOMAT|ELETTRONICO|RESO|ARROTONDAMENTO|IMPORTO|NUMERO|DOCUMENTO|SCONTRINO|BUONO|BUONI|PUNTI|SALDO|CASSA|CASSIERE|OPERATORE|TEL|TESSERA|ARTICOLI|VISA|MASTERCARD|MAESTRO|P\.?\s?IVA|C\.?F\.?|VALIDA|VALIDO|VALIDE|CAMSCANNER|SCANSIONATO)\b|CARTA (DI )?(CREDITO|DEBITO)/;
 export const SCONTO = /\b(SCONTO|SC\.|SCONT|PROMO|OFFERTA|RIBASSO|RIDUZIONE|STORNO|COUPON)\b|TOO\s?GOO?D|TO\s?GO\b/;
+const SCONTO_IN_TESTA = /^[^A-Z0-9]*(?:\d{1,3}\s?%\s*)?(?:SCONTO|SC\.|SCONT|PROMO|OFFERTA|RIBASSO|RIDUZIONE|STORNO|COUPON)\b|TOO\s?GOO?D|TO\s?GO\b/;
+/** Righe senza prezzo che non sono un prodotto, lette senza spazi e con gli zeri come O. */
+const NON_PRODOTTO = /VALID[AEIO]|SCADEN|TESSERA|SALDOPUNTI|PUNTIFEDELT|CAMSCANNER|SCANSIONATO|TOOGOOD|TOGO/;
 export const INTESTAZIONE_RIGHE = /\bDESCRIZIONE\b|\bPREZZO\s*\(?€?\)?\s*$/;
 
 /** Quante lettere diverse (sostituite, in più o in meno) ci sono tra due parole. */
@@ -109,6 +112,8 @@ export function pulisciLinea(linea: string): string {
     // Il prezzo letto con una barra o un apice al posto della virgola («1/35 A»), o con la barra letta 7 prima della lettera dell'IVA («1720 A»).
     .replace(/(\s\d{1,3})[/'’`´](\d{2})(?=\s?[A-Z]?$)/, '$1,$2')
     .replace(/(\s\d)7(\d{2})(?=\s[ABC]$)/, '$1,$2')
+    // Il prezzo senza la virgola, attaccato alla lettera dell'IVA («366C» per «3,66 C»): se dopo c'è solo quella lettera, in fondo alla riga.
+    .replace(/(\s)(\d{1,3})(\d{2})\s?([A-D])$/, '$1$2,$3 $4')
     // Dopo il prezzo, una cifra sola al posto della lettera dell'IVA («0,20 0» per «0,20 D»).
     .replace(/(^|\s)(-?\d{1,4}[.,]\d{2}) [0468]$/, '$1$2')
     // La lettera dell'IVA attaccata al prezzo e letta come cifra («0,994» per «0,99 A», «4,990» per «4,99 C»).
@@ -124,24 +129,49 @@ export function pulisciLinea(linea: string): string {
 export const numero = (s: string) => Number(s.replace(/\s/g, '').replace(',', '.'));
 export const centesimi = (n: number) => Math.round(n * 100) / 100;
 
-/** Il formato della confezione scritto nella descrizione, in unità base. */
+/** Misura in unità base da un numero, un'unità e un moltiplicatore («2X125G» → 250 g). Null se non è una misura credibile. */
+function misura(valore: string, unita: string, confezioni = 1): RigaLetta['formato'] {
+  const n = numero(valore);
+  const U = unita.toUpperCase();
+  // Un «G 2» è un pezzo di scritta tagliato, non due grammi: sotto questi valori non è una confezione.
+  const minimo = U === 'G' || U === 'GR' || U === 'ML' || U === 'CL' ? 10 : 0;
+  const massimo = U === 'KG' ? 50 : U === 'L' || U === 'LT' ? 20 : 5000;
+  if (!(n > 0) || n < minimo || n > massimo) return undefined;
+  const [fattore, base]: [number, UnitaBase] = U === 'KG' ? [1000, 'g'] : U === 'G' || U === 'GR' ? [1, 'g'] : U === 'L' || U === 'LT' ? [1000, 'ml'] : U === 'CL' ? [10, 'ml'] : [1, 'ml'];
+  const quantita = Math.round(n * fattore * confezioni * 1000) / 1000;
+  return quantita > 0 ? { quantita, unita: base } : undefined;
+}
+
+const UNITA = 'KG|GR|G|LT|L|ML|CL';
+/** La lettura scrive la O al posto dello zero nei numeri di un formato («5OOG», «BAULETTO4OOG»). */
+const conZeri = (d: string) =>
+  d
+    .replace(new RegExp(`(\\d[\\dO]{0,3})(?=\\s?(?:${UNITA})\\b)`, 'g'), (x) => x.replace(/O/g, '0'))
+    // Con l'unità prima del numero («G 2OO», «G4CO»): la O e la C dentro un numero sono zeri.
+    .replace(new RegExp(`(?<=\\b(?:${UNITA})\\.?\\s?)(\\d[\\dOC]{1,3})\\b`, 'g'), (x) => x.replace(/[OC]/g, '0'));
+
+/**
+ * Il formato della confezione scritto nella descrizione, in unità base: «500G», «1,5L», «2X125G», «250GX2» (due da 250 g),
+ * ma anche con l'unità prima del numero («LT.1», «GR 290», «G400», «CL66») e «UOVA X6» (pezzi).
+ */
 export function formatoDaDescrizione(descrizione: string): RigaLetta['formato'] {
-  const d = descrizione.toUpperCase();
-  const m = d.match(/(?:(\d{1,2})\s*X\s*)?(\d{1,4}(?:[.,]\d{1,3})?)\s*(KG|GR|G|LT|L|ML|CL)\b/);
-  if (!m) {
-    // «UOVA X6», «6 PZ»: una confezione di pezzi.
-    const pz = d.match(/(?:\bX\s?(\d{1,2})\b|\b(\d{1,2})\s?PZ\b)/);
-    return pz ? { quantita: Number(pz[1] ?? pz[2]), unita: 'pz' } : undefined;
-  }
-  const confezioni = m[1] ? Number(m[1]) : 1;
-  const valore = numero(m[2]);
-  const [fattore, unita]: [number, UnitaBase] =
-    m[3] === 'KG' ? [1000, 'g'] : m[3] === 'G' || m[3] === 'GR' ? [1, 'g'] : m[3] === 'L' || m[3] === 'LT' ? [1000, 'ml'] : m[3] === 'CL' ? [10, 'ml'] : [1, 'ml'];
-  const quantita = Math.round(valore * fattore * confezioni * 1000) / 1000;
-  return quantita > 0 ? { quantita, unita } : undefined;
+  const d = conZeri(descrizione.toUpperCase());
+  const dopo = d.match(new RegExp(`(\\d{1,4}(?:[.,]\\d{1,3})?)\\s*(${UNITA})\\s*X\\s*(\\d{1,2})\\b`));
+  if (dopo) return misura(dopo[1], dopo[2], Number(dopo[3]));
+  const m = d.match(new RegExp(`(?:(\\d{1,2})\\s*X\\s*)?(\\d{1,4}(?:[.,]\\d{1,3})?)\\s*(${UNITA})\\b`));
+  if (m) return misura(m[2], m[3], m[1] ? Number(m[1]) : 1);
+  // «LT.1» anche attaccato al nome («GRANAROLOLT.1»): con il punto l'unità non è parte di una parola.
+  const prima = d.match(new RegExp(`(?:\\b(${UNITA})\\.?\\s?|(LT|GR|KG|ML|CL)\\.\\s?)(\\d{1,4}(?:[.,]\\d{1,3})?)\\b(?!\\s?[A-Z%])`));
+  const daUnita = prima ? misura(prima[3], prima[1] ?? prima[2]) : undefined;
+  if (daUnita) return daUnita;
+  // «UOVA X6», «6 PZ»: una confezione di pezzi.
+  const pz = d.match(/(?:\bX\s?(\d{1,2})\b|\b(\d{1,2})\s?PZ\b)/);
+  return pz ? { quantita: Number(pz[1] ?? pz[2]), unita: 'pz' } : undefined;
 }
 
 const DATA = /\b(\d{1,2})[/.-](\d{1,2})[/.-](\d{4}|\d{2})\b/g;
+/** Righe con una data che non è quella dello scontrino. */
+const DATA_DI_ALTRO = /\b(VALID[AOI]?|SCAD\w*|FINO AL|ENTRO|DAL)\b/i;
 
 function giornoValido(m: RegExpMatchArray): string | null {
   const g = Number(m[1]);
@@ -157,14 +187,20 @@ function giornoValido(m: RegExpMatchArray): string | null {
  * Data e ora dello scontrino. Prima si cerca una data con l'ora accanto («02-11-2026 18:41»): un'ora da sola
  * può essere altro (l'orologio del telefono in uno screenshot, gli orari del negozio).
  */
-function dataOraDa(testo: string): { data: string | null; ora: string | null } {
+function dataOraDa(grezzo: string): { data: string | null; ora: string | null } {
+  // La lettura perde lo spazio tra data e ora («02-11-202618:41»).
+  const testo = grezzo.replace(/(\b\d{1,2}[/.-]\d{1,2}[/.-]20\d{2})(?=[0-2]\d[:.][0-5]\d\b)/g, '$1 ');
   for (const m of testo.matchAll(new RegExp(`${DATA.source}\\s+([01]?\\d|2[0-3])[:.]([0-5]\\d)\\b`, 'g'))) {
     const data = giornoValido(m);
     if (data) return { data, ora: `${m[4].padStart(2, '0')}:${m[5]}` };
   }
   let data: string | null = null;
-  for (const m of testo.matchAll(DATA)) {
-    data = giornoValido(m);
+  // Senza un'ora accanto, la prima data: ma non quella di una riga che parla d'altro (validità di un'offerta, scadenza della tessera).
+  for (const linea of testo.split('\n').filter((l) => !DATA_DI_ALTRO.test(l))) {
+    for (const m of linea.matchAll(DATA)) {
+      data = giornoValido(m);
+      if (data) break;
+    }
     if (data) break;
   }
   const ora = testo.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/);
@@ -231,7 +267,13 @@ export function leggiScontrino(testo: string): ScontrinoLetto {
     if (pezziSospesi && riga.pezzi === undefined) riga.pezzi = pezziSospesi;
     pezziSospesi = null;
     descrizioneSospesa = null;
-    const formato = formatoDaDescrizione(descrizione);
+    // «4 PASTA DI SEMOLA 500G»: il numero in testa è la quantità (colonna QTA letta attaccata al nome), non parte del nome.
+    const qta = riga.descrizione.match(/^(\d{1,2})\s+([A-Z].*)$/);
+    if (qta && riga.pezzi === undefined && Number(qta[1]) > 0 && (qta[2].match(/[A-Z]/g) ?? []).length >= 4) {
+      riga.pezzi = Number(qta[1]);
+      riga.descrizione = qta[2];
+    }
+    const formato = formatoDaDescrizione(riga.descrizione);
     if (formato) riga.formato = formato;
     righe.push(riga);
   };
@@ -264,6 +306,15 @@ export function leggiScontrino(testo: string): ScontrinoLetto {
       aggiungi(colonne[2], numero(colonne[4]), { pezzi: Number(colonne[1]), ...(colonne[5] ? { iva: colonne[5] } : {}) });
       continue;
     }
+    // «Cad 0,99 Pz. 3»: tre pezzi a 0,99 sulla riga di sopra (o su quella che segue, se il prezzo non è ancora uscito).
+    const cad = linea.match(/^CAD\.?\s*(\d{1,4}[.,]\d{2})\s*PZ\.?\s*(\d{1,3})\b/);
+    if (cad) {
+      const n = Number(cad[2]);
+      const sopra = righe.at(-1);
+      if (sopra && sopra.pezzi === undefined && Math.abs(sopra.prezzo - n * numero(cad[1])) < 0.011) sopra.pezzi = n;
+      else pezziSospesi = n;
+      continue;
+    }
     const peso = linea.match(PESO);
     const pezzi = peso ? null : linea.match(PEZZI);
     let importo = linea.match(IMPORTO);
@@ -285,8 +336,9 @@ export function leggiScontrino(testo: string): ScontrinoLetto {
       continue;
     }
     if (!importo) {
-      // Una descrizione senza prezzo: il prezzo è sulla linea sotto (peso o solo importo).
-      if (!peso && (linea.match(/[A-Z]/g) ?? []).length >= 3) {
+      // Una descrizione senza prezzo: il prezzo è sulla linea sotto (peso o solo importo). Non lo è una riga di validità,
+      // di tessera o di punti, anche con gli spazi persi e gli zeri letti O («SALD0PUNTI1250»).
+      if (!peso && (linea.match(/[A-Z]/g) ?? []).length >= 3 && !NON_PRODOTTO.test(linea.replace(/[^A-Z0-9]/g, '').replace(/0/g, 'O'))) {
         chiudiSospesa();
         descrizioneSospesa = linea;
       }
@@ -302,7 +354,8 @@ export function leggiScontrino(testo: string): ScontrinoLetto {
       .replace(/\s+/g, ' ')
       .trim();
 
-    if (SCONTO.test(linea) || valore < 0) {
+    // Uno sconto ha il prezzo negativo, o comincia con la parola («SCONTO FEDELTA»): «PROMO» o «OFFERTA» in mezzo al nome di un prodotto no.
+    if (valore < 0 || (SCONTO.test(linea) && SCONTO_IN_TESTA.test(linea))) {
       const precedente = righe.at(-1);
       if (precedente) {
         precedente.prezzo = centesimi(Math.max(0, precedente.prezzo - Math.abs(valore)));
@@ -377,13 +430,22 @@ function parole(descrizione: string): string[] {
     .filter((p) => p.length >= 3 && !/\d/.test(p) && !PAROLE_VUOTE.has(p));
 }
 
+/**
+ * Ciò che sullo scontrino non è un alimento né una scorta di casa: sacchetti del banco e shopper, abiti, spazzolino e collutorio.
+ * Mai un ingrediente: il prefisso di una parola («dent» come dentice, «sacchetto» come ghiaccio) li farebbe entrare in casa.
+ */
+const NON_ALIMENTO =
+  /\b(SHOPPER|SACCHETTO DI CONFEZ\w*|NS SACCHETTO|SACCH\.? ?ORTOFR\w*|SACCHETTO COMPOST\w*|GONNA|CARDIGAN|MAGLIA|MAGLIETTA|CAMICIA|CAMICETTA|PANTALON\w*|GIACCA|CALZINI|COLLANT|MENTADENT|COLLUTORIO|DENTIFRICIO|TESTINE|SALVASLIP)\b/;
+
 /** L'ingrediente più probabile per una descrizione dello scontrino, o undefined se non c'è un buon candidato. */
 export function suggerisciIngrediente(descrizione: string, indice: Indice): Ingrediente | undefined {
+  if (NON_ALIMENTO.test(descrizione.toUpperCase())) return undefined;
   const p = parole(descrizione);
   const tentativi = [p.join(' '), ...p.slice(0, -1).map((x, i) => `${x} ${p[i + 1]}`), ...p, ...p.filter((x) => x.length >= 5).map((x) => x.slice(0, -1))];
   // Quante parole della descrizione ha il nome (o sinonimo) che ne ha di più: «macinato tacchino pollo»
   // è il macinato di pollo o tacchino, non la carne macinata, anche se «macinato» da solo è quella.
-  const comuni = (i: Ingrediente) => Math.max(...[i.nome, ...i.sinonimi].map((n) => normalizza(n).split(' ')).map((w) => p.filter((x) => w.includes(x)).length));
+  // A parità di parole in comune vince il nome con meno parole in più: «petto di pollo» è il petto di pollo, non «petto di pollo arrosto».
+  const comuni = (i: Ingrediente) => Math.max(...[i.nome, ...i.sinonimi].map((n) => normalizza(n).split(' ')).map((w) => { const c = p.filter((x) => w.includes(x)).length; return c * 100 - (w.length - c); }));
   for (const t of tentativi) {
     if (!t) continue;
     // Solo se una parola del nome inizia con il testo cercato: «latte» sì, «atte» no.
@@ -404,11 +466,22 @@ export interface RigaDaAbbinare {
   nome: string;
 }
 
-/** Due parole si somigliano se iniziano uguali: «mozz» è mozzarella, «yog» è yogurt, «pane» non è «panna». */
-function parolaSimile(dalloScontrino: string, nota: string): boolean {
+/** La parola senza la vocale finale: «mele» e «mela» sono la stessa, «latte» e «lattuga» no. */
+const radice = (w: string) => w.replace(/[aeio]$/, '');
+
+/**
+ * Due parole si somigliano se iniziano uguali: «mozz» è mozzarella, «yog» è yogurt, «pane» non è «panna». Ma una parola
+ * scritta per intero, che è già il nome di un ingrediente («latte», «mela», «pane», «riso»), non è l'inizio di un'altra:
+ * «latte» non è «lattuga», «mela» non è «melanzane», «pane» non è «panettone». Quella si confronta con la radice.
+ */
+function parolaSimile(dalloScontrino: string, nota: string, intera: boolean): boolean {
+  if (intera) return radice(dalloScontrino) === radice(nota);
   if (dalloScontrino.length === 3) return nota.startsWith(dalloScontrino);
   return dalloScontrino.slice(0, 4) === nota.slice(0, 4);
 }
+
+/** La parola è, per intero, una parola del nome o dei sinonimi di un ingrediente. */
+const eParolaIntera = (w: string, indice: Indice) => indice.cercaIngredienti(w, 60).some((i) => [i.nome, ...i.sinonimi].some((n) => normalizza(n).split(' ').includes(w)));
 
 /** Descrizione senza spazi e punteggiatura, per riconoscere la stessa riga ripetuta sullo scontrino. */
 const chiaveRiga = (descrizione: string) => normalizza(descrizione).replace(/[^a-z0-9]/g, '');
@@ -449,7 +522,7 @@ export function abbinaRighe(lette: RigaLetta[], candidate: RigaDaAbbinare[], ind
       libere().find((x) => {
         const ing = x.ingrediente_id ? indice.ingrediente(x.ingrediente_id) : undefined;
         const note = [x.nome, ...(ing ? [ing.nome, ...ing.sinonimi] : [])].flatMap(parole);
-        return note.some((w) => mie.some((m) => parolaSimile(m, w)));
+        return note.some((w) => mie.some((m) => parolaSimile(m, w, eParolaIntera(m, indice))));
       }),
     );
   }

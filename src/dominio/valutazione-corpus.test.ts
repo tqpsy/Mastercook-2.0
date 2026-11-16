@@ -53,7 +53,9 @@ describe('misura della lettura (testi congelati)', () => {
     const chiave = (r: { caso: string; lettura: string }) => `${r.caso}/${r.lettura}`;
     // Cambiato il corpus, i numeri non sono più confrontabili: la base va rifatta di proposito.
     expect(rapporto.casi.map(chiave), 'il corpus è cambiato: MC_AGGIORNA_BASE=1 npm run valuta:scontrini').toEqual(base.casi.map(chiave));
-    expect(peggiorate(base.sintesi, rapporto.sintesi), 'metriche peggiorate').toEqual([]);
+    // La stabilità confronta letture di fonti diverse (foto, scatole, ideale): ha senso solo nella misura sulle foto, non qui.
+    const senzaStabilita = (s: Rapporto['sintesi']) => Object.fromEntries(Object.entries(s).filter(([k]) => k !== 'stabilita'));
+    expect(peggiorate(senzaStabilita(base.sintesi), senzaStabilita(rapporto.sintesi)), 'metriche peggiorate').toEqual([]);
     const prima = new Map(base.casi.map((c) => [chiave(c), c]));
     const tornatiIndietro = rapporto.casi.filter((c) => prima.get(chiave(c))?.perfetta && !c.perfetta).map(chiave);
     expect(tornatiIndietro, 'letture che erano perfette e non lo sono più').toEqual([]);

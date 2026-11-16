@@ -5,7 +5,7 @@
  * precisa), e si abbinano nomi e prezzi per ORDINE: ogni riga ha un solo prezzo, nello stesso ordine.
  * Se i conti non tornano (nomi e prezzi in numero diverso, uno sconto fuori posto) non si abbina niente.
  */
-import { DA_SALTARE, eFineRighe, eIntestazione, fineRighe, IMPORTO, PEZZI, pulisciLinea } from './scontrini';
+import { DA_SALTARE, eFineRighe, eIntestazione, fineRighe, IMPORTO, numero, PEZZI, pulisciLinea } from './scontrini';
 
 /** Un prezzo letto dalla colonna, con la lettera dell'IVA se c'è: «1,99 B», «-0,44». */
 export interface PrezzoColonna {
@@ -75,7 +75,15 @@ const soloIntestazione = (linea: string) => eIntestazione(linea) && (linea.repla
  * di articoli: l'inizio si legge peggio della fine) e l'intestazione del negozio prima di loro. Null se non ce ne sono
  * abbastanza.
  */
-function prendiNomi(testo: string, quanti: number, taglia: boolean): { testa: string[]; nomi: string[]; qta: (number | undefined)[] } | null {
+/** «3 X1,49», «Cad 0,99 Pz. 3»: quanti pezzi e a quanto l'uno, con la posizione (quanti nomi stanno sopra). */
+interface RigaPezzi {
+  pos: number;
+  n: number;
+  unitario: number;
+}
+const CAD = /^CAD\.?\s*(\d{1,4}[.,]\d{2})\s*PZ\.?\s*(\d{1,3})\b/;
+
+function prendiNomi(testo: string, quanti: number, taglia: boolean): { testa: string[]; nomi: string[]; qta: (number | undefined)[]; pezzi: RigaPezzi[] } | null {
   const grezze = testo.split(/\r?\n/).filter((l) => l.trim());
   const linee = grezze.map(pulisciLinea);
   const intestazione = linee.findIndex(eIntestazione);
@@ -89,8 +97,29 @@ function prendiNomi(testo: string, quanti: number, taglia: boolean): { testa: st
     if (r) scelte.unshift({ i, ...r });
   }
   if (!scelte.length || (intestazione < 0 && scelte.length < quanti)) return null;
+  // Le righe dei pezzi («3 X1,49») non sono nomi ma dicono quanti pezzi ha la riga vicina: si ricordano con la loro posizione.
+  const pezzi: RigaPezzi[] = [];
+  for (let i = Math.max(0, intestazione + 1); i < fine; i++) {
+    const m = linee[i].match(PEZZI);
+    const c = linee[i].match(CAD);
+    if (m) pezzi.push({ pos: scelte.filter((x) => x.i < i).length, n: Number(m[1]), unitario: numero(m[2]) });
+    else if (c) pezzi.push({ pos: scelte.filter((x) => x.i < i).length, n: Number(c[2]), unitario: numero(c[1]) });
+  }
   // Prima dei nomi: l'intestazione del negozio (senza la riga «DESCRIZIONE»: la rimettiamo noi, una sola).
-  return { testa: [...linee.slice(0, scelte[0].i).filter((l) => !eIntestazione(l)), 'DESCRIZIONE'], nomi: scelte.map((x) => x.nome), qta: scelte.map((x) => x.qta) };
+  return { testa: [...linee.slice(0, scelte[0].i).filter((l) => !eIntestazione(l)), 'DESCRIZIONE'], nomi: scelte.map((x) => x.nome), qta: scelte.map((x) => x.qta), pezzi };
+}
+
+/** Le righe della tessera fedeltà e simili, che stanno prima dei prodotti e non hanno prezzo. */
+const TESSERA = /(CARTA\s?NUM\w*|CLUB\b|\bTESSERA|\bFEDELT\w*|\bCARD\b)/;
+
+/** Toglie fino a `extra` righe di tessera tra le prime sei: se non bastano, resta com'era (non si sa quale nome manca). */
+function senzaTessera<T extends { nomi: string[]; qta: (number | undefined)[]; pezzi: RigaPezzi[] }>(letti: T, extra: number): T {
+  const via = new Set<number>();
+  for (const [i, n] of letti.nomi.slice(0, 6).entries()) if (via.size < extra && TESSERA.test(n)) via.add(i);
+  if (via.size < extra) return letti;
+  // Le righe tolte stavano tra i primi nomi: i pezzi più in basso restano sul loro nome (la posizione scende di quante ne sono state tolte sopra).
+  const sopra = (pos: number) => [...via].filter((i) => i < pos).length;
+  return { ...letti, nomi: letti.nomi.filter((_, i) => !via.has(i)), qta: letti.qta.filter((_, i) => !via.has(i)), pezzi: letti.pezzi.map((p) => ({ ...p, pos: p.pos - sopra(p.pos) })) };
 }
 
 /**
@@ -102,22 +131,37 @@ function prendiNomi(testo: string, quanti: number, taglia: boolean): { testa: st
  */
 export function unisciColonne(primo: string, prezzi: PrezzoColonna[], nomiDa = primo): string | null {
   if (!prezzi.length) return null;
-  const letti = prendiNomi(nomiDa, prezzi.length, nomiDa === primo);
-  // Più nomi che prezzi: ne manca uno, non si sa quale. Più prezzi che nomi: i prezzi di troppo in fondo sono quelli del
-  // totale, dell'IVA e del pagamento, e si tolgono.
+  let letti = prendiNomi(nomiDa, prezzi.length, nomiDa === primo);
+  // Più nomi che prezzi: ne manca uno, non si sa quale. Ma le righe della tessera fedeltà all'inizio («BENNET CLUB», «CARTA NUM.
+  // 0420***») non hanno prezzo e non sono prodotti: si tolgono, e se poi i conti tornano si abbina. Più prezzi che nomi: i prezzi
+  // di troppo in fondo sono quelli del totale, dell'IVA e del pagamento, e si tolgono.
+  if (letti && letti.nomi.length > prezzi.length) letti = senzaTessera(letti, letti.nomi.length - prezzi.length);
   if (!letti || letti.nomi.length > prezzi.length) return null;
   prezzi = prezzi.slice(0, letti.nomi.length);
   // Uno sconto è negativo: se al prezzo è caduto il segno meno, lo si rimette (il nome dice che è uno sconto).
   // Il contrario non vale: un prezzo negativo può essere uno sconto che non si chiama così («Too Good To Go»).
   const conSegno = prezzi.map((p, i) => (eSconto(letti.nomi[i]) && !p.negativo ? { testo: `-${p.testo}`, negativo: true } : p));
   if (letti.nomi.some((n, i) => eSconto(n) && !conSegno[i].negativo)) return null;
+  // I pezzi di una riga stanno a volte su una riga a parte («3 X1,49»): vanno al nome sopra o sotto il cui prezzo vale pezzi × unitario.
+  const qta = [...letti.qta];
+  for (const p of letti.pezzi) {
+    for (const j of [p.pos - 1, p.pos]) {
+      if (j < 0 || j >= letti.nomi.length || qta[j] !== undefined) continue;
+      const tot = Math.abs(numero(conSegno[j].testo.replace(/\s?[A-Z]$/, '')));
+      if (Math.abs(p.n * p.unitario - tot) < 0.011) {
+        qta[j] = p.n;
+        break;
+      }
+    }
+  }
+  letti.qta = qta;
   const linee = primo.split(/\r?\n/).map(pulisciLinea).filter(Boolean);
   const t = linee.findIndex((l, i) => eFineRighe(l) && linee.slice(0, i).some(eIntestazione));
   const resto = t >= 0 ? linee.slice(t) : [];
   const righe = letti.nomi.flatMap((n, i) => {
     // Colonna delle quantità («2   PANE   0,49   0,98»): il prezzo è quello di riga; il pezzo costa totale ÷ quantità.
     const q = letti.qta[i];
-    const tot = Number(conSegno[i].testo.replace(/[^\d,]/g, '').replace(',', '.'));
+    const tot = Math.abs(numero(conSegno[i].testo.replace(/\s?[A-Z]$/, '')));
     const unitario = q && q > 1 ? Math.round((tot / q) * 100) / 100 : null;
     if (unitario !== null && Math.abs(unitario * q! - tot) < 0.011) return [n, `${q} x ${unitario.toFixed(2).replace('.', ',')}   ${conSegno[i].testo}`];
     return [`${n}   ${conSegno[i].testo}`];

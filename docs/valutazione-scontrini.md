@@ -84,3 +84,26 @@ Per confrontare davvero, i rapporti devono venire dalla stessa macchina e dallo 
 - La conversione in prodotti si misura con `suggerisciIngrediente` e `quantitaProposta`; le scelte che la schermata fa in più (per esempio l'unità a pezzi per ciò che si conta) stanno dentro `Scontrino.tsx` e non sono ancora coperte. Estrarle in `src/dominio/` è un lavoro per la fase dei prodotti.
 - Le righe ripetute non si uniscono («× 2», `unisciRipetute`): ogni riga stampata è una riga della verità.
 - Con pochi scontrini veri i numeri sono un'indicazione, non una statistica. Più scontrini veri ci sono nel corpus, più si può fidare del risultato.
+
+## Come è andata finora (misura sulle foto, 112 letture, 16 scontrini)
+
+| | Fase 0 (partenza) | Dopo parser, prodotti, doppioni e lettore |
+|---|---|---|
+| Letture perfette al primo tentativo | 17% | **80%** |
+| Righe giuste (nome e prezzo) | 78% | **96%** |
+| Data e ora giuste | 32% e 29% | **91%** |
+| Formato letto | 39% | **86%** |
+| Ingrediente giusto | 67% | **88%** |
+| Quantità in casa giusta | 39% | **75%** |
+| Abbinamenti alle spunte giusti | 33% | **98%** |
+| Prezzi sbagliati senza avviso | 384 | **24** |
+| Quantità sbagliate che entrerebbero in casa | 32 | **3** |
+
+I rapporti sono `tests/scontrini/rapporti/fase-0-base.json` e `fase-2.json`; `node scripts/valuta-scontrini/confronta.mjs` li confronta.
+Cosa ha pesato di più: l'abbinamento dei nomi ai prezzi per ordine (regge le foto storte e ora ignora la tessera fedeltà in testa), il
+formato letto con l'unità prima del numero e con gli zeri letti O, la data incollata all'ora, `PROMO` nel nome che non è uno sconto,
+l'abbinamento alle spunte per parola intera (LATTE non è Lattuga), i non-alimenti che non diventano cibo, la doppia lettura che segnala
+le righe dubbie e il ripiego Tesseract che non sostituisce più una lettura buona di Paddle.
+
+I limiti noti: il carattere con lo zero barrato (Lidl) letto come 8, e le scatole di prezzi molto chiare che la rilevazione non vede
+(Bennet su sfondo blu): in questi casi la lettura resta sbagliata ma segnalata, e si controlla riga per riga.

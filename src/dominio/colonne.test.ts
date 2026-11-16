@@ -290,3 +290,43 @@ describe('correzione delle cifre confuse', () => {
     expect(correggiPrezzi(righe, { totale: 1400, ivaTotale: iva(500, 900), aliquote })).toEqual([500, 900]);
   });
 });
+
+describe('righe della tessera fedeltà prima dei prodotti', () => {
+  const pagina = ['BENNET', 'DESCRIZIONE', 'TOTALE COMPLESSIVO 4,18'].join('\n');
+  const prezzi = prezziDaColonna(['1,99 B', '2,19 C'].join('\n'));
+  it('«BENNET CLUB» e «CARTA NUM.» non hanno prezzo: si tolgono e i nomi si abbinano ai prezzi per ordine', () => {
+    const nomi = ['DESCRIZIONE   PREZZO IVA', 'BENNET CLUB', 'CARTA NUM.0420***21', 'RICOTTA CASEIFICIO PUGLI', 'TAGLIATELLE SPEC.GOURMET', 'TOTALE COMPLESSIVO'].join('\n');
+    const t = unisciColonne(pagina, prezzi, nomi);
+    expect(t).not.toBeNull();
+    expect(leggiScontrino(t!).righe.map((r) => [r.descrizione, r.prezzo])).toEqual([['RICOTTA CASEIFICIO PUGLI', 1.99], ['TAGLIATELLE SPEC.GOURMET', 2.19]]);
+  });
+  it('un nome in più che non è della tessera resta un nome in più: non si abbina niente', () => {
+    const nomi = ['DESCRIZIONE   PREZZO IVA', 'RICOTTA CASEIFICIO PUGLI', 'PASTA FRESCA', 'TAGLIATELLE SPEC.GOURMET', 'TOTALE COMPLESSIVO'].join('\n');
+    expect(unisciColonne(pagina, prezzi, nomi)).toBeNull();
+  });
+});
+
+describe('righe dei pezzi nella colonna dei nomi', () => {
+  const pagina = ['SUPERMERCATO', 'DESCRIZIONE', 'TOTALE COMPLESSIVO 6,57'].join('\n');
+  it('«3 X1,49» dà i pezzi al nome sopra se il suo prezzo vale 3 × 1,49', () => {
+    const nomi = ['DESCRIZIONE   PREZZO IVA', 'PATATE BENNET', 'AVOCADO HASS G 200', '3 X1,49', 'MELANZANE SFUSE', 'TOTALE COMPLESSIVO'].join('\n');
+    const t = unisciColonne(pagina, prezziDaColonna(['2,34 B', '4,47 B', '2,52 B'].join('\n')), nomi);
+    expect(leggiScontrino(t!).righe.map((r) => [r.descrizione, r.prezzo, r.pezzi])).toEqual([['PATATE BENNET', 2.34, undefined], ['AVOCADO HASS G 200', 4.47, 3], ['MELANZANE SFUSE', 2.52, undefined]]);
+  });
+  it('i prezzi col punto decimale («4.47 B») valgono quanto quelli con la virgola', () => {
+    const nomi = ['DESCRIZIONE   PREZZO IVA', 'PATATE BENNET', 'AVOCADO HASS G 200', '3 X1.49', 'MELANZANE SFUSE', 'TOTALE COMPLESSIVO'].join('\n');
+    const t = unisciColonne(pagina, prezziDaColonna(['2.34 B', '4.47 B', '2.52 B'].join('\n')), nomi);
+    expect(leggiScontrino(t!).righe[1]).toMatchObject({ descrizione: 'AVOCADO HASS G 200', prezzo: 4.47, pezzi: 3 });
+  });
+  it('«3 x 0.10» sopra il nome (come nell’Iperal) dà i pezzi al nome sotto', () => {
+    const nomi = ['DESCRIZIONE   PREZZO IVA', 'PESTO G190', '3 x 0.10', 'SHOPPER BIO SELF', 'TOTALE COMPLESSIVO'].join('\n');
+    const t = unisciColonne(pagina, prezziDaColonna(['1,99 B', '0,30 C'].join('\n')), nomi);
+    expect(leggiScontrino(t!).righe.map((r) => [r.descrizione, r.prezzo, r.pezzi])).toEqual([['PESTO G190', 1.99, undefined], ['SHOPPER BIO SELF', 0.3, 3]]);
+  });
+  it('«Cad 0,99 Pz. 3» dà i pezzi alla riga il cui prezzo è 3 × 0,99', () => {
+    const nomi = ['DESCRIZIONE   PREZZO IVA', 'ZUCCHERO SEMOLATO', 'Cad 0,99 Pz. 3', 'FETTE DORATE', 'TOTALE COMPLESSIVO'].join('\n');
+    const t = unisciColonne(pagina, prezziDaColonna(['2,97 C', '2,35 B'].join('\n')), nomi);
+    expect(leggiScontrino(t!).righe.map((r) => [r.descrizione, r.prezzo, r.pezzi])).toEqual([['ZUCCHERO SEMOLATO', 2.97, 3], ['FETTE DORATE', 2.35, undefined]]);
+  });
+});
+
