@@ -104,7 +104,8 @@ export function leggiPerValutare(testo: string, indice: Indice, carrello: RigaDa
     totale: s.totale,
     quadra: s.quadra,
     corretti: s.corretti,
-    campiDubbi: c.campi,
+    // Da una foto (c'è una seconda lettura) la schermata mette in evidenza anche ciò che non ha letto: data, ora e totale.
+    campiDubbi: controllo ? { data: c.campi.data || s.data === null, ora: c.campi.ora || s.ora === null, totale: c.campi.totale || s.totale === null } : c.campi,
     mancantiSegnalate: c.mancanti.length,
     righe: s.righe.map((r, i) => {
       const ing = suggerisciIngrediente(r.descrizione, indice);

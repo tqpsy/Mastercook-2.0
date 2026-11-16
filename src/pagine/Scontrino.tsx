@@ -88,6 +88,8 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
   /** La data è incerta (non letta, o le due letture non concordano): va confermata prima di importare. */
   const [dataIncerta, setDataIncerta] = useState<string | null>(null);
   const [dataConfermata, setDataConfermata] = useState(false);
+  /** Di una foto: i campi che non si sono letti (ora, totale), da scrivere guardando lo scontrino. */
+  const [nonLetti, setNonLetti] = useState<string[]>([]);
   /** Lo scontrino sembra uno già importato ma chi lo importa dice che è un altro. */
   const [altroScontrino, setAltroScontrino] = useState(false);
   /** Si sta importando: un secondo tocco non deve accodare un secondo comando. */
@@ -130,6 +132,7 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
     setDaFoto(fotografata);
     setDataIncerta(fotografata ? (s.data === null ? 'Non ho letto la data: ho messo oggi.' : c.campi.data ? 'Le due letture della foto non coincidono sulla data.' : null) : null);
     setDataConfermata(false);
+    setNonLetti(fotografata ? [s.ora === null ? 'l’ora' : '', s.totale === null ? 'il totale' : ''].filter(Boolean) : []);
     setAltroScontrino(false);
     const dubbia = (r: RigaLetta, i: number) => (r.corretta ? 'il prezzo è ricavato dal totale, non letto' : c.disponibile && !c.righe[i].concorde ? 'le due letture della foto non coincidono' : undefined);
     setRighe(unisciRipetute(proposte(s.righe.map((r, i) => ({ id: crypto.randomUUID(), riga: r, dubbia: dubbia(r, i) })), giorno)));
@@ -379,6 +382,7 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
           )}
         </div>
       )}
+      {nonLetti.length > 0 && <div className="avviso info">Non ho letto {nonLetti.join(' e ')}: scrivilo guardando lo scontrino{nonLetti.includes('il totale') ? ' (serve anche a controllare che il conto torni)' : ''}.</div>}
       {controllo?.disponibile && (controllo.campi.ora || controllo.campi.totale) && (
         <div className="avviso attenzione">Le due letture della foto non coincidono su {[controllo.campi.ora ? 'ora' : '', controllo.campi.totale ? 'totale' : ''].filter(Boolean).join(' e ')}: controllali sullo scontrino.</div>
       )}

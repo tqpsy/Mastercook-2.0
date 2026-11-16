@@ -2,7 +2,7 @@
  "versione": 1,
  "livello": "testo",
  "etichetta": "base",
- "creato": "2026-11-16T00:17:31.260Z",
+ "creato": "2026-11-16T00:56:38.399Z",
  "sintesi": {
   "perfette": {
    "etichetta": "Letture perfette (al primo tentativo)",
@@ -42,7 +42,7 @@
   },
   "pezzi": {
    "etichetta": "Pezzi letti",
-   "valore": 91,
+   "valore": 125,
    "su": 133,
    "verso": "piu"
   },
@@ -72,7 +72,7 @@
   },
   "stabilita": {
    "etichetta": "Stesso esito tra letture dello stesso scontrino",
-   "valore": 52,
+   "valore": 56,
    "su": 131,
    "verso": "piu"
   },
@@ -88,7 +88,7 @@
   },
   "righeInPiu": {
    "etichetta": "Righe in più",
-   "valore": 37,
+   "valore": 28,
    "verso": "meno"
   },
   "nomiSbagliati": {
@@ -123,7 +123,7 @@
   },
   "affidabili": {
    "etichetta": "Letture affidabili (ogni errore è segnalato)",
-   "valore": 112,
+   "valore": 114,
    "su": 131,
    "verso": "piu"
   },
@@ -139,7 +139,7 @@
   },
   "campiSilenziosi": {
    "etichetta": "Data, ora o totale sbagliati non segnalati",
-   "valore": 17,
+   "valore": 5,
    "verso": "meno"
   },
   "giusteSegnalate": {
@@ -162,9 +162,7 @@
    "affidabile": true,
    "righeOk": 48,
    "righeVere": 48,
-   "errori": [
-    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3"
-   ]
+   "errori": []
   },
   {
    "caso": "bennet-albano-completo",
@@ -174,9 +172,7 @@
    "affidabile": true,
    "righeOk": 48,
    "righeVere": 48,
-   "errori": [
-    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3"
-   ]
+   "errori": []
   },
   {
    "caso": "bennet-albano-completo",
@@ -186,9 +182,7 @@
    "affidabile": true,
    "righeOk": 48,
    "righeVere": 48,
-   "errori": [
-    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3"
-   ]
+   "errori": []
   },
   {
    "caso": "bennet-albano-completo",
@@ -198,9 +192,7 @@
    "affidabile": true,
    "righeOk": 48,
    "righeVere": 48,
-   "errori": [
-    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3"
-   ]
+   "errori": []
   },
   {
    "caso": "bennet-albano-completo",
@@ -210,9 +202,7 @@
    "affidabile": true,
    "righeOk": 48,
    "righeVere": 48,
-   "errori": [
-    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3"
-   ]
+   "errori": []
   },
   {
    "caso": "bennet-albano-completo",
@@ -222,9 +212,7 @@
    "affidabile": true,
    "righeOk": 48,
    "righeVere": 48,
-   "errori": [
-    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3"
-   ]
+   "errori": []
   },
   {
    "caso": "bennet-albano-completo",
@@ -234,9 +222,7 @@
    "affidabile": true,
    "righeOk": 48,
    "righeVere": 48,
-   "errori": [
-    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3"
-   ]
+   "errori": []
   },
   {
    "caso": "bennet-albano-completo",
@@ -268,9 +254,7 @@
    "affidabile": true,
    "righeOk": 48,
    "righeVere": 48,
-   "errori": [
-    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3"
-   ]
+   "errori": []
   },
   {
    "caso": "bennet-albano-ritaglio-alto",
@@ -280,9 +264,7 @@
    "affidabile": true,
    "righeOk": 48,
    "righeVere": 48,
-   "errori": [
-    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3"
-   ]
+   "errori": []
   },
   {
    "caso": "bennet-albano-ritaglio-alto",
@@ -292,9 +274,7 @@
    "affidabile": true,
    "righeOk": 48,
    "righeVere": 48,
-   "errori": [
-    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3"
-   ]
+   "errori": []
   },
   {
    "caso": "bennet-albano-ritaglio-alto",
@@ -304,9 +284,7 @@
    "affidabile": true,
    "righeOk": 48,
    "righeVere": 48,
-   "errori": [
-    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3"
-   ]
+   "errori": []
   },
   {
    "caso": "bennet-albano-ritaglio-alto",
@@ -316,9 +294,7 @@
    "affidabile": true,
    "righeOk": 48,
    "righeVere": 48,
-   "errori": [
-    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3"
-   ]
+   "errori": []
   },
   {
    "caso": "bennet-albano-ritaglio-alto",
@@ -328,9 +304,7 @@
    "affidabile": true,
    "righeOk": 48,
    "righeVere": 48,
-   "errori": [
-    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3"
-   ]
+   "errori": []
   },
   {
    "caso": "bennet-albano-ritaglio-alto",
@@ -352,7 +326,6 @@
    "righeVere": 48,
    "errori": [
     "riga 23 «SACCHETTO DI CONFEZ.»: ingrediente ing:ghiaccio invece di nessuno",
-    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3",
     "riga 46 «UOVA BIOLOGICHE M X4»: ingrediente nessuno invece di ing:uova"
    ]
   },
@@ -366,7 +339,6 @@
    "righeVere": 48,
    "errori": [
     "riga 32 «SACCHETTO DI CONFEZ.»: ingrediente ing:ghiaccio invece di nessuno",
-    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3",
     "riga 46 «UOVA BIOLOGICHE M X4»: formato niente invece di 4 pz",
     "riga 46 «UOVA BIOLOGICHE M X4»: in casa 1 pz invece di 4 pz",
     "riga 47 «UOVA BIOLOGICHE M X4»: ingrediente nessuno invece di ing:uova"
@@ -382,7 +354,6 @@
    "righeVere": 48,
    "errori": [
     "riga 32 «SACCHETTO DI CONFEZ.»: ingrediente ing:ghiaccio invece di nessuno",
-    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3",
     "riga 47 «UOVA BIOLOGICHE M X4»: ingrediente nessuno invece di ing:uova"
    ]
   },
@@ -396,7 +367,6 @@
    "righeVere": 48,
    "errori": [
     "riga 32 «SACCHETTO DI CONFEZ.»: ingrediente ing:ghiaccio invece di nessuno",
-    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3",
     "riga 47 «UOVA BIOLOGICHE M X4»: ingrediente nessuno invece di ing:uova"
    ]
   },
@@ -410,7 +380,6 @@
    "righeVere": 48,
    "errori": [
     "riga 32 «SACCHETTO DI CONFEZ.»: ingrediente ing:ghiaccio invece di nessuno",
-    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3",
     "riga 47 «UOVA BIOLOGICHE M X4»: ingrediente nessuno invece di ing:uova"
    ]
   },
@@ -425,7 +394,6 @@
    "errori": [
     "riga 27 «SACCHETTO DI CONFEZ.»: ingrediente ing:marmellata invece di nessuno",
     "riga 32 «SACCHETTO DI CONFEZ.»: ingrediente ing:ghiaccio invece di nessuno",
-    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3",
     "riga 47 «UOVA BIOLOGICHE M X4»: ingrediente nessuno invece di ing:uova"
    ]
   },
@@ -439,7 +407,6 @@
    "righeVere": 48,
    "errori": [
     "riga 32 «SACCHETTO DI CONFEZ.»: ingrediente ing:ghiaccio invece di nessuno",
-    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3",
     "riga 47 «UOVA BIOLOGICHE M X4»: ingrediente nessuno invece di ing:uova"
    ]
   },
@@ -464,9 +431,7 @@
    "affidabile": true,
    "righeOk": 48,
    "righeVere": 48,
-   "errori": [
-    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3"
-   ]
+   "errori": []
   },
   {
    "caso": "bennet-albano-sfondo-blu",
@@ -477,7 +442,6 @@
    "righeOk": 48,
    "righeVere": 48,
    "errori": [
-    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3",
     "riga 47 «UOVA BIOLOGICHE M X4»: ingrediente nessuno invece di ing:uova"
    ]
   },
@@ -489,9 +453,7 @@
    "affidabile": true,
    "righeOk": 48,
    "righeVere": 48,
-   "errori": [
-    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3"
-   ]
+   "errori": []
   },
   {
    "caso": "bennet-albano-sfondo-blu",
@@ -501,9 +463,7 @@
    "affidabile": true,
    "righeOk": 48,
    "righeVere": 48,
-   "errori": [
-    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3"
-   ]
+   "errori": []
   },
   {
    "caso": "bennet-albano-sfondo-blu",
@@ -514,7 +474,6 @@
    "righeOk": 48,
    "righeVere": 48,
    "errori": [
-    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3",
     "riga 47 «UOVA BIOLOGICHE M X4»: ingrediente nessuno invece di ing:uova"
    ]
   },
@@ -527,7 +486,6 @@
    "righeOk": 48,
    "righeVere": 48,
    "errori": [
-    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3",
     "riga 46 «UOVA BIOLOGICHE M X4»: formato niente invece di 4 pz",
     "riga 46 «UOVA BIOLOGICHE M X4»: in casa 1 pz invece di 4 pz",
     "riga 47 «UOVA BIOLOGICHE M X4»: ingrediente nessuno invece di ing:uova"
@@ -541,9 +499,7 @@
    "affidabile": true,
    "righeOk": 48,
    "righeVere": 48,
-   "errori": [
-    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3"
-   ]
+   "errori": []
   },
   {
    "caso": "bennet-albano-sfondo-blu",
@@ -956,7 +912,6 @@
    "righeOk": 32,
    "righeVere": 32,
    "errori": [
-    "riga 32 «SHOPPER BIO SELF»: pezzi non letti invece di 3",
     "negozio «San Paolod'Argon» invece di «Iperal Supermercati Spa»"
    ]
   },
@@ -968,9 +923,7 @@
    "affidabile": true,
    "righeOk": 32,
    "righeVere": 32,
-   "errori": [
-    "riga 32 «SHOPPER BIO SELF»: pezzi non letti invece di 3"
-   ]
+   "errori": []
   },
   {
    "caso": "iperal-san-paolo-d-argon",
@@ -980,9 +933,7 @@
    "affidabile": true,
    "righeOk": 32,
    "righeVere": 32,
-   "errori": [
-    "riga 32 «SHOPPER BIO SELF»: pezzi non letti invece di 3"
-   ]
+   "errori": []
   },
   {
    "caso": "iperal-san-paolo-d-argon",
@@ -992,9 +943,7 @@
    "affidabile": true,
    "righeOk": 32,
    "righeVere": 32,
-   "errori": [
-    "riga 32 «SHOPPER BIO SELF»: pezzi non letti invece di 3"
-   ]
+   "errori": []
   },
   {
    "caso": "iperal-san-paolo-d-argon",
@@ -1004,9 +953,7 @@
    "affidabile": true,
    "righeOk": 32,
    "righeVere": 32,
-   "errori": [
-    "riga 32 «SHOPPER BIO SELF»: pezzi non letti invece di 3"
-   ]
+   "errori": []
   },
   {
    "caso": "iperal-san-paolo-d-argon",
@@ -1016,9 +963,7 @@
    "affidabile": true,
    "righeOk": 32,
    "righeVere": 32,
-   "errori": [
-    "riga 32 «SHOPPER BIO SELF»: pezzi non letti invece di 3"
-   ]
+   "errori": []
   },
   {
    "caso": "iperal-san-paolo-d-argon",
@@ -1029,8 +974,7 @@
    "righeOk": 31,
    "righeVere": 32,
    "errori": [
-    "riga 3 «PRIMIA DISG LIQ LT1»: nome «PRIMIA DISG LIO L»",
-    "riga 32 «SHOPPER BIO SELF»: pezzi non letti invece di 3"
+    "riga 3 «PRIMIA DISG LIQ LT1»: nome «PRIMIA DISG LIO L»"
    ]
   },
   {
@@ -1069,15 +1013,10 @@
     "riga 12 «MOZZARELLA DI BUFALA»: prezzo 471,49 invece di 1,19 (segnalato: letture diverse)",
     "riga 13 «GONNA MIDI NERO S-0487526» 8,99: non letta",
     "riga 14 «CARDIGAN NAVY S-0469699»: prezzo 3,43 invece di 14,99, nome «CARDIGAN NAVY S-0469699 14.99» (segnalato: letture diverse)",
-    "riga in più «OFFERTA LIDL PLUS» 0,00",
     "riga in più «CAD699PZ.3» 0,00",
-    "riga in più «OFFERTA LIDL PLUS» 0,00",
-    "riga in più «SCONTO» 0,00",
     "riga in più «B.96KGX1.79EUR/KG» 0,00",
-    "riga in più «SCONTO» 0,00",
     "riga in più «GONNA MIDI» 0,00",
     "riga in più «VALORE SCONTI 22899» 43,18",
-    "riga in più «SLBTOTALE» 0,00",
     "negozio «Ldl» invece di «Lidl Italia S.r.l. a socio unico»"
    ]
   },
@@ -1099,8 +1038,8 @@
     "riga 9 «YOGURT BIO FRAGOLA»: prezzo 9,69 invece di 0,69 (segnalato: letture diverse)",
     "riga 12 «MOZZARELLA DI BUFALA»: prezzo 0,00 invece di 1,19 (segnalato: letture diverse)",
     "riga 13 «GONNA MIDI NERO S-0487526»: ingrediente ing:cavolo_nero invece di nessuno",
-    "data non letta invece di 2025-10-27",
-    "ora non letta invece di 11:51",
+    "data non letta invece di 2025-10-27 (segnalato: letture diverse)",
+    "ora non letta invece di 11:51 (segnalato: letture diverse)",
     "negozio «B416-Via Nazionale, Snc» invece di «Lidl Italia S.r.l. a socio unico»"
    ]
   },
@@ -1109,7 +1048,7 @@
    "lettura": "foto-originale-bis",
    "perfetta": false,
    "sicura": true,
-   "affidabile": false,
+   "affidabile": true,
    "righeOk": 9,
    "righeVere": 14,
    "errori": [
@@ -1119,9 +1058,8 @@
     "riga 7 «UVA RED GLOBE»: nome «LIVA RED GLOBE» (segnalato: letture diverse)",
     "riga 9 «YOGURT BIO FRAGOLA»: prezzo 8,69 invece di 0,69 (segnalato: letture diverse)",
     "riga 12 «MOZZARELLA DI BUFALA»: prezzo 0,00 invece di 1,19 (segnalato: letture diverse)",
-    "riga in più «SLBTOTALE» 3,43",
-    "data non letta invece di 2025-10-27",
-    "ora non letta invece di 11:51",
+    "data non letta invece di 2025-10-27 (segnalato: letture diverse)",
+    "ora non letta invece di 11:51 (segnalato: letture diverse)",
     "negozio «Ldl» invece di «Lidl Italia S.r.l. a socio unico»"
    ]
   },
@@ -1130,7 +1068,7 @@
    "lettura": "foto-originale",
    "perfetta": false,
    "sicura": true,
-   "affidabile": false,
+   "affidabile": true,
    "righeOk": 9,
    "righeVere": 14,
    "errori": [
@@ -1140,9 +1078,8 @@
     "riga 7 «UVA RED GLOBE»: nome «LIVA RED GLOBE» (segnalato: letture diverse)",
     "riga 9 «YOGURT BIO FRAGOLA»: prezzo 8,69 invece di 0,69 (segnalato: letture diverse)",
     "riga 12 «MOZZARELLA DI BUFALA»: prezzo 0,00 invece di 1,19 (segnalato: letture diverse)",
-    "riga in più «SLBTOTALE» 3,43",
-    "data non letta invece di 2025-10-27",
-    "ora non letta invece di 11:51",
+    "data non letta invece di 2025-10-27 (segnalato: letture diverse)",
+    "ora non letta invece di 11:51 (segnalato: letture diverse)",
     "negozio «Ldl» invece di «Lidl Italia S.r.l. a socio unico»"
    ]
   },
@@ -1173,8 +1110,8 @@
     "riga in più «OFFERTALIDI PLUS» 0,00",
     "riga in più «SCUNTO» 8,99",
     "riga in più «VALCRE SCONTI» 0,00",
-    "data non letta invece di 2025-10-27",
-    "ora non letta invece di 11:51"
+    "data non letta invece di 2025-10-27 (segnalato: letture diverse)",
+    "ora non letta invece di 11:51 (segnalato: letture diverse)"
    ]
   },
   {
@@ -1192,9 +1129,8 @@
     "riga 4 «FILETTI TONNO SURG.»: prezzo 0,00 invece di 2,99, nome «FILETTTTOOSURG» (segnalato: letture diverse)",
     "riga 5 «LATTE PS UHT»: prezzo 0,00 invece di 0,33 (segnalato: letture diverse)",
     "riga in più «VALORE SCCNTI» 3,43",
-    "riga in più «SLBTOTALE» 43,18",
-    "data non letta invece di 2025-10-27",
-    "ora non letta invece di 11:51"
+    "data non letta invece di 2025-10-27 (segnalato: letture diverse)",
+    "ora non letta invece di 11:51 (segnalato: letture diverse)"
    ]
   },
   {
@@ -1212,9 +1148,8 @@
     "riga 5 «LATTE PS UHT»: nome «LATIEPS UHT 4L» (segnalato: letture diverse)",
     "riga 9 «YOGURT BIO FRAGOLA»: prezzo 9,69 invece di 0,69 (segnalato: letture diverse)",
     "riga 12 «MOZZARELLA DI BUFALA»: prezzo 0,00 invece di 1,19 (segnalato: letture diverse)",
-    "riga in più «SLBTOTALE» 3,43",
-    "data non letta invece di 2025-10-27",
-    "ora non letta invece di 11:51"
+    "data non letta invece di 2025-10-27 (segnalato: letture diverse)",
+    "ora non letta invece di 11:51 (segnalato: letture diverse)"
    ]
   },
   {

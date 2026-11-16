@@ -60,14 +60,16 @@ function quasiUguali(a: string, b: string): boolean {
 }
 
 /** «TOTALE» anche letto male («TOTALF», «T0TALE», «TOTAIE»). */
-const eTotale = (linea: string) => linea.split(/[^A-Z0-9]+/).some((p) => p === 'TOTALE' || (p.length >= 5 && quasiUguali(p, 'TOTALE')));
+const eTotale = (linea: string) => linea.split(/[^A-Z0-9]+/).some((p) => p === 'TOTALE' || (p.length >= 5 && quasiUguali(p, 'TOTALE')) || (p.length >= 8 && p.length <= 11 && /TOTALE$/.test(p)));
+/** «SUBTOTALE» letto male («SLBTOTALE»): chiude le righe ma non è il totale. */
+const eSubtotaleGuasto = (linea: string) => linea.split(/[^A-Z0-9]+/).some((p) => p.length >= 8 && p.length <= 11 && /TOTALE$/.test(p) && p !== 'SUBTOTALE');
 export const fineRighe = (linea: string) => FINE_RIGHE.test(linea) || eTotale(linea);
 export const DA_SALTARE =
   /\b(IVA|CONTANTE|CONTANTI|RESTO|PAGAMENTO|PAGATO|BANCOMAT|ELETTRONICO|RESO|ARROTONDAMENTO|IMPORTO|NUMERO|DOCUMENTO|SCONTRINO|BUONO|BUONI|PUNTI|SALDO|CASSA|CASSIERE|OPERATORE|TEL|TESSERA|ARTICOLI|VISA|MASTERCARD|MAESTRO|P\.?\s?IVA|C\.?F\.?|VALIDA|VALIDO|VALIDE|CAMSCANNER|SCANSIONATO)\b|CARTA (DI )?(CREDITO|DEBITO)/;
 export const SCONTO = /\b(SCONTO|SC\.|SCONT|PROMO|OFFERTA|RIBASSO|RIDUZIONE|STORNO|COUPON)\b|TOO\s?GOO?D|TO\s?GO\b/;
 const SCONTO_IN_TESTA = /^[^A-Z0-9]*(?:\d{1,3}\s?%\s*)?(?:SCONTO|SC\.|SCONT|PROMO|OFFERTA|RIBASSO|RIDUZIONE|STORNO|COUPON)\b|TOO\s?GOO?D|TO\s?GO\b/;
 /** Righe senza prezzo che non sono un prodotto, lette senza spazi e con gli zeri come O. */
-const NON_PRODOTTO = /VALID[AEIO]|SCADEN|TESSERA|SALDOPUNTI|PUNTIFEDELT|CAMSCANNER|SCANSIONATO|TOOGOOD|TOGO/;
+const NON_PRODOTTO = /VALID[AEIO]|SCADEN|TESSERA|SALDOPUNTI|PUNTIFEDELT|CAMSCANNER|SCANSIONATO|TOOGOOD|TOGO|^(SCONTO|OFFERT|COUPON)/;
 export const INTESTAZIONE_RIGHE = /\bDESCRIZIONE\b|\bPREZZO\s*\(?€?\)?\s*$/;
 
 /** Quante lettere diverse (sostituite, in più o in meno) ci sono tra due parole. */
@@ -285,7 +287,7 @@ export function leggiScontrino(testo: string): ScontrinoLetto {
       inRighe = false;
       const importo = linea.match(IMPORTO);
       if (importo && !/\bIVA\b|RESTO|CONTANT/.test(linea)) altriTotali.push(numero(importo[1]));
-      if (totale === null && eTotale(linea) && !/SUB\s?TOT/.test(linea) && !/\bIVA\b/.test(linea)) {
+      if (totale === null && eTotale(linea) && !/SUB\s?TOT/.test(linea) && !eSubtotaleGuasto(linea) && !/\bIVA\b/.test(linea)) {
         const m = linea.match(IMPORTO);
         if (m) totale = numero(m[1]);
       }
