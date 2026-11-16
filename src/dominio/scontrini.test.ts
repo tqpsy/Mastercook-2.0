@@ -305,6 +305,12 @@ describe('ingredienti e abbinamenti', () => {
     expect(t.quadra).toBe(true);
   });
 
+  it('«SLBTOTALE» è un subtotale letto male: le righe finiscono lì; uno sconto senza prezzo non è un prodotto', () => {
+    const t = leggiScontrino(['DESCRIZIONE PREZZO IVA', 'LATTE   1,29 C', 'OFFERTA LIDL PIUS', 'SCONTO', 'PANE   0,99 A', 'SLBTOTALE   2,28', 'TOTALE COMPLESSIVO 2,28'].join('\n'));
+    expect(t.righe.map((r) => r.descrizione)).toEqual(['LATTE', 'PANE']);
+    expect(t.quadra).toBe(true);
+  });
+
   it('un «G 2» o un numero senza unità non è un formato', () => {
     expect(formatoDaDescrizione('POM.DATTERINO GIALLO G 2')).toBeUndefined();
     expect(formatoDaDescrizione('SPLEG PANCETTA CUB.')).toBeUndefined();

@@ -87,19 +87,21 @@ Per confrontare davvero, i rapporti devono venire dalla stessa macchina e dallo 
 
 ## Come è andata finora (misura sulle foto, 112 letture, 16 scontrini)
 
-| | Fase 0 (partenza) | Dopo parser, prodotti, doppioni e lettore |
+| | Fase 0 (partenza) | Dopo le fasi 1-4 |
 |---|---|---|
-| Letture perfette al primo tentativo | 17% | **80%** |
+| Letture perfette al primo tentativo | 17% | **81%** |
 | Righe giuste (nome e prezzo) | 78% | **96%** |
 | Data e ora giuste | 32% e 29% | **91%** |
-| Formato letto | 39% | **86%** |
-| Ingrediente giusto | 67% | **88%** |
-| Quantità in casa giusta | 39% | **75%** |
+| Pezzi letti | 78% | **93%** |
+| Formato letto | 39% | **96%** |
+| Ingrediente giusto | 67% | **90%** |
+| Quantità in casa giusta | 39% | **82%** |
 | Abbinamenti alle spunte giusti | 33% | **98%** |
 | Prezzi sbagliati senza avviso | 384 | **24** |
 | Quantità sbagliate che entrerebbero in casa | 32 | **3** |
+| Righe in più che entrerebbero in casa | 27 | **1** |
 
-I rapporti sono `tests/scontrini/rapporti/fase-0-base.json` e `fase-2.json`; `node scripts/valuta-scontrini/confronta.mjs` li confronta.
+I rapporti sono `tests/scontrini/rapporti/fase-0-base.json` e `fase-3.json`; `node scripts/valuta-scontrini/confronta.mjs` li confronta.
 Cosa ha pesato di più: l'abbinamento dei nomi ai prezzi per ordine (regge le foto storte e ora ignora la tessera fedeltà in testa), il
 formato letto con l'unità prima del numero e con gli zeri letti O, la data incollata all'ora, `PROMO` nel nome che non è uno sconto,
 l'abbinamento alle spunte per parola intera (LATTE non è Lattuga), i non-alimenti che non diventano cibo, la doppia lettura che segnala
