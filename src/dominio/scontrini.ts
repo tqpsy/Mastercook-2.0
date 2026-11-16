@@ -299,6 +299,15 @@ export function leggiScontrino(testo: string): ScontrinoLetto {
       aggiungi(colonne[2], numero(colonne[4]), { pezzi: Number(colonne[1]), ...(colonne[5] ? { iva: colonne[5] } : {}) });
       continue;
     }
+    // «Cad 0,99 Pz. 3»: tre pezzi a 0,99 sulla riga di sopra (o su quella che segue, se il prezzo non è ancora uscito).
+    const cad = linea.match(/^CAD\.?\s*(\d{1,4}[.,]\d{2})\s*PZ\.?\s*(\d{1,3})\b/);
+    if (cad) {
+      const n = Number(cad[2]);
+      const sopra = righe.at(-1);
+      if (sopra && sopra.pezzi === undefined && Math.abs(sopra.prezzo - n * numero(cad[1])) < 0.011) sopra.pezzi = n;
+      else pezziSospesi = n;
+      continue;
+    }
     const peso = linea.match(PESO);
     const pezzi = peso ? null : linea.match(PEZZI);
     let importo = linea.match(IMPORTO);

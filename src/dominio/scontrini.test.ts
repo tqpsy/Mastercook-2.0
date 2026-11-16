@@ -275,6 +275,11 @@ describe('ingredienti e abbinamenti', () => {
     expect(leggiScontrino(['DESCRIZIONE', 'PASTA 500G   0,89 A', 'TOTALE 0,89'].join('\n')).righe[0]).toMatchObject({ descrizione: 'PASTA 500G', prezzo: 0.89 });
   });
 
+  it('«Cad 0,99 Pz. 3» dà i pezzi alla riga di sopra e non diventa una riga', () => {
+    const t = leggiScontrino(['DESCRIZIONE PREZZO IVA', 'ZUCCHERO SEMOLATO   2,97 C', 'Cad 0,99 Pz. 3', 'FETTE DORATE   2,35 B', 'TOTALE COMPLESSIVO 5,32'].join('\n'));
+    expect(t.righe.map((r) => [r.descrizione, r.prezzo, r.pezzi])).toEqual([['ZUCCHERO SEMOLATO', 2.97, 3], ['FETTE DORATE', 2.35, undefined]]);
+  });
+
   it('un numero di una o due cifre in testa al nome è la quantità; uno di tre (un codice) no', () => {
     const t = (riga: string) => leggiScontrino(['DESCRIZIONE PREZZO IVA', riga, 'TOTALE 0,76'].join('\n')).righe[0];
     expect(t('4 PASTA DI SEMOLA 500G   0,76')).toMatchObject({ descrizione: 'PASTA DI SEMOLA 500G', pezzi: 4, formato: { quantita: 500, unita: 'g' } });
