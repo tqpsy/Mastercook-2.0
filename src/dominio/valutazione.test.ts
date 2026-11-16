@@ -91,6 +91,49 @@ describe('valutazione di una lettura', () => {
   });
 });
 
+describe('segnalazioni della doppia lettura', () => {
+  const ERRATA = TESTO(['LATTE PARZ.SCREM. 1L 1,28 C', ...GIUSTO.slice(1)]);
+
+  it('un prezzo sbagliato che la seconda lettura smentisce è segnalato, non silenzioso', () => {
+    const senza = valuta(VERITA, leggiPerValutare(ERRATA, indice));
+    expect(senza.righe).toMatchObject({ sbagliateSilenziose: 1, sbagliateSegnalate: 0, prezzoSilenzioso: 1 });
+    expect(senza.affidabile).toBe(false);
+    const con = valuta(VERITA, leggiPerValutare(ERRATA, indice, [], TESTO(GIUSTO)));
+    expect(con.righe).toMatchObject({ sbagliateSilenziose: 0, sbagliateSegnalate: 1, giusteSegnalate: 0, prezzoSegnalato: 1 });
+    expect(con.errori[0]).toContain('segnalato: letture diverse');
+    // La lettura resta sbagliata (non perfetta): ma ora chi controlla la vede.
+    expect(con).toMatchObject({ perfetta: false, affidabile: true });
+  });
+
+  it('una riga giusta su cui le due letture divergono è un falso allarme, non un errore', () => {
+    const v = valuta(VERITA, leggiPerValutare(TESTO(GIUSTO), indice, [], ERRATA));
+    expect(v.righe).toMatchObject({ ok: 4, giusteSegnalate: 1, sbagliateSilenziose: 0 });
+    expect(v).toMatchObject({ perfetta: true, affidabile: true });
+  });
+
+  it('una data che manca è silenziosa, a meno che la seconda lettura non la veda', () => {
+    const senzaData = TESTO(GIUSTO, 'TOTALE COMPLESSIVO 4,77');
+    expect(valuta(VERITA, leggiPerValutare(senzaData, indice))).toMatchObject({ campiSilenziosi: 2, affidabile: false });
+    expect(valuta(VERITA, leggiPerValutare(senzaData, indice, [], TESTO(GIUSTO)))).toMatchObject({ campiSilenziosi: 0, affidabile: true });
+  });
+
+  it('una riga persa è segnalata se la seconda lettura ne ha trovate in più', () => {
+    const persa = TESTO(GIUSTO.slice(0, 3));
+    expect(valuta(VERITA, leggiPerValutare(persa, indice)).righe).toMatchObject({ mancanti: 1, perseSilenziose: 1 });
+    const con = valuta(VERITA, leggiPerValutare(persa, indice, [], TESTO(GIUSTO)));
+    expect(con.righe).toMatchObject({ mancanti: 1, perseSilenziose: 0 });
+    expect(con.affidabile).toBe(true);
+  });
+
+  it('nella sintesi: letture affidabili e falsi allarmi', () => {
+    const esito = (lettura: string, testo: string, controllo: string | null) => ({ caso: 'a', lettura, valutazione: valuta(VERITA, leggiPerValutare(testo, indice, [], controllo)) });
+    const s = riassumi([esito('1', ERRATA, null), esito('2', ERRATA, TESTO(GIUSTO)), esito('3', TESTO(GIUSTO), ERRATA)]);
+    expect(s.affidabili).toMatchObject({ valore: 2, su: 3 });
+    expect(s.sbagliateSilenziose.valore).toBe(1);
+    expect(s.giusteSegnalate.valore).toBe(1);
+  });
+});
+
 describe('scontrino ritagliato: i campi che non si vedono non si misurano', () => {
   it('senza data e totale nella verità, una lettura senza data né totale può essere perfetta', () => {
     const ritagliata: Verita = { ...VERITA, data: undefined, ora: undefined, totale: undefined };

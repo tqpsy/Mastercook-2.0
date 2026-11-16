@@ -23,7 +23,10 @@ I numeri principali (`riassumi` in `src/dominio/valutazione.ts`):
 - **Errori**, dove meno è meglio: prezzi sbagliati *senza avviso*, righe perse, righe in più, quantità sbagliate in casa, abbinamenti sbagliati.
 - **«Il conto torna» ma la lettura è sbagliata** (falso quadra): la lettura dichiara il totale in ordine, ma qualche riga è sbagliata, persa o in più (data e ora non contano: non fanno parte del conto). Oggi «quadra» fa vincere una lettura sull'altra (`punteggio` in `ocr.ts`): questo numero dice quanto è affidabile.
 
-Un errore *segnalato* (riga senza prezzo, prezzo corretto dal conto) è meno grave di uno *silenzioso*: chi controlla vede il primo, il secondo arriva in casa.
+Un errore *segnalato* è meno grave di uno *silenzioso*: chi controlla vede il primo, il secondo arriva in casa. L'app segnala una riga quando non ha il prezzo, quando il prezzo è ricavato dal conto, oppure quando **le due letture della foto non coincidono** su di lei (`doppiaLettura.ts`).
+- **Letture affidabili**: ogni errore che resta (riga sbagliata, riga persa, data, ora o totale) è segnalato. Non vuol dire che la lettura sia giusta, vuol dire che nessun errore passa inosservato: è il numero che misura la Fase 1.
+- **Righe sbagliate non segnalate**, **righe perse non segnalate**, **data, ora o totale sbagliati non segnalati**: gli errori silenziosi, dove meno è meglio.
+- **Righe giuste segnalate per prudenza** (falsi allarmi): ogni riga giusta segnalata costa un controllo inutile. Se i falsi allarmi crescono troppo la segnalazione non serve più.
 Una quantità non letta è «mancata» (si scrive dopo, in «Da completare») e non è un errore di giacenza; una quantità diversa da quella vera lo è.
 
 ## Due livelli
@@ -39,6 +42,7 @@ Le due misure sono complementari. Un cambiamento al parser o all'abbinamento si 
 tests/scontrini/
   casi/<id>/verita.json       la verità, scritta a mano (si committa)
   casi/<id>/letture/*.txt     testi già letti, congelati (si committano)
+  casi/<id>/letture/<nome>-controllo.txt   la seconda lettura della stessa foto, accanto a <nome>.txt
   casi/<id>/letture/*-scatole.json   pezzi di testo di PaddleOCR, ricomposti come fa l'app
   casi/<id>/foto.jpg          la foto vera dello scontrino (si committa, vedi «Foto e dati personali»)
   base.json                   i numeri di adesso del livello testo (il freno)

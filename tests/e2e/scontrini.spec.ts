@@ -360,3 +360,26 @@ test('una riga segnata «non è un alimento» per errore si riporta tra gli alim
   await page.getByRole('button', { name: 'Casa', exact: true }).click();
   await expect(page.getByRole('region', { name: 'Da completare' })).toContainText('Pasta');
 });
+
+test('scontrino con un prezzo ricavato dal totale: la riga è segnalata e non si importa finché non è controllata', async ({ browser }, info) => {
+  const luca = await nuovoUtente('Luca');
+  const { page } = await apri(browser, luca, info.project.use);
+  await creaFamiglia(page, 'Casa Da Controllare');
+  await page.getByRole('button', { name: 'Spesa', exact: true }).click();
+  await page.getByRole('button', { name: 'Aggiungi uno scontrino' }).click();
+  // Il prezzo del latte non si legge: l'app lo ricava dal totale (2,89 - 1,50), ma non è letto e va guardato.
+  await page.getByLabel('Oppure incolla il testo dello scontrino').fill('SUPERMERCATO ROSSI\nDESCRIZIONE   PREZZO IVA\nPANE   1,50 A\nLATTE INTERO 1L   ip: |\nTOTALE 2,89\nCARTA   2,89');
+  await page.getByRole('button', { name: 'Leggi le righe' }).click();
+  const foglio = page.getByRole('dialog', { name: 'Controlla lo scontrino' });
+  await expect(foglio.getByRole('status')).toContainText('Una riga è segnalata');
+  await expect(foglio.getByText('Da controllare: il prezzo è ricavato dal totale, non letto.')).toBeVisible();
+  const importa = foglio.getByRole('button', { name: 'Importa lo scontrino' });
+  await expect(importa).toBeDisabled();
+  await expect(foglio).toContainText('Prima di importare controlla la riga segnalata.');
+
+  // Guardata la riga, si segna «controllata»: ora si può importare.
+  await foglio.getByRole('checkbox', { name: 'Ho controllato LATTE INTERO' }).check();
+  await expect(foglio.getByText('Controllata', { exact: true })).toBeVisible();
+  await expect(importa).toBeEnabled();
+  await expect(foglio.getByRole('status')).toHaveCount(0);
+});

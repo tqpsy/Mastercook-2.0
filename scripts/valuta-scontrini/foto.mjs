@@ -160,17 +160,19 @@ async function nelBrowser({ casi, varianti, etichetta, base, tesseract }) {
       const nome = `${c.foto ? 'foto' : 'sintetica'}-${v.nome}`;
       const inizio = performance.now();
       let testo = '';
+      let controllo = null;
       let errore = null;
       try {
-        testo = await leggiTestoDaFoto(await varia(blobBase, v), () => undefined);
+        // Il lettore dà la lettura scelta e un controllo (seconda lettura della stessa foto): la misura usa tutti e due, come l'app.
+        ({ testo, controllo } = await leggiTestoDaFoto(await varia(blobBase, v), () => undefined));
       } catch (e) {
         errore = String(e?.message ?? e);
       }
       tempi.push(performance.now() - inizio);
-      const valutazione = valuta(c.verita, leggiPerValutare(testo, indice, c.verita.carrello));
+      const valutazione = valuta(c.verita, leggiPerValutare(testo, indice, c.verita.carrello, controllo));
       if (errore) valutazione.errori.unshift(`lettura fallita: ${errore}`);
       esiti.push({ caso: c.id, lettura: nome, valutazione, ...(errore ? { fallita: true } : {}) });
-      letti.push({ caso: c.id, nome, testo });
+      letti.push({ caso: c.id, nome, testo, controllo });
       window.progresso?.(`${c.id} / ${nome}: ${valutazione.perfetta ? 'perfetta' : `${valutazione.righe.ok}/${valutazione.righe.vere} righe`}`);
     }
   }
@@ -210,11 +212,14 @@ try {
   console.log(`\nRapporto: ${fuori}`);
   for (const m of Object.values(rapporto.sintesi)) console.log(`  ${m.etichetta}: ${m.su === undefined ? m.valore : m.su ? `${Math.round((m.valore / m.su) * 1000) / 10}% (${m.valore}/${m.su})` : '—'}`);
   if (congela) {
-    for (const { caso, nome, testo } of letti) {
+    const conFineRiga = (t) => (t.endsWith('\n') ? t : `${t}\n`);
+    for (const { caso, nome, testo, controllo } of letti) {
       if (!testo.trim()) continue;
       const cartella = join(CORPUS, 'casi', caso, 'letture');
       mkdirSync(cartella, { recursive: true });
-      writeFileSync(join(cartella, `${nome}.txt`), testo.endsWith('\n') ? testo : `${testo}\n`);
+      writeFileSync(join(cartella, `${nome}.txt`), conFineRiga(testo));
+      // Il controllo (seconda lettura) sta accanto alla lettura: `<nome>-controllo.txt`.
+      if (controllo?.trim()) writeFileSync(join(cartella, `${nome}-controllo.txt`), conFineRiga(controllo));
     }
     console.log(`Testi congelati in tests/scontrini/casi/*/letture. Controllali (le foto vere possono avere numeri di carta o tessera) e poi: MC_AGGIORNA_BASE=1 npm run valuta:scontrini`);
   }

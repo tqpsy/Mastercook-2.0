@@ -41,6 +41,8 @@ export interface ScontrinoLetto {
   righe: RigaLetta[];
   /** La somma delle righe coincide con il totale: la lettura è probabilmente completa. */
   quadra: boolean;
+  /** Torna senza aiuto: nessun prezzo è stato corretto o ricavato dal conto per farlo tornare (`corretti === 0`). Un conto fatto tornare a forza prova meno. */
+  quadraDaSola: boolean;
   /** Quanti prezzi sono stati corretti perché il conto tornasse. */
   corretti: number;
 }
@@ -354,6 +356,7 @@ export function leggiScontrino(testo: string): ScontrinoLetto {
     somma = centesimi(righe.reduce((s, r) => s + r.prezzo, 0));
   }
   const { data, ora } = dataOraDa(linee.join('\n'));
+  const quadra = totale !== null && righe.length > 0 && Math.abs(somma - totale) < 0.011;
   return {
     negozio: negozioDa(linee),
     data,
@@ -361,7 +364,8 @@ export function leggiScontrino(testo: string): ScontrinoLetto {
     totale,
     righe,
     corretti,
-    quadra: totale !== null && righe.length > 0 && Math.abs(somma - totale) < 0.011,
+    quadra,
+    quadraDaSola: quadra && corretti === 0,
   };
 }
 
@@ -510,6 +514,8 @@ export interface RigaRipetibile {
   unita: string;
   luogo: string;
   quante?: string;
+  /** Perché la riga è «da controllare» (le due letture divergono, prezzo ricavato dal conto): vale per la riga unita se vale per una delle due. */
+  dubbia?: string;
 }
 
 /**
@@ -528,6 +534,7 @@ export function unisciRipetute<T extends RigaRipetibile>(righe: T[]): T[] {
       continue;
     }
     const s = stessa.riga;
+    s.dubbia ??= r.dubbia;
     s.quante = String((leggiNumero(s.quante || '1') ?? 1) + (leggiNumero(r.quante || '1') ?? 1));
     if (s.euro.trim()) s.euro = (Math.round(((leggiNumero(s.euro) ?? 0) + (leggiNumero(r.euro) ?? 0)) * 100) / 100).toFixed(2).replace('.', ',');
   }

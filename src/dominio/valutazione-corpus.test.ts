@@ -21,7 +21,7 @@ const indice = new Indice(catalogo as Catalogo);
 const BASE = `${CARTELLA}base.json`;
 const corpus = caricaCorpus();
 
-const esiti: Esito[] = corpus.flatMap((c) => c.letture.map((l) => ({ caso: c.verita.id, lettura: l.nome, valutazione: valuta(c.verita, leggiPerValutare(l.testo, indice, c.verita.carrello)) })));
+const esiti: Esito[] = corpus.flatMap((c) => c.letture.map((l) => ({ caso: c.verita.id, lettura: l.nome, valutazione: valuta(c.verita, leggiPerValutare(l.testo, indice, c.verita.carrello, l.controllo ?? null)) })));
 const rapporto = creaRapporto('testo', process.env.MC_ETICHETTA ?? 'testo', esiti);
 
 describe('corpus degli scontrini: dati di riferimento', () => {
@@ -57,6 +57,8 @@ describe('misura della lettura (testi congelati)', () => {
     const prima = new Map(base.casi.map((c) => [chiave(c), c]));
     const tornatiIndietro = rapporto.casi.filter((c) => prima.get(chiave(c))?.perfetta && !c.perfetta).map(chiave);
     expect(tornatiIndietro, 'letture che erano perfette e non lo sono più').toEqual([]);
+    const nonPiuAffidabili = rapporto.casi.filter((c) => prima.get(chiave(c))?.affidabile && !c.affidabile).map(chiave);
+    expect(nonPiuAffidabili, 'letture che erano affidabili (ogni errore segnalato) e non lo sono più').toEqual([]);
     const migliorate = Object.entries(rapporto.sintesi).filter(([k, m]) => base.sintesi[k] && testoMetrica(base.sintesi[k]) !== testoMetrica(m));
     if (migliorate.length) console.info(`Metriche cambiate in meglio: ${migliorate.map(([, m]) => m.etichetta).join('; ')}. Aggiorna la base: MC_AGGIORNA_BASE=1 npm run valuta:scontrini`);
   });
