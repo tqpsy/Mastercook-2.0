@@ -321,6 +321,11 @@ describe('ingredienti e abbinamenti', () => {
     expect(leggiScontrino(['DESCRIZIONE PREZZO IVA', 'LATTE   1,29 C', 'DTALECOMPLESSIVO   1,29', 'MPORTOPAGATO   1,29'].join('\n'))).toMatchObject({ totale: 1.29, quadra: true });
   });
 
+  it('le righe senza prezzo della tessera («BENNET CLUB», «CARTA NUM.») non sono prodotti; «CARTA IGIENICA» sì', () => {
+    const t = leggiScontrino(['DESCRIZIONE PREZZO IVA', 'BENNET CLUB', 'CARTA', 'CARTA IGIENICA', '3,99 C', 'LATTE   1,29 C', 'TOTALE COMPLESSIVO 5,28'].join('\n'));
+    expect(t.righe.map((r) => r.descrizione)).toEqual(['CARTA IGIENICA', 'LATTE']);
+  });
+
   it('un «G 2» o un numero senza unità non è un formato', () => {
     expect(formatoDaDescrizione('POM.DATTERINO GIALLO G 2')).toBeUndefined();
     expect(formatoDaDescrizione('SPLEG PANCETTA CUB.')).toBeUndefined();

@@ -2,17 +2,17 @@
  "versione": 1,
  "livello": "testo",
  "etichetta": "base",
- "creato": "2026-11-24T17:18:29.160Z",
+ "creato": "2026-11-24T17:25:19.535Z",
  "sintesi": {
   "perfette": {
    "etichetta": "Letture perfette (al primo tentativo)",
-   "valore": 107,
+   "valore": 108,
    "su": 132,
    "verso": "piu"
   },
   "sicure": {
    "etichetta": "Letture sicure per la giacenza",
-   "valore": 126,
+   "valore": 127,
    "su": 132,
    "verso": "piu"
   },
@@ -88,7 +88,7 @@
   },
   "righeInPiu": {
    "etichetta": "Righe in più",
-   "valore": 25,
+   "valore": 23,
    "verso": "meno"
   },
   "nomiSbagliati": {
@@ -98,7 +98,7 @@
   },
   "falsiQuadra": {
    "etichetta": "«Il conto torna» ma la lettura è sbagliata (su 104 che tornano)",
-   "valore": 13,
+   "valore": 12,
    "verso": "meno"
   },
   "giacenzaSbagliata": {
@@ -108,7 +108,7 @@
   },
   "giacenzaInPiu": {
    "etichetta": "Righe in più che entrerebbero in casa",
-   "valore": 2,
+   "valore": 1,
    "verso": "meno"
   },
   "giacenzaPersa": {
@@ -504,15 +504,13 @@
   {
    "caso": "bennet-albano-sfondo-blu",
    "lettura": "paddle-originale",
-   "perfetta": false,
-   "sicura": false,
+   "perfetta": true,
+   "sicura": true,
    "affidabile": true,
    "righeOk": 48,
    "righeVere": 48,
    "errori": [
-    "riga 47 «UOVA BIOLOGICHE M X4»: ingrediente nessuno invece di ing:uova",
-    "riga in più «BENNET CLUB» 0,00",
-    "riga in più «CARTA» 0,00"
+    "riga 47 «UOVA BIOLOGICHE M X4»: ingrediente nessuno invece di ing:uova"
    ]
   },
   {
