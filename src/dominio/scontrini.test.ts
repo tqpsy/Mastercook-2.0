@@ -311,6 +311,16 @@ describe('ingredienti e abbinamenti', () => {
     expect(t.quadra).toBe(true);
   });
 
+  it('screenshot tagliato a sinistra: «OTALE COMPLESSIVO» è il totale, il segno per letto 大 vale *, i titoli di sezione non sono righe', () => {
+    const t = leggiScontrino(
+      ['IPER MONTEBELLO S.P.A.', 'ESCRIZIONE   PREZZO IVA', 'RTICOLI AGGIUNTIVI', 'COQUA A4 PAG.BIANCA   2,69 D', 'NIZIO ESPLOSIONE', 'ILETTO DI SCORFANO', '0,218   大   29,91Kg   6,52 B', 'IL.PLATESSA IMP.FIN', '2   大   5,99   11,98 B', 'INE ESPLOSIONE', 'OTALE COMPLESSIVO   21,19', 'MPORTO PAGATO   21,19'].join('\n'),
+    );
+    expect(t.righe.map((r) => [r.descrizione, r.prezzo, r.grammi ?? r.pezzi ?? null])).toEqual([['COQUA A4 PAG.BIANCA', 2.69, null], ['ILETTO DI SCORFANO', 6.52, 218], ['IL.PLATESSA IMP.FIN', 11.98, 2]]);
+    expect(t).toMatchObject({ totale: 21.19, quadra: true });
+    // La T letta D: si riconosce lo stesso dalla parola «COMPLESSIVO».
+    expect(leggiScontrino(['DESCRIZIONE PREZZO IVA', 'LATTE   1,29 C', 'DTALECOMPLESSIVO   1,29', 'MPORTOPAGATO   1,29'].join('\n'))).toMatchObject({ totale: 1.29, quadra: true });
+  });
+
   it('un «G 2» o un numero senza unità non è un formato', () => {
     expect(formatoDaDescrizione('POM.DATTERINO GIALLO G 2')).toBeUndefined();
     expect(formatoDaDescrizione('SPLEG PANCETTA CUB.')).toBeUndefined();

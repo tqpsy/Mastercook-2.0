@@ -398,7 +398,7 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
           {righe.length >= 6 && daControllare * 2 > righe.length && (
             <>
               {' '}
-              Sono molte: la foto può essere troppo lontana o storta, e conviene rifarla.
+              Sono molte: le due letture non concordano. Se hai fatto una foto, può essere storta o poco nitida; se è uno screenshot, controlla le righe.
             </>
           )}
           {daControllare >= 4 && (

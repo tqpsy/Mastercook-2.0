@@ -320,13 +320,26 @@ export function impagina(scatole: Scatola[], larghezza: number): Pagina {
     sinistra.push({ ...pezzi[0], testo: pezzi.map((b) => b.testo).join('   '), x1: Math.max(...pezzi.map((b) => b.x1)), y0: Math.min(...pezzi.map((b) => b.y0)), y1: Math.max(...pezzi.map((b) => b.y1)) });
   }
   const passo = mediana(sinistra.map(altezza)) * 2.2 || 40;
-  const usate = new Set<Scatola>();
-  const righe = sinistra.map((s) => {
+  // Ogni pezzo di destra va alla riga di sinistra più vicina a lui, e non il contrario: una riga senza prezzo (il nome sopra la riga
+  // del peso, un titolo di sezione) non deve prendere il prezzo della riga sotto, o si sfasa tutto lo scontrino da lì in poi.
+  const perRiga: Scatola[][] = sinistra.map(() => []);
+  for (const d of destra) {
+    let k = -1;
+    let vicina = Infinity;
+    for (const [i, s] of sinistra.entries()) {
+      const distanza = Math.abs(centroY(d) - centroY(s));
+      if (distanza < vicina) {
+        vicina = distanza;
+        k = i;
+      }
+    }
+    if (k >= 0 && vicina < passo * 0.75) perRiga[k].push(d);
+  }
+  const righe = sinistra.map((s, i) => {
     // Tutti i pezzi di destra su questa riga (colonna dei prezzi, dei totali…), da sinistra a destra.
-    const vicine = destra.filter((d) => !usate.has(d) && Math.abs(centroY(d) - centroY(s)) < passo * 0.75).sort((a, b) => Math.abs(centroY(a) - centroY(s)) - Math.abs(centroY(b) - centroY(s)));
+    const vicine = perRiga[i].sort((a, b) => Math.abs(centroY(a) - centroY(s)) - Math.abs(centroY(b) - centroY(s)));
     const perColonna: Scatola[] = [];
     for (const d of vicine) if (!perColonna.some((q) => Math.abs(q.x0 - d.x0) < larghezza * 0.04) || /^[A-Z%]{1,2}$/.test(d.testo)) perColonna.push(d);
-    for (const d of perColonna) usate.add(d);
     perColonna.sort((a, b) => a.x0 - b.x0);
     return [s.testo, ...perColonna.map((d) => d.testo)].join('   ');
   });

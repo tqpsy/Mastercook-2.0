@@ -1,0 +1,160 @@
+{
+  "versione": 1,
+  "id": "iper-seriate-screenshot",
+  "origine": "scontrino-reale",
+  "verita": "carta",
+  "negozio": "Iper Montebello S.P.A.",
+  "totale": 118.81,
+  "note": "Screenshot di uno scontrino digitale Iper (Seriate, 39 articoli, 118,81 €) fatto sul telefono, tagliato a sinistra: manca la prima lettera di ogni riga («ESCRIZIONE», «OTALE COMPLESSIVO», «MPORTO PAGATO»). Il prezzo sta sulla riga del peso o della quantità («0,218 * 29,91Kg   6,52 B»), non su quella del nome; «ARTICOLI AGGIUNTIVI», «INIZIO ESPLOSIONE» e «FINE ESPLOSIONE» sono titoli di sezione senza prezzo. La data in basso è tagliata (manca anche il primo numero): non si misura. Le prime lettere tagliate nei nomi della verità sono ricostruite (BISC.ORO, SPUNTINELLE…). Sconti già tolti: crema spalmabile -0,75, spaghetti -1,60, olio -3,00. La prima lettera di «BS M/RIGHE» non si legge.",
+  "righe": [
+    {
+      "descrizione": "ACQUA A4 PAG.BIANCA",
+      "prezzo": 2.69
+    },
+    {
+      "descrizione": "FILETTO DI SCORFANO",
+      "prezzo": 6.52
+    },
+    {
+      "descrizione": "FILETTO DI SCORFANO",
+      "prezzo": 6.52
+    },
+    {
+      "descrizione": "FILETTO DI SCORFANO",
+      "prezzo": 6.28
+    },
+    {
+      "descrizione": "MAZZANCOLLA(E)",
+      "prezzo": 10.85
+    },
+    {
+      "descrizione": "SACCHETT.BIO PESCHER",
+      "prezzo": 0.02,
+      "ingrediente": null
+    },
+    {
+      "descrizione": "COS.BROC.CAVOL.BIO A",
+      "prezzo": 3.99
+    },
+    {
+      "descrizione": "POMOD.CILIEGINO BIO",
+      "prezzo": 4.29
+    },
+    {
+      "descrizione": "BORSA TERM.33+23X40",
+      "prezzo": 3.99
+    },
+    {
+      "descrizione": "FIL.PLATESSA IMP.FIN",
+      "prezzo": 11.98,
+      "pezzi": 2
+    },
+    {
+      "descrizione": "BISC.ORO SAIWA 500G",
+      "prezzo": 2.49,
+      "formato": {
+        "quantita": 500,
+        "unita": "g"
+      },
+      "ingrediente": "ing:biscotti",
+      "carico": {
+        "quantita": 500,
+        "unita": "g"
+      }
+    },
+    {
+      "descrizione": "CREMA SPALMABILE VAL",
+      "prezzo": 2.24
+    },
+    {
+      "descrizione": "BEV.OPT/YOGA PERA/VI",
+      "prezzo": 3.29
+    },
+    {
+      "descrizione": "BEV.OPT/YOGA PESCA/V",
+      "prezzo": 3.29
+    },
+    {
+      "descrizione": "FETTE DORATE M/BIANC",
+      "prezzo": 1.48
+    },
+    {
+      "descrizione": "CORN FLAKES ORIGIN.K",
+      "prezzo": 1.94
+    },
+    {
+      "descrizione": "SPECIAL K CLASS.KELL",
+      "prezzo": 4.19
+    },
+    {
+      "descrizione": "SCHIACC.CLASSICHE IP",
+      "prezzo": 1.39
+    },
+    {
+      "descrizione": "SPUNTINELLE A/CUBO M",
+      "prezzo": 1.89
+    },
+    {
+      "descrizione": "SPUNT A/CUBO INTEGR",
+      "prezzo": 2.19
+    },
+    {
+      "descrizione": "SPAGHETTI N3 LL RUMM",
+      "prezzo": 1.58,
+      "pezzi": 2
+    },
+    {
+      "descrizione": "FARFALLE BARILLA N26",
+      "prezzo": 0.99
+    },
+    {
+      "descrizione": "CONCHIG.RIG.N93 BARI",
+      "prezzo": 0.99
+    },
+    {
+      "descrizione": "POLPA BIO VALFRUTTA",
+      "prezzo": 3.58,
+      "pezzi": 2
+    },
+    {
+      "descrizione": "ACQUA A4 PAG.BIANCA",
+      "prezzo": 2.69
+    },
+    {
+      "descrizione": "BS M/RIGHE 12X18CM",
+      "prezzo": 4.99
+    },
+    {
+      "descrizione": "OLIO EX/V.100%ITAL.B",
+      "prezzo": 9.99
+    },
+    {
+      "descrizione": "MOZZ.BUFALA DOP VALL",
+      "prezzo": 5.16,
+      "pezzi": 2
+    },
+    {
+      "descrizione": "RICOTTINE S.LUCIA 90",
+      "prezzo": 1.49
+    },
+    {
+      "descrizione": "RICOTTA VALLELATA 10",
+      "prezzo": 1.75
+    },
+    {
+      "descrizione": "PANCETTA-D STICK BER",
+      "prezzo": 1.79
+    },
+    {
+      "descrizione": "LATTE INT.AQ PET GRA",
+      "prezzo": 1.99,
+      "ingrediente": "ing:latte"
+    },
+    {
+      "descrizione": "SHOPPER 30X55 INATEC",
+      "prezzo": 0.3,
+      "pezzi": 3,
+      "ingrediente": null
+    }
+  ]
+}

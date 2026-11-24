@@ -60,7 +60,7 @@ function quasiUguali(a: string, b: string): boolean {
 }
 
 /** «TOTALE» anche letto male («TOTALF», «T0TALE», «TOTAIE»). */
-const eTotale = (linea: string) => linea.split(/[^A-Z0-9]+/).some((p) => p === 'TOTALE' || (p.length >= 5 && quasiUguali(p, 'TOTALE')) || (p.length >= 8 && p.length <= 11 && /TOTALE$/.test(p)));
+const eTotale = (linea: string) => /^T?OTALE(COMPLESS|\b|$)/.test(linea.replace(/[^A-Z]/g, '')) || /^[A-Z]?[A-Z]?TALE?COMPLESSIV|^[A-Z]{0,3}COMPLESSIV/.test(linea.replace(/[^A-Z]/g, '')) || linea.split(/[^A-Z0-9]+/).some((p) => p === 'TOTALE' || (p.length >= 5 && quasiUguali(p, 'TOTALE')) || (p.length >= 8 && p.length <= 11 && /TOTALE$/.test(p)));
 /** «SUBTOTALE» letto male («SLBTOTALE»): chiude le righe ma non è il totale. */
 const eSubtotaleGuasto = (linea: string) => linea.split(/[^A-Z0-9]+/).some((p) => p.length >= 8 && p.length <= 11 && /TOTALE$/.test(p) && p !== 'SUBTOTALE');
 export const fineRighe = (linea: string) => FINE_RIGHE.test(linea) || eTotale(linea);
@@ -69,7 +69,7 @@ export const DA_SALTARE =
 export const SCONTO = /\b(SCONTO|SC\.|SCONT|PROMO|OFFERTA|RIBASSO|RIDUZIONE|STORNO|COUPON)\b|TOO\s?GOO?D|TO\s?GO\b/;
 const SCONTO_IN_TESTA = /^[^A-Z0-9]*(?:\d{1,3}\s?%\s*)?(?:SCONTO|SC\.|SCONT|PROMO|OFFERTA|RIBASSO|RIDUZIONE|STORNO|COUPON)\b|TOO\s?GOO?D|TO\s?GO\b/;
 /** Righe senza prezzo che non sono un prodotto, lette senza spazi e con gli zeri come O. */
-const NON_PRODOTTO = /VALID[AEIO]|SCADEN|TESSERA|SALDOPUNTI|PUNTIFEDELT|CAMSCANNER|SCANSIONATO|TOOGOOD|TOGO|^(SCONTO|OFFERT|COUPON)/;
+const NON_PRODOTTO = /AGGIUNTIV|ESPLOSION|VALID[AEIO]|SCADEN|TESSERA|SALDOPUNTI|PUNTIFEDELT|CAMSCANNER|SCANSIONATO|TOOGOOD|TOGO|^(SCONTO|OFFERT|COUPON)/;
 export const INTESTAZIONE_RIGHE = /\bDESCRIZIONE\b|\bPREZZO\s*\(?€?\)?\s*$/;
 
 /** Quante lettere diverse (sostituite, in più o in meno) ci sono tra due parole. */
@@ -108,6 +108,8 @@ const SOCIETA = /\b(S\.?\s?P\.?\s?A|S\.?\s?R\.?\s?L|S\.?\s?N\.?\s?C|S\.?\s?A\.?\
  */
 export function pulisciLinea(linea: string): string {
   return linea
+    // La lettura prende il segno per (*) per un carattere cinese («0,218 大 29,91Kg»): per i prezzi è sempre un'asterisco.
+    .replace(/[\u3400-\u9FFF]/g, '*')
     .toUpperCase()
     .replace(/€/g, ' ')
     .replace(/\s+/g, ' ')
