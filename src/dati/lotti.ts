@@ -2,9 +2,9 @@
 import { useMemo } from 'react';
 import type { RigaInVista } from './anteprima';
 import { useVista } from './contesto';
-import type { Indice, Ingrediente } from '../dominio/ricette';
+import type { Indice } from '../dominio/ricette';
 import type { Luogo, TipoData } from '../dominio/scadenze';
-import { formatta, leggiNumero, type Scritta, totaleScritta, type UnitaBase } from '../dominio/unita';
+import { formatta, type UnitaBase } from '../dominio/unita';
 import { descriviGruppo, type Gruppo } from '../dominio/confezioni';
 import { descriviLivello, eLivello, type Livello, type ScortaAOcchio, scorteAOcchio } from '../dominio/livello';
 
@@ -71,11 +71,4 @@ export const quantitaLotto = (l: Pick<Lotto, 'quantita' | 'unita' | 'livello'>) 
 /** La riga di più confezioni uguali: «500 g × 2», «500 g + 300 g aperta»; a occhio «2 pezzi · poco». */
 export const quantitaRiga = (g: Gruppo<Lotto>) => (g.primo.livello ? quantitaLotto(g.primo) : descriviGruppo(g));
 
-/** Legge «1,5» + «kg» × quante confezioni per l'ingrediente e lo porta in unità base, o dice cosa non va. */
-export function quantitaDa(scritta: Scritta, ing: Ingrediente | undefined): { valore: number; unita: UnitaBase } | string {
-  if (leggiNumero(scritta.numero) === null) return 'Scrivi una quantità, per esempio 500 o 1,5.';
-  const e = totaleScritta(scritta, ing?.dimensione ?? 'massa', ing?.peso_pz);
-  if (e.ok) return e.quantita;
-  if (e.motivo === 'confezioni_non_valide') return 'Scrivi quante confezioni, per esempio 1 o 3.';
-  return e.motivo === 'unita_incompatibile' ? 'Unità non adatta a questo ingrediente.' : 'La quantità deve essere più di zero.';
-}
+export { quantitaDa } from '../dominio/unita';

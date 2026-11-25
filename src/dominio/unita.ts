@@ -93,6 +93,15 @@ export function totaleScritta(s: Scritta, dimensione: Dimensione, pesoPz?: numbe
   return inBase(n * quante, s.unita, dimensione, pesoPz);
 }
 
+/** Legge «1,5» + «kg» × quante confezioni per l'ingrediente e lo porta in unità base, o dice cosa non va. */
+export function quantitaDa(scritta: Scritta, ing: { dimensione: Dimensione; peso_pz?: number | null } | undefined): { valore: number; unita: UnitaBase } | string {
+  if (leggiNumero(scritta.numero) === null) return 'Scrivi una quantità, per esempio 500 o 1,5.';
+  const e = totaleScritta(scritta, ing?.dimensione ?? 'massa', ing?.peso_pz);
+  if (e.ok) return e.quantita;
+  if (e.motivo === 'confezioni_non_valide') return 'Scrivi quante confezioni, per esempio 1 o 3.';
+  return e.motivo === 'unita_incompatibile' ? 'Unità non adatta a questo ingrediente.' : 'La quantità deve essere più di zero.';
+}
+
 /**
  * Cosa diventa quello che si è scritto, solo quando non si vede già: «= 375 ml» per 3 confezioni,
  * «≈ 600 g» per 3 pezzi di un ingrediente che si pesa o per 500 ml di yogurt. Null se non serve dirlo.
