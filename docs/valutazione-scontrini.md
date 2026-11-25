@@ -80,6 +80,8 @@ Ogni fase del lavoro sulla lettura:
 
 Per confrontare davvero, i rapporti devono venire dalla stessa macchina e dallo stesso insieme di foto e di varianti: le foto sintetiche dipendono dai caratteri del computer e dal browser, e il rapporto lo registra in `ambiente`.
 
+Il piano per il prossimo riordino del lettore (un formato intermedio con le coordinate) è in [scontrini-passo-3.md](scontrini-passo-3.md).
+
 ## Limiti da conoscere
 
 - La conversione in prodotti (ingrediente, quantità, unità e posto di partenza, abbinamento alle spunte) è in `src/dominio/importaScontrino.ts`: la schermata «Scontrino» e la valutazione usano le stesse funzioni (`proponiProdotto`, `proponiRighe`), quindi ciò che si misura è ciò che l'app propone. Non è misurato ciò che la persona corregge dopo, né il comando `importa_scontrino` (`costruisciImportazione`, coperto da `importaScontrino.test.ts`).
