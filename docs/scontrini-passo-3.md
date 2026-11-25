@@ -54,6 +54,10 @@ caso del corpus che le giustifica, e vanno spostate, non perse.
   (`limitiRighe`, `ePrezzoDiColonna`, `CAD`, `nomeDiRiga`). Testo e misura sulle foto identici a prima.
 - Sotto-passo 3: la fiducia del prezzo arriva alle righe (`RigaLetta.fiducia`, `LetturaFoto.righe`) e segnala le righe dubbie
   (`SOGLIA_FIDUCIA`, `SOGLIA_PREZZO_SICURO`). Numeri in [valutazione-scontrini.md](valutazione-scontrini.md#passo-3-righe-con-le-coordinate-e-fiducia-misura-sulle-foto-119-letture-17-scontrini).
+- Dopo (`passo-3-4.json`): prezzi attaccati divisi con il conto quantità × unitario, riepilogo «Too Good To Go» a zero saltato; prezzi
+  sbagliati senza avviso da 16 a 4.
+- Gli errori che restano sulle foto non dipendono dal parser: lo zero barrato del Lidl letto 8, i nomi tagliati dello screenshot, date non lette,
+  ingredienti non riconosciuti. Per questo leggere il prezzo dal suo pezzo invece che dal testo (sotto) oggi non cambierebbe i numeri.
 - Resta: il parser delle righe (`leggiRighe`) lavora ancora sul testo di ogni riga; il passo successivo naturale è che legga i pezzi (il prezzo
   è il pezzo a destra) invece di ritrovarli con `IMPORTO`.
 

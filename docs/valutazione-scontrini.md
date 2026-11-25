@@ -133,6 +133,11 @@ Come si è scelta la fiducia (letture salvate con `--salva-righe`, provate offli
 | Letture affidabili (ogni errore segnalato) | 79,8% (95/119) | **81,5% (97/119)** |
 | Righe giuste segnalate per prudenza (falsi allarmi) | 59 | **57** |
 
+Dopo la fiducia, due correzioni trovate guardando gli errori rimasti (`passo-3-4.json`): i due prezzi di una riga con la quantità letti
+attaccati in un solo pezzo («0,490,98» sulla foto storta del Conad: 490,98 €) si dividono se quantità × unitario fa il totale, anche
+quando stanno sulla linea sotto il nome; e il riepilogo «***TOO GOOD TO GO» a 0,00 € non è più una riga. Prezzi sbagliati senza avviso
+16 → **4**, righe sbagliate non segnalate 36 → 24, righe in più 18 → 12, letture perfette 92 → 93 su 119, nessuna metrica peggiore.
+
 Le soglie sono scelte sulle stesse letture su cui si misurano: con 17 scontrini sono un'indicazione, da ricontrollare quando il corpus cresce.
 La fiducia c'è solo con PaddleOCR: le letture di Tesseract, il testo incollato e il PDF non la portano.
 

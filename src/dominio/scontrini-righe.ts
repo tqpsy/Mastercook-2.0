@@ -161,6 +161,16 @@ export interface RigheLette {
   ivaTotale: number | null;
 }
 
+/** «2 PANE 0,49 0,98»: quantità, nome, prezzo unitario e totale di riga (colonne QTA, PREZZO, TOTALE); i due prezzi anche attaccati. */
+const COLONNE_QTA = /^(\d{1,3})\s+(\D.*?)\s+(\d{1,4}[.,]\d{2})\s*(\d{1,4}[.,]\d{2})\s*([A-Z])?$/;
+/** Una linea con i soli due prezzi (unitario e totale), anche attaccati. */
+const SOLO_DUE_PREZZI = /^\d{1,4}[.,]\d{2}\s*\d{1,4}[.,]\d{2}\s*[A-Z]?$/;
+/** Le colonne QTA, PREZZO, TOTALE se il conto torna (quantità × unitario = totale), altrimenti null: due numeri qualsiasi non si dividono. */
+function leggiColonne(linea: string): RegExpMatchArray | null {
+  const m = linea.match(COLONNE_QTA);
+  return m && !/^[X*×\s]+$/.test(m[2]) && Math.abs(Number(m[1]) * numero(m[3]) - numero(m[4])) < 0.011 ? m : null;
+}
+
 /**
  * Legge le righe (già ripulite con `pulisciLinea`) con il totale che le chiude. Non inventa: quello che non trova resta fuori.
  * `fiducie` (una per linea, se il lettore la dà): ogni riga letta prende la fiducia più bassa tra le linee da cui viene (il nome,
@@ -237,9 +247,16 @@ export function leggiRighe(linee: string[], fiducie?: number[]): RigheLette {
     }
     if (!inRighe || DA_SALTARE.test(linea)) continue;
     // «2 PANE 0,49 0,98»: quantità, prezzo unitario e totale di riga (colonne QTA, PREZZO, TOTALE).
-    const colonne = linea.match(/^(\d{1,3})\s+(\D.*?)\s+(\d{1,4}[.,]\d{2})\s+(\d{1,4}[.,]\d{2})\s*([A-Z])?$/);
-    if (colonne && !/^[X*×\s]+$/.test(colonne[2]) && Math.abs(Number(colonne[1]) * numero(colonne[3]) - numero(colonne[4])) < 0.011) {
+    // I due prezzi possono essere attaccati («0,490,98»: la foto storta li legge in un solo pezzo) e stare sulla linea sotto il nome
+    // («4 PASTA DI SEMOLA» e poi «0,190,76»): si dividono solo se quantità × unitario fa il totale.
+    let colonne = leggiColonne(linea);
+    const daSopra = !colonne && descrizioneSospesa !== null && SOLO_DUE_PREZZI.test(linea);
+    if (daSopra) colonne = leggiColonne(`${descrizioneSospesa} ${linea}`);
+    if (colonne) {
+      const fiduciaSopra = fiduciaSospesa;
       aggiungi(colonne[2], numero(colonne[4]), { pezzi: Number(colonne[1]), ...(colonne[5] ? { iva: colonne[5] } : {}) });
+      const riga = righe.at(-1)!;
+      if (daSopra && riga.fiducia !== undefined) riga.fiducia = Math.min(riga.fiducia, fiduciaSopra);
       continue;
     }
     // «Cad 0,99 Pz. 3»: tre pezzi a 0,99 sulla riga di sopra (o su quella che segue, se il prezzo non è ancora uscito).
@@ -291,6 +308,9 @@ export function leggiRighe(linee: string[], fiducie?: number[]): RigheLette {
       .replace(/\s+/g, ' ')
       .trim();
 
+    // Il riepilogo «***TOO GOOD TO GO 3.» a 0,00 dopo l'ultima riga, anche letto male («1OO GOCOTOGO3»): non è un prodotto. Solo a 0,00:
+    // una riga vera può costare zero («CARTAMICA 0,00»).
+    if (valore === 0 && /TOGO/.test(descrizione.replace(/[^A-Z]/g, ''))) continue;
     // Uno sconto ha il prezzo negativo, o comincia con la parola («SCONTO FEDELTA»): «PROMO» o «OFFERTA» in mezzo al nome di un prodotto no.
     if (valore < 0 || (SCONTO.test(linea) && SCONTO_IN_TESTA.test(linea))) {
       const precedente = righe.at(-1);
