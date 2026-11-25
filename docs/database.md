@@ -171,8 +171,8 @@ Migrazione `20261031000000_scontrini.sql`. Tabelle `scontrino`, `scontrino_riga`
   persona rivede ogni riga prima di importare. Il server non legge immagini.
 - **Lettura dalla foto** (`src/ui/ocr.ts`): prima PaddleOCR (`src/ui/paddle.ts`, modelli ONNX nel browser: rilevazione a fasce
   e lettura dei riquadri), poi, se non va, Tesseract. Nella foto la carta si piega e il prezzo finisce accanto al nome
-  sbagliato: `src/dominio/paddle.ts` ricompone nomi e prezzi come due colonne e `src/dominio/colonne.ts` li abbina
-  **per ordine** (con la lettura dell'intestazione e del totale tollerante agli errori). Se il conto non torna: la foto
+  sbagliato: i riquadri diventano righe con la posizione e la fiducia (`src/dominio/scontrini-geometria.ts`), e
+  `src/dominio/scontrini-impaginazione.ts` divide nomi e prezzi in due colonne e li abbina **per ordine** (con la lettura dell'intestazione e del totale tollerante agli errori). Se il conto non torna: la foto
   inclinata si raddrizza (i prezzi sono allineati a destra) e si rilegge; la sola colonna dei prezzi si rilegge con
   soglie più basse. Infine `src/dominio/quadratura.ts` corregge al più tre cifre confuse (3↔8, 5↔9…) scegliendo
   l'unica soluzione che fa tornare il totale e l'IVA («DI CUI IVA», lettere A/B/C della legenda) e rende uguali le

@@ -1,0 +1,1674 @@
+{
+ "versione": 1,
+ "livello": "foto",
+ "etichetta": "main-qui",
+ "creato": "2026-11-25T10:28:05.468Z",
+ "ambiente": {
+  "browser": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/158.0.8127.36 Safari/537.36",
+  "tesseract": "locale",
+  "varianti": "7",
+  "tempoMedioLetturaMs": "20931"
+ },
+ "sintesi": {
+  "perfette": {
+   "etichetta": "Letture perfette (al primo tentativo)",
+   "valore": 92,
+   "su": 119,
+   "verso": "piu"
+  },
+  "sicure": {
+   "etichetta": "Letture sicure per la giacenza",
+   "valore": 115,
+   "su": 119,
+   "verso": "piu"
+  },
+  "righeOk": {
+   "etichetta": "Righe giuste (nome e prezzo)",
+   "valore": 2516,
+   "su": 2590,
+   "verso": "piu"
+  },
+  "data": {
+   "etichetta": "Data giusta",
+   "valore": 74,
+   "su": 84,
+   "verso": "piu"
+  },
+  "ora": {
+   "etichetta": "Ora giusta",
+   "valore": 74,
+   "su": 84,
+   "verso": "piu"
+  },
+  "totale": {
+   "etichetta": "Totale giusto",
+   "valore": 103,
+   "su": 105,
+   "verso": "piu"
+  },
+  "pezzi": {
+   "etichetta": "Pezzi letti",
+   "valore": 137,
+   "su": 147,
+   "verso": "piu"
+  },
+  "formato": {
+   "etichetta": "Formato letto (peso o volume)",
+   "valore": 541,
+   "su": 560,
+   "verso": "piu"
+  },
+  "ingrediente": {
+   "etichetta": "Ingrediente giusto",
+   "valore": 773,
+   "su": 868,
+   "verso": "piu"
+  },
+  "giacenzaOk": {
+   "etichetta": "Quantità in casa giusta",
+   "valore": 451,
+   "su": 560,
+   "verso": "piu"
+  },
+  "abbinamentiOk": {
+   "etichetta": "Abbinamenti alle spunte giusti",
+   "valore": 41,
+   "su": 42,
+   "verso": "piu"
+  },
+  "stabilita": {
+   "etichetta": "Stesso esito tra letture dello stesso scontrino",
+   "valore": 47,
+   "su": 119,
+   "verso": "piu"
+  },
+  "prezzoSilenzioso": {
+   "etichetta": "Prezzi sbagliati senza avviso",
+   "valore": 22,
+   "verso": "meno"
+  },
+  "righeMancanti": {
+   "etichetta": "Righe perse",
+   "valore": 1,
+   "verso": "meno"
+  },
+  "righeInPiu": {
+   "etichetta": "Righe in più",
+   "valore": 18,
+   "verso": "meno"
+  },
+  "nomiSbagliati": {
+   "etichetta": "Nomi letti male (prezzo giusto)",
+   "valore": 24,
+   "verso": "meno"
+  },
+  "falsiQuadra": {
+   "etichetta": "«Il conto torna» ma la lettura è sbagliata (su 96 che tornano)",
+   "valore": 18,
+   "verso": "meno"
+  },
+  "giacenzaSbagliata": {
+   "etichetta": "Quantità sbagliate che entrerebbero in casa",
+   "valore": 3,
+   "verso": "meno"
+  },
+  "giacenzaInPiu": {
+   "etichetta": "Righe in più che entrerebbero in casa",
+   "valore": 0,
+   "verso": "meno"
+  },
+  "giacenzaPersa": {
+   "etichetta": "Righe di casa perse",
+   "valore": 0,
+   "verso": "meno"
+  },
+  "abbinamentiSbagliati": {
+   "etichetta": "Abbinamenti alle spunte sbagliati",
+   "valore": 1,
+   "verso": "meno"
+  },
+  "affidabili": {
+   "etichetta": "Letture affidabili (ogni errore è segnalato)",
+   "valore": 95,
+   "su": 119,
+   "verso": "piu"
+  },
+  "sbagliateSilenziose": {
+   "etichetta": "Righe sbagliate non segnalate",
+   "valore": 42,
+   "verso": "meno"
+  },
+  "perseSilenziose": {
+   "etichetta": "Righe perse non segnalate",
+   "valore": 1,
+   "verso": "meno"
+  },
+  "campiSilenziosi": {
+   "etichetta": "Data, ora o totale sbagliati non segnalati",
+   "valore": 0,
+   "verso": "meno"
+  },
+  "giusteSegnalate": {
+   "etichetta": "Righe giuste segnalate per prudenza (falsi allarmi)",
+   "valore": 59,
+   "verso": "meno"
+  },
+  "lettureFallite": {
+   "etichetta": "Letture fallite (errore al posto del testo)",
+   "valore": 0,
+   "verso": "meno"
+  }
+ },
+ "casi": [
+  {
+   "caso": "bennet-albano-completo",
+   "lettura": "foto-originale",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 48,
+   "righeVere": 48,
+   "errori": []
+  },
+  {
+   "caso": "bennet-albano-completo",
+   "lettura": "foto-originale-bis",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 48,
+   "righeVere": 48,
+   "errori": []
+  },
+  {
+   "caso": "bennet-albano-completo",
+   "lettura": "foto-jpeg60",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 48,
+   "righeVere": 48,
+   "errori": []
+  },
+  {
+   "caso": "bennet-albano-completo",
+   "lettura": "foto-spostata",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 48,
+   "righeVere": 48,
+   "errori": []
+  },
+  {
+   "caso": "bennet-albano-completo",
+   "lettura": "foto-piu-piccola",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 48,
+   "righeVere": 48,
+   "errori": []
+  },
+  {
+   "caso": "bennet-albano-completo",
+   "lettura": "foto-storta-1-5",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 48,
+   "righeVere": 48,
+   "errori": []
+  },
+  {
+   "caso": "bennet-albano-completo",
+   "lettura": "foto-ombra",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 48,
+   "righeVere": 48,
+   "errori": []
+  },
+  {
+   "caso": "bennet-albano-ritaglio-alto",
+   "lettura": "foto-originale",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 48,
+   "righeVere": 48,
+   "errori": []
+  },
+  {
+   "caso": "bennet-albano-ritaglio-alto",
+   "lettura": "foto-originale-bis",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 48,
+   "righeVere": 48,
+   "errori": []
+  },
+  {
+   "caso": "bennet-albano-ritaglio-alto",
+   "lettura": "foto-jpeg60",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 48,
+   "righeVere": 48,
+   "errori": [
+    "riga 36 «AVOCADO HASS G 200»: pezzi non letti invece di 3"
+   ]
+  },
+  {
+   "caso": "bennet-albano-ritaglio-alto",
+   "lettura": "foto-spostata",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 48,
+   "righeVere": 48,
+   "errori": []
+  },
+  {
+   "caso": "bennet-albano-ritaglio-alto",
+   "lettura": "foto-piu-piccola",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 48,
+   "righeVere": 48,
+   "errori": []
+  },
+  {
+   "caso": "bennet-albano-ritaglio-alto",
+   "lettura": "foto-storta-1-5",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 48,
+   "righeVere": 48,
+   "errori": []
+  },
+  {
+   "caso": "bennet-albano-ritaglio-alto",
+   "lettura": "foto-ombra",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 48,
+   "righeVere": 48,
+   "errori": []
+  },
+  {
+   "caso": "bennet-albano-ritaglio-basso",
+   "lettura": "foto-originale",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 48,
+   "righeVere": 48,
+   "errori": [
+    "riga 32 «SACCHETTO DI CONFEZ.»: ingrediente ing:ghiaccio invece di nessuno",
+    "riga 47 «UOVA BIOLOGICHE M X4»: ingrediente nessuno invece di ing:uova"
+   ]
+  },
+  {
+   "caso": "bennet-albano-ritaglio-basso",
+   "lettura": "foto-originale-bis",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 48,
+   "righeVere": 48,
+   "errori": [
+    "riga 32 «SACCHETTO DI CONFEZ.»: ingrediente ing:ghiaccio invece di nessuno",
+    "riga 47 «UOVA BIOLOGICHE M X4»: ingrediente nessuno invece di ing:uova"
+   ]
+  },
+  {
+   "caso": "bennet-albano-ritaglio-basso",
+   "lettura": "foto-jpeg60",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 48,
+   "righeVere": 48,
+   "errori": [
+    "riga 23 «SACCHETTO DI CONFEZ.»: ingrediente ing:ghiaccio invece di nessuno",
+    "riga 46 «UOVA BIOLOGICHE M X4»: ingrediente nessuno invece di ing:uova"
+   ]
+  },
+  {
+   "caso": "bennet-albano-ritaglio-basso",
+   "lettura": "foto-spostata",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 48,
+   "righeVere": 48,
+   "errori": [
+    "riga 27 «SACCHETTO DI CONFEZ.»: ingrediente ing:marmellata invece di nessuno",
+    "riga 32 «SACCHETTO DI CONFEZ.»: ingrediente ing:ghiaccio invece di nessuno",
+    "riga 47 «UOVA BIOLOGICHE M X4»: ingrediente nessuno invece di ing:uova"
+   ]
+  },
+  {
+   "caso": "bennet-albano-ritaglio-basso",
+   "lettura": "foto-piu-piccola",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 48,
+   "righeVere": 48,
+   "errori": [
+    "riga 32 «SACCHETTO DI CONFEZ.»: ingrediente ing:ghiaccio invece di nessuno",
+    "riga 47 «UOVA BIOLOGICHE M X4»: ingrediente nessuno invece di ing:uova"
+   ]
+  },
+  {
+   "caso": "bennet-albano-ritaglio-basso",
+   "lettura": "foto-storta-1-5",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 48,
+   "righeVere": 48,
+   "errori": []
+  },
+  {
+   "caso": "bennet-albano-ritaglio-basso",
+   "lettura": "foto-ombra",
+   "perfetta": true,
+   "sicura": false,
+   "affidabile": true,
+   "righeOk": 48,
+   "righeVere": 48,
+   "errori": [
+    "riga 32 «SACCHETTO DI CONFEZ.»: ingrediente ing:ghiaccio invece di nessuno",
+    "riga 46 «UOVA BIOLOGICHE M X4»: formato niente invece di 4 pz",
+    "riga 46 «UOVA BIOLOGICHE M X4»: in casa 1 pz invece di 4 pz",
+    "riga 47 «UOVA BIOLOGICHE M X4»: ingrediente nessuno invece di ing:uova"
+   ]
+  },
+  {
+   "caso": "bennet-albano-sfondo-blu",
+   "lettura": "foto-originale",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 48,
+   "righeVere": 48,
+   "errori": [
+    "riga 47 «UOVA BIOLOGICHE M X4»: ingrediente nessuno invece di ing:uova"
+   ]
+  },
+  {
+   "caso": "bennet-albano-sfondo-blu",
+   "lettura": "foto-originale-bis",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 48,
+   "righeVere": 48,
+   "errori": [
+    "riga 47 «UOVA BIOLOGICHE M X4»: ingrediente nessuno invece di ing:uova"
+   ]
+  },
+  {
+   "caso": "bennet-albano-sfondo-blu",
+   "lettura": "foto-jpeg60",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 48,
+   "righeVere": 48,
+   "errori": []
+  },
+  {
+   "caso": "bennet-albano-sfondo-blu",
+   "lettura": "foto-spostata",
+   "perfetta": true,
+   "sicura": false,
+   "affidabile": true,
+   "righeOk": 48,
+   "righeVere": 48,
+   "errori": [
+    "riga 46 «UOVA BIOLOGICHE M X4»: formato niente invece di 4 pz",
+    "riga 46 «UOVA BIOLOGICHE M X4»: in casa 1 pz invece di 4 pz",
+    "riga 47 «UOVA BIOLOGICHE M X4»: ingrediente nessuno invece di ing:uova"
+   ]
+  },
+  {
+   "caso": "bennet-albano-sfondo-blu",
+   "lettura": "foto-piu-piccola",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 48,
+   "righeVere": 48,
+   "errori": [
+    "riga 47 «UOVA BIOLOGICHE M X4»: ingrediente nessuno invece di ing:uova"
+   ]
+  },
+  {
+   "caso": "bennet-albano-sfondo-blu",
+   "lettura": "foto-storta-1-5",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 48,
+   "righeVere": 48,
+   "errori": []
+  },
+  {
+   "caso": "bennet-albano-sfondo-blu",
+   "lettura": "foto-ombra",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 48,
+   "righeVere": 48,
+   "errori": [
+    "riga 47 «UOVA BIOLOGICHE M X4»: ingrediente nessuno invece di ing:uova"
+   ]
+  },
+  {
+   "caso": "conad-superstore",
+   "lettura": "foto-originale",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 12,
+   "righeVere": 12,
+   "errori": []
+  },
+  {
+   "caso": "conad-superstore",
+   "lettura": "foto-originale-bis",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 12,
+   "righeVere": 12,
+   "errori": []
+  },
+  {
+   "caso": "conad-superstore",
+   "lettura": "foto-jpeg60",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 12,
+   "righeVere": 12,
+   "errori": []
+  },
+  {
+   "caso": "conad-superstore",
+   "lettura": "foto-spostata",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 12,
+   "righeVere": 12,
+   "errori": []
+  },
+  {
+   "caso": "conad-superstore",
+   "lettura": "foto-piu-piccola",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 12,
+   "righeVere": 12,
+   "errori": []
+  },
+  {
+   "caso": "conad-superstore",
+   "lettura": "foto-storta-1-5",
+   "perfetta": false,
+   "sicura": true,
+   "affidabile": false,
+   "righeOk": 0,
+   "righeVere": 12,
+   "errori": [
+    "riga 1 «PANE BAULETTO»: prezzo 490,98 invece di 0,98",
+    "riga 2 «LATTE PARZ.SCREM.1L»: prezzo 391,17 invece di 1,17",
+    "riga 3 «PASTA DI SEMOLA 500G»: prezzo 190,76 invece di 0,76",
+    "riga 4 «PASSATA POMODORO 700G»: prezzo 290,58 invece di 0,58",
+    "riga 5 «MOZZARELLA 125G»: prezzo 591,18 invece di 1,18",
+    "riga 6 «PETTO DI POLLO 500G»: prezzo 492,49 invece di 2,49",
+    "riga 7 «BANANE»: prezzo 690,69 invece di 0,69",
+    "riga 8 «MELE GOLDEN 1KG»: prezzo 790,79 invece di 0,79",
+    "riga 9 «DETERSIVO LAVATRICE»: prezzo 191,19 invece di 1,19",
+    "riga 10 «CARTA IGIENICA 12R»: prezzo 291,29 invece di 1,29",
+    "riga 11 «NUTELLA 750G»: prezzo 991,99 invece di 1,99",
+    "riga 12 «ACQUA NATURALE 1.5L»: prezzo 90,54 invece di 0,54",
+    "riga 12 «ACQUA NATURALE 1.5L»: ingrediente nessuno invece di ing:acqua"
+   ]
+  },
+  {
+   "caso": "conad-superstore",
+   "lettura": "foto-ombra",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 12,
+   "righeVere": 12,
+   "errori": []
+  },
+  {
+   "caso": "coop-ritaglio-righe",
+   "lettura": "foto-originale",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 20,
+   "righeVere": 20,
+   "errori": [
+    "riga 1 «LATTE ESL BIO INT 1L»: formato niente invece di 1000 ml",
+    "riga 1 «LATTE ESL BIO INT 1L»: ingrediente nessuno invece di ing:latte",
+    "riga 16 «ALTU.LAVAZZA250GX2»: ingrediente nessuno invece di ing:caffe"
+   ]
+  },
+  {
+   "caso": "coop-ritaglio-righe",
+   "lettura": "foto-originale-bis",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 20,
+   "righeVere": 20,
+   "errori": [
+    "riga 1 «LATTE ESL BIO INT 1L»: formato niente invece di 1000 ml",
+    "riga 1 «LATTE ESL BIO INT 1L»: ingrediente nessuno invece di ing:latte",
+    "riga 16 «ALTU.LAVAZZA250GX2»: ingrediente nessuno invece di ing:caffe"
+   ]
+  },
+  {
+   "caso": "coop-ritaglio-righe",
+   "lettura": "foto-jpeg60",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 20,
+   "righeVere": 20,
+   "errori": [
+    "riga 1 «LATTE ESL BIO INT 1L»: formato niente invece di 1000 ml",
+    "riga 1 «LATTE ESL BIO INT 1L»: ingrediente nessuno invece di ing:latte",
+    "riga 16 «ALTU.LAVAZZA250GX2»: ingrediente nessuno invece di ing:caffe"
+   ]
+  },
+  {
+   "caso": "coop-ritaglio-righe",
+   "lettura": "foto-spostata",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 20,
+   "righeVere": 20,
+   "errori": [
+    "riga 1 «LATTE ESL BIO INT 1L»: formato niente invece di 1000 ml",
+    "riga 1 «LATTE ESL BIO INT 1L»: ingrediente nessuno invece di ing:latte",
+    "riga 16 «ALTU.LAVAZZA250GX2»: ingrediente nessuno invece di ing:caffe"
+   ]
+  },
+  {
+   "caso": "coop-ritaglio-righe",
+   "lettura": "foto-piu-piccola",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 20,
+   "righeVere": 20,
+   "errori": [
+    "riga 1 «LATTE ESL BIO INT 1L»: formato niente invece di 1000 ml",
+    "riga 2 «ZUCCHINE BIO IT 14-2»: ingrediente nessuno invece di ing:zucchina",
+    "riga 16 «ALTU.LAVAZZA250GX2»: ingrediente nessuno invece di ing:caffe"
+   ]
+  },
+  {
+   "caso": "coop-ritaglio-righe",
+   "lettura": "foto-storta-1-5",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 20,
+   "righeVere": 20,
+   "errori": [
+    "riga 1 «LATTE ESL BIO INT 1L»: formato niente invece di 1000 ml",
+    "riga 2 «ZUCCHINE BIO IT 14-2»: ingrediente nessuno invece di ing:zucchina",
+    "riga 7 «POMODORINI FF G400»: formato niente invece di 400 g",
+    "riga 16 «ALTU.LAVAZZA250GX2»: ingrediente nessuno invece di ing:caffe"
+   ]
+  },
+  {
+   "caso": "coop-ritaglio-righe",
+   "lettura": "foto-ombra",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 20,
+   "righeVere": 20,
+   "errori": [
+    "riga 1 «LATTE ESL BIO INT 1L»: formato niente invece di 1000 ml",
+    "riga 16 «ALTU.LAVAZZA250GX2»: ingrediente nessuno invece di ing:caffe"
+   ]
+  },
+  {
+   "caso": "iper-arese-too-good-to-go",
+   "lettura": "foto-originale",
+   "perfetta": false,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 6,
+   "righeVere": 6,
+   "errori": [
+    "riga in più «1OO GOCOTOGO3» 0,00",
+    "data non letta invece di 2025-06-06 (segnalato: letture diverse)",
+    "ora non letta invece di 09:51 (segnalato: letture diverse)",
+    "negozio «Per» invece di «Iper Montebello S.P.A.»"
+   ]
+  },
+  {
+   "caso": "iper-arese-too-good-to-go",
+   "lettura": "foto-originale-bis",
+   "perfetta": false,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 6,
+   "righeVere": 6,
+   "errori": [
+    "riga in più «1OO GOCOTOGO3» 0,00",
+    "data non letta invece di 2025-06-06 (segnalato: letture diverse)",
+    "ora non letta invece di 09:51 (segnalato: letture diverse)",
+    "negozio «Per» invece di «Iper Montebello S.P.A.»"
+   ]
+  },
+  {
+   "caso": "iper-arese-too-good-to-go",
+   "lettura": "foto-jpeg60",
+   "perfetta": false,
+   "sicura": true,
+   "affidabile": false,
+   "righeOk": 3,
+   "righeVere": 6,
+   "errori": [
+    "riga 1 «SHOPPER CART32+17X45»: nome «SHIPPER CART2+1745 PREZZOTVA 0.200» (segnalato: senza prezzo)",
+    "riga 2 «VERDURA MISTA CUOCER»: nome «VEROUPA HESTA CUOCER»",
+    "riga 4 «FORM.ERBI FIANDINO C»: prezzo 0,00 invece di 3,70 (segnalato: senza prezzo)",
+    "riga in più «1000 3.70KG» 3,70",
+    "riga in più «TO0GOODTOGO3.» 0,01",
+    "totale 0,17 invece di 3,99 (segnalato: letture diverse)",
+    "negozio «Per» invece di «Iper Montebello S.P.A.»"
+   ]
+  },
+  {
+   "caso": "iper-arese-too-good-to-go",
+   "lettura": "foto-spostata",
+   "perfetta": false,
+   "sicura": true,
+   "affidabile": false,
+   "righeOk": 4,
+   "righeVere": 6,
+   "errori": [
+    "riga 1 «SHOPPER CART32+17X45» 0,00: non letta",
+    "riga 2 «VERDURA MISTA CUOCER»: nome «VERDUPA HESTA CUOCER»",
+    "riga in più «XTO0GOCDTOGO3.» 0,00"
+   ]
+  },
+  {
+   "caso": "iper-arese-too-good-to-go",
+   "lettura": "foto-piu-piccola",
+   "perfetta": false,
+   "sicura": true,
+   "affidabile": false,
+   "righeOk": 5,
+   "righeVere": 6,
+   "errori": [
+    "riga 4 «FORM.ERBI FIANDINO C»: prezzo 0,00 invece di 3,70 (segnalato: senza prezzo)",
+    "riga in più «1.000 3,TCH» 3,70",
+    "riga in più «X#1OO GO0DTO GO3.» 0,00",
+    "negozio «non letto» invece di «Iper Montebello S.P.A.»"
+   ]
+  },
+  {
+   "caso": "iper-arese-too-good-to-go",
+   "lettura": "foto-storta-1-5",
+   "perfetta": false,
+   "sicura": true,
+   "affidabile": false,
+   "righeOk": 4,
+   "righeVere": 6,
+   "errori": [
+    "riga 1 «SHOPPER CART32+17X45»: nome «SHOPPER CART32+1745 PREZZO TVA 0.200» (segnalato: senza prezzo)",
+    "riga 4 «FORM.ERBI FIANDINO C»: prezzo 0,00 invece di 3,70 (segnalato: senza prezzo)",
+    "riga in più «1.0003.70KG» 3,70",
+    "riga in più «XTOOGOCDTOGO3.» 0,00",
+    "negozio «Per» invece di «Iper Montebello S.P.A.»"
+   ]
+  },
+  {
+   "caso": "iper-arese-too-good-to-go",
+   "lettura": "foto-ombra",
+   "perfetta": false,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 6,
+   "righeVere": 6,
+   "errori": [
+    "riga in più «PREZ2D TVA» 0,00",
+    "riga in più «A1OOGOCOTOGO3» 0,00",
+    "data non letta invece di 2025-06-06 (segnalato: letture diverse)",
+    "ora non letta invece di 09:51 (segnalato: letture diverse)",
+    "negozio «non letto» invece di «Iper Montebello S.P.A.»"
+   ]
+  },
+  {
+   "caso": "iper-seriate-screenshot",
+   "lettura": "foto-originale",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 33,
+   "righeVere": 33,
+   "errori": [
+    "riga 11 «BISC.ORO SAIWA 500G»: ingrediente nessuno invece di ing:biscotti",
+    "riga 32 «LATTE INT.AQ PET GRA»: ingrediente nessuno invece di ing:latte"
+   ]
+  },
+  {
+   "caso": "iper-seriate-screenshot",
+   "lettura": "foto-originale-bis",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 33,
+   "righeVere": 33,
+   "errori": [
+    "riga 11 «BISC.ORO SAIWA 500G»: ingrediente nessuno invece di ing:biscotti",
+    "riga 32 «LATTE INT.AQ PET GRA»: ingrediente nessuno invece di ing:latte"
+   ]
+  },
+  {
+   "caso": "iper-seriate-screenshot",
+   "lettura": "foto-jpeg60",
+   "perfetta": false,
+   "sicura": true,
+   "affidabile": false,
+   "righeOk": 32,
+   "righeVere": 33,
+   "errori": [
+    "riga 6 «SACCHETT.BIO PESCHER»: ingrediente ing:pesca invece di nessuno",
+    "riga 11 «BISC.ORO SAIWA 500G»: ingrediente nessuno invece di ing:biscotti",
+    "riga 30 «RICOTTA VALLELATA 10»: nome «ICOTTA VALLELATATO»",
+    "riga 32 «LATTE INT.AQ PET GRA»: ingrediente ing:biscotti invece di ing:latte"
+   ]
+  },
+  {
+   "caso": "iper-seriate-screenshot",
+   "lettura": "foto-spostata",
+   "perfetta": false,
+   "sicura": true,
+   "affidabile": false,
+   "righeOk": 32,
+   "righeVere": 33,
+   "errori": [
+    "riga 11 «BISC.ORO SAIWA 500G»: ingrediente nessuno invece di ing:biscotti",
+    "riga 27 «OLIO EX/V.100%ITAL.B»: nome «I0EX/V.100%ITAL.B»",
+    "riga 32 «LATTE INT.AQ PET GRA»: ingrediente nessuno invece di ing:latte"
+   ]
+  },
+  {
+   "caso": "iper-seriate-screenshot",
+   "lettura": "foto-piu-piccola",
+   "perfetta": false,
+   "sicura": true,
+   "affidabile": false,
+   "righeOk": 32,
+   "righeVere": 33,
+   "errori": [
+    "riga 11 «BISC.ORO SAIWA 500G»: nome «ISC.OROSAIWA5OOG»",
+    "riga 11 «BISC.ORO SAIWA 500G»: ingrediente nessuno invece di ing:biscotti",
+    "riga 28 «MOZZ.BUFALA DOP VALL»: pezzi non letti invece di 2",
+    "riga 32 «LATTE INT.AQ PET GRA»: ingrediente nessuno invece di ing:latte"
+   ]
+  },
+  {
+   "caso": "iper-seriate-screenshot",
+   "lettura": "foto-storta-1-5",
+   "perfetta": false,
+   "sicura": true,
+   "affidabile": false,
+   "righeOk": 30,
+   "righeVere": 33,
+   "errori": [
+    "riga 6 «SACCHETT.BIO PESCHER»: ingrediente ing:pesca invece di nessuno",
+    "riga 11 «BISC.ORO SAIWA 500G»: ingrediente nessuno invece di ing:biscotti",
+    "riga 31 «PANCETTA-D STICK BER»: nome «ICETTA-D STICK BER»",
+    "riga 32 «LATTE INT.AQ PET GRA»: nome «TE INT.AQ PET GRA»",
+    "riga 32 «LATTE INT.AQ PET GRA»: ingrediente ing:biscotti invece di ing:latte",
+    "riga 33 «SHOPPER 30X55 INATEC»: nome «PPER30X55INATEC»",
+    "riga in più «TICOLI 039» 0,00"
+   ]
+  },
+  {
+   "caso": "iper-seriate-screenshot",
+   "lettura": "foto-ombra",
+   "perfetta": false,
+   "sicura": true,
+   "affidabile": false,
+   "righeOk": 32,
+   "righeVere": 33,
+   "errori": [
+    "riga 11 «BISC.ORO SAIWA 500G»: nome «ISC.ORO SAIWA 5OOG»",
+    "riga 11 «BISC.ORO SAIWA 500G»: ingrediente nessuno invece di ing:biscotti",
+    "riga 32 «LATTE INT.AQ PET GRA»: ingrediente ing:biscotti invece di ing:latte",
+    "riga 33 «SHOPPER 30X55 INATEC»: pezzi non letti invece di 3"
+   ]
+  },
+  {
+   "caso": "iperal-san-paolo-d-argon",
+   "lettura": "foto-originale",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 32,
+   "righeVere": 32,
+   "errori": []
+  },
+  {
+   "caso": "iperal-san-paolo-d-argon",
+   "lettura": "foto-originale-bis",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 32,
+   "righeVere": 32,
+   "errori": []
+  },
+  {
+   "caso": "iperal-san-paolo-d-argon",
+   "lettura": "foto-jpeg60",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 32,
+   "righeVere": 32,
+   "errori": [
+    "negozio «San Paolod'Argon» invece di «Iperal Supermercati Spa»"
+   ]
+  },
+  {
+   "caso": "iperal-san-paolo-d-argon",
+   "lettura": "foto-spostata",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 32,
+   "righeVere": 32,
+   "errori": []
+  },
+  {
+   "caso": "iperal-san-paolo-d-argon",
+   "lettura": "foto-piu-piccola",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 32,
+   "righeVere": 32,
+   "errori": []
+  },
+  {
+   "caso": "iperal-san-paolo-d-argon",
+   "lettura": "foto-storta-1-5",
+   "perfetta": false,
+   "sicura": true,
+   "affidabile": false,
+   "righeOk": 31,
+   "righeVere": 32,
+   "errori": [
+    "riga 3 «PRIMIA DISG LIQ LT1»: nome «PRIMIA DISG LIO L»"
+   ]
+  },
+  {
+   "caso": "iperal-san-paolo-d-argon",
+   "lettura": "foto-ombra",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 32,
+   "righeVere": 32,
+   "errori": []
+  },
+  {
+   "caso": "lidl-pagani",
+   "lettura": "foto-originale",
+   "perfetta": false,
+   "sicura": true,
+   "affidabile": false,
+   "righeOk": 9,
+   "righeVere": 14,
+   "errori": [
+    "riga 2 «ZUCCHERO SEMOLATO»: pezzi non letti invece di 3",
+    "riga 4 «FILETTI TONNO SURG.»: prezzo 0,00 invece di 2,99",
+    "riga 6 «LATTUGHINO BIO»: prezzo 8,79 invece di 0,79, nome «LATTUGHENO BIG» (segnalato: letture diverse)",
+    "riga 7 «UVA RED GLOBE»: nome «LIVA RED GLOBE»",
+    "riga 9 «YOGURT BIO FRAGOLA»: prezzo 8,69 invece di 0,69 (segnalato: letture diverse)",
+    "riga 12 «MOZZARELLA DI BUFALA»: prezzo 0,00 invece di 1,19 (segnalato: letture diverse)",
+    "data non letta invece di 2025-10-27 (segnalato: letture diverse)",
+    "ora non letta invece di 11:51 (segnalato: letture diverse)",
+    "negozio «Ldl» invece di «Lidl Italia S.r.l. a socio unico»"
+   ]
+  },
+  {
+   "caso": "lidl-pagani",
+   "lettura": "foto-originale-bis",
+   "perfetta": false,
+   "sicura": true,
+   "affidabile": false,
+   "righeOk": 9,
+   "righeVere": 14,
+   "errori": [
+    "riga 2 «ZUCCHERO SEMOLATO»: pezzi non letti invece di 3",
+    "riga 4 «FILETTI TONNO SURG.»: prezzo 0,00 invece di 2,99",
+    "riga 6 «LATTUGHINO BIO»: prezzo 8,79 invece di 0,79, nome «LATTUGHENO BIG» (segnalato: letture diverse)",
+    "riga 7 «UVA RED GLOBE»: nome «LIVA RED GLOBE»",
+    "riga 9 «YOGURT BIO FRAGOLA»: prezzo 8,69 invece di 0,69 (segnalato: letture diverse)",
+    "riga 12 «MOZZARELLA DI BUFALA»: prezzo 0,00 invece di 1,19 (segnalato: letture diverse)",
+    "data non letta invece di 2025-10-27 (segnalato: letture diverse)",
+    "ora non letta invece di 11:51 (segnalato: letture diverse)",
+    "negozio «Ldl» invece di «Lidl Italia S.r.l. a socio unico»"
+   ]
+  },
+  {
+   "caso": "lidl-pagani",
+   "lettura": "foto-jpeg60",
+   "perfetta": false,
+   "sicura": true,
+   "affidabile": false,
+   "righeOk": 7,
+   "righeVere": 14,
+   "errori": [
+    "riga 1 «FETTE DORATE»: prezzo 0,00 invece di 1,79 (segnalato: senza prezzo)",
+    "riga 2 «ZUCCHERO SEMOLATO»: prezzo 0,00 invece di 2,52",
+    "riga 2 «ZUCCHERO SEMOLATO»: pezzi non letti invece di 3",
+    "riga 3 «FILETTI TONNO SURG.»: prezzo 3,79 invece di 2,99, nome «ETLETTTONNOSURG» (segnalato: letture diverse)",
+    "riga 4 «FILETTI TONNO SURG.»: prezzo 0,00 invece di 2,99, nome «FILETTTTONWO SURG 379» (segnalato: senza prezzo)",
+    "riga 6 «LATTUGHINO BIO»: prezzo NaN invece di 0,79, nome «LATTUGHENO BIG» (segnalato: letture diverse)",
+    "riga 8 «SACCH.ORTOFR.BIOGRAD»: prezzo 0,00 invece di 0,01 (segnalato: senza prezzo)",
+    "riga 8 «SACCH.ORTOFR.BIOGRAD»: ingrediente ing:ghiaccio invece di nessuno",
+    "riga 9 «YOGURT BIO FRAGOLA»: prezzo 8,69 invece di 0,69 (segnalato: letture diverse)",
+    "riga 13 «GONNA MIDI NERO S-0487526»: ingrediente ing:cavolo_nero invece di nessuno",
+    "riga in più «CAD699PZ3» 0,00",
+    "riga in più «B.96KGX1.79EUR/KG» 0,00",
+    "riga in più «VALORE SCONTT» 3,43",
+    "data non letta invece di 2025-10-27 (segnalato: letture diverse)",
+    "totale 5,76 invece di 43,18 (segnalato: letture diverse)",
+    "ora 00:20 invece di 11:51 (segnalato: letture diverse)"
+   ]
+  },
+  {
+   "caso": "lidl-pagani",
+   "lettura": "foto-spostata",
+   "perfetta": false,
+   "sicura": true,
+   "affidabile": false,
+   "righeOk": 10,
+   "righeVere": 14,
+   "errori": [
+    "riga 1 «FETTE DORATE»: prezzo 0,00 invece di 1,79",
+    "riga 2 «ZUCCHERO SEMOLATO»: prezzo 0,00 invece di 2,52",
+    "riga 2 «ZUCCHERO SEMOLATO»: pezzi non letti invece di 3",
+    "riga 4 «FILETTI TONNO SURG.»: prezzo 0,00 invece di 2,99, nome «FILETTTTOOSURG» (segnalato: letture diverse)",
+    "riga 5 «LATTE PS UHT»: prezzo 0,00 invece di 0,33 (segnalato: letture diverse)",
+    "riga in più «VALORE SCCNTI» 3,43",
+    "data non letta invece di 2025-10-27 (segnalato: letture diverse)",
+    "ora non letta invece di 11:51 (segnalato: letture diverse)"
+   ]
+  },
+  {
+   "caso": "lidl-pagani",
+   "lettura": "foto-piu-piccola",
+   "perfetta": false,
+   "sicura": true,
+   "affidabile": false,
+   "righeOk": 7,
+   "righeVere": 14,
+   "errori": [
+    "riga 1 «FETTE DORATE»: prezzo 2,35 invece di 1,79",
+    "riga 2 «ZUCCHERO SEMOLATO»: pezzi non letti invece di 3",
+    "riga 3 «FILETTI TONNO SURG.»: prezzo 3,79 invece di 2,99 (segnalato: letture diverse)",
+    "riga 4 «FILETTI TONNO SURG.»: prezzo 3,79 invece di 2,99",
+    "riga 6 «LATTUGHINO BIO»: prezzo 0,99 invece di 0,79 (segnalato: letture diverse)",
+    "riga 8 «SACCH.ORTOFR.BIOGRAD»: prezzo 8,01 invece di 0,01 (segnalato: letture diverse)",
+    "riga 9 «YOGURT BIO FRAGOLA»: prezzo 8,69 invece di 0,69 (segnalato: letture diverse)",
+    "riga 12 «MOZZARELLA DI BUFALA»: prezzo 0,00 invece di 1,19 (segnalato: letture diverse)",
+    "riga 13 «GONNA MIDI NERO S-0487526»: ingrediente ing:cavolo_nero invece di nessuno",
+    "riga in più «OFFERTALIDI PLUS» 0,80",
+    "riga in più «VALCRE SCONTI» 0,00",
+    "data non letta invece di 2025-10-27 (segnalato: letture diverse)",
+    "ora non letta invece di 11:51 (segnalato: letture diverse)"
+   ]
+  },
+  {
+   "caso": "lidl-pagani",
+   "lettura": "foto-storta-1-5",
+   "perfetta": false,
+   "sicura": true,
+   "affidabile": false,
+   "righeOk": 10,
+   "righeVere": 14,
+   "errori": [
+    "riga 2 «ZUCCHERO SEMOLATO»: prezzo 0,00 invece di 2,52 (segnalato: letture diverse)",
+    "riga 2 «ZUCCHERO SEMOLATO»: pezzi non letti invece di 3",
+    "riga 4 «FILETTI TONNO SURG.»: prezzo 0,00 invece di 2,99",
+    "riga 5 «LATTE PS UHT»: nome «LATIEPS UHT 4L» (segnalato: letture diverse)",
+    "riga 12 «MOZZARELLA DI BUFALA»: prezzo 0,00 invece di 1,19",
+    "data non letta invece di 2025-10-27 (segnalato: letture diverse)",
+    "ora non letta invece di 11:51 (segnalato: letture diverse)"
+   ]
+  },
+  {
+   "caso": "lidl-pagani",
+   "lettura": "foto-ombra",
+   "perfetta": false,
+   "sicura": true,
+   "affidabile": false,
+   "righeOk": 8,
+   "righeVere": 14,
+   "errori": [
+    "riga 1 «FETTE DORATE»: prezzo 0,00 invece di 1,79 (segnalato: letture diverse)",
+    "riga 2 «ZUCCHERO SEMOLATO»: pezzi non letti invece di 3",
+    "riga 4 «FILETTI TONNO SURG.»: prezzo 0,00 invece di 2,99",
+    "riga 5 «LATTE PS UHT»: prezzo 8,33 invece di 0,33 (segnalato: letture diverse)",
+    "riga 6 «LATTUGHINO BIO»: nome «CATTUGHENO BIO» (segnalato: letture diverse)",
+    "riga 8 «SACCH.ORTOFR.BIOGRAD»: ingrediente ing:ghiaccio invece di nessuno",
+    "riga 9 «YOGURT BIO FRAGOLA»: prezzo 9,69 invece di 0,69 (segnalato: letture diverse)",
+    "riga 12 «MOZZARELLA DI BUFALA»: prezzo 0,00 invece di 1,19 (segnalato: letture diverse)",
+    "riga 13 «GONNA MIDI NERO S-0487526»: ingrediente ing:cavolo_nero invece di nessuno",
+    "data non letta invece di 2025-10-27 (segnalato: letture diverse)",
+    "ora non letta invece di 11:51 (segnalato: letture diverse)",
+    "negozio «B416-Via Nazionale, Snc» invece di «Lidl Italia S.r.l. a socio unico»"
+   ]
+  },
+  {
+   "caso": "sint-abbinamento-spunte",
+   "lettura": "sintetica-originale",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 6,
+   "righeVere": 6,
+   "errori": []
+  },
+  {
+   "caso": "sint-abbinamento-spunte",
+   "lettura": "sintetica-originale-bis",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 6,
+   "righeVere": 6,
+   "errori": []
+  },
+  {
+   "caso": "sint-abbinamento-spunte",
+   "lettura": "sintetica-jpeg60",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 6,
+   "righeVere": 6,
+   "errori": []
+  },
+  {
+   "caso": "sint-abbinamento-spunte",
+   "lettura": "sintetica-spostata",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 6,
+   "righeVere": 6,
+   "errori": []
+  },
+  {
+   "caso": "sint-abbinamento-spunte",
+   "lettura": "sintetica-piu-piccola",
+   "perfetta": true,
+   "sicura": false,
+   "affidabile": true,
+   "righeOk": 6,
+   "righeVere": 6,
+   "errori": [
+    "riga 5 «PANE COMUNE»: abbinata a r-panettone invece di nessuna"
+   ]
+  },
+  {
+   "caso": "sint-abbinamento-spunte",
+   "lettura": "sintetica-storta-1-5",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 6,
+   "righeVere": 6,
+   "errori": []
+  },
+  {
+   "caso": "sint-abbinamento-spunte",
+   "lettura": "sintetica-ombra",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 6,
+   "righeVere": 6,
+   "errori": []
+  },
+  {
+   "caso": "sint-colonne-quantita",
+   "lettura": "sintetica-originale",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 6,
+   "righeVere": 6,
+   "errori": [
+    "riga 5 «YOGURT BIANCO 125G»: ingrediente nessuno invece di ing:yogurt"
+   ]
+  },
+  {
+   "caso": "sint-colonne-quantita",
+   "lettura": "sintetica-originale-bis",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 6,
+   "righeVere": 6,
+   "errori": [
+    "riga 5 «YOGURT BIANCO 125G»: ingrediente nessuno invece di ing:yogurt"
+   ]
+  },
+  {
+   "caso": "sint-colonne-quantita",
+   "lettura": "sintetica-jpeg60",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 6,
+   "righeVere": 6,
+   "errori": [
+    "riga 5 «YOGURT BIANCO 125G»: ingrediente nessuno invece di ing:yogurt"
+   ]
+  },
+  {
+   "caso": "sint-colonne-quantita",
+   "lettura": "sintetica-spostata",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 6,
+   "righeVere": 6,
+   "errori": []
+  },
+  {
+   "caso": "sint-colonne-quantita",
+   "lettura": "sintetica-piu-piccola",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 6,
+   "righeVere": 6,
+   "errori": []
+  },
+  {
+   "caso": "sint-colonne-quantita",
+   "lettura": "sintetica-storta-1-5",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 6,
+   "righeVere": 6,
+   "errori": []
+  },
+  {
+   "caso": "sint-colonne-quantita",
+   "lettura": "sintetica-ombra",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 6,
+   "righeVere": 6,
+   "errori": []
+  },
+  {
+   "caso": "sint-date-e-righe-lunghe",
+   "lettura": "sintetica-originale",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 19,
+   "righeVere": 19,
+   "errori": []
+  },
+  {
+   "caso": "sint-date-e-righe-lunghe",
+   "lettura": "sintetica-originale-bis",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 19,
+   "righeVere": 19,
+   "errori": []
+  },
+  {
+   "caso": "sint-date-e-righe-lunghe",
+   "lettura": "sintetica-jpeg60",
+   "perfetta": false,
+   "sicura": true,
+   "affidabile": false,
+   "righeOk": 17,
+   "righeVere": 19,
+   "errori": [
+    "riga 8 «BURRO 250G»: nome «BURR025OG»",
+    "riga 9 «FARINA 00 1KG»: nome «FARINA OO KG»"
+   ]
+  },
+  {
+   "caso": "sint-date-e-righe-lunghe",
+   "lettura": "sintetica-spostata",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 19,
+   "righeVere": 19,
+   "errori": []
+  },
+  {
+   "caso": "sint-date-e-righe-lunghe",
+   "lettura": "sintetica-piu-piccola",
+   "perfetta": false,
+   "sicura": true,
+   "affidabile": false,
+   "righeOk": 18,
+   "righeVere": 19,
+   "errori": [
+    "riga 9 «FARINA 00 1KG»: nome «FARINA OO 1KG»"
+   ]
+  },
+  {
+   "caso": "sint-date-e-righe-lunghe",
+   "lettura": "sintetica-storta-1-5",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 19,
+   "righeVere": 19,
+   "errori": []
+  },
+  {
+   "caso": "sint-date-e-righe-lunghe",
+   "lettura": "sintetica-ombra",
+   "perfetta": false,
+   "sicura": true,
+   "affidabile": false,
+   "righeOk": 17,
+   "righeVere": 19,
+   "errori": [
+    "riga 8 «BURRO 250G»: nome «BURR025OG»",
+    "riga 9 «FARINA 00 1KG»: nome «FARINA OO 1KG»"
+   ]
+  },
+  {
+   "caso": "sint-formati-nei-nomi",
+   "lettura": "sintetica-originale",
+   "perfetta": false,
+   "sicura": true,
+   "affidabile": false,
+   "righeOk": 9,
+   "righeVere": 10,
+   "errori": [
+    "riga 6 «FARINA 00 1KG»: nome «FARINA OO 1KG»",
+    "riga 9 «BURRO 250G»: ingrediente nessuno invece di ing:burro"
+   ]
+  },
+  {
+   "caso": "sint-formati-nei-nomi",
+   "lettura": "sintetica-originale-bis",
+   "perfetta": false,
+   "sicura": true,
+   "affidabile": false,
+   "righeOk": 9,
+   "righeVere": 10,
+   "errori": [
+    "riga 6 «FARINA 00 1KG»: nome «FARINA OO 1KG»",
+    "riga 9 «BURRO 250G»: ingrediente nessuno invece di ing:burro"
+   ]
+  },
+  {
+   "caso": "sint-formati-nei-nomi",
+   "lettura": "sintetica-jpeg60",
+   "perfetta": true,
+   "sicura": false,
+   "affidabile": true,
+   "righeOk": 10,
+   "righeVere": 10,
+   "errori": [
+    "riga 2 «ACQUA NATURALE 6X1,5L»: formato 90000 ml invece di 9000 ml",
+    "riga 2 «ACQUA NATURALE 6X1,5L»: in casa 90000 ml invece di 9000 ml",
+    "riga 4 «LATTE UHT 1L»: formato niente invece di 1000 ml",
+    "riga 4 «LATTE UHT 1L»: ingrediente nessuno invece di ing:latte",
+    "riga 7 «ZUCCHERO 1KG»: ingrediente nessuno invece di ing:zucchero",
+    "riga 9 «BURRO 250G»: ingrediente nessuno invece di ing:burro",
+    "riga 10 «OLIO DI SEMI 1L»: formato niente invece di 1000 ml"
+   ]
+  },
+  {
+   "caso": "sint-formati-nei-nomi",
+   "lettura": "sintetica-spostata",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 10,
+   "righeVere": 10,
+   "errori": [
+    "riga 9 «BURRO 250G»: ingrediente nessuno invece di ing:burro"
+   ]
+  },
+  {
+   "caso": "sint-formati-nei-nomi",
+   "lettura": "sintetica-piu-piccola",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 10,
+   "righeVere": 10,
+   "errori": [
+    "riga 2 «ACQUA NATURALE 6X1,5L»: ingrediente nessuno invece di ing:acqua",
+    "riga 5 «BISCOTTI FROLLINI 700G»: ingrediente nessuno invece di ing:biscotti",
+    "riga 9 «BURRO 250G»: ingrediente nessuno invece di ing:burro",
+    "riga 10 «OLIO DI SEMI 1L»: ingrediente ing:olio_evo invece di ing:olio_semi"
+   ]
+  },
+  {
+   "caso": "sint-formati-nei-nomi",
+   "lettura": "sintetica-storta-1-5",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 10,
+   "righeVere": 10,
+   "errori": [
+    "riga 10 «OLIO DI SEMI 1L»: ingrediente ing:semi_misti invece di ing:olio_semi"
+   ]
+  },
+  {
+   "caso": "sint-formati-nei-nomi",
+   "lettura": "sintetica-ombra",
+   "perfetta": false,
+   "sicura": true,
+   "affidabile": false,
+   "righeOk": 9,
+   "righeVere": 10,
+   "errori": [
+    "riga 6 «FARINA 00 1KG»: nome «FARINA OO 1KG»",
+    "riga 9 «BURRO 250G»: ingrediente nessuno invece di ing:burro"
+   ]
+  },
+  {
+   "caso": "sint-pesi-e-sconti",
+   "lettura": "sintetica-originale",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 5,
+   "righeVere": 5,
+   "errori": []
+  },
+  {
+   "caso": "sint-pesi-e-sconti",
+   "lettura": "sintetica-originale-bis",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 5,
+   "righeVere": 5,
+   "errori": []
+  },
+  {
+   "caso": "sint-pesi-e-sconti",
+   "lettura": "sintetica-jpeg60",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 5,
+   "righeVere": 5,
+   "errori": []
+  },
+  {
+   "caso": "sint-pesi-e-sconti",
+   "lettura": "sintetica-spostata",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 5,
+   "righeVere": 5,
+   "errori": []
+  },
+  {
+   "caso": "sint-pesi-e-sconti",
+   "lettura": "sintetica-piu-piccola",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 5,
+   "righeVere": 5,
+   "errori": []
+  },
+  {
+   "caso": "sint-pesi-e-sconti",
+   "lettura": "sintetica-storta-1-5",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 5,
+   "righeVere": 5,
+   "errori": []
+  },
+  {
+   "caso": "sint-pesi-e-sconti",
+   "lettura": "sintetica-ombra",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 5,
+   "righeVere": 5,
+   "errori": []
+  },
+  {
+   "caso": "sint-promo-nei-nomi",
+   "lettura": "sintetica-originale",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 5,
+   "righeVere": 5,
+   "errori": [
+    "riga 1 «PASTA PROMO 500G»: ingrediente nessuno invece di ing:pasta",
+    "riga 2 «BISCOTTI OFFERTA 700G»: ingrediente nessuno invece di ing:biscotti",
+    "riga 3 «YOGURT GRECO PROMO 150G»: ingrediente nessuno invece di ing:yogurt_greco",
+    "riga 5 «LATTE INTERO 1L»: formato niente invece di 1000 ml"
+   ]
+  },
+  {
+   "caso": "sint-promo-nei-nomi",
+   "lettura": "sintetica-originale-bis",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 5,
+   "righeVere": 5,
+   "errori": [
+    "riga 1 «PASTA PROMO 500G»: ingrediente nessuno invece di ing:pasta",
+    "riga 2 «BISCOTTI OFFERTA 700G»: ingrediente nessuno invece di ing:biscotti",
+    "riga 3 «YOGURT GRECO PROMO 150G»: ingrediente nessuno invece di ing:yogurt_greco",
+    "riga 5 «LATTE INTERO 1L»: formato niente invece di 1000 ml"
+   ]
+  },
+  {
+   "caso": "sint-promo-nei-nomi",
+   "lettura": "sintetica-jpeg60",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 5,
+   "righeVere": 5,
+   "errori": [
+    "riga 5 «LATTE INTERO 1L»: formato niente invece di 1000 ml",
+    "riga 5 «LATTE INTERO 1L»: ingrediente nessuno invece di ing:latte"
+   ]
+  },
+  {
+   "caso": "sint-promo-nei-nomi",
+   "lettura": "sintetica-spostata",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 5,
+   "righeVere": 5,
+   "errori": [
+    "riga 2 «BISCOTTI OFFERTA 700G»: ingrediente nessuno invece di ing:biscotti",
+    "riga 3 «YOGURT GRECO PROMO 150G»: ingrediente nessuno invece di ing:yogurt_greco"
+   ]
+  },
+  {
+   "caso": "sint-promo-nei-nomi",
+   "lettura": "sintetica-piu-piccola",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 5,
+   "righeVere": 5,
+   "errori": [
+    "riga 1 «PASTA PROMO 500G»: ingrediente nessuno invece di ing:pasta",
+    "riga 2 «BISCOTTI OFFERTA 700G»: ingrediente nessuno invece di ing:biscotti",
+    "riga 3 «YOGURT GRECO PROMO 150G»: ingrediente nessuno invece di ing:yogurt_greco"
+   ]
+  },
+  {
+   "caso": "sint-promo-nei-nomi",
+   "lettura": "sintetica-storta-1-5",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 5,
+   "righeVere": 5,
+   "errori": []
+  },
+  {
+   "caso": "sint-promo-nei-nomi",
+   "lettura": "sintetica-ombra",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 5,
+   "righeVere": 5,
+   "errori": [
+    "riga 1 «PASTA PROMO 500G»: ingrediente nessuno invece di ing:pasta",
+    "riga 2 «BISCOTTI OFFERTA 700G»: ingrediente nessuno invece di ing:biscotti",
+    "riga 4 «CAFFE MACINATO 250G»: ingrediente nessuno invece di ing:caffe",
+    "riga 5 «LATTE INTERO 1L»: formato niente invece di 1000 ml"
+   ]
+  },
+  {
+   "caso": "sint-spesa-semplice",
+   "lettura": "sintetica-originale",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 10,
+   "righeVere": 10,
+   "errori": [
+    "riga 5 «MOZZARELLA 125G»: ingrediente nessuno invece di ing:mozzarella"
+   ]
+  },
+  {
+   "caso": "sint-spesa-semplice",
+   "lettura": "sintetica-originale-bis",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 10,
+   "righeVere": 10,
+   "errori": [
+    "riga 5 «MOZZARELLA 125G»: ingrediente nessuno invece di ing:mozzarella"
+   ]
+  },
+  {
+   "caso": "sint-spesa-semplice",
+   "lettura": "sintetica-jpeg60",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 10,
+   "righeVere": 10,
+   "errori": [
+    "riga 3 «PASTA SEMOLA 500G»: ingrediente nessuno invece di ing:pasta",
+    "riga 9 «OLIO EXTRAVERGINE 1L»: formato niente invece di 1000 ml"
+   ]
+  },
+  {
+   "caso": "sint-spesa-semplice",
+   "lettura": "sintetica-spostata",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 10,
+   "righeVere": 10,
+   "errori": [
+    "riga 5 «MOZZARELLA 125G»: ingrediente nessuno invece di ing:mozzarella",
+    "riga 8 «YOGURT BIANCO 125G»: ingrediente nessuno invece di ing:yogurt"
+   ]
+  },
+  {
+   "caso": "sint-spesa-semplice",
+   "lettura": "sintetica-piu-piccola",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 10,
+   "righeVere": 10,
+   "errori": [
+    "riga 3 «PASTA SEMOLA 500G»: ingrediente nessuno invece di ing:pasta",
+    "riga 5 «MOZZARELLA 125G»: ingrediente nessuno invece di ing:mozzarella",
+    "riga 7 «UOVA FRESCHE X6»: formato niente invece di 6 pz",
+    "riga 7 «UOVA FRESCHE X6»: ingrediente nessuno invece di ing:uova",
+    "riga 8 «YOGURT BIANCO 125G»: ingrediente nessuno invece di ing:yogurt"
+   ]
+  },
+  {
+   "caso": "sint-spesa-semplice",
+   "lettura": "sintetica-storta-1-5",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 10,
+   "righeVere": 10,
+   "errori": []
+  },
+  {
+   "caso": "sint-spesa-semplice",
+   "lettura": "sintetica-ombra",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 10,
+   "righeVere": 10,
+   "errori": [
+    "riga 3 «PASTA SEMOLA 500G»: ingrediente nessuno invece di ing:pasta",
+    "riga 5 «MOZZARELLA 125G»: ingrediente nessuno invece di ing:mozzarella"
+   ]
+  }
+ ]
+}

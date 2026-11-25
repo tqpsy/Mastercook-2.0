@@ -2,10 +2,11 @@
  * PaddleOCR (modelli PP-OCR in ONNX) sul telefono: la parte che non tocca il browser.
  * Il riconoscimento ha due reti. La prima (rilevazione, «DB») dice dove c'è testo: una mappa di probabilità,
  * da cui qui si ricavano i riquadri. La seconda (lettura) trasforma ogni riquadro in testo: qui si prepara
- * l'immagine e si decodifica la risposta (CTC). Poi si compone il testo dello scontrino (`impagina`).
+ * l'immagine e si decodifica la risposta (CTC). Le righe dello scontrino si compongono dai riquadri in
+ * scontrini-geometria.ts (`daScatole`) e scontrini-impaginazione.ts (a quale nome va ogni prezzo).
  * Le immagini sono pixel RGBA come quelli di un canvas, così i test li provano senza browser.
  */
-import { eFineRighe, eIntestazione, pulisciLinea } from './scontrini';
+import { ePrezzoDiColonna } from './scontrini-righe';
 
 export interface Pixel {
   width: number;
@@ -226,23 +227,8 @@ export function decodificaCtc(probabilita: Float32Array, t: number, classi: numb
   return { testo, fiducia: n ? somma / n : 0 };
 }
 
-const altezza = (s: Scatola) => s.y1 - s.y0;
 const centroY = (s: Scatola) => (s.y0 + s.y1) / 2;
 const mediana = (v: number[]) => [...v].sort((a, b) => a - b)[Math.floor(v.length / 2)] ?? 0;
-/** Un prezzo, anche senza la virgola («135A»: si perde spesso) o con la lettera dell'IVA letta come cifra («0,20 0»). */
-const ePrezzo = (t: string) => /^-?\s?(\d{0,4}\s?[.,:]\s?\d{2}|\d{3,5})(\s?[A-Z0-9])?$/.test(t.trim().toUpperCase());
-
-/**
- * Da dove inizia la colonna dei prezzi: poco prima dei numeri con i decimali, alla destra della pagina
- * (un peso o una quantità nel nome non contano: si ignora il 20% più a sinistra; il margine tiene dentro «PREZZO IVA»).
- */
-export function inizioPrezzi(scatole: Scatola[], larghezza: number): number {
-  const x = scatole
-    .filter((s) => ePrezzo(s.testo) && s.x0 > larghezza * 0.4)
-    .map((s) => s.x0)
-    .sort((a, b) => a - b);
-  return x.length < 5 ? larghezza * 0.66 : x[Math.floor(x.length * 0.2)] - larghezza * 0.05;
-}
 
 /**
  * Di quanto è inclinata la foto, in radianti (positivo = ruotata in senso orario): i prezzi sono allineati a destra,
@@ -250,103 +236,9 @@ export function inizioPrezzi(scatole: Scatola[], larghezza: number): number {
  * lontane (Theil–Sen: non la sporcano le letture sbagliate). Null se i prezzi sono pochi o troppo vicini.
  */
 export function inclinazione(scatole: Scatola[], larghezza: number): number | null {
-  const punti = scatole.filter((s) => ePrezzo(s.testo) && s.x0 > larghezza * 0.5).map((s) => ({ x: s.x1, y: centroY(s) }));
+  const punti = scatole.filter((s) => ePrezzoDiColonna(s.testo) && s.x0 > larghezza * 0.5).map((s) => ({ x: s.x1, y: centroY(s) }));
   const pendenze: number[] = [];
   for (const [i, a] of punti.entries()) for (const b of punti.slice(i + 1)) if (Math.abs(b.y - a.y) > 200) pendenze.push((b.x - a.x) / (b.y - a.y));
   if (punti.length < 6 || pendenze.length < 10) return null;
   return Math.atan(mediana(pendenze));
-}
-
-export interface Pagina {
-  /** Tutta la pagina, una riga per ogni scatola di sinistra con la scatola di destra più vicina in verticale. */
-  pagina: string;
-  /** Le scatole della colonna dei prezzi nelle righe dello scontrino, dall'alto in basso, una per riga. */
-  prezzi: string;
-  /** Le scatole della colonna dei nomi (e di tutto quello che non è la colonna dei prezzi). */
-  nomi: string;
-}
-
-/**
- * Ricompone il testo dello scontrino dalle scatole. Nella foto la carta si piega e un prezzo può trovarsi
- * più in basso del suo nome: per questo oltre alla pagina «riga per riga» si dà anche la colonna dei prezzi
- * da sola e quella dei nomi, che colonne.ts abbina per ordine.
- */
-/**
- * Le scatole di prezzi divise per colonna (prezzo unitario, totale di riga…): numeri i cui bordi sinistri distano più di
- * `vuoto` volte la larghezza della pagina stanno in colonne diverse. Ordinate da sinistra a destra.
- */
-function colonnePrezzi(prezzi: Scatola[], larghezza: number, vuoto = 0.08): Scatola[][] {
-  const ordinate = [...prezzi].sort((a, b) => a.x0 - b.x0);
-  const colonne: Scatola[][] = [];
-  for (const s of ordinate) {
-    const ultima = colonne.at(-1);
-    if (ultima && s.x0 - ultima[ultima.length - 1].x0 < larghezza * vuoto) ultima.push(s);
-    else colonne.push([s]);
-  }
-  return colonne;
-}
-
-export function impagina(scatole: Scatola[], larghezza: number): Pagina {
-  const x = inizioPrezzi(scatole, larghezza);
-  const ordine = [...scatole].sort((a, b) => centroY(a) - centroY(b));
-  const destra = ordine.filter((s) => s.x0 >= x && (ePrezzo(s.testo) || s.testo.replace(/[^A-Za-z0-9]/g, '').length < 4));
-  // Più colonne di prezzi (unitario e totale di riga): le righe valgono quanto la colonna più a destra, se è piena
-  // abbastanza; le altre colonne restano solo accanto ai nomi, nella pagina riga per riga.
-  const colonne = colonnePrezzi(destra.filter((s) => ePrezzo(s.testo)), larghezza);
-  const piena = Math.max(0, ...colonne.map((c) => c.length));
-  const ultima = [...colonne].reverse().find((c) => c.length >= piena * 0.5);
-  const daScartare = new Set(colonne.filter((c) => c !== ultima).flat());
-  const prezziColonna = destra.filter((s) => !daScartare.has(s));
-  // Più pezzi di sinistra sulla stessa riga («IPERAL SUPERMERCATI» e «SPA», la data e l'ora) formano una riga sola.
-  const sinistra: Scatola[] = [];
-  /** Il centro del primo pezzo di ogni riga: i pezzi dopo si confrontano con quello, non con la riga che cresce. */
-  const centri: number[] = [];
-  const gruppi: Scatola[][] = [];
-  // A sinistra anche i pezzi di destra che non sono prezzi («Ora: 12:47», «PREZZO IVA»): non fanno parte della colonna.
-  // (La colonna dell'aliquota IVA in percentuale, tra i nomi e i prezzi — «4%», «10%» — non è un nome: si salta.)
-  const eAliquota = (b: Scatola) => b.x0 > larghezza * 0.45 && /^\d{1,3}\s?%?$|^\d{1,2}\s?[^\dA-Za-z\s]$/.test(b.testo.trim());
-  const aSinistra = ordine.filter((b) => !eAliquota(b) && (b.x0 < x || (!ePrezzo(b.testo) && b.testo.replace(/[^A-Za-z0-9]/g, '').length >= 4)));
-  for (const s of aSinistra.sort((a, b) => centroY(a) - centroY(b) || a.x0 - b.x0)) {
-    const k = gruppi.length - 1;
-    if (k >= 0 && Math.abs(centroY(s) - centri[k]) < altezza(s) * 0.5) gruppi[k].push(s);
-    else {
-      gruppi.push([s]);
-      centri.push(centroY(s));
-    }
-  }
-  for (const g of gruppi) {
-    // Da sinistra a destra («2   PANE»), senza ripetere lo stesso testo letto due volte da riquadri sovrapposti.
-    const pezzi = g.sort((a, b) => a.x0 - b.x0).filter((b, i, v) => v.findIndex((q) => q.testo === b.testo) === i);
-    sinistra.push({ ...pezzi[0], testo: pezzi.map((b) => b.testo).join('   '), x1: Math.max(...pezzi.map((b) => b.x1)), y0: Math.min(...pezzi.map((b) => b.y0)), y1: Math.max(...pezzi.map((b) => b.y1)) });
-  }
-  const passo = mediana(sinistra.map(altezza)) * 2.2 || 40;
-  // Ogni pezzo di destra va alla riga di sinistra più vicina a lui, e non il contrario: una riga senza prezzo (il nome sopra la riga
-  // del peso, un titolo di sezione) non deve prendere il prezzo della riga sotto, o si sfasa tutto lo scontrino da lì in poi.
-  const perRiga: Scatola[][] = sinistra.map(() => []);
-  for (const d of destra) {
-    let k = -1;
-    let vicina = Infinity;
-    for (const [i, s] of sinistra.entries()) {
-      const distanza = Math.abs(centroY(d) - centroY(s));
-      if (distanza < vicina) {
-        vicina = distanza;
-        k = i;
-      }
-    }
-    if (k >= 0 && vicina < passo * 0.75) perRiga[k].push(d);
-  }
-  const righe = sinistra.map((s, i) => {
-    // Tutti i pezzi di destra su questa riga (colonna dei prezzi, dei totali…), da sinistra a destra.
-    const vicine = perRiga[i].sort((a, b) => Math.abs(centroY(a) - centroY(s)) - Math.abs(centroY(b) - centroY(s)));
-    const perColonna: Scatola[] = [];
-    for (const d of vicine) if (!perColonna.some((q) => Math.abs(q.x0 - d.x0) < larghezza * 0.04) || /^[A-Z%]{1,2}$/.test(d.testo)) perColonna.push(d);
-    perColonna.sort((a, b) => a.x0 - b.x0);
-    return [s.testo, ...perColonna.map((d) => d.testo)].join('   ');
-  });
-  // Le righe dello scontrino finiscono dove comincia il totale: dopo, i prezzi non sono righe.
-  // (Dopo l'intestazione: «QTA DESCRIZIONE PREZZO TOTALE» contiene la parola «totale».)
-  const intestazione = sinistra.findIndex((s) => eIntestazione(pulisciLinea(s.testo)));
-  const totale = sinistra.find((s, i) => i > intestazione && eFineRighe(pulisciLinea(s.testo)));
-  const prezzi = prezziColonna.filter((s) => !totale || centroY(s) < centroY(totale) - altezza(totale) * 0.3);
-  return { pagina: righe.join('\n'), prezzi: prezzi.map((s) => s.testo).join('\n'), nomi: sinistra.map((s) => s.testo).join('\n') };
 }
