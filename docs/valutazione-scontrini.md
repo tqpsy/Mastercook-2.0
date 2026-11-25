@@ -54,6 +54,7 @@ Tre origini, dichiarate in ogni `verita.json`:
 
 - `scontrino-reale` con `verita: "carta"`: uno scontrino vero della famiglia, con la verità scritta **guardando lo scontrino** (e controllata con le somme), mai l'uscita del lettore.
 - `esempio-reale` con `verita: "ricavata"`: esempi veri già nel repo (Conad, Iper) la cui verità è ricavata dai testi e dal conto, non dalla carta. Valgono meno: i nomi potrebbero essere sbagliati in modo coerente con il lettore.
+- Uno stesso scontrino può avere più fonti, ognuna un caso: le foto (`bennet-albano-*`), lo screenshot e il **PDF** dello scontrino digitale (`iper-seriate-screenshot`, `iper-seriate-pdf`). La lettura del PDF non passa dall'OCR: è il testo di `src/dominio/pdf.ts`, e si misura come le altre.
 - `sintetico` con `verita: "costruzione"`: scontrini costruiti con trabocchetti noti (PROMO nel nome, date che non sono lo scontrino, formati, abbinamenti). La verità è esatta per costruzione. Servono a isolare un difetto; **non misurano la qualità su foto vere**: per quella servono scontrini veri.
 
 ### Foto e dati personali

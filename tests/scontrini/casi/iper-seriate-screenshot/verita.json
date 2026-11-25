@@ -5,10 +5,10 @@
   "verita": "carta",
   "negozio": "Iper Montebello S.P.A.",
   "totale": 118.81,
-  "note": "Screenshot di uno scontrino digitale Iper (Seriate, 39 articoli, 118,81 €) fatto sul telefono, tagliato a sinistra: manca la prima lettera di ogni riga («ESCRIZIONE», «OTALE COMPLESSIVO», «MPORTO PAGATO»). Il prezzo sta sulla riga del peso o della quantità («0,218 * 29,91Kg   6,52 B»), non su quella del nome; «ARTICOLI AGGIUNTIVI», «INIZIO ESPLOSIONE» e «FINE ESPLOSIONE» sono titoli di sezione senza prezzo. La data in basso è tagliata (manca anche il primo numero): non si misura. Le prime lettere tagliate nei nomi della verità sono ricostruite (BISC.ORO, SPUNTINELLE…). Sconti già tolti: crema spalmabile -0,75, spaghetti -1,60, olio -3,00. La prima lettera di «BS M/RIGHE» non si legge.",
+  "note": "Screenshot di uno scontrino digitale Iper (Seriate, 39 articoli, 118,81 €) fatto sul telefono, tagliato a sinistra: manca la prima lettera di ogni riga («ESCRIZIONE», «OTALE COMPLESSIVO», «MPORTO PAGATO»). Il prezzo sta sulla riga del peso o della quantità («0,218 * 29,91Kg   6,52 B»), non su quella del nome; «ARTICOLI AGGIUNTIVI», «INIZIO ESPLOSIONE» e «FINE ESPLOSIONE» sono titoli di sezione senza prezzo. La data in basso è tagliata (manca anche il primo numero): non si misura. I nomi interi (la prima lettera tagliata nello screenshot) vengono dal PDF dello stesso scontrino (caso iper-seriate-pdf). Sconti già tolti: crema spalmabile -0,75, spaghetti -1,60, olio -3,00.",
   "righe": [
     {
-      "descrizione": "ACQUA A4 PAG.BIANCA",
+      "descrizione": "ECOQUA A4 PAG.BIANCA",
       "prezzo": 2.69
     },
     {
@@ -33,7 +33,7 @@
       "ingrediente": null
     },
     {
-      "descrizione": "COS.BROC.CAVOL.BIO A",
+      "descrizione": "ROS.BROC.CAVOL.BIO A",
       "prezzo": 3.99
     },
     {
@@ -117,11 +117,11 @@
       "pezzi": 2
     },
     {
-      "descrizione": "ACQUA A4 PAG.BIANCA",
+      "descrizione": "ECOQUA A4 PAG.BIANCA",
       "prezzo": 2.69
     },
     {
-      "descrizione": "BS M/RIGHE 12X18CM",
+      "descrizione": "25BS M/RIGHE 12X18CM",
       "prezzo": 4.99
     },
     {
