@@ -97,12 +97,30 @@ export function proponiRighe(lette: RigaDaProporre[], carrello: RigaDaAbbinare[]
 }
 
 /**
+ * Sotto questa fiducia la lettura del prezzo di una riga della foto è incerta (`fiduciaRiga`): la riga è «da controllare».
+ * Scelta con la misura sulle foto (docs/valutazione-scontrini.md): tra 0,66 e 0,70 scopre 6 righe sbagliate che passavano
+ * inosservate con 2 falsi allarmi in più su 119 letture; più in alto i falsi allarmi crescono in fretta (0,78: 126 in più).
+ */
+export const SOGLIA_FIDUCIA = 0.68;
+/** La lettura della riga è incerta: PaddleOCR non era sicuro del prezzo (solo per le righe lette da una foto). */
+export const rigaIncerta = (r: RigaLetta): boolean => r.fiducia !== undefined && r.fiducia < SOGLIA_FIDUCIA;
+/**
+ * Da questa fiducia il prezzo è letto con sicurezza: se le due letture della foto non coincidono su una riga così, a sbagliare è
+ * l'altra lettura, e la riga non si segnala. Misurata sulle foto: da 0,94 a 0,95 nessun errore in più passa inosservato e i falsi
+ * allarmi calano (da 61 a 57 su 119 letture); a 0,93 una riga sbagliata non sarebbe più segnalata.
+ */
+export const SOGLIA_PREZZO_SICURO = 0.95;
+/** Le due letture della foto non coincidono sulla riga (`concorde` falso) e il prezzo non è letto con sicurezza: la riga è da controllare. */
+export const letturaDiscorde = (r: RigaLetta, concorde: boolean): boolean => !concorde && !(r.fiducia !== undefined && r.fiducia >= SOGLIA_PREZZO_SICURO);
+
+/**
  * Le righe che la schermata mostra dopo la lettura: le righe lette (con il motivo del dubbio dove le due letture della
- * foto non coincidono o il prezzo è ricavato dal conto), proposte e con le ripetute unite («× 2»).
+ * foto non coincidono, la lettura è incerta o il prezzo è ricavato dal conto), proposte e con le ripetute unite («× 2»).
  * `nuovoId` dà un id a ogni riga; `controllo` è il confronto con la seconda lettura (`confrontaLetture`).
  */
 export function righeDaLettura(s: ScontrinoLetto, controllo: ControlloLettura, carrello: RigaDaAbbinare[], indice: Indice, nuovoId: () => string): RigaInRevisione[] {
-  const dubbia = (r: RigaLetta, i: number) => (r.corretta ? 'il prezzo è ricavato dal totale, non letto' : controllo.disponibile && !controllo.righe[i].concorde ? 'le due letture della foto non coincidono' : undefined);
+  const dubbia = (r: RigaLetta, i: number) =>
+    r.corretta ? 'il prezzo è ricavato dal totale, non letto' : controllo.disponibile && letturaDiscorde(r, controllo.righe[i].concorde) ? 'le due letture della foto non coincidono' : rigaIncerta(r) ? 'la foto non si legge bene su questa riga' : undefined;
   return unisciRipetute(proponiRighe(s.righe.map((riga, i) => ({ id: nuovoId(), riga, dubbia: dubbia(riga, i) })), carrello, indice));
 }
 

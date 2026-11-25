@@ -50,6 +50,16 @@ export interface LetturaGeometrica {
 const centroY = (p: { y0: number; y1: number }) => (p.y0 + p.y1) / 2;
 const mediana = (v: number[]) => [...v].sort((a, b) => a - b)[Math.floor(v.length / 2)] ?? 0;
 
+/** Un pezzo che contiene un prezzo («1,99 B», «0.90A», «135A»): cifre con due decimali e quasi niente lettere. */
+const haUnPrezzo = (p: Pezzo) => /\d[.,:]?\d{2}/.test(p.testo) && (p.testo.match(/[A-Za-z]/g) ?? []).length <= 2;
+
+/**
+ * La fiducia di una riga per il parser: quella del suo prezzo (il pezzo meno sicuro tra quelli con un prezzo), 1 se la riga non ne
+ * ha. Il nome conta poco: un nome letto un po' male si riconosce lo stesso, un prezzo no. Ed è il segnale che funziona: misurata
+ * sulle foto, la fiducia dei nomi (o del carattere meno sicuro) segnala molte righe giuste per ogni riga sbagliata che scopre.
+ */
+export const fiduciaRiga = (r: Riga): number => Math.min(1, ...r.pezzi.filter(haUnPrezzo).map((p) => p.fiducia));
+
 /** La riga che contiene questi pezzi, riordinati da sinistra a destra (o nell'ordine dato, con `ordina` falso). */
 export function creaRiga(pezzi: Pezzo[], ordina = true): Riga {
   const ordinati = ordina ? [...pezzi].sort((a, b) => a.x0 - b.x0) : pezzi;

@@ -19,7 +19,7 @@
  * - `scontrini-abbinamenti.ts`: abbinamento alle righe già comprate e unione delle ripetute.
  */
 import { correggiPrezzi } from './quadratura';
-import { daTesto, type LetturaGeometrica, testoRiga } from './scontrini-geometria';
+import { daTesto, fiduciaRiga, type LetturaGeometrica, testoRiga } from './scontrini-geometria';
 import { centesimi, leggiRighe, pulisciLinea } from './scontrini-righe';
 import { leggiTestata } from './scontrini-testata';
 import type { ScontrinoLetto } from './scontrini-tipi';
@@ -37,8 +37,11 @@ export function leggiScontrino(testo: string): ScontrinoLetto {
 
 /** Legge uno scontrino dalle sue righe con le posizioni (scontrini-geometria.ts). Non inventa: quello che non trova resta null o fuori dalle righe. */
 export function leggiLettura(lettura: LetturaGeometrica): ScontrinoLetto {
-  const linee = lettura.righe.map((r) => pulisciLinea(testoRiga(r, lettura.carattere))).filter(Boolean);
-  const { righe, totale: totaleLetto, pagato, altriTotali, aliquote, ivaTotale } = leggiRighe(linee);
+  const lette = lettura.righe.map((r) => ({ linea: pulisciLinea(testoRiga(r, lettura.carattere)), fiducia: fiduciaRiga(r) })).filter((x) => x.linea);
+  const linee = lette.map((x) => x.linea);
+  // La fiducia c'è solo se il lettore la dà (la foto): il testo e il PDF sono sicuri, e le righe non la portano.
+  const fiducie = lettura.origine === 'foto' ? lette.map((x) => x.fiducia) : undefined;
+  const { righe, totale: totaleLetto, pagato, altriTotali, aliquote, ivaTotale } = leggiRighe(linee, fiducie);
   let totale = totaleLetto;
   if (totale === null && righe.length) totale = pagato;
   let somma = centesimi(righe.reduce((s, r) => s + r.prezzo, 0));

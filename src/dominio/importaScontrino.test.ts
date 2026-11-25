@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import catalogo from '../catalogo/catalogo.json';
 import type { Catalogo } from '../catalogo/tipi';
 import { confrontaLetture } from './doppiaLettura';
-import { type BozzaImportazione, costruisciImportazione, proponiProdotto, proponiRighe, riabbina, righeDaLettura, rigaVuota, testoEuro } from './importaScontrino';
+import { type BozzaImportazione, costruisciImportazione, letturaDiscorde, proponiProdotto, proponiRighe, riabbina, righeDaLettura, rigaIncerta, rigaVuota, SOGLIA_FIDUCIA, SOGLIA_PREZZO_SICURO, testoEuro } from './importaScontrino';
 import { Indice } from './ricette';
 import { leggiScontrino } from './scontrini';
 
@@ -68,6 +68,21 @@ describe('proponiRighe e righeDaLettura', () => {
     expect(righe[1].dubbia).toBeUndefined();
     const senza = righeDaLettura(s, confrontaLetture(s, null), [], indice, nuovoId);
     expect(senza.every((r) => r.dubbia === undefined)).toBe(true);
+  });
+
+  it('una riga della foto con il prezzo letto con poca fiducia è da controllare; il testo incollato no', () => {
+    const s = leggiScontrino(TESTO);
+    const foto = { ...s, righe: s.righe.map((r, i) => ({ ...r, fiducia: [0.5, SOGLIA_FIDUCIA, 0.99][i] })) };
+    expect(foto.righe.map(rigaIncerta)).toEqual([true, false, false]);
+    expect(righeDaLettura(foto, confrontaLetture(foto, null), [], indice, nuovoId).map((r) => r.dubbia)).toEqual(['la foto non si legge bene su questa riga', undefined, undefined]);
+    expect(righeDaLettura(s, confrontaLetture(s, null), [], indice, nuovoId).every((r) => r.dubbia === undefined)).toBe(true);
+  });
+
+  it('se le due letture non coincidono ma il prezzo è letto con sicurezza, a sbagliare è l’altra lettura: la riga non si segnala', () => {
+    expect(letturaDiscorde({ descrizione: 'LATTE', prezzo: 1.29 }, false)).toBe(true);
+    expect(letturaDiscorde({ descrizione: 'LATTE', prezzo: 1.29, fiducia: 0.9 }, false)).toBe(true);
+    expect(letturaDiscorde({ descrizione: 'LATTE', prezzo: 1.29, fiducia: SOGLIA_PREZZO_SICURO }, false)).toBe(false);
+    expect(letturaDiscorde({ descrizione: 'LATTE', prezzo: 1.29, fiducia: 0.5 }, true)).toBe(false);
   });
 
   it('le righe ripetute si uniscono in una sola con «quante»', () => {

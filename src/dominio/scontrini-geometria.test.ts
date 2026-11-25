@@ -82,3 +82,34 @@ describe('dalle voci del PDF alle righe', () => {
     expect(leggiLettura(daPagine(IPER))).toEqual(leggiScontrino(congelato));
   });
 });
+
+describe('la fiducia arriva alle righe lette', () => {
+  const pezzo = (testo: string, x0: number, y0: number, fiducia: number) => ({ testo, x0, y0, x1: x0 + 200, y1: y0 + 30, fiducia });
+  const foto = daScatole(
+    [
+      pezzo('DESCRIZIONE', 20, 0, 1), pezzo('LATTE', 20, 50, 0.5), pezzo('1,29 A', 600, 50, 0.51), pezzo('PANE', 20, 100, 0.97), pezzo('2,00 A', 600, 100, 0.99),
+      pezzo('SCONTO', 20, 150, 0.3), pezzo('-0,50', 600, 150, 0.6), pezzo('MELE', 20, 200, 0.4), pezzo('1,10 A', 20, 250, 0.9), pezzo('TOTALE', 20, 300, 1), pezzo('3,89', 600, 300, 1),
+    ],
+    800,
+  );
+
+  it('ogni riga prende la fiducia del suo prezzo (e dello sconto sotto), non quella del nome', () => {
+    const s = leggiLettura(foto);
+    expect(s.righe.map((r) => [r.descrizione, r.prezzo, r.fiducia])).toEqual([['LATTE', 1.29, 0.51], ['PANE', 1.5, 0.6], ['MELE', 1.1, 0.9]]);
+  });
+
+  it('le letture delle foto nel corpus: le righe si leggono come il loro testo, in più con la fiducia', () => {
+    const conRighe = corpus.flatMap((c) => c.letture.filter((l) => l.righe));
+    expect(conRighe.length).toBeGreaterThanOrEqual(17);
+    for (const l of conRighe) {
+      const s = leggiLettura(l.righe!);
+      expect(s.righe.some((r) => r.fiducia !== undefined && r.fiducia < 1), l.nome).toBe(true);
+      expect({ ...s, righe: s.righe.map((r) => ({ ...r, fiducia: undefined })) }).toEqual(leggiScontrino(l.testo));
+    }
+  });
+
+  it('il testo e il PDF non hanno fiducia: le righe non la portano', () => {
+    expect(leggiScontrino(testoDa(foto)).righe.every((r) => r.fiducia === undefined)).toBe(true);
+    expect(leggiScontrino(testoDa(foto)).righe[0]).toEqual({ ...leggiLettura(foto).righe[0], fiducia: undefined });
+  });
+});

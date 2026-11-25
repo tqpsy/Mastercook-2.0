@@ -18,8 +18,8 @@
 import { allinea, compatto, SOGLIA_NOME, somiglianza, stessoPrezzo } from './allineamento';
 import type { Indice } from './ricette';
 import { confrontaLetture } from './doppiaLettura';
-import { proponiProdotto, proponiRighe } from './importaScontrino';
-import { leggiScontrino, type RigaDaAbbinare } from './scontrini';
+import { letturaDiscorde, proponiProdotto, proponiRighe, rigaIncerta } from './importaScontrino';
+import { type LetturaGeometrica, leggiLettura, leggiScontrino, type RigaDaAbbinare } from './scontrini';
 
 export type UnitaCarico = 'g' | 'ml' | 'pz';
 export interface Carico {
@@ -73,8 +73,12 @@ export interface RigaLettaValutata {
   ingrediente: string | null;
   carico: Carico | null;
   abbina: string | null;
-  /** Le due letture della foto divergono su questa riga: l'app la mette «da controllare». */
+  /** Le due letture della foto divergono su questa riga, o la sua lettura è incerta: l'app la mette «da controllare». */
   dubbia: boolean;
+  /** La fiducia della lettura della riga (solo dalla foto, con le righe del lettore). */
+  fiducia?: number;
+  /** Segnalata perché la lettura è incerta (fiducia sotto la soglia). */
+  incerta?: boolean;
 }
 export interface LetturaValutata {
   negozio: string | null;
@@ -92,10 +96,11 @@ export interface LetturaValutata {
 
 /**
  * Dal testo letto a ciò che l'app propone (le stesse funzioni della schermata «Scontrino», in `importaScontrino.ts`). `controllo` è la seconda lettura
- * indipendente della stessa foto (`leggiTestoDaFoto`): senza, nessuna riga è segnalata come dubbia.
+ * indipendente della stessa foto (`leggiTestoDaFoto`): senza, nessuna riga è segnalata come dubbia. `righe` sono le righe con la fiducia
+ * della lettura scelta (`LetturaFoto.righe`, il cui testo è `testo`): con loro si segnalano anche le righe lette con poca fiducia.
  */
-export function leggiPerValutare(testo: string, indice: Indice, carrello: RigaDaAbbinare[] = [], controllo: string | null = null): LetturaValutata {
-  const s = leggiScontrino(testo);
+export function leggiPerValutare(testo: string, indice: Indice, carrello: RigaDaAbbinare[] = [], controllo: string | null = null, righe: LetturaGeometrica | null = null): LetturaValutata {
+  const s = righe ? leggiLettura(righe) : leggiScontrino(testo);
   const c = confrontaLetture(s, controllo ? leggiScontrino(controllo) : null);
   // Le stesse proposte che la schermata mostra (senza unire le righe ripetute: ogni riga stampata è una riga della verità).
   const proposte = proponiRighe(s.righe.map((riga) => ({ id: '', riga })), carrello, indice);
@@ -121,7 +126,8 @@ export function leggiPerValutare(testo: string, indice: Indice, carrello: RigaDa
         ingrediente: ing?.id ?? null,
         carico,
         abbina: proposte[i].azione.startsWith('abbina:') ? proposte[i].azione.slice(7) : null,
-        dubbia: !c.righe[i].concorde,
+        dubbia: letturaDiscorde(r, c.righe[i].concorde) || rigaIncerta(r),
+        ...(r.fiducia !== undefined ? { fiducia: r.fiducia, incerta: rigaIncerta(r) } : {}),
       };
     }),
   };
@@ -241,7 +247,7 @@ export function valuta(verita: Verita, letta: LetturaValutata): Valutazione {
         if (segnalata) v.righe.prezzoSegnalato++;
         else v.righe.prezzoSilenzioso++;
       } else v.righe.nome++;
-      const segnale = r.senzaPrezzo ? ' (segnalato: senza prezzo)' : r.corretta ? ' (segnalato: corretto)' : r.dubbia ? ' (segnalato: letture diverse)' : '';
+      const segnale = r.senzaPrezzo ? ' (segnalato: senza prezzo)' : r.corretta ? ' (segnalato: corretto)' : r.incerta ? ' (segnalato: lettura incerta)' : r.dubbia ? ' (segnalato: letture diverse)' : '';
       const cosa = [!prezzoOk ? `prezzo ${euro(r.prezzo)} invece di ${euro(t.prezzo)}` : '', !nomeOk ? `nome «${r.descrizione}»` : ''].filter(Boolean);
       errori.push(`riga ${i + 1} «${t.descrizione}»: ${cosa.join(', ')}${segnale}`);
     }

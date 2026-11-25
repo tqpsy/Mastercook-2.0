@@ -22,7 +22,7 @@ export interface Scatola {
   y0: number;
   x1: number;
   y1: number;
-  /** Quanto è sicura la lettura (0–1). */
+  /** Quanto è sicura la lettura (0–1): la probabilità media dei caratteri letti. */
   fiducia: number;
 }
 

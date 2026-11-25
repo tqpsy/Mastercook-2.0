@@ -5,7 +5,7 @@ import { LUOGHI, NOME_LUOGO } from '../catalogo/tipi';
 import { useFamiglia, useVista } from '../dati/contesto';
 import type { Indice } from '../dominio/ricette';
 import { giorniTra, type Luogo, oggi } from '../dominio/scadenze';
-import { leggiScontrino, type RigaDaAbbinare } from '../dominio/scontrini';
+import { type LetturaGeometrica, leggiLettura, leggiScontrino, type RigaDaAbbinare } from '../dominio/scontrini';
 import { type Azione, costruisciImportazione, righeDaLettura, riabbina, type RigaInRevisione, rigaVuota, testoEuro } from '../dominio/importaScontrino';
 import { formattaEuro, formattaGiorno, leggiNumero, UNITA_BASE } from '../dominio/unita';
 import { confrontaLetture, type ControlloLettura } from '../dominio/doppiaLettura';
@@ -82,9 +82,9 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
     setErrore(null);
     setLettura(0);
     try {
-      const { testo: letto, controllo: secondo } = await leggiTestoDaFoto(file, setLettura);
+      const { testo: letto, controllo: secondo, righe } = await leggiTestoDaFoto(file, setLettura);
       setTesto(letto);
-      leggi(letto, secondo, true);
+      leggi(letto, secondo, true, righe);
     } catch {
       setErrore('Non sono riuscito a leggere la foto (serve la rete la prima volta). Riprova o incolla il testo.');
     } finally {
@@ -111,8 +111,9 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
     }
   }
 
-  function leggi(t = testo, secondo: string | null = null, fotografata = false) {
-    const s = leggiScontrino(t);
+  /** `righe`: le righe della foto con la fiducia della lettura (il loro testo è `t`): dicono anche quali righe sono incerte. */
+  function leggi(t = testo, secondo: string | null = null, fotografata = false, righe: LetturaGeometrica | null = null) {
+    const s = righe ? leggiLettura(righe) : leggiScontrino(t);
     if (!s.righe.length) return setErrore('Non ho trovato righe con un prezzo. Controlla il testo o rifai la foto, dritta e con buona luce.');
     setErrore(null);
     const giorno = s.data ?? data;
