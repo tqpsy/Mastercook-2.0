@@ -408,3 +408,44 @@ test('lo stesso scontrino letto un po’ diverso (ora e negozio) non entra in ca
   await foglio.getByRole('button', { name: 'È un altro scontrino' }).click();
   await expect(importa).toBeEnabled();
 });
+
+test('scontrino digitale come PDF: il testo si legge dal file e si importa come uno incollato', async ({ browser }, info) => {
+  const luca = await nuovoUtente('Luca');
+  const { page } = await apri(browser, luca, info.project.use);
+  await creaFamiglia(page, 'Casa Pdf');
+  await page.getByRole('button', { name: 'Spesa', exact: true }).click();
+
+  // Il PDF come lo salva Chrome («Stampa › Salva come PDF» dalla pagina dello scontrino digitale).
+  const stampa = await page.context().newPage();
+  await stampa.setContent(`<pre style="font: 12px monospace; margin: 20px">${scontrino(new Date().toLocaleDateString('sv-SE'))}</pre>`);
+  const buffer = await stampa.pdf();
+  await stampa.close();
+
+  await page.getByRole('button', { name: 'Aggiungi uno scontrino' }).click();
+  await page.getByRole('dialog', { name: 'Aggiungi uno scontrino' }).locator('input[type=file][accept="application/pdf"]').setInputFiles({ name: 'Scontrino_Digitale.pdf', mimeType: 'application/pdf', buffer });
+  const foglio = page.getByRole('dialog', { name: 'Controlla lo scontrino' });
+  await expect(foglio.getByLabel('Negozio')).toHaveValue('Supermercato Rossi');
+  await expect(foglio.getByLabel('Totale €')).toHaveValue('3,09');
+  await expect(foglio.getByLabel('Cosa fare di BANANE')).toHaveValue('casa');
+  // Un PDF non è una foto: niente righe «da controllare» né data da confermare.
+  await expect(foglio.getByRole('status')).toHaveCount(0);
+  await foglio.getByLabel('Cosa fare di SHOPPER').selectOption('ignora');
+  await foglio.getByRole('button', { name: 'Importa lo scontrino' }).click();
+  await expect(page.getByRole('region', { name: 'Acquisti recenti' })).toContainText('Banane');
+  await salvato(page);
+});
+
+test('un PDF senza testo (una scansione) o un file che non è un PDF dà un messaggio chiaro', async ({ browser }, info) => {
+  const luca = await nuovoUtente('Luca');
+  const { page } = await apri(browser, luca, info.project.use);
+  await creaFamiglia(page, 'Casa Pdf Vuoto');
+  await page.getByRole('button', { name: 'Spesa', exact: true }).click();
+  await page.getByRole('button', { name: 'Aggiungi uno scontrino' }).click();
+  const ingresso = page.getByRole('dialog', { name: 'Aggiungi uno scontrino' }).locator('input[type=file][accept="application/pdf"]');
+  const vuoto = await page.context().newPage();
+  await vuoto.setContent('<div style="height:10px"></div>');
+  await ingresso.setInputFiles({ name: 'Scansione.pdf', mimeType: 'application/pdf', buffer: await vuoto.pdf() });
+  await expect(page.getByRole('alert')).toContainText('non contiene testo');
+  await ingresso.setInputFiles({ name: 'Non-un-pdf.pdf', mimeType: 'application/pdf', buffer: Buffer.from('questo non è un pdf') });
+  await expect(page.getByRole('alert')).toContainText('Non sono riuscito a leggere il PDF');
+});

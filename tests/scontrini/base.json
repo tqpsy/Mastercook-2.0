@@ -2,66 +2,66 @@
  "versione": 1,
  "livello": "testo",
  "etichetta": "base",
- "creato": "2026-11-24T17:25:19.535Z",
+ "creato": "2026-11-25T07:54:36.771Z",
  "sintesi": {
   "perfette": {
    "etichetta": "Letture perfette (al primo tentativo)",
-   "valore": 108,
-   "su": 132,
+   "valore": 110,
+   "su": 133,
    "verso": "piu"
   },
   "sicure": {
    "etichetta": "Letture sicure per la giacenza",
-   "valore": 127,
-   "su": 132,
+   "valore": 128,
+   "su": 133,
    "verso": "piu"
   },
   "righeOk": {
    "etichetta": "Righe giuste (nome e prezzo)",
-   "valore": 2649,
-   "su": 2753,
+   "valore": 2683,
+   "su": 2786,
    "verso": "piu"
   },
   "data": {
    "etichetta": "Data giusta",
-   "valore": 89,
-   "su": 99,
+   "valore": 90,
+   "su": 100,
    "verso": "piu"
   },
   "ora": {
    "etichetta": "Ora giusta",
-   "valore": 89,
-   "su": 99,
+   "valore": 90,
+   "su": 100,
    "verso": "piu"
   },
   "totale": {
    "etichetta": "Totale giusto",
-   "valore": 113,
-   "su": 116,
+   "valore": 114,
+   "su": 117,
    "verso": "piu"
   },
   "pezzi": {
    "etichetta": "Pezzi letti",
-   "valore": 130,
-   "su": 138,
+   "valore": 135,
+   "su": 143,
    "verso": "piu"
   },
   "formato": {
    "etichetta": "Formato letto (peso o volume)",
-   "valore": 620,
-   "su": 641,
+   "valore": 621,
+   "su": 642,
    "verso": "piu"
   },
   "ingrediente": {
    "etichetta": "Ingrediente giusto",
-   "valore": 887,
-   "su": 984,
+   "valore": 890,
+   "su": 988,
    "verso": "piu"
   },
   "giacenzaOk": {
    "etichetta": "Quantità in casa giusta",
-   "valore": 544,
-   "su": 648,
+   "valore": 545,
+   "su": 649,
    "verso": "piu"
   },
   "abbinamentiOk": {
@@ -93,12 +93,12 @@
   },
   "nomiSbagliati": {
    "etichetta": "Nomi letti male (prezzo giusto)",
-   "valore": 15,
+   "valore": 14,
    "verso": "meno"
   },
   "falsiQuadra": {
-   "etichetta": "«Il conto torna» ma la lettura è sbagliata (su 104 che tornano)",
-   "valore": 12,
+   "etichetta": "«Il conto torna» ma la lettura è sbagliata (su 105 che tornano)",
+   "valore": 11,
    "verso": "meno"
   },
   "giacenzaSbagliata": {
@@ -123,13 +123,13 @@
   },
   "affidabili": {
    "etichetta": "Letture affidabili (ogni errore è segnalato)",
-   "valore": 115,
-   "su": 132,
+   "valore": 117,
+   "su": 133,
    "verso": "piu"
   },
   "sbagliateSilenziose": {
    "etichetta": "Righe sbagliate non segnalate",
-   "valore": 36,
+   "valore": 35,
    "verso": "meno"
   },
   "perseSilenziose": {
@@ -881,15 +881,26 @@
    "errori": []
   },
   {
-   "caso": "iper-seriate-screenshot",
-   "lettura": "paddle-originale",
-   "perfetta": false,
+   "caso": "iper-seriate-pdf",
+   "lettura": "pdf",
+   "perfetta": true,
    "sicura": true,
-   "affidabile": false,
-   "righeOk": 32,
+   "affidabile": true,
+   "righeOk": 33,
    "righeVere": 33,
    "errori": [
-    "riga 1 «ACQUA A4 PAG.BIANCA»: nome «COOUA A4PAG.BIANCA»",
+    "riga 6 «SACCHETT.BIO PESCHER»: ingrediente ing:ghiaccio invece di nessuno"
+   ]
+  },
+  {
+   "caso": "iper-seriate-screenshot",
+   "lettura": "paddle-originale",
+   "perfetta": true,
+   "sicura": true,
+   "affidabile": true,
+   "righeOk": 33,
+   "righeVere": 33,
+   "errori": [
     "riga 11 «BISC.ORO SAIWA 500G»: ingrediente nessuno invece di ing:biscotti",
     "riga 32 «LATTE INT.AQ PET GRA»: ingrediente nessuno invece di ing:latte"
    ]

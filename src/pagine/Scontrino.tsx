@@ -14,6 +14,7 @@ import { CampoQuantita } from '../ui/CampoQuantita';
 import { CercaIngrediente } from '../ui/CercaIngrediente';
 import { Foglio } from '../ui/Foglio';
 import { leggiTestoDaFoto } from '../ui/ocr';
+import { leggiTestoDaPdf } from '../ui/pdf';
 import { Scanner } from '../ui/Scanner';
 import { quantitaDa } from '../dati/lotti';
 import { useDatiSpesa } from './Spesa';
@@ -111,6 +112,25 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
       leggi(letto, secondo, true);
     } catch {
       setErrore('Non sono riuscito a leggere la foto (serve la rete la prima volta). Riprova o incolla il testo.');
+    } finally {
+      setLettura(null);
+    }
+  }
+
+  /** Uno scontrino digitale salvato come PDF: il testo c'è già, si legge come se fosse incollato. */
+  async function pdf(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setErrore(null);
+    setLettura(0);
+    try {
+      const letto = await leggiTestoDaPdf(file);
+      if (letto.replace(/\s/g, '').length < 20) return setErrore('Questo PDF non contiene testo (forse è una scansione). Fotografa lo scontrino o scegli uno screenshot.');
+      setTesto(letto);
+      leggi(letto);
+    } catch {
+      setErrore('Non sono riuscito a leggere il PDF. Riprova, oppure copia il testo dello scontrino e incollalo qui sotto.');
     } finally {
       setLettura(null);
     }
@@ -299,11 +319,11 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
     return (
       <Foglio titolo="Aggiungi uno scontrino" chiudi={chiudi}>
         <p className="tenue" style={{ marginTop: 0 }}>
-          Fotografa lo scontrino (dritto, intero, con buona luce) o scegli lo screenshot di quello digitale: lo leggo sul telefono e poi controlli tu ogni riga. Le righe già confermate dal carrello prendono solo il prezzo.
+          Fotografa lo scontrino (dritto, intero, con buona luce), scegli lo screenshot di quello digitale o carica il suo PDF (il più preciso): lo leggo sul telefono e poi controlli tu ogni riga. Le righe già confermate dal carrello prendono solo il prezzo.
         </p>
         {lettura !== null ? (
           <div className="avviso info" aria-live="polite">
-            Sto leggendo la foto… {Math.round(lettura * 100)}%
+            Sto leggendo… {Math.round(lettura * 100)}%
           </div>
         ) : (
           <>
@@ -315,6 +335,11 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
             <label className="bottone pieno" style={{ marginTop: 8 }}>
               <span aria-hidden>🖼️</span> Scegli una foto o uno screenshot
               <input type="file" accept="image/*" onChange={foto} hidden />
+            </label>
+            {/* Lo scontrino digitale come PDF (da Chrome: «Condividi › Stampa › Salva come PDF»): il testo c'è già, si legge senza errori. */}
+            <label className="bottone pieno" style={{ marginTop: 8 }}>
+              <span aria-hidden>📄</span> Carica un PDF
+              <input type="file" accept="application/pdf" onChange={pdf} hidden />
             </label>
           </>
         )}

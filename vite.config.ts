@@ -44,13 +44,19 @@ export default defineConfig({
         // ma la prima volta che serve resta in cache, così poi funziona anche senza rete.
         // I caratteri (Outfit e Figtree) stanno nell'app: niente richieste a Google, e funzionano anche senza rete.
         globPatterns: ['**/*.{js,css,html,svg,png,webp,woff2}'],
-        globIgnores: ['**/anteprima-link.png', '**/pglite*', '**/initdb*', '**/motore.worker*', '**/modelli-ocr/**', '**/ort-wasm*'],
+        globIgnores: ['**/anteprima-link.png', '**/pglite*', '**/initdb*', '**/motore.worker*', '**/modelli-ocr/**', '**/ort-wasm*', '**/pdf.worker*', '**/assets/pdf-*.js'],
         runtimeCaching: [
           // Lettura degli scontrini (PaddleOCR): modelli e motore si scaricano alla prima foto, poi restano in cache.
           {
             urlPattern: ({ url }) => /\/modelli-ocr\/|\/assets\/ort-wasm[^/]*\.wasm$/.test(url.pathname),
             handler: 'CacheFirst',
             options: { cacheName: 'mastercook-lettura-scontrini', expiration: { maxEntries: 8 } },
+          },
+          // Scontrino come PDF (pdf.js): il motore che legge il PDF si scarica la prima volta che serve, poi resta in cache.
+          {
+            urlPattern: ({ url }) => /\/assets\/pdf(\.worker)?[-.][^/]*\.m?js$/.test(url.pathname),
+            handler: 'CacheFirst',
+            options: { cacheName: 'mastercook-lettura-pdf', expiration: { maxEntries: 4 } },
           },
           {
             urlPattern: ({ url }) => /\/assets\/((pglite|initdb)[^/]*\.(wasm|data)|motore\.worker[^/]*\.js)$/.test(url.pathname),
