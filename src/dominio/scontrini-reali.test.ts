@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { prezziDaColonna, unisciColonne } from './colonne';
-import { impagina, type Scatola } from './paddle';
-import { leggiScontrino } from './scontrini';
+import type { Scatola } from './paddle';
+import { leggiLettura } from './scontrini';
+import { daScatole } from './scontrini-geometria';
+import { abbinaPerOrdine, impagina, prezziDaColonna } from './scontrini-impaginazione';
 
 // Pezzi di testo che PaddleOCR (nel browser) ha letto da due foto reali di altri negozi, come [testo, x sinistra, y alto,
 // y basso, x destra] su una foto larga 1400 punti: un Conad con le colonne quantità, prezzo e totale di riga, e un Iper
@@ -10,9 +11,9 @@ const CONAD: [string, number, number, number, number][] = [["C3CONAD", 295, 163,
 const IPER: [string, number, number, number, number][] = [["PER", 593, 300, 354, 806], ["La grande", 617, 368, 407, 837], ["ELDS", 424, 392, 550, 1076], ["VEA B.EUGENTOLURAGHI.TE", 420, 516, 565, 967], ["2004ARESE HT", 509, 574, 608, 863], ["D.IVAD3585750155", 504, 615, 654, 876], ["TPER ARESE", 591, 665, 701, 810], ["TEL02.93452111", 533, 710, 747, 876], ["DOCUHENTO CUMHERCIALE", 461, 755, 792, 922], ["di vendfta o prestazlore", 437, 800, 843, 969], ["DESCREZIONE", 231, 818, 888, 500], ["PREZZD TVA", 897, 841, 880, 1120], ["SHOPPER CART32+17X45", 231, 868, 938, 699], ["0.20 0", 934, 886, 928, 1082], ["100% SaochettiT", 275, 922, 989, 658], ["-0,20", 919, 934, 976, 1037], ["VERDURA HISTA CUOCER", 231, 967, 1034, 700], ["1.89", 939, 985, 1023, 1040], ["Too dhoy to Go", 277, 1023, 1081, 610], ["-1,89", 928, 1031, 1072, 1038], ["INSALATAICAPRIC.TAA", 228, 1064, 1132, 701], ["2,50B", 936, 1075, 1125, 1087], ["Too GoodtoGo", 274, 1121, 1179, 613], ["2.50", 935, 1129, 1170, 1041], ["FORM ERBI FIANDINOC", 224, 1167, 1226, 698], ["3.70A", 940, 1220, 1268, 1090], ["1.0003,70Hg", 294, 1221, 1280, 765], ["CUNEESI RHUMVG200G", 222, 1267, 1323, 700], ["3.598", 940, 1272, 1315, 1090], ["3.30", 941, 1323, 1364, 1045], ["TooCondto Go", 272, 1323, 1371, 609], ["BARBABIETCLE A JULIE", 224, 1373, 1418, 689], ["0.99 A", 943, 1373, 1414, 1093], ["-0,99", 932, 1424, 1461, 1047], ["Too Good to Ga", 272, 1428, 1468, 603], ["0.00E", 945, 1472, 1513, 1092], ["-1OO0OCOTOGO3", 238, 1480, 1517, 672], ["007", 519, 1530, 1570, 606], ["Articoli", 247, 1532, 1567, 438], ["3,99", 940, 1621, 1704, 1061], ["TOTALE COHPLESSTVO", 224, 1641, 1700, 645], ["0.17", 945, 1712, 1758, 1056], ["DI CUIIVA", 218, 1728, 1765, 459], ["3.99", 948, 1767, 1809, 1056], ["NON RISCOSSO", 215, 1780, 1819, 507], ["3.99", 949, 1821, 1864, 1058], ["INPCRTO PAGATO", 214, 1832, 1874, 553], ["DCC.N.0810-D008", 636, 1931, 1971, 1009], ["06-06-2025 09:51", 210, 1937, 1985, 597], ["86525001472", 685, 1988, 2024, 942], ["SERVER RT:", 353, 1994, 2036, 592], ["00321093", 613, 2041, 2082, 806], ["ECR.", 468, 2047, 2089, 579], ["DETTAGLIO PAGAVENTO:", 204, 2150, 2207, 693], ["3.99", 958, 2197, 2243, 1070], ["TOO-GOODTOGO", 209, 2208, 2264, 554], ["ACTVA4%", 224, 2321, 2379, 485]];
 const scatole = (v: [string, number, number, number, number][]): Scatola[] => v.map(([testo, x0, y0, y1, x1]) => ({ testo, x0, y0, x1, y1, fiducia: 1 }));
 const letto = (v: [string, number, number, number, number][]) => {
-  const { pagina, prezzi, nomi } = impagina(scatole(v), 1400);
-  const testo = unisciColonne(pagina, prezziDaColonna(prezzi), nomi);
-  return testo ? leggiScontrino(testo) : null;
+  const { pagina, prezzi, nomi } = impagina(daScatole(scatole(v), 1400));
+  const abbinata = abbinaPerOrdine(pagina, prezziDaColonna(prezzi), nomi);
+  return abbinata ? leggiLettura(abbinata) : null;
 };
 
 describe('scontrini di altri negozi', () => {

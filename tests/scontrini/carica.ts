@@ -9,8 +9,9 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Catalogo } from '../../src/catalogo/tipi';
-import { prezziDaColonna, unisciColonne } from '../../src/dominio/colonne';
-import { impagina, type Scatola } from '../../src/dominio/paddle';
+import type { Scatola } from '../../src/dominio/paddle';
+import { daScatole, testoDa } from '../../src/dominio/scontrini-geometria';
+import { impaginaFoto } from '../../src/dominio/scontrini-impaginazione';
 import type { Carico, Verita } from '../../src/dominio/valutazione';
 
 export const CARTELLA = new URL('./', import.meta.url).pathname;
@@ -36,8 +37,7 @@ export function testoIdeale(stampa: NonNullable<Verita['stampa']>): string {
 /** I pezzi di PaddleOCR → il testo dello scontrino, come in `leggiConPaddle` (src/ui/ocr.ts). */
 export function testoDaScatole(file: { larghezza: number; scatole: [string, number, number, number, number][] }): string {
   const scatole: Scatola[] = file.scatole.map(([testo, x0, y0, y1, x1]) => ({ testo, x0, y0, x1, y1, fiducia: 1 }));
-  const { pagina, prezzi, nomi } = impagina(scatole, file.larghezza);
-  return unisciColonne(pagina, prezziDaColonna(prezzi), nomi) ?? pagina;
+  return testoDa(impaginaFoto(daScatole(scatole, file.larghezza))[0]);
 }
 
 export function caricaCaso(id: string, radice = join(CARTELLA, 'casi')): Caso {

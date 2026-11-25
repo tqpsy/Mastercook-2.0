@@ -54,8 +54,20 @@ export const eIntestazione = (linea: string) => {
 
 /** Dove finiscono le righe: il totale (anche letto male) o il numero di articoli che lo precede. */
 export const eFineRighe = (linea: string) => fineRighe(linea) || /\bARTICOLI\b|COMPLESSIV/.test(linea);
+
+/**
+ * Dove stanno le righe dei prodotti tra le linee (già ripulite): l'intestazione («DESCRIZIONE», -1 se non c'è) e la prima fine
+ * delle righe dopo di lei (`eFineRighe`, -1 se non c'è). «QTA DESCRIZIONE PREZZO TOTALE» contiene la parola «totale»: per
+ * questo la fine si cerca dopo l'intestazione.
+ */
+export function limitiRighe(linee: string[]): { intestazione: number; fine: number } {
+  const intestazione = linee.findIndex(eIntestazione);
+  return { intestazione, fine: linee.findIndex((l, i) => i > intestazione && eFineRighe(l)) };
+}
 /** «2 x 0,99» (la lettura sbaglia la x: «xXx», «×», «*»). */
 export const PEZZI = /^(\d{1,3})\s*(?:PZ|N\.?)?\s*[X*×]{1,3}\s*(\d{1,4}[.,]\d{2})\b/;
+/** «Cad 0,99 Pz. 3»: tre pezzi a 0,99 l'uno. */
+export const CAD = /^CAD\.?\s*(\d{1,4}[.,]\d{2})\s*PZ\.?\s*(\d{1,3})\b/;
 /** «0,856 kg x 1,99 €/kg» oppure, alla Iper, «0,386 * 4,90Kg»: peso, poi prezzo al chilo. */
 const PESO = /(\d{1,3}[.,]\d{1,3})\s*KG\s*[X*×]\s*(\d{1,4}[.,]\d{2})|^(\d{1,3}[.,]\d{3})\s*[X*×]\s*(\d{1,4}[.,]\d{2})\s*(?:€\s*\/?\s*)?[^\s\d]{0,4}/;
 
@@ -151,7 +163,7 @@ export interface RigheLette {
 
 /** Legge le righe (già ripulite con `pulisciLinea`) con il totale che le chiude. Non inventa: quello che non trova resta fuori. */
 export function leggiRighe(linee: string[]): RigheLette {
-  const inizio = linee.findIndex(eIntestazione);
+  const inizio = limitiRighe(linee).intestazione;
   const righe: RigaLetta[] = [];
   let totale: number | null = null;
   let inRighe = true;
@@ -222,7 +234,7 @@ export function leggiRighe(linee: string[]): RigheLette {
       continue;
     }
     // «Cad 0,99 Pz. 3»: tre pezzi a 0,99 sulla riga di sopra (o su quella che segue, se il prezzo non è ancora uscito).
-    const cad = linea.match(/^CAD\.?\s*(\d{1,4}[.,]\d{2})\s*PZ\.?\s*(\d{1,3})\b/);
+    const cad = linea.match(CAD);
     if (cad) {
       const n = Number(cad[2]);
       const sopra = righe.at(-1);
@@ -297,4 +309,48 @@ export function leggiRighe(linee: string[]): RigheLette {
   // Un testo in cui nessuna riga ha un prezzo non è uno scontrino: niente righe inventate.
   if (righe.every((r) => r.senzaPrezzo)) righe.length = 0;
   return { righe, totale, pagato, altriTotali, aliquote, ivaTotale };
+}
+
+/**
+ * Un pezzo che è solo un prezzo, come sta nella colonna dei prezzi di una foto: anche senza la virgola («135A»: si perde spesso)
+ * o con la lettera dell'IVA letta come cifra («0,20 0»).
+ */
+export const ePrezzoDiColonna = (t: string) => /^-?\s?(\d{0,4}\s?[.,:]\s?\d{2}|\d{3,5})(\s?[A-Z0-9])?$/.test(t.trim().toUpperCase());
+
+/**
+ * Una riga di sconto riconosciuta dal solo nome (letto da una colonna, senza il prezzo): più larga di `SCONTO`, perché qui il
+ * nome è da solo sulla riga («OFFERT», «SCONT0» con lo zero, «-30%», «... PLUS» della tessera).
+ */
+export const eSconto = (nome: string) => /\b(SCONTO|SC\.|PROMO|OFFERTA|RIBASSO|RIDUZIONE|STORNO|COUPON)\b|OFFERT|SCONT[O0]|TOO\s?GOO?D|TO\s?GO$|P[IL]US$|^\d{2,3}\s?%/.test(nome);
+
+/** Le righe della tessera fedeltà e simili, che stanno prima dei prodotti e non hanno prezzo. */
+export const TESSERA = /(CARTA\s?NUM\w*|CLUB\b|\bTESSERA|\bFEDELT\w*|\bCARD\b)/;
+
+/**
+ * Il nome di una riga dello scontrino (anche senza prezzo, anche con l'intestazione «PREZZO IVA» accanto), o null se la riga
+ * non è un prodotto: dettaglio della riga sopra (pezzi, peso, «Cad»), totale, pagamento, IVA. `taglia`: il testo è la pagina
+ * intera, con i prezzi accanto ai nomi, spesso rovinati: si taglia dove inizia lo spazio largo che li separa. Altrimenti (colonna
+ * dei nomi) si tolgono solo un prezzo o un'aliquota in coda («4%»). Una quantità prima del nome («2   PANE», colonna «QTA»)
+ * viene data a parte.
+ */
+export function nomeDiRiga(riga: string, taglia: boolean): { nome: string; qta?: number } | null {
+  const linea = pulisciLinea(riga);
+  const m = linea.match(IMPORTO);
+  const qta = riga.trim().match(/^(\d{1,3})\s{2,}(\D.*)$/);
+  const corpo = qta ? qta[2] : riga.trim();
+  const lineaCorpo = pulisciLinea(corpo);
+  const mc = lineaCorpo.match(IMPORTO);
+  const nome = pulisciLinea(taglia && /\s{3,}/.test(corpo) ? corpo.split(/\s{3,}/)[0] : mc ? lineaCorpo.slice(0, mc.index) : lineaCorpo)
+    .replace(/\bPREZZO\b.*$/, '')
+    .replace(/(\s+\d{1,2}\s?%)+$/, '')
+    .replace(/[^A-Z0-9.)]+$/, '')
+    .trim();
+  // Righe di dettaglio di quella sopra: «Cad 0,99 Pz. 3», «0,96 kg x 1,79 EUR/kg», «VALORE SCONTI» (un riepilogo).
+  if (/^CAD\.?\s*\d|KG\s?[X*]|EUR\s?\/?\s?KG|\bPZ\.?\s?\d|VALORE\s+SCON/.test(nome)) return null;
+  // Una riga di peso («1,000 * 3,70kg», letta «1.0003,70Hg»): tante cifre e quasi niente lettere.
+  if ((nome.match(/\d/g) ?? []).length >= 4 && (nome.match(/[A-Z]/g) ?? []).length <= 2) return null;
+  if ((nome.match(/[A-Z]/g) ?? []).length < 2 || fineRighe(nome) || DA_SALTARE.test(nome) || PEZZI.test(linea)) return null;
+  // «3 x 0.10» letto «DX 0.10»: una x, un prezzo e quasi niente altro non è una riga.
+  if (m && /[X*×]\s*\d{1,3}[.,]\d{2}\s*$/.test(linea) && (nome.replace(/[X*×]/g, '').match(/[A-Z]/g) ?? []).length < 3) return null;
+  return { nome, ...(qta && Number(qta[1]) > 0 ? { qta: Number(qta[1]) } : {}) };
 }

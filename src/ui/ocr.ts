@@ -12,14 +12,15 @@
  * riga per riga in una sola colonna: con la lettura automatica delle colonne Tesseract metteva le descrizioni
  * da una parte e i prezzi dall'altra, e le righe non si ricomponevano più.
  * Se il conto non torna si rileggono a parte la colonna dei prezzi (solo cifre e virgola, molto più
- * precisa) e quella dei nomi, e si abbinano per ordine (colonne.ts): nella foto la carta si piega e il
+ * precisa) e quella dei nomi, e si abbinano per ordine (`abbinaPerOrdine`): nella foto la carta si piega e il
  * prezzo finisce accanto al nome sbagliato. Se ancora non torna si rilegge la foto così com'è.
  * Si tiene sempre la lettura migliore.
  */
 import { dateNelTesto } from '../dominio/dataDaTesto';
-import { inizioColonnaPrezzi, type ParolaLetta, prezziDaColonna, unisciColonne } from '../dominio/colonne';
-import { impagina, inclinazione, inizioPrezzi, type Scatola } from '../dominio/paddle';
+import { inclinazione, type Scatola } from '../dominio/paddle';
 import { leggiScontrino } from '../dominio/scontrini';
+import { daScatole, daTesto, testoDa } from '../dominio/scontrini-geometria';
+import { abbinaPerOrdine, impaginaFoto, inizioColonnaPrezzi, inizioPrezzi, prezziDaColonna } from '../dominio/scontrini-impaginazione';
 import { leggiScatole, liberaPaddle, ruotaFoto } from './paddle';
 import { binarizza, daGrigi, grigi, preparaFoto } from './preparaScontrino';
 
@@ -70,7 +71,7 @@ type Lettore = Awaited<ReturnType<(typeof import('tesseract.js'))['createWorker'
  * Le letture alternative con la colonna dei prezzi e quella dei nomi riletti a parte. `parole` sono le
  * parole della prima lettura con la loro posizione: dicono dove iniziano i prezzi.
  */
-async function leggiAColonne(lettore: Lettore, PSM: typeof import('tesseract.js').PSM, tela: HTMLCanvasElement, prima: string, parole: ParolaLetta[], passo: () => void): Promise<string[]> {
+async function leggiAColonne(lettore: Lettore, PSM: typeof import('tesseract.js').PSM, tela: HTMLCanvasElement, prima: string, parole: { testo: string; x0: number }[], passo: () => void): Promise<string[]> {
   const x = inizioColonnaPrezzi(parole, tela.width);
   const destra = fascia(tela, x, tela.width);
   const leggi = async (img: HTMLCanvasElement, modo: (typeof PSM)[keyof typeof PSM], cifre: boolean) => {
@@ -78,10 +79,12 @@ async function leggiAColonne(lettore: Lettore, PSM: typeof import('tesseract.js'
     passo();
     return (await lettore.recognize(img)).data.text;
   };
-  const prezzi = [await leggi(destra, PSM.SINGLE_BLOCK, true), await leggi(destra, PSM.SINGLE_COLUMN, true)].map(prezziDaColonna);
-  const nomi = await leggi(fascia(tela, 0, x), PSM.SINGLE_BLOCK, false);
+  // Tesseract dà il testo delle colonne senza posizioni: le righe hanno le coordinate del testo (`daTesto`).
+  const prezzi = [await leggi(destra, PSM.SINGLE_BLOCK, true), await leggi(destra, PSM.SINGLE_COLUMN, true)].map((t) => prezziDaColonna(daTesto(t)));
+  const nomi = daTesto(await leggi(fascia(tela, 0, x), PSM.SINGLE_BLOCK, false));
   await lettore.setParameters({ tessedit_pageseg_mode: PSM.SINGLE_COLUMN, tessedit_char_whitelist: '' });
-  return prezzi.flatMap((p) => [unisciColonne(prima, p, nomi), unisciColonne(prima, p)]).filter((t): t is string => t !== null);
+  const pagina = daTesto(prima);
+  return prezzi.flatMap((p) => [abbinaPerOrdine(pagina, p, nomi), abbinaPerOrdine(pagina, p)]).flatMap((l) => (l ? [testoDa(l)] : []));
 }
 
 /**
@@ -94,11 +97,8 @@ export async function leggiConPaddle(foto: Blob, avanzamento: (frazione: number)
   const larghezzaScontrino = tela.width;
   if (opzioni.sposta) tela = spostaTela(tela, SPOSTAMENTO.dx, SPOSTAMENTO.dy);
   let lettura = await leggiScatole(tela, (f) => avanzamento(f * 0.5), larghezzaScontrino);
-  const testi = (scatole: Scatola[]) => {
-    const { pagina, prezzi, nomi } = impagina(scatole, tela.width);
-    const abbinata = unisciColonne(pagina, prezziDaColonna(prezzi), nomi);
-    return abbinata ? [abbinata, pagina] : [pagina];
-  };
+  // Dai riquadri alle righe con le posizioni, e da lì le letture possibili: per ordine (se nomi e prezzi si abbinano) e riga per riga.
+  const testi = (scatole: Scatola[]) => impaginaFoto(daScatole(scatole, tela.width)).map(testoDa);
   const out = testi(lettura.scatole);
   const quadra = () => out.some((t) => leggiScontrino(t).quadra);
   if (quadra()) return out;
@@ -182,7 +182,7 @@ async function leggiConTesseract(foto: Blob, avanzamento: (frazione: number) => 
     let migliore = letta.text;
     if (!preparata || leggiScontrino(migliore).quadra) return migliore;
     // Le parole con la loro x: dicono dove inizia la colonna dei prezzi.
-    const parole: ParolaLetta[] = (letta.blocks ?? []).flatMap((b) => b.paragraphs.flatMap((p) => p.lines.flatMap((l) => l.words.map((w) => ({ testo: w.text, x0: w.bbox.x0 })))));
+    const parole = (letta.blocks ?? []).flatMap((b) => b.paragraphs.flatMap((p) => p.lines.flatMap((l) => l.words.map((w) => ({ testo: w.text, x0: w.bbox.x0 })))));
     passo = 1;
     passi = 5;
     for (const testo of await leggiAColonne(lettore, PSM, preparata, migliore, parole, () => (passo += 1))) {

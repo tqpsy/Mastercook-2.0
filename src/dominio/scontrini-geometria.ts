@@ -38,8 +38,11 @@ export interface LetturaGeometrica {
   origine: Origine;
   /** Larghezza della pagina (della foto, del PDF, o la linea più lunga del testo), nelle stesse unità delle coordinate. */
   larghezza: number;
-  /** Larghezza di un carattere, per rimettere i pezzi nella loro colonna quando si ricompone il testo (`testoDa`). */
-  carattere: number;
+  /**
+   * Larghezza di un carattere, per rimettere i pezzi nella loro colonna quando si ricompone il testo (`testoDa`): il PDF e il
+   * testo sono a colonne. `null` per la foto, dove le colonne di caratteri non ci sono: i pezzi si separano con tre spazi.
+   */
+  carattere: number | null;
   /** Le righe dall'alto in basso. */
   righe: Riga[];
 }
@@ -47,9 +50,9 @@ export interface LetturaGeometrica {
 const centroY = (p: { y0: number; y1: number }) => (p.y0 + p.y1) / 2;
 const mediana = (v: number[]) => [...v].sort((a, b) => a - b)[Math.floor(v.length / 2)] ?? 0;
 
-/** La riga che contiene questi pezzi (riordinati da sinistra a destra). */
-export function creaRiga(pezzi: Pezzo[]): Riga {
-  const ordinati = [...pezzi].sort((a, b) => a.x0 - b.x0);
+/** La riga che contiene questi pezzi, riordinati da sinistra a destra (o nell'ordine dato, con `ordina` falso). */
+export function creaRiga(pezzi: Pezzo[], ordina = true): Riga {
+  const ordinati = ordina ? [...pezzi].sort((a, b) => a.x0 - b.x0) : pezzi;
   return {
     pezzi: ordinati,
     x0: Math.min(...ordinati.map((p) => p.x0)),
@@ -75,9 +78,7 @@ export function daScatole(scatole: Scatola[], larghezza: number): LetturaGeometr
     if (ultimo && Math.abs(centroY(s) - ultimo.centro) < (s.y1 - s.y0) * 0.5) ultimo.pezzi.push(pezzo);
     else gruppi.push({ centro: centroY(s), pezzi: [pezzo] });
   }
-  // La larghezza di un carattere: la mediana tra i pezzi di almeno tre lettere (serve solo a ricomporre un testo leggibile).
-  const misure = ordinate.filter((s) => s.testo.trim().length >= 3).map((s) => (s.x1 - s.x0) / s.testo.trim().length);
-  return { origine: 'foto', larghezza, carattere: mediana(misure) || 10, righe: gruppi.map((g) => creaRiga(g.pezzi)) };
+  return { origine: 'foto', larghezza, carattere: null, righe: gruppi.map((g) => creaRiga(g.pezzi)) };
 }
 
 /** Due voci del PDF con la `y` più vicina di così (in punti) stanno sulla stessa riga. */
@@ -132,12 +133,13 @@ export function daTesto(testo: string): LetturaGeometrica {
 }
 
 /**
- * Il testo di una riga: ogni pezzo nella sua colonna (x ÷ larghezza di un carattere), con almeno uno spazio dal pezzo prima.
- * Senza `margine` si parte dalla colonna 0.
+ * Il testo di una riga: ogni pezzo nella sua colonna (x ÷ larghezza di un carattere), con almeno uno spazio dal pezzo prima;
+ * senza colonne (la foto) i pezzi separati da tre spazi.
  */
-export function testoRiga(riga: Riga, carattere: number, margine = 0): string {
+export function testoRiga(riga: Riga, carattere: number | null): string {
+  if (carattere === null) return riga.pezzi.map((p) => p.testo).join('   ');
   let t = '';
-  for (const p of riga.pezzi) t = t.padEnd(Math.max(Math.round(p.x0 / carattere) - margine, t.length + (t ? 1 : 0)), ' ') + p.testo;
+  for (const p of riga.pezzi) t = t.padEnd(Math.max(Math.round(p.x0 / carattere), t.length + (t ? 1 : 0)), ' ') + p.testo;
   return t.trimEnd();
 }
 

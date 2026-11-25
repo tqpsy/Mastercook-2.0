@@ -9,7 +9,7 @@ Per ogni *lettura* (un testo, come quello che la schermata «Scontrino» riceve 
 
 | Parte | Cosa si controlla | Dove si decide |
 |---|---|---|
-| Lettura | righe, prezzi, nomi, data, ora, totale | `leggiScontrino`, `ocr.ts`, `paddle.ts` |
+| Lettura | righe, prezzi, nomi, data, ora, totale | `leggiScontrino`/`leggiLettura`, `scontrini-impaginazione.ts`, `ocr.ts`, `paddle.ts` |
 | Campi della riga | pezzi e formato (peso, volume) letti dalla descrizione | `formatoDaDescrizione`, `PEZZI` |
 | Prodotti | ingrediente suggerito e quantità che entrerebbe in casa | `proponiProdotto` (con `suggerisciIngrediente`, `quantitaProposta`) |
 | Spunte | abbinamento alle righe già comprate | `proponiRighe` (con `abbinaRighe`) |

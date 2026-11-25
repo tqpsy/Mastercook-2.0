@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { prezziDaColonna, unisciColonne } from './colonne';
-import { allargaRiquadro, decodificaCtc, impagina, inclinazione, inizioPrezzi, larghezzaPerLettura, riquadriDaMappa, type Scatola, tensoreLettura, tensoreRilevazione, unisciRiquadri } from './paddle';
+import { allargaRiquadro, decodificaCtc, inclinazione, larghezzaPerLettura, riquadriDaMappa, type Scatola, tensoreLettura, tensoreRilevazione, unisciRiquadri } from './paddle';
 import { leggiScontrino } from './scontrini';
+import { daScatole, testoDa } from './scontrini-geometria';
+import { abbinaPerOrdine, impagina, inizioPrezzi, prezziDaColonna } from './scontrini-impaginazione';
 
 // Pezzi di testo che PaddleOCR (nel browser) ha letto da foto storte di uno scontrino Iperal, come [testo, x sinistra, y alto,
 // y basso] su una foto larga 1400 punti: la foto originale, e la stessa foto compressa a bassa qualità (JPEG 30), di cui si ha
@@ -16,9 +17,10 @@ const PREZZI = [0, 1.39, 1.99, 0.65, 0.9, 1.99, 2.85, 2.85, 0.89, 0.89, 1.35, 1.
 
 /** Il testo dello scontrino come lo compone l'app: nomi e prezzi abbinati per ordine. */
 const letto = (v: Scatola[]) => {
-  const { pagina, prezzi, nomi } = impagina(v, LARGHEZZA);
-  const testo = unisciColonne(pagina, prezziDaColonna(prezzi), nomi);
-  return { pagina, testo, scontrino: testo ? leggiScontrino(testo) : null };
+  const { pagina, prezzi, nomi } = impagina(daScatole(v, LARGHEZZA));
+  const abbinata = abbinaPerOrdine(pagina, prezziDaColonna(prezzi), nomi);
+  const testo = abbinata && testoDa(abbinata);
+  return { pagina: testoDa(pagina), testo, scontrino: testo ? leggiScontrino(testo) : null };
 };
 
 describe('scontrino letto con PaddleOCR (foto storta)', () => {

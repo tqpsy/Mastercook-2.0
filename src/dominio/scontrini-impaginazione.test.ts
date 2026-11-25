@@ -1,7 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { correggiPrezzi } from './quadratura';
-import { inizioColonnaPrezzi, prezziDaColonna, unisciColonne } from './colonne';
 import { leggiScontrino } from './scontrini';
+import { daScatole, daTesto, testoDa } from './scontrini-geometria';
+import { abbinaPerOrdine, impaginaFoto, inizioColonnaPrezzi, prezziDaColonna as prezziDaPezzi } from './scontrini-impaginazione';
+
+/** I prezzi di una colonna letta a parte (solo testo, come la rilegge Tesseract), con il testo ripulito. */
+const prezziDaColonna = (colonna: string) => prezziDaPezzi(daTesto(colonna)).map((p) => ({ testo: p.testo, negativo: p.testo.startsWith('-') }));
+/** Nomi e prezzi abbinati per ordine, dal testo: la pagina, la colonna dei prezzi e (se c'è) quella dei nomi lette a parte. */
+function unisciColonne(pagina: string, prezzi: { testo: string }[], nomi?: string): string | null {
+  const abbinata = abbinaPerOrdine(daTesto(pagina), prezziDaPezzi(daTesto(prezzi.map((p) => p.testo).join('\n'))), nomi === undefined ? undefined : daTesto(nomi));
+  return abbinata && testoDa(abbinata);
+}
 
 // Letture vere di Tesseract sulla foto di uno scontrino Iperal (foto storta, carta piegata): tutta la pagina,
 // la sola colonna dei nomi e la sola colonna dei prezzi (solo cifre).
@@ -330,3 +339,34 @@ describe('righe dei pezzi nella colonna dei nomi', () => {
   });
 });
 
+
+describe('abbinamento sui pezzi con la posizione (foto)', () => {
+  const pezzo = (testo: string, x0: number, y0: number, fiducia = 0.95) => ({ testo, x0, y0, x1: x0 + testo.length * 20, y1: y0 + 30, fiducia });
+  // Foto storta: ogni prezzo scende di quasi una riga rispetto al suo nome. Riga per riga i prezzi finirebbero sfasati.
+  const foto = daScatole(
+    [
+      pezzo('SUPERMERCATO', 100, 0), pezzo('DESCRIZIONE', 20, 60), pezzo('PREZZO IVA', 600, 60),
+      pezzo('PANE', 20, 100), pezzo('1,50 A', 620, 125, 0.4), pezzo('LATTE', 20, 140), pezzo('1,25 A', 620, 165), pezzo('UOVA', 20, 180), pezzo('2,10 A', 620, 205),
+      pezzo('SALE', 20, 220), pezzo('0,35 A', 620, 245), pezzo('ZUCCHERO', 20, 260), pezzo('0,99 A', 620, 285),
+      pezzo('TOTALE', 20, 330), pezzo('6,19', 620, 330),
+    ],
+    800,
+  );
+
+  it('per ordine ogni nome prende il suo prezzo, che resta il pezzo letto: posizione e fiducia', () => {
+    const [abbinata] = impaginaFoto(foto);
+    const s = leggiScontrino(testoDa(abbinata));
+    expect(s.righe.map((r) => [r.descrizione, r.prezzo])).toEqual([['PANE', 1.5], ['LATTE', 1.25], ['UOVA', 2.1], ['SALE', 0.35], ['ZUCCHERO', 0.99]]);
+    expect(s).toMatchObject({ totale: 6.19, quadraDaSola: true });
+    const pane = abbinata.righe.find((r) => r.pezzi[0].testo === 'PANE')!;
+    expect(pane.pezzi[1]).toMatchObject({ testo: '1,50 A', x0: 620, y0: 125, fiducia: 0.4 });
+    expect(pane.fiducia).toBe(0.4);
+  });
+
+  it('il testo della foto separa i pezzi con tre spazi (non ci sono colonne di caratteri)', () => {
+    const [abbinata, pagina] = impaginaFoto(foto);
+    expect(testoDa(abbinata).split('\n')).toContain('PANE   1,50 A');
+    expect(abbinata.carattere).toBeNull();
+    expect(pagina.carattere).toBeNull();
+  });
+});
