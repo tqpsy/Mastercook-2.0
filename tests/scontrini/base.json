@@ -2,11 +2,11 @@
  "versione": 1,
  "livello": "testo",
  "etichetta": "base",
- "creato": "2026-11-25T11:26:27.725Z",
+ "creato": "2026-11-25T16:04:26.673Z",
  "sintesi": {
   "perfette": {
    "etichetta": "Letture perfette (al primo tentativo)",
-   "valore": 124,
+   "valore": 125,
    "su": 150,
    "verso": "piu"
   },
@@ -18,7 +18,7 @@
   },
   "righeOk": {
    "etichetta": "Righe giuste (nome e prezzo)",
-   "valore": 3047,
+   "valore": 3059,
    "su": 3156,
    "verso": "piu"
   },
@@ -78,7 +78,7 @@
   },
   "prezzoSilenzioso": {
    "etichetta": "Prezzi sbagliati senza avviso",
-   "valore": 26,
+   "valore": 14,
    "verso": "meno"
   },
   "righeMancanti": {
@@ -88,7 +88,7 @@
   },
   "righeInPiu": {
    "etichetta": "Righe in più",
-   "valore": 24,
+   "valore": 18,
    "verso": "meno"
   },
   "nomiSbagliati": {
@@ -97,8 +97,8 @@
    "verso": "meno"
   },
   "falsiQuadra": {
-   "etichetta": "«Il conto torna» ma la lettura è sbagliata (su 119 che tornano)",
-   "valore": 13,
+   "etichetta": "«Il conto torna» ma la lettura è sbagliata (su 120 che tornano)",
+   "valore": 9,
    "verso": "meno"
   },
   "giacenzaSbagliata": {
@@ -123,13 +123,13 @@
   },
   "affidabili": {
    "etichetta": "Letture affidabili (ogni errore è segnalato)",
-   "valore": 132,
+   "valore": 133,
    "su": 150,
    "verso": "piu"
   },
   "sbagliateSilenziose": {
    "etichetta": "Righe sbagliate non segnalate",
-   "valore": 37,
+   "valore": 25,
    "verso": "meno"
   },
   "perseSilenziose": {
@@ -631,24 +631,12 @@
   {
    "caso": "conad-superstore",
    "lettura": "foto-storta-1-5",
-   "perfetta": false,
+   "perfetta": true,
    "sicura": true,
-   "affidabile": false,
-   "righeOk": 0,
+   "affidabile": true,
+   "righeOk": 12,
    "righeVere": 12,
    "errori": [
-    "riga 1 «PANE BAULETTO»: prezzo 490,98 invece di 0,98",
-    "riga 2 «LATTE PARZ.SCREM.1L»: prezzo 391,17 invece di 1,17",
-    "riga 3 «PASTA DI SEMOLA 500G»: prezzo 190,76 invece di 0,76",
-    "riga 4 «PASSATA POMODORO 700G»: prezzo 290,58 invece di 0,58",
-    "riga 5 «MOZZARELLA 125G»: prezzo 591,18 invece di 1,18",
-    "riga 6 «PETTO DI POLLO 500G»: prezzo 492,49 invece di 2,49",
-    "riga 7 «BANANE»: prezzo 690,69 invece di 0,69",
-    "riga 8 «MELE GOLDEN 1KG»: prezzo 790,79 invece di 0,79",
-    "riga 9 «DETERSIVO LAVATRICE»: prezzo 191,19 invece di 1,19",
-    "riga 10 «CARTA IGIENICA 12R»: prezzo 291,29 invece di 1,29",
-    "riga 11 «NUTELLA 750G»: prezzo 991,99 invece di 1,99",
-    "riga 12 «ACQUA NATURALE 1.5L»: prezzo 90,54 invece di 0,54",
     "riga 12 «ACQUA NATURALE 1.5L»: ingrediente nessuno invece di ing:acqua"
    ]
   },
@@ -845,7 +833,6 @@
    "righeOk": 6,
    "righeVere": 6,
    "errori": [
-    "riga in più «1OO GOCOTOGO3» 0,00",
     "data non letta invece di 2025-06-06 (segnalato: letture diverse)",
     "ora non letta invece di 09:51 (segnalato: letture diverse)",
     "negozio «Per» invece di «Iper Montebello S.P.A.»"
@@ -860,7 +847,6 @@
    "righeOk": 6,
    "righeVere": 6,
    "errori": [
-    "riga in più «1OO GOCOTOGO3» 0,00",
     "data non letta invece di 2025-06-06 (segnalato: letture diverse)",
     "ora non letta invece di 09:51 (segnalato: letture diverse)",
     "negozio «Per» invece di «Iper Montebello S.P.A.»"
@@ -875,7 +861,6 @@
    "righeOk": 6,
    "righeVere": 6,
    "errori": [
-    "riga in più «1OO GOCOTOGO3» 0,00",
     "data non letta invece di 2025-06-06 (segnalato: letture diverse)",
     "ora non letta invece di 09:51 (segnalato: letture diverse)",
     "negozio «Per» invece di «Iper Montebello S.P.A.»"
@@ -911,8 +896,7 @@
    "righeVere": 6,
    "errori": [
     "riga 1 «SHOPPER CART32+17X45» 0,00: non letta",
-    "riga 2 «VERDURA MISTA CUOCER»: nome «VERDUPA HESTA CUOCER» (segnalato: letture diverse)",
-    "riga in più «XTO0GOCDTOGO3.» 0,00"
+    "riga 2 «VERDURA MISTA CUOCER»: nome «VERDUPA HESTA CUOCER» (segnalato: letture diverse)"
    ]
   },
   {
@@ -925,7 +909,6 @@
    "righeVere": 6,
    "errori": [
     "riga 1 «SHOPPER CART32+17X45» 0,00: non letta",
-    "riga in più «XTOOGOCDTOGO3.» 0,00",
     "negozio «Per» invece di «Iper Montebello S.P.A.»"
    ]
   },
@@ -938,7 +921,6 @@
    "righeOk": 6,
    "righeVere": 6,
    "errori": [
-    "riga in più «1OO GOCOTOGO3» 0,00",
     "data non letta invece di 2025-06-06",
     "ora non letta invece di 09:51",
     "negozio «Per» invece di «Iper Montebello S.P.A.»"

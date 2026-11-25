@@ -125,6 +125,27 @@ describe('lettura dello scontrino', () => {
   });
 });
 
+describe('riepilogo «Too Good To Go» a zero', () => {
+  it('la riga a 0,00 del riepilogo non è un prodotto, anche letta male; una riga vera a 0,00 resta', () => {
+    const s = leggiScontrino('IPER\nDESCRIZIONE\nCARTAMICA DIGITALE   0,00 C\nBARBABIETOLE   0,99 A\nTOO GOOD TO GO   -0,99\n1OO GOCOTOGO3   0,00 E\nTOTALE COMPLESSIVO   0,00');
+    expect(s.righe.map((r) => [r.descrizione, r.prezzo])).toEqual([['CARTAMICA DIGITALE', 0], ['BARBABIETOLE', 0]]);
+  });
+});
+
+describe('colonne quantità, prezzo unitario e totale (Conad)', () => {
+  const testa = 'CONAD\nQTA   DESCRIZIONE   PREZZO TOTALE';
+  it('i due prezzi attaccati in un solo pezzo («0,490,98», foto storta) si dividono se quantità × unitario fa il totale', () => {
+    const s = leggiScontrino(`${testa}\n2   PANE BAULETTO   0,490,98\n1   PETTO DI POLLO 500G   2,492,49\nTOTALE COMPLESSIVO   3,47`);
+    expect(s.righe.map((r) => [r.descrizione, r.prezzo, r.pezzi])).toEqual([['PANE BAULETTO', 0.98, 2], ['PETTO DI POLLO 500G', 2.49, 1]]);
+    expect(s.quadraDaSola).toBe(true);
+  });
+
+  it('i prezzi sulla linea sotto il nome con la quantità valgono per quel nome', () => {
+    const s = leggiScontrino(`${testa}\n4   PASTA DI SEMOLA 500G\n0,190,76\n6   ACQUA NATURALE 1,5L   0,09 0,54\nTOTALE COMPLESSIVO   1,30`);
+    expect(s.righe.map((r) => [r.descrizione, r.prezzo, r.pezzi])).toEqual([['PASTA DI SEMOLA 500G', 0.76, 4], ['ACQUA NATURALE 1,5L', 0.54, 6]]);
+  });
+});
+
 describe('scontrini veri, letti da Tesseract', () => {
   const esempio = (nome: string) => readFileSync(new URL(`./scontrini-esempi/${nome}`, import.meta.url), 'utf8');
   const IPER = [

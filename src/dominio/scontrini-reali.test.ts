@@ -25,10 +25,10 @@ describe('scontrini di altri negozi', () => {
     expect(s.righe[0].descrizione).toBe('PANE BAULETTO');
   });
 
-  it('Iper: gli sconti senza segno meno («Too Good To Go») tornano negativi, il peso non è una riga, 3,99 € che quadra', () => {
+  it('Iper: gli sconti senza segno meno («Too Good To Go») tornano negativi, il peso e il riepilogo a zero non sono righe, 3,99 € che quadra', () => {
     const s = letto(IPER)!;
     expect(s).toMatchObject({ totale: 3.99, quadra: true, data: '2025-06-06', ora: '09:51' });
-    expect(s.righe.map((r) => r.prezzo)).toEqual([0, 0, 0, 3.7, 0.29, 0, 0]);
-    expect(s.righe.map((r) => r.sconto)).toEqual([0.2, 1.89, 2.5, undefined, 3.3, 0.99, undefined]);
+    expect(s.righe.map((r) => r.prezzo)).toEqual([0, 0, 0, 3.7, 0.29, 0]);
+    expect(s.righe.map((r) => r.sconto)).toEqual([0.2, 1.89, 2.5, undefined, 3.3, 0.99]);
   });
 });
