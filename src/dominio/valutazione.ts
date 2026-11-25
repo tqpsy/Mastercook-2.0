@@ -18,7 +18,8 @@
 import { allinea, compatto, SOGLIA_NOME, somiglianza, stessoPrezzo } from './allineamento';
 import type { Indice } from './ricette';
 import { confrontaLetture } from './doppiaLettura';
-import { abbinaRighe, leggiScontrino, quantitaProposta, type RigaDaAbbinare, suggerisciIngrediente } from './scontrini';
+import { proponiProdotto, proponiRighe } from './importaScontrino';
+import { leggiScontrino, type RigaDaAbbinare } from './scontrini';
 
 export type UnitaCarico = 'g' | 'ml' | 'pz';
 export interface Carico {
@@ -90,13 +91,14 @@ export interface LetturaValutata {
 }
 
 /**
- * Dal testo letto a ciò che l'app propone (stesse funzioni della schermata «Scontrino»). `controllo` è la seconda lettura
+ * Dal testo letto a ciò che l'app propone (le stesse funzioni della schermata «Scontrino», in `importaScontrino.ts`). `controllo` è la seconda lettura
  * indipendente della stessa foto (`leggiTestoDaFoto`): senza, nessuna riga è segnalata come dubbia.
  */
 export function leggiPerValutare(testo: string, indice: Indice, carrello: RigaDaAbbinare[] = [], controllo: string | null = null): LetturaValutata {
   const s = leggiScontrino(testo);
   const c = confrontaLetture(s, controllo ? leggiScontrino(controllo) : null);
-  const abbinate = carrello.length ? abbinaRighe(s.righe, carrello, indice) : s.righe.map(() => null);
+  // Le stesse proposte che la schermata mostra (senza unire le righe ripetute: ogni riga stampata è una riga della verità).
+  const proposte = proponiRighe(s.righe.map((riga) => ({ id: '', riga })), carrello, indice);
   return {
     negozio: s.negozio,
     data: s.data,
@@ -108,8 +110,7 @@ export function leggiPerValutare(testo: string, indice: Indice, carrello: RigaDa
     campiDubbi: controllo ? { data: c.campi.data || s.data === null, ora: c.campi.ora || s.ora === null, totale: c.campi.totale || s.totale === null } : c.campi,
     mancantiSegnalate: c.mancanti.length,
     righe: s.righe.map((r, i) => {
-      const ing = suggerisciIngrediente(r.descrizione, indice);
-      const q = ing ? quantitaProposta(r, ing) : null;
+      const { ing, carico } = proponiProdotto(r, indice);
       return {
         descrizione: r.descrizione,
         prezzo: r.prezzo,
@@ -118,8 +119,8 @@ export function leggiPerValutare(testo: string, indice: Indice, carrello: RigaDa
         senzaPrezzo: !!r.senzaPrezzo,
         corretta: !!r.corretta,
         ingrediente: ing?.id ?? null,
-        carico: q,
-        abbina: abbinate[i] ?? null,
+        carico,
+        abbina: proposte[i].azione.startsWith('abbina:') ? proposte[i].azione.slice(7) : null,
         dubbia: !c.righe[i].concorde,
       };
     }),

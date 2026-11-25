@@ -11,8 +11,8 @@ Per ogni *lettura* (un testo, come quello che la schermata «Scontrino» riceve 
 |---|---|---|
 | Lettura | righe, prezzi, nomi, data, ora, totale | `leggiScontrino`, `ocr.ts`, `paddle.ts` |
 | Campi della riga | pezzi e formato (peso, volume) letti dalla descrizione | `formatoDaDescrizione`, `PEZZI` |
-| Prodotti | ingrediente suggerito e quantità che entrerebbe in casa | `suggerisciIngrediente`, `quantitaProposta` |
-| Spunte | abbinamento alle righe già comprate | `abbinaRighe` |
+| Prodotti | ingrediente suggerito e quantità che entrerebbe in casa | `proponiProdotto` (con `suggerisciIngrediente`, `quantitaProposta`) |
+| Spunte | abbinamento alle righe già comprate | `proponiRighe` (con `abbinaRighe`) |
 
 I numeri principali (`riassumi` in `src/dominio/valutazione.ts`):
 
@@ -82,7 +82,7 @@ Per confrontare davvero, i rapporti devono venire dalla stessa macchina e dallo 
 
 ## Limiti da conoscere
 
-- La conversione in prodotti si misura con `suggerisciIngrediente` e `quantitaProposta`; le scelte che la schermata fa in più (per esempio l'unità a pezzi per ciò che si conta) stanno dentro `Scontrino.tsx` e non sono ancora coperte. Estrarle in `src/dominio/` è un lavoro per la fase dei prodotti.
+- La conversione in prodotti (ingrediente, quantità, unità e posto di partenza, abbinamento alle spunte) è in `src/dominio/importaScontrino.ts`: la schermata «Scontrino» e la valutazione usano le stesse funzioni (`proponiProdotto`, `proponiRighe`), quindi ciò che si misura è ciò che l'app propone. Non è misurato ciò che la persona corregge dopo, né il comando `importa_scontrino` (`costruisciImportazione`, coperto da `importaScontrino.test.ts`).
 - Le righe ripetute non si uniscono («× 2», `unisciRipetute`): ogni riga stampata è una riga della verità.
 - Con pochi scontrini veri i numeri sono un'indicazione, non una statistica. Più scontrini veri ci sono nel corpus, più si può fidare del risultato.
 

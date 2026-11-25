@@ -3,11 +3,11 @@ import { IconaCibo } from '../ui/IconaCibo';
 import { iconaIngrediente } from '../dominio/iconeCibo';
 import { LUOGHI, NOME_LUOGO } from '../catalogo/tipi';
 import { useFamiglia, useVista } from '../dati/contesto';
-import type { Indice, Ingrediente } from '../dominio/ricette';
-import { eFresco, giorniTra, type Luogo, oggi, stima } from '../dominio/scadenze';
-import { abbinaRighe, leggiScontrino, quantitaProposta, type RigaDaAbbinare, type RigaLetta, suggerisciIngrediente, unisciDescrizioni, unisciRipetute } from '../dominio/scontrini';
-import { formattaEuro, formattaGiorno, leggiNumero, type Unita, UNITA_BASE } from '../dominio/unita';
-import { confezioneDa } from '../dominio/confezioni';
+import type { Indice } from '../dominio/ricette';
+import { giorniTra, type Luogo, oggi } from '../dominio/scadenze';
+import { leggiScontrino, type RigaDaAbbinare } from '../dominio/scontrini';
+import { type Azione, costruisciImportazione, righeDaLettura, riabbina, type RigaInRevisione, rigaVuota, testoEuro } from '../dominio/importaScontrino';
+import { formattaEuro, formattaGiorno, leggiNumero, UNITA_BASE } from '../dominio/unita';
 import { confrontaLetture, type ControlloLettura } from '../dominio/doppiaLettura';
 import { type ScontrinoNoto, trovaDoppione } from '../dominio/doppioni';
 import { CampoQuantita } from '../ui/CampoQuantita';
@@ -16,38 +16,13 @@ import { Foglio } from '../ui/Foglio';
 import { leggiTestoDaFoto } from '../ui/ocr';
 import { leggiTestoDaPdf } from '../ui/pdf';
 import { Scanner } from '../ui/Scanner';
-import { quantitaDa } from '../dati/lotti';
 import { useDatiSpesa } from './Spesa';
-
-/** Cosa fare di una riga: dare il prezzo a una riga già confermata, metterla in casa, solo spesa, o niente. */
-type Azione = `abbina:${string}` | 'casa' | 'altro' | 'ignora';
-
-interface RigaInRevisione {
-  id: string;
-  descrizione: string;
-  euro: string;
-  azione: Azione;
-  ing: Ingrediente | null;
-  numero: string;
-  unita: Unita;
-  /** Quante confezioni (3 vasetti di yogurt): vuoto o «1» per una sola. */
-  quante?: string;
-  luogo: Luogo;
-  cerca: boolean;
-  /** Scelta dall'app e non toccata: se cambia la data si riabbina con la spesa di quel giorno. */
-  auto?: boolean;
-  /** Perché la riga è «da controllare»: le due letture della foto non coincidono, o il prezzo è stato ricavato dal conto. Va confermata prima di importare. */
-  dubbia?: string;
-  controllata?: boolean;
-}
 
 /** «pane», «pane e latte», «pane, latte e uova». */
 function elencoNomi(nomi: string[]): string {
   const n = nomi.map((x) => x.toLowerCase());
   return n.length < 2 ? n.join('') : `${n.slice(0, -1).join(', ')} e ${n[n.length - 1]}`;
 }
-
-const testoEuro = (n: number | null | undefined) => (n == null ? '' : n.toFixed(2).replace('.', ','));
 
 /** Le righe confermate dal carrello nei giorni vicini allo scontrino, ancora senza scontrino (lo scontrino ne aggiorna il prezzo). */
 function useDaAbbinare(indice: Indice): (data: string) => RigaDaAbbinare[] {
@@ -154,54 +129,14 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
     setDataConfermata(false);
     setNonLetti(fotografata ? [s.ora === null ? 'l’ora' : '', s.totale === null ? 'il totale' : ''].filter(Boolean) : []);
     setAltroScontrino(false);
-    const dubbia = (r: RigaLetta, i: number) => (r.corretta ? 'il prezzo è ricavato dal totale, non letto' : c.disponibile && !c.righe[i].concorde ? 'le due letture della foto non coincidono' : undefined);
-    setRighe(unisciRipetute(proposte(s.righe.map((r, i) => ({ id: crypto.randomUUID(), riga: r, dubbia: dubbia(r, i) })), giorno)));
+    setRighe(righeDaLettura(s, c, daAbbinare(giorno), indice, () => crypto.randomUUID()));
     setRevisione(true);
-  }
-
-  /** Per ogni riga: il prezzo a una riga già spuntata o confermata (niente doppioni in casa), oppure in casa. */
-  function proposte(lette: { id: string; riga: RigaLetta; dubbia?: string }[], giorno: string): RigaInRevisione[] {
-    const abbinate = abbinaRighe(
-      lette.map((x) => x.riga),
-      daAbbinare(giorno),
-      indice,
-    );
-    return lette.map(({ id, riga: r }, i) => {
-      const ing = suggerisciIngrediente(r.descrizione, indice) ?? null;
-      const q = ing ? quantitaProposta(r, ing) : null;
-      return {
-        id,
-        descrizione: r.descrizione,
-        euro: r.senzaPrezzo ? '' : testoEuro(r.prezzo),
-        azione: abbinate[i] ? `abbina:${abbinate[i]}` : ing ? 'casa' : 'altro',
-        ing,
-        numero: q ? String(q.quantita).replace('.', ',') : '',
-        // Senza quantità sullo scontrino, ciò che si conta (zucchine, mele) si propone a pezzi.
-        unita: q?.unita ?? (ing ? (ing.dimensione !== 'pezzi' && ing.peso_pz ? 'pz' : UNITA_BASE[ing.dimensione]) : 'g'),
-        luogo: ing?.luogo ?? 'dispensa',
-        cerca: false,
-        auto: true,
-        dubbia: lette[i].dubbia,
-      };
-    });
   }
 
   /** Cambiata la data, le righe non toccate si riabbinano con la spesa confermata in quei giorni. */
   function cambiaData(giorno: string) {
     setData(giorno);
-    const auto = righe.filter((r) => r.auto);
-    if (!auto.length) return;
-    const nuove = new Map(
-      proposte(
-        auto.map((r) => ({ id: r.id, riga: { descrizione: r.descrizione, prezzo: leggiNumero(r.euro) ?? 0 } })),
-        giorno,
-      ).map((r) => [r.id, r]),
-    );
-    setRighe(righe.map((r) => {
-      const n = nuove.get(r.id);
-      // Quantità, unità e posto restano quelli già proposti o scritti; cambia solo dove va la riga.
-      return n ? { ...r, azione: n.azione, ing: r.ing ?? n.ing } : r;
-    }));
+    setRighe(riabbina(righe, daAbbinare(giorno), indice));
   }
 
   const cambia = (i: number, x: Partial<RigaInRevisione>) => {
@@ -231,69 +166,13 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
     if (importando) return;
     setSenzaQuantita(null);
     if (bloccato) return setErrore(`Prima di importare controlla ${motivoBlocco}.`);
-    const mancanti: string[] = [];
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return setErrore('Scrivi la data dello scontrino.');
-    if (ora && !/^[0-2]\d:[0-5]\d$/.test(ora)) return setErrore('L’ora si scrive come 18:30.');
-    if (totale.trim() && tot === null) return setErrore('Il totale non è un numero.');
-    const pronte: Record<string, unknown>[] = [];
-    for (const r of righe) {
-      const prezzo = r.euro.trim() ? leggiNumero(r.euro) : null;
-      if (r.euro.trim() && prezzo === null) return setErrore(`Il prezzo di «${r.descrizione}» non è un numero.`);
-      const base = { id: r.id, descrizione: r.descrizione.trim() || 'Riga', prezzo };
-      if (r.azione.startsWith('abbina:')) {
-        // Due righe sulla stessa riga già comprata (due confezioni passate una alla volta): una sola, con i prezzi sommati.
-        const stessa = pronte.find((p) => p.abbina === r.azione.slice(7));
-        if (stessa) {
-          stessa.prezzo = prezzo == null ? stessa.prezzo : Math.round(((stessa.prezzo as number | null) ?? 0) * 100 + prezzo * 100) / 100;
-          stessa.descrizione = unisciDescrizioni(String(stessa.descrizione), base.descrizione);
-        } else pronte.push({ ...base, abbina: r.azione.slice(7) });
-      }
-      else if (r.azione === 'altro') pronte.push({ ...base, nuova: { id: crypto.randomUUID() } });
-      else if (r.azione === 'ignora') pronte.push(base);
-      else {
-        if (!r.ing) return setErrore(`Scegli cos’è «${r.descrizione}», oppure segnalo come «solo spesa».`);
-        if (!r.numero.trim()) {
-          // Senza quantità la riga entra nello scontrino «da completare»: in casa arriva quando si scrive quanto (Casa).
-          mancanti.push(r.ing.nome);
-          pronte.push({ ...base, nuova: { id: crypto.randomUUID(), ingrediente_id: r.ing.id, luogo: r.luogo } });
-          continue;
-        }
-        const scritta = { numero: r.numero, unita: r.unita, quante: r.quante ?? '1' };
-        const q = quantitaDa(scritta, r.ing);
-        if (typeof q === 'string') return setErrore(`${r.ing.nome}: ${q}`);
-        const confezione = confezioneDa(scritta, r.ing.dimensione, r.ing.peso_pz);
-        const s = eFresco(r.ing) ? stima(r.ing, r.luogo, data) : null;
-        pronte.push({
-          ...base,
-          nuova: {
-            id: crypto.randomUUID(),
-            lotto_id: crypto.randomUUID(),
-            ingrediente_id: r.ing.id,
-            quantita: q.valore,
-            unita: q.unita,
-            ...(confezione ? { confezione } : {}),
-            luogo: r.luogo,
-            ...(s ? { data_limite: s.data_limite, tipo_data: 'stimata', fonte_data: 'app', calcolata_il: s.calcolata_il, affidabilita: 'bassa' } : { tipo_data: 'sconosciuta' }),
-          },
-        });
-      }
-    }
-    if (!pronte.length) return setErrore('Non ci sono righe da importare.');
+    const esito = costruisciImportazione({ negozio, data, ora, totale, qr, testo, righe }, () => crypto.randomUUID());
+    if (esito.errore !== undefined) return setErrore(esito.errore);
     setErrore(null);
-    if (mancanti.length && !saltaQuantita) return setSenzaQuantita(mancanti);
+    if (esito.mancanti.length && !saltaQuantita) return setSenzaQuantita(esito.mancanti);
     setImportando(true);
     try {
-      await esegui('importa_scontrino', {
-        id: crypto.randomUUID(),
-        acquisto_id: crypto.randomUUID(),
-        negozio: negozio.trim() || null,
-        data,
-        ora: ora || null,
-        totale: tot,
-        qr,
-        testo: testo.slice(0, 20000) || null,
-        righe: pronte,
-      });
+      await esegui('importa_scontrino', esito.comando);
     } catch {
       setImportando(false);
       return setErrore('Non sono riuscito a importare lo scontrino. Riprova.');
@@ -530,7 +409,7 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
       <button
         className="bottone piccolo"
         style={{ marginTop: 8 }}
-        onClick={() => setRighe([...righe, { id: crypto.randomUUID(), descrizione: '', euro: '', azione: 'altro', ing: null, numero: '', unita: 'g', luogo: 'dispensa', cerca: false }])}
+        onClick={() => setRighe([...righe, rigaVuota(crypto.randomUUID())])}
       >
         + Riga mancante
       </button>
