@@ -21,7 +21,7 @@ const indice = new Indice(catalogo as Catalogo);
 const BASE = `${CARTELLA}base.json`;
 const corpus = caricaCorpus();
 
-const esiti: Esito[] = corpus.flatMap((c) => c.letture.map((l) => ({ caso: c.verita.id, lettura: l.nome, valutazione: valuta(c.verita, leggiPerValutare(l.testo, indice, c.verita.carrello, l.controllo ?? null)) })));
+const esiti: Esito[] = corpus.flatMap((c) => c.letture.map((l) => ({ caso: c.verita.id, lettura: l.nome, valutazione: valuta(c.verita, leggiPerValutare(l.testo, indice, c.verita.carrello, l.controllo ?? null, l.righe ?? null)) })));
 const rapporto = creaRapporto('testo', process.env.MC_ETICHETTA ?? 'testo', esiti);
 
 describe('corpus degli scontrini: dati di riferimento', () => {

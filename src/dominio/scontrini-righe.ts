@@ -161,13 +161,20 @@ export interface RigheLette {
   ivaTotale: number | null;
 }
 
-/** Legge le righe (già ripulite con `pulisciLinea`) con il totale che le chiude. Non inventa: quello che non trova resta fuori. */
-export function leggiRighe(linee: string[]): RigheLette {
+/**
+ * Legge le righe (già ripulite con `pulisciLinea`) con il totale che le chiude. Non inventa: quello che non trova resta fuori.
+ * `fiducie` (una per linea, se il lettore la dà): ogni riga letta prende la fiducia più bassa tra le linee da cui viene (il nome,
+ * il prezzo, lo sconto sotto).
+ */
+export function leggiRighe(linee: string[], fiducie?: number[]): RigheLette {
   const inizio = limitiRighe(linee).intestazione;
   const righe: RigaLetta[] = [];
   let totale: number | null = null;
   let inRighe = true;
   let descrizioneSospesa: string | null = null;
+  let fiduciaSospesa = 1;
+  /** La fiducia della linea che si sta leggendo. */
+  let fiduciaLinea = 1;
   let pezziSospesi: number | null = null;
   /** Gli altri importi che dovrebbero valere quanto il totale (subtotale, pagato): servono se il totale è letto male. */
   const altriTotali: number[] = [];
@@ -184,13 +191,14 @@ export function leggiRighe(linee: string[]): RigheLette {
       // Del prezzo rovinato resta spesso un residuo in coda («5’ SOB», «IP: |»): via le parti finali corte o con segni strani.
       const parole = descrizioneSospesa.split(' ');
       while (parole.length > 1 && (parole.at(-1)!.replace(/[^A-Z0-9]/g, '').length <= 2 || /[^A-Z0-9.)]/.test(parole.at(-1)!)) && parole.slice(0, -1).some((x) => x.replace(/[^A-Z0-9]/g, '').length >= 4)) parole.pop();
-      righe.push({ descrizione: parole.join(' ').replace(/[^A-Z0-9.)]+$/, '').slice(0, 120), prezzo: 0, senzaPrezzo: true });
+      righe.push({ descrizione: parole.join(' ').replace(/[^A-Z0-9.)]+$/, '').slice(0, 120), prezzo: 0, senzaPrezzo: true, ...(fiducie ? { fiducia: fiduciaSospesa } : {}) });
     }
     descrizioneSospesa = null;
   };
 
   const aggiungi = (descrizione: string, prezzo: number, extra: Partial<RigaLetta> = {}) => {
     const riga: RigaLetta = { descrizione: descrizione.slice(0, 120), prezzo, ...extra };
+    if (fiducie) riga.fiducia = Math.min(fiduciaLinea, descrizione === descrizioneSospesa ? fiduciaSospesa : 1);
     if (pezziSospesi && riga.pezzi === undefined) riga.pezzi = pezziSospesi;
     pezziSospesi = null;
     descrizioneSospesa = null;
@@ -207,6 +215,7 @@ export function leggiRighe(linee: string[]): RigheLette {
 
   for (const [i, linea] of linee.entries()) {
     if (inizio >= 0 && i <= inizio) continue;
+    fiduciaLinea = fiducie?.[i] ?? 1;
     if (fineRighe(linea) || (!inRighe && /\b(PAGAMENTO|PAGATO|ELETTRONICO)\b/.test(linea))) {
       if (inRighe) chiudiSospesa();
       inRighe = false;
@@ -268,6 +277,7 @@ export function leggiRighe(linee: string[]): RigheLette {
       if (!peso && (linea.match(/[A-Z]/g) ?? []).length >= 3 && !NON_PRODOTTO.test(linea.replace(/[^A-Z0-9]/g, '').replace(/0/g, 'O'))) {
         chiudiSospesa();
         descrizioneSospesa = linea;
+        fiduciaSospesa = fiduciaLinea;
       }
       continue;
     }
@@ -287,6 +297,7 @@ export function leggiRighe(linee: string[]): RigheLette {
       if (precedente) {
         precedente.prezzo = centesimi(Math.max(0, precedente.prezzo - Math.abs(valore)));
         precedente.sconto = centesimi((precedente.sconto ?? 0) + Math.abs(valore));
+        if (precedente.fiducia !== undefined) precedente.fiducia = Math.min(precedente.fiducia, fiduciaLinea);
       }
       continue;
     }

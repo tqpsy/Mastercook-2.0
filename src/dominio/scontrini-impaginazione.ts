@@ -19,10 +19,12 @@ const altezza = (p: { y0: number; y1: number }) => p.y1 - p.y0;
 const centroY = (p: { y0: number; y1: number }) => (p.y0 + p.y1) / 2;
 const mediana = (v: number[]) => [...v].sort((a, b) => a - b)[Math.floor(v.length / 2)] ?? 0;
 
-/** Un pezzo nuovo con il testo dato, al posto e con la fiducia di `come` (una riga o un pezzo). */
-const sintetico = (testo: string, come: { x0: number; y0: number; x1: number; y1: number; fiducia?: number }): Pezzo => ({ testo, x0: come.x0, y0: come.y0, x1: come.x1, y1: come.y1, fiducia: come.fiducia ?? 1 });
+type Riquadro = { x0: number; y0: number; x1: number; y1: number };
+/** Un pezzo nuovo con il testo dato, al posto di `come`: sicuro, o con la fiducia della riga da cui viene (il suo pezzo meno sicuro). */
+const sintetico = (testo: string, come: Riquadro | Riga): Pezzo => ({ testo, x0: come.x0, y0: come.y0, x1: come.x1, y1: come.y1, fiducia: 'fiducia' in come ? come.fiducia : 1 });
 /** Una riga di un solo pezzo. */
-const rigaDi = (testo: string, come: { x0: number; y0: number; x1: number; y1: number; fiducia?: number }): Riga => creaRiga([sintetico(testo, come)]);
+const rigaDi = (testo: string, come: Riquadro | Riga): Riga => creaRiga([sintetico(testo, come)]);
+const riquadro = ({ x0, y0, x1, y1 }: Riquadro): Riquadro => ({ x0, y0, x1, y1 });
 const testo = (r: Riga, l: LetturaGeometrica) => testoRiga(r, l.carattere);
 
 /**
@@ -223,7 +225,7 @@ function prendiNomi(nomi: LetturaGeometrica, quanti: number, taglia: boolean): {
   // Prima dei nomi: l'intestazione del negozio (senza la riga «DESCRIZIONE»: la rimettiamo noi, una sola).
   const testa = righe.slice(0, scelte[0].i).flatMap((r, i) => (eIntestazione(linee[i]) ? [] : [rigaDi(linee[i], r)]));
   const primo = scelte[0].riga;
-  return { testa: [...testa, rigaDi('DESCRIZIONE', { ...primo, y1: primo.y0, fiducia: 1 })], scelti: scelte, pezzi };
+  return { testa: [...testa, rigaDi('DESCRIZIONE', { ...riquadro(primo), y1: primo.y0 })], scelti: scelte, pezzi };
 }
 
 /** Toglie fino a `extra` righe di tessera tra le prime sei: se non bastano, resta com'era (non si sa quale nome manca). */
@@ -280,6 +282,6 @@ export function abbinaPerOrdine(pagina: LetturaGeometrica, prezzi: Pezzo[], nomi
     if (unitario !== null && Math.abs(unitario * q! - tot) < 0.011) return [creaRiga([nome]), creaRiga([sintetico(`${q} x ${unitario.toFixed(2).replace('.', ',')}`, s.riga), conSegno[i]], false)];
     return [creaRiga([nome, conSegno[i]], false)];
   });
-  const segnoTotale = resto.length && !fineRighe(resto[0].l) ? [rigaDi('TOTALE', { ...resto[0].r, fiducia: 1 })] : [];
+  const segnoTotale = resto.length && !fineRighe(resto[0].l) ? [rigaDi('TOTALE', riquadro(resto[0].r))] : [];
   return { origine: pagina.origine, larghezza: pagina.larghezza, carattere: null, righe: [...letti.testa, ...righe, ...segnoTotale, ...resto.map((x) => rigaDi(x.l, x.r))] };
 }

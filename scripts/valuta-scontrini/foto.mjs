@@ -4,6 +4,7 @@
  *
  *   npm run valuta:scontrini:foto -- [--etichetta fase-0] [--casi id,id] [--varianti base|tutte|nessuna]
  *                                    [--congela] [--fuori percorso.json] [--porta 5199] [--tesseract-locale cartella]
+ *                                    [--salva-righe cartella]
  *
  * Per ogni scontrino del corpus (`tests/scontrini/casi/*`) si parte da una foto:
  * - scontrini sintetici: la foto si disegna dalla «stampa» del file di verità;
@@ -12,7 +13,8 @@
  * davvero in mano a una persona: JPEG più compresso, foto spostata, più piccola o un po' storta, ombra.
  * Ogni lettura si confronta riga per riga con la verità (src/dominio/valutazione.ts) e il rapporto va in
  * `tests/scontrini/rapporti/<etichetta>.json`. Con `--congela` i testi letti si salvano in `casi/<id>/letture/`:
- * da quel momento li misura anche `npm run valuta:scontrini`, senza browser.
+ * da quel momento li misura anche `npm run valuta:scontrini`, senza browser. Con `--salva-righe` si salvano, per ogni lettura, anche
+ * le righe con la posizione e la fiducia dei pezzi (`LetturaFoto.righe`), fuori dal corpus: servono a studiare la fiducia.
  *
  * Il ripiego Tesseract scarica motore e lingua da cdn.jsdelivr.net. Dove la rete è chiusa si possono servire da locale:
  * motore e worker da node_modules, la lingua dal pacchetto npm `@tesseract.js-data/ita` (scaricato fuori dal progetto, per
@@ -43,6 +45,7 @@ const varianti = opzione('varianti', 'base');
 const congela = argomenti.includes('--congela');
 const fuori = opzione('fuori', join(CORPUS, 'rapporti', `${etichetta}.json`));
 const tessLocale = typeof opzione('tesseract-locale', null) === 'string' ? opzione('tesseract-locale') : null;
+const salvaRighe = typeof opzione('salva-righe', null) === 'string' ? opzione('salva-righe') : null;
 const soloCasi = typeof opzione('casi', null) === 'string' ? opzione('casi').split(',') : null;
 
 // Le variazioni sono sempre le stesse: due rapporti si confrontano solo se hanno lette le stesse foto.
@@ -161,18 +164,19 @@ async function nelBrowser({ casi, varianti, etichetta, base, tesseract }) {
       const inizio = performance.now();
       let testo = '';
       let controllo = null;
+      let righe = null;
       let errore = null;
       try {
         // Il lettore dà la lettura scelta e un controllo (seconda lettura della stessa foto): la misura usa tutti e due, come l'app.
-        ({ testo, controllo } = await leggiTestoDaFoto(await varia(blobBase, v), () => undefined));
+        ({ testo, controllo, righe } = await leggiTestoDaFoto(await varia(blobBase, v), () => undefined));
       } catch (e) {
         errore = String(e?.message ?? e);
       }
       tempi.push(performance.now() - inizio);
-      const valutazione = valuta(c.verita, leggiPerValutare(testo, indice, c.verita.carrello, controllo));
+      const valutazione = valuta(c.verita, leggiPerValutare(testo, indice, c.verita.carrello, controllo, righe));
       if (errore) valutazione.errori.unshift(`lettura fallita: ${errore}`);
       esiti.push({ caso: c.id, lettura: nome, valutazione, ...(errore ? { fallita: true } : {}) });
-      letti.push({ caso: c.id, nome, testo, controllo });
+      letti.push({ caso: c.id, nome, testo, controllo, righe });
       window.progresso?.(`${c.id} / ${nome}: ${valutazione.perfetta ? 'perfetta' : `${valutazione.righe.ok}/${valutazione.righe.vere} righe`}`);
     }
   }
@@ -211,6 +215,14 @@ try {
   writeFileSync(fuori, JSON.stringify(rapporto, null, 1) + '\n');
   console.log(`\nRapporto: ${fuori}`);
   for (const m of Object.values(rapporto.sintesi)) console.log(`  ${m.etichetta}: ${m.su === undefined ? m.valore : m.su ? `${Math.round((m.valore / m.su) * 1000) / 10}% (${m.valore}/${m.su})` : '—'}`);
+  if (salvaRighe) {
+    // Le righe con posizione e fiducia di ogni lettura (per studiare la fiducia): <cartella>/<caso>/<nome>.json.
+    for (const { caso, nome, testo, controllo, righe } of letti) {
+      mkdirSync(join(salvaRighe, caso), { recursive: true });
+      writeFileSync(join(salvaRighe, caso, `${nome}.json`), JSON.stringify({ testo, controllo, righe }));
+    }
+    console.log(`Righe salvate in ${salvaRighe}`);
+  }
   if (congela) {
     const conFineRiga = (t) => (t.endsWith('\n') ? t : `${t}\n`);
     for (const { caso, nome, testo, controllo } of letti) {

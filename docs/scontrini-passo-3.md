@@ -47,6 +47,16 @@ Il testo resta come ingresso compatibile (`leggiScontrino(testo)`) finché il nu
 Ogni sotto-passo si ferma se un numero della misura peggiora. Non si riscrive tutto insieme: molte regole del codice attuale hanno un test e un
 caso del corpus che le giustifica, e vanno spostate, non perse.
 
+## Stato
+
+- Sotto-passo 1 (#149): `scontrini-geometria.ts`, con `daScatole`, `daPagine`, `daTesto`, `testoDa` e `leggiLettura`. Stesso risultato di prima.
+- Sotto-passo 2 (#150): `scontrini-impaginazione.ts` al posto di `impagina` e `colonne.ts`; regole ripetute riunite in `scontrini-righe.ts`
+  (`limitiRighe`, `ePrezzoDiColonna`, `CAD`, `nomeDiRiga`). Testo e misura sulle foto identici a prima.
+- Sotto-passo 3: la fiducia del prezzo arriva alle righe (`RigaLetta.fiducia`, `LetturaFoto.righe`) e segnala le righe dubbie
+  (`SOGLIA_FIDUCIA`, `SOGLIA_PREZZO_SICURO`). Numeri in [valutazione-scontrini.md](valutazione-scontrini.md#passo-3-righe-con-le-coordinate-e-fiducia-misura-sulle-foto-119-letture-17-scontrini).
+- Resta: il parser delle righe (`leggiRighe`) lavora ancora sul testo di ogni riga; il passo successivo naturale è che legga i pezzi (il prezzo
+  è il pezzo a destra) invece di ritrovarli con `IMPORTO`.
+
 ## Criteri per unire
 
 - `npm run valuta:scontrini` (dentro `npm test`) non peggiora, e lint, tipi, build ed e2e dello scontrino (telefono e tablet) sono verdi.

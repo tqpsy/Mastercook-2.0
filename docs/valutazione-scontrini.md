@@ -23,7 +23,7 @@ I numeri principali (`riassumi` in `src/dominio/valutazione.ts`):
 - **Errori**, dove meno è meglio: prezzi sbagliati *senza avviso*, righe perse, righe in più, quantità sbagliate in casa, abbinamenti sbagliati.
 - **«Il conto torna» ma la lettura è sbagliata** (falso quadra): la lettura dichiara il totale in ordine, ma qualche riga è sbagliata, persa o in più (data e ora non contano: non fanno parte del conto). Oggi «quadra» fa vincere una lettura sull'altra (`punteggio` in `ocr.ts`): questo numero dice quanto è affidabile.
 
-Un errore *segnalato* è meno grave di uno *silenzioso*: chi controlla vede il primo, il secondo arriva in casa. L'app segnala una riga quando non ha il prezzo, quando il prezzo è ricavato dal conto, oppure quando **le due letture della foto non coincidono** su di lei (`doppiaLettura.ts`).
+Un errore *segnalato* è meno grave di uno *silenzioso*: chi controlla vede il primo, il secondo arriva in casa. L'app segnala una riga quando non ha il prezzo, quando il prezzo è ricavato dal conto, quando **le due letture della foto non coincidono** su di lei (`doppiaLettura.ts`) e il prezzo non è letto con sicurezza, oppure quando **PaddleOCR è poco sicuro del prezzo** (fiducia sotto `SOGLIA_FIDUCIA`, `importaScontrino.ts`; vedi «Passo 3» qui sotto).
 - **Letture affidabili**: ogni errore che resta (riga sbagliata, riga persa, data, ora o totale) è segnalato. Non vuol dire che la lettura sia giusta, vuol dire che nessun errore passa inosservato: è il numero che misura la Fase 1.
 - **Righe sbagliate non segnalate**, **righe perse non segnalate**, **data, ora o totale sbagliati non segnalati**: gli errori silenziosi, dove meno è meglio.
 - **Righe giuste segnalate per prudenza** (falsi allarmi): ogni riga giusta segnalata costa un controllo inutile. Se i falsi allarmi crescono troppo la segnalazione non serve più.
@@ -44,6 +44,7 @@ tests/scontrini/
   casi/<id>/letture/*.txt     testi già letti, congelati (si committano)
   casi/<id>/letture/<nome>-controllo.txt   la seconda lettura della stessa foto, accanto a <nome>.txt
   casi/<id>/letture/*-scatole.json   pezzi di testo di PaddleOCR, ricomposti come fa l'app
+  casi/<id>/letture/*-righe.json     la lettura scelta di una foto con le righe, la posizione e la fiducia dei pezzi (e il controllo)
   casi/<id>/foto.jpg          la foto vera dello scontrino (si committa, vedi «Foto e dati personali»)
   base.json                   i numeri di adesso del livello testo (il freno)
   rapporti/<fase>.json        rapporti del livello foto, uno per fase, per confrontarli
@@ -109,6 +110,31 @@ Cosa ha pesato di più: l'abbinamento dei nomi ai prezzi per ordine (regge le fo
 formato letto con l'unità prima del numero e con gli zeri letti O, la data incollata all'ora, `PROMO` nel nome che non è uno sconto,
 l'abbinamento alle spunte per parola intera (LATTE non è Lattuga), i non-alimenti che non diventano cibo, la doppia lettura che segnala
 le righe dubbie e il ripiego Tesseract che non sostituisce più una lettura buona di Paddle.
+
+## Passo 3: righe con le coordinate e fiducia (misura sulle foto, 119 letture, 17 scontrini)
+
+Il lettore produce righe con la posizione e la fiducia di ogni pezzo (`scontrini-geometria.ts`), l'abbinamento dei nomi ai prezzi lavora su
+quelle (`scontrini-impaginazione.ts`) e la fiducia del prezzo segnala le righe dubbie. Rapporti: `passo-3-0-main.json` (prima, misurato sulla
+stessa macchina), `passo-3-2.json` (abbinamento geometrico: identico, 27 metriche uguali) e `passo-3-3.json` (fiducia).
+
+Come si è scelta la fiducia (letture salvate con `--salva-righe`, provate offline):
+
+- la fiducia del **nome** o del **carattere meno sicuro** della riga è un segnale debole: per ogni riga sbagliata che scopre segnala decine di
+  righe giuste (carattere meno sicuro sotto 0,4: 4 errori scoperti, 81 falsi allarmi in più);
+- la fiducia **media del pezzo del prezzo** funziona: sotto 0,68 (plateau tra 0,66 e 0,70) scopre 6 righe sbagliate che passavano inosservate
+  con 2 falsi allarmi in più; da 0,78 i falsi allarmi esplodono;
+- al contrario, un prezzo letto con fiducia almeno 0,95 è giusto anche quando le due letture non coincidono: lì a sbagliare è l'altra lettura,
+  e la riga non si segnala più (a 0,93 una riga sbagliata tornerebbe silenziosa).
+
+| | Prima | Con la fiducia |
+|---|---|---|
+| Prezzi sbagliati senza avviso | 22 | **16** |
+| Righe sbagliate non segnalate | 42 | **36** |
+| Letture affidabili (ogni errore segnalato) | 79,8% (95/119) | **81,5% (97/119)** |
+| Righe giuste segnalate per prudenza (falsi allarmi) | 59 | **57** |
+
+Le soglie sono scelte sulle stesse letture su cui si misurano: con 17 scontrini sono un'indicazione, da ricontrollare quando il corpus cresce.
+La fiducia c'è solo con PaddleOCR: le letture di Tesseract, il testo incollato e il PDF non la portano.
 
 I limiti noti: il carattere con lo zero barrato (Lidl) letto come 8, e le scatole di prezzi molto chiare che la rilevazione non vede
 (Bennet su sfondo blu): in questi casi la lettura resta sbagliata ma segnalata, e si controlla riga per riga.

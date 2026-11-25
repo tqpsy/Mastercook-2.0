@@ -4,13 +4,15 @@
  * - `letture/*.txt`: testi già letti, congelati (da una foto vera o da una prova); `<nome>-controllo.txt` accanto a
  *   `<nome>.txt` è la seconda lettura della stessa foto (il controllo), come la dà `leggiTestoDaFoto`;
  * - `letture/*-scatole.json`: i pezzi di testo di PaddleOCR con la loro posizione, ricomposti come fa l'app;
+ * - `letture/*-righe.json`: la lettura scelta di una foto come la dà `leggiTestoDaFoto`, con le righe, la posizione e la fiducia di
+ *   ogni pezzo (`righe`) e il controllo: misura anche le righe segnalate perché lette con poca fiducia;
  * - `ideale` (solo scontrini sintetici): il testo che darebbe una lettura perfetta di ciò che è stampato.
  */
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Catalogo } from '../../src/catalogo/tipi';
 import type { Scatola } from '../../src/dominio/paddle';
-import { daScatole, testoDa } from '../../src/dominio/scontrini-geometria';
+import { creaRiga, daScatole, type LetturaGeometrica, type Pezzo, testoDa } from '../../src/dominio/scontrini-geometria';
 import { impaginaFoto } from '../../src/dominio/scontrini-impaginazione';
 import type { Carico, Verita } from '../../src/dominio/valutazione';
 
@@ -21,6 +23,8 @@ export interface LetturaCongelata {
   testo: string;
   /** La seconda lettura della stessa foto, se c'è (`<nome>-controllo.txt`). */
   controllo?: string;
+  /** Le righe con posizione e fiducia da cui viene `testo` (`<nome>-righe.json`). */
+  righe?: LetturaGeometrica;
 }
 export interface Caso {
   verita: Verita;
@@ -48,7 +52,12 @@ export function caricaCaso(id: string, radice = join(CARTELLA, 'casi')): Caso {
   const dir = join(cartella, 'letture');
   if (existsSync(dir)) {
     for (const f of readdirSync(dir).sort()) {
-      if (f.endsWith('-scatole.json')) letture.push({ nome: f.replace(/-scatole\.json$/, ''), testo: testoDaScatole(JSON.parse(readFileSync(join(dir, f), 'utf8'))) });
+      if (f.endsWith('-righe.json')) {
+        // Le righe tengono i pezzi nell'ordine della lettura (un nome abbinato al prezzo è a sinistra anche se il prezzo sta più in alto).
+        const file = JSON.parse(readFileSync(join(dir, f), 'utf8')) as { controllo: string | null; righe: Omit<LetturaGeometrica, 'righe'> & { righe: { pezzi: Pezzo[] }[] } };
+        const righe: LetturaGeometrica = { ...file.righe, righe: file.righe.righe.map((r) => creaRiga(r.pezzi, false)) };
+        letture.push({ nome: f.replace(/\.json$/, ''), testo: testoDa(righe), righe, ...(file.controllo ? { controllo: file.controllo } : {}) });
+      } else if (f.endsWith('-scatole.json')) letture.push({ nome: f.replace(/-scatole\.json$/, ''), testo: testoDaScatole(JSON.parse(readFileSync(join(dir, f), 'utf8'))) });
       else if (f.endsWith('.txt') && !f.endsWith('-controllo.txt')) {
         const nome = f.replace(/\.txt$/, '');
         const fileControllo = join(dir, `${nome}-controllo.txt`);

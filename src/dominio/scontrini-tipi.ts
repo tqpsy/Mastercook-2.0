@@ -17,6 +17,8 @@ export interface RigaLetta {
   corretta?: boolean;
   /** La descrizione si legge ma il prezzo no: la riga resta (con prezzo 0) perché lo scriva una persona. */
   senzaPrezzo?: boolean;
+  /** Quanto è sicura la lettura della riga (0–1): la più bassa tra i pezzi da cui viene. Solo dalla foto (PaddleOCR). */
+  fiducia?: number;
   /** Il formato scritto nella descrizione: «1L» → 1000 ml, «2X125G» → 250 g. */
   formato?: { quantita: number; unita: UnitaBase };
 }
