@@ -9,14 +9,17 @@
  * dopo il prezzo e righe spezzate su due linee. Una riga di cui si legge il nome ma non il prezzo non
  * sparisce: resta senza prezzo, e il conto con il totale dice quanto manca.
  *
- * Questo file è l'interfaccia pubblica: la lettura (`leggiScontrino`) e, qui sotto, i pezzi per responsabilità:
+ * Questo file è l'interfaccia pubblica: la lettura (`leggiScontrino` dal testo, `leggiLettura` dalle righe con le posizioni) e, qui
+ * sotto, i pezzi per responsabilità:
  * - `scontrini-tipi.ts`: i tipi di uno scontrino letto;
+ * - `scontrini-geometria.ts`: il formato intermedio, righe con coordinate e fiducia, dalla foto, dal PDF o dal testo;
  * - `scontrini-righe.ts`: le righe (importi, pezzi, peso, formato) e il totale che le chiude;
  * - `scontrini-testata.ts`: negozio, data e ora;
  * - `scontrini-prodotti.ts`: ingrediente e quantità da caricare in casa, Open Food Facts;
  * - `scontrini-abbinamenti.ts`: abbinamento alle righe già comprate e unione delle ripetute.
  */
 import { correggiPrezzi } from './quadratura';
+import { daTesto, type LetturaGeometrica, testoRiga } from './scontrini-geometria';
 import { centesimi, leggiRighe, pulisciLinea } from './scontrini-righe';
 import { leggiTestata } from './scontrini-testata';
 import type { ScontrinoLetto } from './scontrini-tipi';
@@ -24,11 +27,17 @@ import type { ScontrinoLetto } from './scontrini-tipi';
 export { abbinaRighe, type RigaDaAbbinare, type RigaRipetibile, unisciDescrizioni, unisciRipetute } from './scontrini-abbinamenti';
 export { daOpenFoodFacts, type ProdottoEsterno, quantitaProposta, suggerisciIngrediente } from './scontrini-prodotti';
 export { centesimi, DA_SALTARE, eFineRighe, eIntestazione, FINE_RIGHE, fineRighe, formatoDaDescrizione, IMPORTO, INTESTAZIONE_RIGHE, numero, PEZZI, pulisciLinea, SCONTO } from './scontrini-righe';
+export type { LetturaGeometrica, Pezzo, Riga } from './scontrini-geometria';
 export type { RigaLetta, ScontrinoLetto } from './scontrini-tipi';
 
-/** Legge il testo di uno scontrino. Non inventa: quello che non trova resta null o fuori dalle righe. */
+/** Legge il testo di uno scontrino (incollato, o di un lettore che dà solo testo): è la lettura delle sue righe (`daTesto`). */
 export function leggiScontrino(testo: string): ScontrinoLetto {
-  const linee = testo.split(/\r?\n/).map(pulisciLinea).filter(Boolean);
+  return leggiLettura(daTesto(testo));
+}
+
+/** Legge uno scontrino dalle sue righe con le posizioni (scontrini-geometria.ts). Non inventa: quello che non trova resta null o fuori dalle righe. */
+export function leggiLettura(lettura: LetturaGeometrica): ScontrinoLetto {
+  const linee = lettura.righe.map((r) => pulisciLinea(testoRiga(r, lettura.carattere))).filter(Boolean);
   const { righe, totale: totaleLetto, pagato, altriTotali, aliquote, ivaTotale } = leggiRighe(linee);
   let totale = totaleLetto;
   if (totale === null && righe.length) totale = pagato;

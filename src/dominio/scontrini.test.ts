@@ -11,7 +11,7 @@ describe('interfaccia pubblica di scontrini.ts', () => {
   it('espone ciò che servono agli altri file, anche dopo la divisione per responsabilità (righe, testata, prodotti, abbinamenti)', async () => {
     const tutto = await import('./scontrini');
     expect(Object.keys(tutto).sort()).toEqual(
-      ['DA_SALTARE', 'FINE_RIGHE', 'IMPORTO', 'INTESTAZIONE_RIGHE', 'PEZZI', 'SCONTO', 'abbinaRighe', 'centesimi', 'daOpenFoodFacts', 'eFineRighe', 'eIntestazione', 'fineRighe', 'formatoDaDescrizione', 'leggiScontrino', 'numero', 'pulisciLinea', 'quantitaProposta', 'suggerisciIngrediente', 'unisciDescrizioni', 'unisciRipetute'].sort(),
+      ['DA_SALTARE', 'FINE_RIGHE', 'IMPORTO', 'INTESTAZIONE_RIGHE', 'PEZZI', 'SCONTO', 'abbinaRighe', 'centesimi', 'daOpenFoodFacts', 'eFineRighe', 'eIntestazione', 'fineRighe', 'formatoDaDescrizione', 'leggiLettura', 'leggiScontrino', 'numero', 'pulisciLinea', 'quantitaProposta', 'suggerisciIngrediente', 'unisciDescrizioni', 'unisciRipetute'].sort(),
     );
   });
 });
