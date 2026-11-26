@@ -472,4 +472,32 @@ test('un PDF senza testo (una scansione) o un file che non è un PDF dà un mess
   await expect(page.getByRole('alert')).toContainText('non contiene testo');
   await ingresso.setInputFiles({ name: 'Non-un-pdf.pdf', mimeType: 'application/pdf', buffer: Buffer.from('questo non è un pdf') });
   await expect(page.getByRole('alert')).toContainText('Non sono riuscito a leggere il PDF');
+  // Il telefono (Android) a volte dà il file scelto vuoto: messaggio chiaro, non un errore della libreria.
+  await ingresso.setInputFiles({ name: 'Vuoto.pdf', mimeType: 'application/pdf', buffer: Buffer.alloc(0) });
+  await expect(page.getByRole('alert')).toContainText('Il telefono mi ha dato un file vuoto');
+});
+
+test('PDF scelto sul telefono: i byte si leggono finché il campo è nella pagina (su Android dopo il file risulta vuoto)', async ({ browser }, info) => {
+  const luca = await nuovoUtente('Luca');
+  const { page } = await apri(browser, luca, info.project.use);
+  await creaFamiglia(page, 'Casa Pdf Android');
+  await page.getByRole('button', { name: 'Spesa', exact: true }).click();
+  const stampa = await page.context().newPage();
+  await stampa.setContent(`<pre style="font: 12px monospace; margin: 20px">${scontrino(new Date().toLocaleDateString('sv-SE'))}</pre>`);
+  const buffer = await stampa.pdf();
+  await stampa.close();
+  await page.getByRole('button', { name: 'Aggiungi uno scontrino' }).click();
+  // Su Android il file scelto con il selettore non è più leggibile quando il campo non è più nella pagina o è stato pulito: chi lo legge dopo
+  // vede zero byte («InvalidPDFException: The PDF file is empty»). Mentre si legge, la schermata toglie i pulsanti (e il campo): si simula.
+  await page.evaluate(() => {
+    const originale = File.prototype.arrayBuffer;
+    File.prototype.arrayBuffer = function (this: File) {
+      const campo = document.querySelector<HTMLInputElement>('input[type=file][accept="application/pdf"]');
+      return !campo || campo.files?.length === 0 ? Promise.resolve(new ArrayBuffer(0)) : originale.call(this);
+    };
+  });
+  await page.getByRole('dialog', { name: 'Aggiungi uno scontrino' }).locator('input[type=file][accept="application/pdf"]').setInputFiles({ name: 'Scontrino_Digitale.pdf', mimeType: 'application/pdf', buffer });
+  const foglio = page.getByRole('dialog', { name: 'Controlla lo scontrino' });
+  await expect(foglio.getByLabel('Negozio')).toHaveValue('Supermercato Rossi');
+  await expect(foglio.getByLabel('Totale €')).toHaveValue('3,09');
 });
