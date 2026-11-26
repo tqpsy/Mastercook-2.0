@@ -7,6 +7,13 @@ export default defineConfig({
   // PGlite carica da sé i suoi file (wasm e dati): Vite non deve preimpacchettarlo.
   optimizeDeps: { exclude: ['@electric-sql/pglite'] },
   worker: { format: 'es' },
+  // I motori caricati per indirizzo (pdf.js per i PDF, onnxruntime per PaddleOCR) escono come .js e non .mjs: un .mjs servito
+  // con un tipo diverso da JavaScript il browser non lo esegue, e la lettura del PDF o della foto non parte.
+  build: {
+    rollupOptions: {
+      output: { assetFileNames: (asset) => (asset.names?.[0] ?? asset.name ?? '').endsWith('.mjs') ? 'assets/[name]-[hash].js' : 'assets/[name]-[hash][extname]' },
+    },
+  },
   // Data della versione, mostrata in Impostazioni accanto a «Aggiorna l’app».
   define: { __COSTRUITA_IL__: JSON.stringify(new Date().toISOString()) },
   plugins: [
