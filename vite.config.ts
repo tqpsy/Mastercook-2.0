@@ -2,6 +2,9 @@ import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
+/** Data e ora di questa costruzione: la stessa nella pagina (`__COSTRUITA_IL__`) e in `versione.json`. */
+const costruitaIl = new Date().toISOString();
+
 export default defineConfig({
   base: '/Mastercook-2.0/',
   // PGlite carica da sé i suoi file (wasm e dati): Vite non deve preimpacchettarlo.
@@ -15,9 +18,19 @@ export default defineConfig({
     },
   },
   // Data della versione, mostrata in Impostazioni accanto a «Aggiorna l’app».
-  define: { __COSTRUITA_IL__: JSON.stringify(new Date().toISOString()) },
+  define: { __COSTRUITA_IL__: JSON.stringify(costruitaIl) },
   plugins: [
     react(),
+    // Il tasto «Aggiorna l’app» chiede al server questa data per capire se la pagina aperta è rimasta indietro
+    // (il service worker nuovo si attiva da solo all'apertura, ma la pagina resta la vecchia finché non si ricarica).
+    // È un .json: non entra nella cache del service worker (globPatterns), così si legge sempre quella pubblicata.
+    {
+      name: 'versione-pubblicata',
+      apply: 'build',
+      generateBundle() {
+        this.emitFile({ type: 'asset', fileName: 'versione.json', source: JSON.stringify({ costruita_il: costruitaIl }) });
+      },
+    },
     VitePWA({
       // L'app nuova si attiva da sola alla riapertura; il blocco di versione del server impedisce
       // comunque a una versione vecchia di scrivere.
