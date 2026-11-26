@@ -10,6 +10,7 @@ import {
   type PortataMenu,
   porzioniAutomatiche,
   ripetiSettimana,
+  settimaneDelMese,
   valutaPortata,
 } from './menu';
 import { Indice } from './ricette';
@@ -38,6 +39,13 @@ describe('settimane', () => {
     expect(lunedi('2026-11-01')).toBe('2026-10-26');
     expect(lunedi('2026-11-02')).toBe('2026-11-02');
     expect(nomeSettimana('2026-10-26')).toBe('26 ottobre – 1 novembre');
+  });
+
+  it('le settimane del mese, a cavallo con i giorni dei mesi vicini', () => {
+    const settimane = settimaneDelMese('2026-11-26');
+    expect(settimane[0]).toEqual(['2026-10-26', '2026-10-27', '2026-10-28', '2026-10-29', '2026-10-30', '2026-10-31', '2026-11-01']);
+    expect(settimane.at(-1)).toEqual(['2026-11-30', '2026-12-01', '2026-12-02', '2026-12-03', '2026-12-04', '2026-12-05', '2026-12-06']);
+    expect(settimane).toHaveLength(6);
     expect(nomeSettimana('2026-11-02')).toBe('2–8 novembre');
   });
 });

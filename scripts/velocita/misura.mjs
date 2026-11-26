@@ -102,16 +102,16 @@ for (let i = 0; i < Number(RIPETI); i++) {
   const { c, page } = await contesto();
   metti('primo avvio (scarica tutto)', await apertura(page, false));
   metti('riapertura', await apertura(page, true));
-  for (const scheda of ['Menu', 'Spesa', 'Casa', 'Ricette', 'Oggi', 'Menu', 'Ricette']) {
+  for (const scheda of ['Calendario', 'Spesa', 'Casa', 'Ricette', 'Oggi', 'Calendario', 'Ricette']) {
     metti(`scheda ${scheda}`, await tocco(page, page.locator('nav.schede').getByRole('button', { name: scheda, exact: true })));
   }
   // Dentro le schermate: aggiungere un piatto (scelta tra le ricette), aprire un piatto, aprire una ricetta.
   const schede = page.locator('nav.schede');
-  await tocco(page, schede.getByRole('button', { name: 'Menu', exact: true }));
-  metti('Menu › aggiungi piatto', await tocco(page, page.locator('main button.piu, main button.aggiungi-riquadro')));
+  await tocco(page, schede.getByRole('button', { name: 'Calendario', exact: true }));
+  metti('Calendario › aggiungi piatto', await tocco(page, page.locator('main button.piu, main button.aggiungi-riquadro')));
   await page.keyboard.press('Escape');
   await page.waitForTimeout(500);
-  metti('Menu › apri piatto', await tocco(page, page.locator('main .piatti-riquadro button[aria-label^="Apri"]')));
+  metti('Calendario › apri piatto', await tocco(page, page.locator('main .piatti-riquadro button[aria-label^="Apri"]')));
   await page.keyboard.press('Escape');
   await page.waitForTimeout(500);
   await tocco(page, schede.getByRole('button', { name: 'Ricette', exact: true }));

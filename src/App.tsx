@@ -16,6 +16,7 @@ import { NuovaFamiglia } from './pagine/NuovaFamiglia';
 import { Consenso, VERSIONE_PRIVACY } from './pagine/Privacy';
 import { Oggi } from './pagine/Oggi';
 import { Ricette } from './pagine/Ricette';
+import { Scadenze } from './pagine/Scadenze';
 import { Spesa } from './pagine/Spesa';
 import { famiglieLocali } from './piattaforma/locale/motore';
 import { esci, type FamigliaMia, mieFamiglie, mioConsenso, sessioneSulDispositivo, supabase } from './piattaforma/supabase';
@@ -203,8 +204,8 @@ function ConAccesso() {
   }
 }
 
-type Scheda = 'oggi' | 'menu' | 'spesa' | 'ricette' | 'casa' | 'famiglia' | 'impostazioni';
-type SchedaPrincipale = 'oggi' | 'menu' | 'spesa' | 'ricette' | 'casa';
+type Scheda = 'oggi' | 'menu' | 'spesa' | 'ricette' | 'casa' | 'scadenze' | 'famiglia' | 'impostazioni';
+type SchedaPrincipale = 'oggi' | 'menu' | 'spesa' | 'ricette' | 'casa' | 'scadenze';
 
 /**
  * Le cinque schede della barra restano montate (React `Activity`): quella nascosta non si vede, non ha effetti attivi
@@ -219,7 +220,7 @@ function useSchedePreparate(attuale: Scheda): Set<SchedaPrincipale> {
   const pronta = vista.pronta;
   useEffect(() => {
     if (!pronta) return;
-    const tutte = () => setPreparate(new Set(['oggi', 'menu', 'spesa', 'casa', 'ricette']));
+    const tutte = () => setPreparate(new Set(['oggi', 'menu', 'spesa', 'casa', 'ricette', 'scadenze']));
     if ('requestIdleCallback' in window) {
       const id = requestIdleCallback(tutte, { timeout: 4000 });
       return () => cancelIdleCallback(id);
@@ -286,10 +287,11 @@ function Guscio({ email, apriFamiglia }: { email: string; apriFamiglia: (famigli
     () =>
       [
         { id: 'oggi', nome: 'Oggi' },
-        { id: 'menu', nome: 'Menu' },
+        { id: 'menu', nome: 'Calendario' },
         { id: 'spesa', nome: 'Spesa' },
         { id: 'casa', nome: 'Casa' },
         { id: 'ricette', nome: 'Ricette' },
+        { id: 'scadenze', nome: 'Scadenze' },
       ] as const,
     [],
   );
@@ -297,7 +299,7 @@ function Guscio({ email, apriFamiglia }: { email: string; apriFamiglia: (famigli
   const statoBreve = useStatoBreve();
   const preparate = useSchedePreparate(scheda);
   // Sempre gli stessi elementi: React ridisegna una scheda solo quando cambiano i dati che legge.
-  const pagine = useMemo(() => ({ oggi: <Oggi vai={vai} />, menu: <Menu />, spesa: <Spesa />, ricette: <Ricette />, casa: <Casa /> }), [vai]);
+  const pagine = useMemo(() => ({ oggi: <Oggi vai={vai} />, menu: <Menu />, spesa: <Spesa />, ricette: <Ricette />, casa: <Casa />, scadenze: <Scadenze vai={vai} /> }), [vai]);
   const pagina = (id: SchedaPrincipale, contenuto: ReactNode) =>
     preparate.has(id) && (
       <Activity key={id} mode={scheda === id ? 'visible' : 'hidden'}>
@@ -343,6 +345,7 @@ function Guscio({ email, apriFamiglia }: { email: string; apriFamiglia: (famigli
         {pagina('spesa', pagine.spesa)}
         {pagina('ricette', pagine.ricette)}
         {pagina('casa', pagine.casa)}
+        {pagina('scadenze', pagine.scadenze)}
         {scheda === 'famiglia' && (
           <>
             {/* Famiglia sta dentro Impostazioni: anche senza tasto Indietro (iPhone) si torna su. */}

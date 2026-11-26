@@ -259,7 +259,7 @@ function RicettePerUrgenti({ indice, presto, lotti, giorno }: { indice: Indice; 
   );
 }
 
-const ElencoLotti = memo(function ElencoLotti({
+export const ElencoLotti = memo(function ElencoLotti({
   indice,
   lotti,
   giorno,

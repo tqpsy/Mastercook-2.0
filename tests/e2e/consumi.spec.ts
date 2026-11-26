@@ -28,7 +28,7 @@ test('pasti: «mangiato» con le porzioni avanzate, correzione a differenza, ava
   await nuovo.getByRole('button', { name: 'Aggiungi', exact: true }).click();
   await salvato(page);
 
-  await page.getByRole('button', { name: 'Menu', exact: true }).click();
+  await page.getByRole('button', { name: 'Calendario', exact: true }).click();
   await page.getByRole('group', { name: 'Vista' }).getByRole('button', { name: 'Giorni' }).click();
   await page.getByRole('button', { name: `Aggiungi a cena di ${dataLunga(oggi())}` }).click();
   await page.getByRole('dialog').getByLabel('Cosa si mangia').fill('carbonara');
@@ -159,7 +159,7 @@ test('l’avanzo di ieri, in casa, si mette nel menu di domani da «Aggiungi»',
 
   // Domani a cena: in «Aggiungi» c'è l'avanzo in casa, un tocco e il pasto lo prende.
   const domani = piuGiorni(oggi(), 1);
-  await page.getByRole('button', { name: 'Menu', exact: true }).click();
+  await page.getByRole('button', { name: 'Calendario', exact: true }).click();
   await page.getByRole('group', { name: 'Vista' }).getByRole('button', { name: 'Giorni' }).click();
   await scegliGiorno(page, domani);
   await page.getByRole('button', { name: `Aggiungi a cena di ${dataLunga(domani)}` }).click();
