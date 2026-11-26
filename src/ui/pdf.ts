@@ -23,14 +23,7 @@ export class ErrorePdf extends Error {
  * a distanza di qualche secondo, dopo il caricamento della libreria, risultava vuoto («The PDF file is empty»).
  */
 export async function byteDelFile(file: Blob): Promise<Uint8Array> {
-  let dati = new Uint8Array(await file.arrayBuffer());
-  // Secondo modo di leggere: su alcuni telefoni FileReader riesce dove arrayBuffer() dà zero byte.
-  if (dati.byteLength === 0 && typeof FileReader !== 'undefined') dati = new Uint8Array(await new Promise<ArrayBuffer>((ok) => {
-    const lettore = new FileReader();
-    lettore.onload = () => ok(lettore.result instanceof ArrayBuffer ? lettore.result : new ArrayBuffer(0));
-    lettore.onerror = () => ok(new ArrayBuffer(0));
-    lettore.readAsArrayBuffer(file);
-  }));
+  const dati = new Uint8Array(await file.arrayBuffer());
   if (dati.byteLength === 0) {
     const nome = file instanceof File ? `, «${file.name}», tipo «${file.type || 'sconosciuto'}»` : '';
     throw new ErrorePdf('file', `il telefono ha dato un file vuoto (dichiarati ${file.size} byte${nome})`);
