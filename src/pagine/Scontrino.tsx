@@ -14,7 +14,7 @@ import { CampoQuantita } from '../ui/CampoQuantita';
 import { CercaIngrediente } from '../ui/CercaIngrediente';
 import { Foglio } from '../ui/Foglio';
 import { leggiTestoDaFoto } from '../ui/ocr';
-import { leggiTestoDaPdf } from '../ui/pdf';
+import { byteDelFile, ErrorePdf, leggiTestoDaPdf } from '../ui/pdf';
 import { Scanner } from '../ui/Scanner';
 import { useDatiSpesa } from './Spesa';
 
@@ -94,21 +94,31 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
 
   /** Uno scontrino digitale salvato come PDF: il testo c'è già, si legge come se fosse incollato. */
   async function pdf(e: ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = '';
+    const campo = e.target;
+    const file = campo.files?.[0];
     if (!file) return;
     setErrore(null);
-    setLettura(0);
     try {
-      const letto = await leggiTestoDaPdf(file);
+      // I byte si leggono per primi, finché il campo del file è ancora nella pagina: «Sto leggendo…» lo toglie (e con lui, su Android,
+      // il file scelto, che poi risulta vuoto), e il caricamento di pdf.js dalla rete lascia passare qualche secondo.
+      const dati = await byteDelFile(file);
+      campo.value = '';
+      setLettura(0);
+      const letto = await leggiTestoDaPdf(dati);
       if (letto.replace(/\s/g, '').length < 20) return setErrore('Questo PDF non contiene testo (forse è una scansione). Fotografa lo scontrino o scegli uno screenshot.');
       setTesto(letto);
       leggi(letto);
     } catch (e) {
-      // Il dettaglio dell'errore (in coda, tra parentesi) dice cosa è andato storto quando chi prova sul telefono manda uno screenshot.
-      const dettaglio = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
-      setErrore(`Non sono riuscito a leggere il PDF. Riprova, oppure copia il testo dello scontrino e incollalo qui sotto. (${dettaglio.slice(0, 160)})`);
+      // Il dettaglio dell'errore (in coda, tra parentesi, con la fase) dice cosa è andato storto quando chi prova sul telefono manda uno screenshot.
+      const fase = e instanceof ErrorePdf ? e.fase : 'lettura';
+      const dettaglio = e instanceof Error ? e.message : String(e);
+      setErrore(
+        fase === 'file'
+          ? `Il telefono mi ha dato un file vuoto. Se il PDF è su Drive o in un'altra app, scaricalo prima sul telefono e riprova; oppure copia il testo dello scontrino e incollalo qui sotto. (${dettaglio.slice(0, 160)})`
+          : `Non sono riuscito a leggere il PDF. Riprova, oppure copia il testo dello scontrino e incollalo qui sotto. (${fase}: ${dettaglio.slice(0, 160)})`,
+      );
     } finally {
+      campo.value = '';
       setLettura(null);
     }
   }
