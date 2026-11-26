@@ -18,6 +18,7 @@ Stack: TypeScript, React 19 + Vite (nessun router), CSS a mano, Dexie (copia loc
 
 ## Convenzioni
 - **Italiano ovunque**: nomi di file, funzioni, variabili, testi, commit e PR.
+- **Rispondi sempre in italiano** a Luca, in ogni messaggio della conversazione (anche brevi, anche dopo una notifica o un controllo automatico): mai in inglese.
 - Le tabelle non si scrivono mai direttamente: solo `public.applica_comando(comando)` con id, così ripetere un comando non fa doppi effetti. Si legge con `scarica_modifiche`. Menu e spesa sono intenzioni, la casa è la somma dei movimenti.
 - **Migrazioni**: `AAAAMMGGhhmmss_descrizione.sql` con **versione unica** e successiva all'ultima su `origin/main` (ricontrollare prima di unire: più persone lavorano in parallelo). `src/dati/migrazioni.test.ts` blocca le versioni doppie. Mai modificare o rinominare una migrazione già unita; ogni migrazione ha test in `tests/db/`; se cambia il significato dei comandi alzare `compatibilita.versione_minima_app`.
 - **Costo zero**: solo piani gratuiti, niente servizi a pagamento, nessun segreto nel codice (stanno nei segreti di GitHub).
