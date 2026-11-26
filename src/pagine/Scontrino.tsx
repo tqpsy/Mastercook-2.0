@@ -114,7 +114,7 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
       const dettaglio = e instanceof Error ? e.message : String(e);
       setErrore(
         fase === 'file'
-          ? `Il telefono mi ha dato un file vuoto, anche se il PDF non lo è: succede ad alcuni PDF salvati da Chrome. Con l'app File copia il PDF in un'altra cartella (per esempio Documenti), poi scegli la copia; oppure copia il testo dello scontrino e incollalo qui sotto. (${dettaglio.slice(0, 160)})`
+          ? `Il telefono mi ha dato un file vuoto, anche se il PDF non lo è: succede quando lo si sceglie dal collegamento «Download» del selettore. Scegli il file da «Documenti», oppure dal nome del telefono e poi dalla cartella Download; in alternativa copia il testo dello scontrino e incollalo qui sotto. (${dettaglio.slice(0, 160)})`
           : `Non sono riuscito a leggere il PDF. Riprova, oppure copia il testo dello scontrino e incollalo qui sotto. (${fase}: ${dettaglio.slice(0, 160)})`,
       );
     } finally {
