@@ -61,6 +61,18 @@ export function giorniDellaSettimana(lun: string): string[] {
   return Array.from({ length: 7 }, (_, i) => piuGiorni(lun, i));
 }
 
+/** Le settimane (lunedì-domenica) che coprono il mese di una data, per il mini-calendario: a cavallo con i giorni dei mesi vicini. */
+export function settimaneDelMese(data: string): string[][] {
+  const [a, m] = data.split('-').map(Number);
+  const primo = `${a}-${String(m).padStart(2, '0')}-01`;
+  const ultimoGiorno = new Date(Date.UTC(a, m, 0)).getUTCDate();
+  const ultimo = `${a}-${String(m).padStart(2, '0')}-${String(ultimoGiorno).padStart(2, '0')}`;
+  const fine = piuGiorni(lunedi(ultimo), 6);
+  const settimane: string[][] = [];
+  for (let g = lunedi(primo); g <= fine; g = piuGiorni(g, 7)) settimane.push(giorniDellaSettimana(g));
+  return settimane;
+}
+
 const GIORNI = ['domenica', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato'];
 const MESI = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'];
 

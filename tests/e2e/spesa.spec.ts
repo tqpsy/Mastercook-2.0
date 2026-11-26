@@ -13,7 +13,7 @@ test('spesa: la lista nasce dal menu, il carrello non tocca la casa, la conferma
   const luca = await nuovoUtente('Luca');
   const { page } = await apri(browser, luca, info.project.use);
   await creaFamiglia(page, 'Casa Spesa');
-  await page.getByRole('button', { name: 'Menu', exact: true }).click();
+  await page.getByRole('button', { name: 'Calendario', exact: true }).click();
   await page.getByRole('group', { name: 'Vista' }).getByRole('button', { name: 'Giorni' }).click();
   await page.getByRole('button', { name: `Aggiungi a cena di ${dataLunga(oggi())}` }).click();
   await page.getByRole('dialog').getByLabel('Cosa si mangia').fill('carbonara');
@@ -123,7 +123,7 @@ test('spesa per giorni scelti: con il menu su più giorni si compra solo per i p
   const luca = await nuovoUtente('Luca');
   const { page } = await apri(browser, luca, info.project.use);
   await creaFamiglia(page, 'Casa Giorni');
-  await page.getByRole('button', { name: 'Menu', exact: true }).click();
+  await page.getByRole('button', { name: 'Calendario', exact: true }).click();
   await page.getByRole('group', { name: 'Vista' }).getByRole('button', { name: 'Giorni' }).click();
   for (const [giorno, cerca, piatto] of [
     [oggi(), 'carbonara', /Spaghetti alla carbonara/],

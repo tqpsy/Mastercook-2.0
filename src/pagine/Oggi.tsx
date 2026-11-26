@@ -4,7 +4,7 @@ import { iconaIngrediente } from '../dominio/iconeCibo';
 import { righeAttive, useFamiglia, useVista } from '../dati/contesto';
 import { useIndice } from '../dati/indice';
 import { type ConfermaPasto as Conferma, daConfermare, type EsitoPasto, NOME_ESITO } from '../dominio/consumi';
-import type { CategoriaPasto, Eccezione, PortataMenu } from '../dominio/menu';
+import { type CategoriaPasto, type Eccezione, giorniDellaSettimana, lunedi, nomeGiorno, type PortataMenu, settimaneDelMese } from '../dominio/menu';
 import type { Indice, Ricetta } from '../dominio/ricette';
 import { daUsarePresto, giorniTra, oggi, piuGiorni, scadutoVero, statoData } from '../dominio/scadenze';
 import { spesaDelGiorno, type BisognoDelGiorno } from '../dominio/spesa';
@@ -156,6 +156,10 @@ export function Oggi({ vai }: { vai: (scheda: 'spesa' | 'casa' | 'menu') => void
   const io = righeAttive(vista, 'membro').find((m) => m.utente_id === utenteId);
   const giorno = oggi();
   useProlungaFissi(piuGiorni(giorno, 13));
+  // Solo per il pannello mese/settimana del tablet (vedi .oggi-settimana in stile.css): calendario e conteggi veri, niente di finto.
+  const giorniSettimana = giorniDellaSettimana(lunedi(giorno));
+  const settimaneMese = settimaneDelMese(giorno);
+  const meseLabel = new Date(`${giorno}T12:00:00`).toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
   const { attive } = useConferme(vista);
   const [aperto, setAperto] = useState<string | null>(null);
   /** «Non è andata così?» dal foglio degli avanzi: la risposta già scelta. */
@@ -201,6 +205,41 @@ export function Oggi({ vai }: { vai: (scheda: 'spesa' | 'casa' | 'menu') => void
         </p>
         <h2 className="titolo-grande">{nome ? `${saluto(adesso)}, ${nome}` : saluto(adesso)}</h2>
       </header>
+
+      {/* Solo da 900 px in su (vedi stile.css): mese e settimana a colpo d'occhio, accanto al resto della pagina. */}
+      <section className="oggi-settimana" aria-label="Mese e settimana">
+        <div className="oggi-mese">
+          <h3 style={{ textTransform: 'capitalize' }}>{meseLabel}</h3>
+          <div className="mese-griglia">
+            {['L', 'M', 'M', 'G', 'V', 'S', 'D'].map((l, i) => (
+              <span key={i} className="intest">
+                {l}
+              </span>
+            ))}
+            {settimaneMese.flat().map((g) => (
+              <span key={g} className={`giorno-mese${g.slice(0, 7) !== giorno.slice(0, 7) ? ' fuori' : ''}${g === giorno ? ' oggi' : ''}`}>
+                {Number(g.slice(8))}
+              </span>
+            ))}
+          </div>
+        </div>
+        <div className="oggi-mese-settimana">
+          <h3>Questa settimana</h3>
+          <ul className="elenco">
+            {giorniSettimana.map((g) => {
+              const n = dati.portate.filter((p) => p.data === g).length;
+              return (
+                <li key={g} className={`riga spazio${g === giorno ? ' oggi' : ''}`}>
+                  <strong style={{ textTransform: 'capitalize' }}>
+                    {nomeGiorno(g, true)} {Number(g.slice(8))}
+                  </strong>
+                  <span className="tenue">{n === 0 ? 'niente in menu' : n === 1 ? '1 pasto' : `${n} pasti`}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      </section>
 
       {indice && presto.length > 0 && (
         // Una tendina chiusa di base, come in Casa: si vede subito quanti prodotti stanno per scadere.

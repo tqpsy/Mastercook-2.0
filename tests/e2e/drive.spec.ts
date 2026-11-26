@@ -9,7 +9,7 @@ import { apri, apriSezione, nuovoUtente } from './aiuti';
 import { DriveFinto } from './google-finto';
 
 async function aggiungiCena(page: Page, cerca: string, titolo: string) {
-  await page.getByRole('button', { name: 'Menu', exact: true }).click();
+  await page.getByRole('button', { name: 'Calendario', exact: true }).click();
   await page.getByRole('group', { name: 'Vista' }).getByRole('button', { name: 'Giorni' }).click();
   await page.getByRole('button', { name: `Aggiungi a cena di ${dataLunga(oggi())}` }).click();
   await page.getByRole('dialog').getByLabel('Cosa si mangia').fill(cerca);
@@ -57,7 +57,7 @@ test('sul mio Drive: spiegazione, copia automatica, ritrovata su un altro telefo
   await b.getByRole('dialog', { name: 'Il tuo Google Drive' }).getByRole('button', { name: 'Ho capito, continua' }).click();
   await b.getByRole('list', { name: 'Famiglie sul Drive' }).getByRole('button', { name: 'Usa questa' }).click();
   await expect(b.getByText(nome, { exact: true })).toBeVisible({ timeout: 120_000 });
-  await b.getByRole('button', { name: 'Menu', exact: true }).click();
+  await b.getByRole('button', { name: 'Calendario', exact: true }).click();
   await expect(b.getByRole('button', { name: 'Apri Spaghetti alla carbonara' })).toBeVisible();
 
   // Il primo telefono salva di nuovo; il secondo, che ha una copia vecchia, non sovrascrive: chiede.

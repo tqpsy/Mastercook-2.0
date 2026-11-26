@@ -20,7 +20,7 @@ test('senza un ingrediente: solo per Sara, poi per tutti; il principale non si t
   await pannello.getByRole('button', { name: 'Fatto' }).click();
   await page.getByRole('button', { name: 'Chiudi' }).click();
 
-  await page.getByRole('button', { name: 'Menu', exact: true }).click();
+  await page.getByRole('button', { name: 'Calendario', exact: true }).click();
   await page.getByRole('group', { name: 'Vista' }).getByRole('button', { name: 'Giorni' }).click();
   await page.getByRole('button', { name: `Aggiungi a cena di ${dataLunga(oggi())}` }).click();
   const nuovo = page.getByRole('dialog', { name: `Cena di ${dataLunga(oggi())}` });
@@ -85,7 +85,7 @@ test('Antonino propone un piatto ⛔ solo se si può togliere l’ingrediente, e
   await pannello.getByRole('button', { name: 'Fatto' }).click();
   await page.getByRole('button', { name: 'Chiudi' }).click();
 
-  await page.getByRole('button', { name: 'Menu', exact: true }).click();
+  await page.getByRole('button', { name: 'Calendario', exact: true }).click();
   await page.getByRole('group', { name: 'Vista' }).getByRole('button', { name: 'Giorni' }).click();
   await page.getByRole('button', { name: `Aggiungi a cena di ${dataLunga(oggi())}` }).click();
   const nuovo = page.getByRole('dialog', { name: `Cena di ${dataLunga(oggi())}` });

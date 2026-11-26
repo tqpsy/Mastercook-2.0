@@ -29,7 +29,7 @@ test('cucinato oggi: ingredienti tolti subito, in frigo con il ripiano, poi mang
   const { page } = await apri(browser, luca, info.project.use);
   await creaFamiglia(page, 'Casa Cucina');
   await preparaCasa(page);
-  await page.getByRole('button', { name: 'Menu', exact: true }).click();
+  await page.getByRole('button', { name: 'Calendario', exact: true }).click();
   await page.getByRole('group', { name: 'Vista' }).getByRole('button', { name: 'Giorni' }).click();
   await page.getByRole('button', { name: `Aggiungi a cena di ${dataLunga(oggi())}` }).click();
   await page.getByRole('dialog').getByLabel('Cosa si mangia').fill('carbonara');
@@ -84,7 +84,7 @@ test('cucinato 3 giorni prima: l’avviso consiglia il freezer', async ({ browse
     [luca.id, giorno],
   );
   await page.reload();
-  await page.getByRole('button', { name: 'Menu', exact: true }).click();
+  await page.getByRole('button', { name: 'Calendario', exact: true }).click();
   await page.getByRole('group', { name: 'Vista' }).getByRole('button', { name: 'Giorni' }).click();
   await scegliGiorno(page, giorno);
   await page.getByRole('region', { name: dataLunga(giorno) }).getByRole('button', { name: `Apri ${CARBONARA}` }).click();

@@ -16,7 +16,7 @@ test('solo su questo telefono: i dati restano qui e il server non ne sa nulla', 
   await page.getByRole('button', { name: 'Crea la famiglia' }).click();
   await expect(page.getByText(nome, { exact: true })).toBeVisible({ timeout: 120_000 });
 
-  await page.getByRole('button', { name: 'Menu', exact: true }).click();
+  await page.getByRole('button', { name: 'Calendario', exact: true }).click();
   await page.getByRole('group', { name: 'Vista' }).getByRole('button', { name: 'Giorni' }).click();
   await page.getByRole('button', { name: `Aggiungi a cena di ${dataLunga(oggi())}` }).click();
   await page.getByRole('dialog').getByLabel('Cosa si mangia').fill('carbonara');
@@ -31,7 +31,7 @@ test('solo su questo telefono: i dati restano qui e il server non ne sa nulla', 
   // Dopo la ricarica la famiglia e il piatto ci sono ancora.
   await page.reload();
   await expect(page.getByText(nome, { exact: true })).toBeVisible({ timeout: 60_000 });
-  await page.getByRole('button', { name: 'Menu', exact: true }).click();
+  await page.getByRole('button', { name: 'Calendario', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Apri Spaghetti alla carbonara' })).toBeVisible();
 
   await page.getByRole('button', { name: 'Impostazioni' }).click();
