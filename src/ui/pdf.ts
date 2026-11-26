@@ -8,8 +8,10 @@ import { type PaginaPdf, testoDaPagine } from '../dominio/pdf';
 
 /** Il testo dello scontrino nel PDF; lancia un errore se il file non è un PDF leggibile. Vuoto se non ha testo (una scansione). */
 export async function leggiTestoDaPdf(file: Blob): Promise<string> {
-  const pdfjs = await import('pdfjs-dist');
-  pdfjs.GlobalWorkerOptions.workerSrc = (await import('pdfjs-dist/build/pdf.worker.min.mjs?url')).default;
+  // La versione «legacy» di pdf.js: quella normale usa funzioni troppo nuove per i browser dei telefoni (Promise.try,
+  // Map.getOrInsertComputed, Math.sumPrecise) e su un telefono non aggiornatissimo non legge nessun PDF.
+  const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+  pdfjs.GlobalWorkerOptions.workerSrc = (await import('pdfjs-dist/legacy/build/pdf.worker.min.mjs?url')).default;
   const caricamento = pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) });
   try {
     const documento = await caricamento.promise;

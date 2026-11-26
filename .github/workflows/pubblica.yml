@@ -38,9 +38,6 @@ jobs:
   app:
     needs: database
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.pubblicazione.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -56,6 +53,16 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
+
+  # La pubblicazione in un lavoro a parte, come nel modello di GitHub: nello stesso lavoro del caricamento deploy-pages a volte
+  # non trovava ancora il pacchetto appena caricato («No artifacts named github-pages») e il sito restava alla versione prima.
+  pubblica-app:
+    needs: app
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.pubblicazione.outputs.page_url }}
+    steps:
       - id: pubblicazione
         uses: actions/deploy-pages@v4
 
