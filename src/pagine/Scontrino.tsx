@@ -104,8 +104,10 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
       if (letto.replace(/\s/g, '').length < 20) return setErrore('Questo PDF non contiene testo (forse è una scansione). Fotografa lo scontrino o scegli uno screenshot.');
       setTesto(letto);
       leggi(letto);
-    } catch {
-      setErrore('Non sono riuscito a leggere il PDF. Riprova, oppure copia il testo dello scontrino e incollalo qui sotto.');
+    } catch (e) {
+      // Il dettaglio dell'errore (in coda, tra parentesi) dice cosa è andato storto quando chi prova sul telefono manda uno screenshot.
+      const dettaglio = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
+      setErrore(`Non sono riuscito a leggere il PDF. Riprova, oppure copia il testo dello scontrino e incollalo qui sotto. (${dettaglio.slice(0, 160)})`);
     } finally {
       setLettura(null);
     }
