@@ -58,8 +58,6 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
   const [leggiQr, setLeggiQr] = useState(false);
   const [righe, setRighe] = useState<RigaInRevisione[]>([]);
   const [errore, setErrore] = useState<string | null>(null);
-  /** Il selettore del telefono ha dato un PDF vuoto: si offre un secondo modo di sceglierlo (senza filtro sul tipo di file). */
-  const [pdfVuoto, setPdfVuoto] = useState(false);
   /** Il confronto tra le due letture della foto (righe, campi e righe forse perse), o `null` se il testo è incollato. */
   const [controllo, setControllo] = useState<ControlloLettura | null>(null);
   const [daFoto, setDaFoto] = useState(false);
@@ -100,7 +98,6 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
     const file = campo.files?.[0];
     if (!file) return;
     setErrore(null);
-    setPdfVuoto(false);
     try {
       // I byte si leggono per primi, finché il campo del file è ancora nella pagina: «Sto leggendo…» lo toglie (e con lui, su Android,
       // il file scelto, che poi risulta vuoto), e il caricamento di pdf.js dalla rete lascia passare qualche secondo.
@@ -115,10 +112,9 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
       // Il dettaglio dell'errore (in coda, tra parentesi, con la fase) dice cosa è andato storto quando chi prova sul telefono manda uno screenshot.
       const fase = e instanceof ErrorePdf ? e.fase : 'lettura';
       const dettaglio = e instanceof Error ? e.message : String(e);
-      setPdfVuoto(fase === 'file');
       setErrore(
         fase === 'file'
-          ? `Il telefono mi ha dato un file vuoto. Se il PDF è su Drive o in un'altra app, scaricalo prima sul telefono e riprova; oppure copia il testo dello scontrino e incollalo qui sotto. (${dettaglio.slice(0, 160)})`
+          ? `Il telefono mi ha dato un file vuoto, anche se il PDF non lo è: succede ad alcuni PDF salvati da Chrome. Con l'app File copia il PDF in un'altra cartella (per esempio Documenti), poi scegli la copia; oppure copia il testo dello scontrino e incollalo qui sotto. (${dettaglio.slice(0, 160)})`
           : `Non sono riuscito a leggere il PDF. Riprova, oppure copia il testo dello scontrino e incollalo qui sotto. (${fase}: ${dettaglio.slice(0, 160)})`,
       );
     } finally {
@@ -237,13 +233,6 @@ export function Scontrino({ indice, chiudi }: { indice: Indice; chiudi: () => vo
               <span aria-hidden>📄</span> Carica un PDF
               <input type="file" accept="application/pdf" onChange={pdf} hidden />
             </label>
-            {pdfVuoto && (
-              // Alcuni telefoni con il filtro «solo PDF» aprono un selettore che dà file vuoti: senza filtro si apre quello di Android.
-              <label className="bottone pieno" style={{ marginTop: 8 }}>
-                <span aria-hidden>📂</span> Prova a scegliere il PDF da «Sfoglia»
-                <input type="file" onChange={pdf} hidden />
-              </label>
-            )}
           </>
         )}
         <label className="campo" style={{ marginTop: 12 }}>
