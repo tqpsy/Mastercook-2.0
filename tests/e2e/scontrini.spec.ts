@@ -435,6 +435,30 @@ test('scontrino digitale come PDF: il testo si legge dal file e si importa come 
   await salvato(page);
 });
 
+test('il PDF si legge anche su un telefono senza le funzioni più nuove del browser (Promise.try, Map.getOrInsertComputed, Math.sumPrecise)', async ({ browser }, info) => {
+  const luca = await nuovoUtente('Luca');
+  // Come su un telefono non aggiornatissimo: le funzioni non ci sono, né nella pagina né nel worker che legge il PDF.
+  const togli = 'delete Promise.try; delete Map.prototype.getOrInsertComputed; delete Map.prototype.getOrInsert; delete WeakMap.prototype.getOrInsertComputed; delete Math.sumPrecise;';
+  const { page } = await apri(browser, luca, info.project.use, '', async (contesto) => {
+    await contesto.addInitScript(togli);
+    await contesto.route(/pdf\.worker/, async (rotta) => {
+      const risposta = await rotta.fetch();
+      await rotta.fulfill({ response: risposta, body: `${togli}\n${await risposta.text()}` });
+    });
+  });
+  expect(await page.evaluate(() => 'try' in Promise || 'sumPrecise' in Math)).toBe(false);
+  await creaFamiglia(page, 'Casa Pdf Vecchio');
+  await page.getByRole('button', { name: 'Spesa', exact: true }).click();
+  const stampa = await page.context().newPage();
+  await stampa.setContent(`<pre style="font: 12px monospace; margin: 20px">${scontrino(new Date().toLocaleDateString('sv-SE'))}</pre>`);
+  const buffer = await stampa.pdf();
+  await stampa.close();
+  await page.getByRole('button', { name: 'Aggiungi uno scontrino' }).click();
+  await page.getByRole('dialog', { name: 'Aggiungi uno scontrino' }).locator('input[type=file][accept="application/pdf"]').setInputFiles({ name: 'Scontrino_Digitale.pdf', mimeType: 'application/pdf', buffer });
+  const foglio = page.getByRole('dialog', { name: 'Controlla lo scontrino' });
+  await expect(foglio.getByLabel('Totale €')).toHaveValue('3,09');
+});
+
 test('un PDF senza testo (una scansione) o un file che non è un PDF dà un messaggio chiaro', async ({ browser }, info) => {
   const luca = await nuovoUtente('Luca');
   const { page } = await apri(browser, luca, info.project.use);
