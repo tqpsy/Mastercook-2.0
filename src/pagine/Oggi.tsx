@@ -196,12 +196,6 @@ export function Oggi({ vai }: { vai: (scheda: 'spesa' | 'casa' | 'menu') => void
       <header className="oggi-saluto">
         <p className="tenue" style={{ marginBottom: 0 }}>
           <span style={{ textTransform: 'capitalize' }}>{data}</span>
-          {famiglia && (
-            <>
-              {' · '}
-              <span>{String(famiglia.nome)}</span>
-            </>
-          )}
         </p>
         <h2 className="titolo-grande">{nome ? `${saluto(adesso)}, ${nome}` : saluto(adesso)}</h2>
       </header>

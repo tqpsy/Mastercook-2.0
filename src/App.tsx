@@ -3,7 +3,7 @@ import Dexie from 'dexie';
 import { Activity, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { configurato } from './config';
 import { Archivio } from './dati/archivio';
-import { FamigliaAperta, nomeArchivio, type Sessione, useFamiglia, useVista } from './dati/contesto';
+import { FamigliaAperta, nomeArchivio, righeAttive, type Sessione, useFamiglia, useVista } from './dati/contesto';
 import { ErroreRete } from './dati/tipi';
 import { Accesso } from './pagine/Accesso';
 import { Casa } from './pagine/Casa';
@@ -282,6 +282,9 @@ function Guscio({ email, apriFamiglia }: { email: string; apriFamiglia: (famigli
   useEffect(() => {
     riprendiLettura(famiglia);
   }, [famiglia]);
+  // Il nome della famiglia aperta: sempre visibile, qualunque sia la scheda attuale (non solo su Oggi).
+  const vista = useVista();
+  const famigliaRiga = righeAttive(vista, 'famiglia')[0];
   const avvisi = useAvvisi();
   const schede = useMemo(
     () =>
@@ -336,6 +339,7 @@ function Guscio({ email, apriFamiglia }: { email: string; apriFamiglia: (famigli
       <main className="pagina">
         {/* Il nome della scheda si vede già evidenziato nella barra: qui resta solo per il lettore dello schermo. */}
         <h1 className="solo-lettore">{titoloScheda}</h1>
+        {famigliaRiga && <p className="tenue nome-famiglia-attiva">{String(famigliaRiga.nome)}</p>}
         <AvvisoSync />
         <AvvisoLetturaFoto vai={vai} />
         <AvvisoMancanti />
