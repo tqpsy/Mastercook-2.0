@@ -5,7 +5,7 @@ import { expect, test } from '@playwright/test';
 import { dataLunga } from '../../src/dominio/menu';
 import { oggi, piuGiorni } from '../../src/dominio/scadenze';
 import { formattaGiorno } from '../../src/dominio/unita';
-import { apri, creaFamiglia, nuovoUtente, scegliGiorno, sql } from './aiuti';
+import { apri, creaFamiglia, nuovoUtente, sql, vaiAllaSettimanaDi } from './aiuti';
 
 const famigliaDi = '(select famiglia_id from utente_famiglia where utente_id = $1)';
 
@@ -14,7 +14,6 @@ test('spesa: la lista nasce dal menu, il carrello non tocca la casa, la conferma
   const { page } = await apri(browser, luca, info.project.use);
   await creaFamiglia(page, 'Casa Spesa');
   await page.getByRole('button', { name: 'Calendario', exact: true }).click();
-  await page.getByRole('group', { name: 'Vista' }).getByRole('button', { name: 'Giorni' }).click();
   await page.getByRole('button', { name: `Aggiungi a cena di ${dataLunga(oggi())}` }).click();
   await page.getByRole('dialog').getByLabel('Cosa si mangia').fill('carbonara');
   await page.getByRole('dialog').getByRole('button', { name: /Spaghetti alla carbonara/ }).click();
@@ -124,12 +123,11 @@ test('spesa per giorni scelti: con il menu su più giorni si compra solo per i p
   const { page } = await apri(browser, luca, info.project.use);
   await creaFamiglia(page, 'Casa Giorni');
   await page.getByRole('button', { name: 'Calendario', exact: true }).click();
-  await page.getByRole('group', { name: 'Vista' }).getByRole('button', { name: 'Giorni' }).click();
   for (const [giorno, cerca, piatto] of [
     [oggi(), 'carbonara', /Spaghetti alla carbonara/],
     [piuGiorni(oggi(), 4), 'aglio', /Spaghetti aglio, olio/],
   ] as const) {
-    await scegliGiorno(page, giorno);
+    await vaiAllaSettimanaDi(page, giorno);
     await page.getByRole('button', { name: `Aggiungi a cena di ${dataLunga(giorno)}` }).click();
     await page.getByRole('dialog').getByLabel('Cosa si mangia').fill(cerca);
     await page.getByRole('dialog').getByRole('button', { name: piatto }).first().click();

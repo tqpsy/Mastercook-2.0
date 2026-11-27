@@ -21,7 +21,6 @@ test('senza un ingrediente: solo per Sara, poi per tutti; il principale non si t
   await page.getByRole('button', { name: 'Chiudi' }).click();
 
   await page.getByRole('button', { name: 'Calendario', exact: true }).click();
-  await page.getByRole('group', { name: 'Vista' }).getByRole('button', { name: 'Giorni' }).click();
   await page.getByRole('button', { name: `Aggiungi a cena di ${dataLunga(oggi())}` }).click();
   const nuovo = page.getByRole('dialog', { name: `Cena di ${dataLunga(oggi())}` });
   await nuovo.getByLabel('Cosa si mangia').fill('pasta con le zucchine');
@@ -86,7 +85,6 @@ test('Antonino propone un piatto ⛔ solo se si può togliere l’ingrediente, e
   await page.getByRole('button', { name: 'Chiudi' }).click();
 
   await page.getByRole('button', { name: 'Calendario', exact: true }).click();
-  await page.getByRole('group', { name: 'Vista' }).getByRole('button', { name: 'Giorni' }).click();
   await page.getByRole('button', { name: `Aggiungi a cena di ${dataLunga(oggi())}` }).click();
   const nuovo = page.getByRole('dialog', { name: `Cena di ${dataLunga(oggi())}` });
   // Ricette con le zucchine, solo primi: tra le idee anche quella da fare senza parmigiano.

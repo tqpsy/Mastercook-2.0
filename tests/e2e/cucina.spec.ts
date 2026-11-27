@@ -85,7 +85,6 @@ test('fine della modalità cucina per il piatto del menu di oggi: si segna mangi
   await creaFamiglia(page, 'Casa Fine Menu');
   await spaghettiInCasa(page);
   await page.getByRole('button', { name: 'Calendario', exact: true }).click();
-  await page.getByRole('group', { name: 'Vista' }).getByRole('button', { name: 'Giorni' }).click();
   await page.getByRole('button', { name: `Aggiungi a cena di ${dataLunga(oggi())}` }).click();
   await page.getByRole('dialog').getByLabel('Cosa si mangia').fill('carbonara');
   await page.getByRole('dialog').getByRole('button', { name: /Spaghetti alla carbonara/ }).click();

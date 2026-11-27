@@ -17,7 +17,6 @@ test('solo su questo telefono: i dati restano qui e il server non ne sa nulla', 
   await expect(page.getByText(nome, { exact: true })).toBeVisible({ timeout: 120_000 });
 
   await page.getByRole('button', { name: 'Calendario', exact: true }).click();
-  await page.getByRole('group', { name: 'Vista' }).getByRole('button', { name: 'Giorni' }).click();
   await page.getByRole('button', { name: `Aggiungi a cena di ${dataLunga(oggi())}` }).click();
   await page.getByRole('dialog').getByLabel('Cosa si mangia').fill('carbonara');
   await page.getByRole('dialog').getByRole('button', { name: /Spaghetti alla carbonara/ }).click();

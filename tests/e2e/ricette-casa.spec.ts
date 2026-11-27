@@ -473,7 +473,6 @@ test('ricette ⭐ preferite e 💫 da ospiti, cerca per ingrediente e suggerite,
 
   // Nella scelta del piatto: il filtro ⭐ trova la carbonara.
   await page.getByRole('button', { name: 'Calendario', exact: true }).click();
-  await page.getByRole('group', { name: 'Vista' }).getByRole('button', { name: 'Giorni' }).click();
   await page.getByRole('button', { name: /^Aggiungi a cena di / }).first().click();
   const foglio = page.getByRole('dialog');
   await foglio.getByRole('group', { name: 'Ricette segnate' }).getByRole('button', { name: '⭐ Preferite' }).click();

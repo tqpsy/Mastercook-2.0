@@ -1513,18 +1513,7 @@ div.piatto-riquadro {
   }
 }
 
-/* Menu a riquadri: il giorno scelto come in Oggi, la settimana a righe (telefono) o a griglia (tablet). */
-.giorno-riquadri {
-  margin-bottom: 8px;
-}
-.titolo-giorno {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin: 12px 0 10px;
-  font-size: 1.2rem;
-}
+/* Menu: i piatti del giorno nella sua finestra, come in Oggi; la settimana a righe (telefono) o a griglia (tablet). */
 .etichetta.da-riempire {
   background: var(--superficie);
   border: 1px solid var(--bordo);
@@ -1533,7 +1522,6 @@ div.piatto-riquadro {
 .piatto-riquadro.a-parte {
   margin-top: 6px;
 }
-.giorno-riquadri .piatto-riquadro,
 .riquadro.cella .piatto-riquadro {
   height: auto;
 }
@@ -1550,7 +1538,7 @@ div.piatto-riquadro {
   padding: 6px;
   gap: 4px;
   border-radius: 14px;
-  min-height: 72px;
+  min-height: 76px;
 }
 .riquadro.cella.vuoto {
   background: transparent;
@@ -1569,10 +1557,10 @@ div.piatto-riquadro {
   opacity: 0.6;
 }
 .riquadro.cella .piatto-riquadro {
-  min-height: 40px;
+  min-height: 42px;
   padding: 6px 7px;
   gap: 3px;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   border-radius: 9px;
 }
 .riquadro.cella .sigla {
@@ -1592,14 +1580,19 @@ div.piatto-riquadro {
   margin-bottom: 8px;
 }
 .testa-giorno {
+  all: unset;
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  cursor: pointer;
   text-align: center;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   color: var(--testo-tenue);
   padding: 4px 0;
 }
 .testa-giorno strong {
   font-family: var(--carattere-titoli);
-  font-size: 1.05rem;
+  font-size: 1.15rem;
   color: var(--testo);
 }
 .testa-giorno.oggi,
@@ -1613,20 +1606,20 @@ div.piatto-riquadro {
   align-items: center;
   justify-content: center;
   gap: 2px;
-  font-size: 0.78rem;
+  font-size: 0.82rem;
   font-weight: 600;
   color: var(--testo-tenue);
   text-align: center;
 }
 .testa-pasto-settimana span {
-  font-size: 1.4rem;
+  font-size: 1.5rem;
 }
 .riempi-vuoti {
   margin: 14px 0;
   min-height: 52px;
 }
 
-/* Menu: vista, «Oggi» e «⋯» su una riga; i giorni come striscia; «Riempi i vuoti» sempre a portata di pollice. */
+/* Menu: «Oggi» e «⋯» su una riga; «Riempi i vuoti» sempre a portata di pollice. */
 .comandi-menu {
   flex-wrap: wrap;
   margin: 8px 0 12px;
@@ -1665,50 +1658,6 @@ div.piatto-riquadro {
 }
 .tendina .voce + .voce {
   border-top: 1px solid var(--bordo);
-}
-.striscia-giorni {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 6px;
-  margin-bottom: 14px;
-}
-.striscia-giorni button {
-  min-height: 64px;
-  padding: 4px 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  line-height: 1.15;
-  border: 1px solid var(--bordo);
-  border-radius: 12px;
-  background: var(--superficie);
-  color: var(--testo);
-  font: inherit;
-  cursor: pointer;
-}
-.striscia-giorni small {
-  font-size: 0.8rem;
-  color: var(--testo-tenue);
-}
-.striscia-giorni strong {
-  font-family: var(--carattere-titoli);
-  font-size: 1.2rem;
-}
-.striscia-giorni button.passato {
-  opacity: 0.55;
-}
-.striscia-giorni button.oggi {
-  border: 2px solid var(--primario);
-}
-.striscia-giorni button[aria-pressed='true'] {
-  background: var(--primario);
-  border-color: var(--primario);
-  color: var(--primario-testo);
-  opacity: 1;
-}
-.striscia-giorni button[aria-pressed='true'] small {
-  color: inherit;
 }
 .pagina {
   padding-bottom: calc(160px + env(safe-area-inset-bottom));
@@ -1755,20 +1704,9 @@ div.piatto-riquadro {
   border-radius: 12px;
   min-height: 40px;
 }
-.giorno-riquadri .riquadro:not(.vuoto) > .aggiungi-riquadro {
-  margin-top: auto;
-}
 .etichetta.ospiti-giorno {
   background: var(--senape-tenue);
   color: var(--testo);
-}
-.due-settimane {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 18px;
-}
-.striscia-titolo {
-  margin: 0 0 6px;
 }
 .riquadri.riquadri-menu-largo .riquadro:last-child {
   grid-column: 1 / -1;
@@ -1877,26 +1815,6 @@ p > .link {
   display: inline;
   min-height: 0;
 }
-.due-settimane {
-  display: grid;
-  gap: 4px;
-  margin-bottom: 14px;
-}
-.due-settimane .striscia-giorni {
-  margin-bottom: 4px;
-}
-.sopratitolo.striscia-titolo {
-  margin: 4px 0 6px;
-  font-size: 0.78rem;
-}
-@media (min-width: 900px),
-  (orientation: landscape) and (min-width: 560px) and (max-height: 600px) {
-  .due-settimane {
-    grid-template-columns: 1fr 1fr;
-    column-gap: 20px;
-  }
-}
-
 /* Modalità cucina: sempre scura, a tutto schermo, testi e tasti grandi per le mani sporche. */
 .modalita-cucina {
   position: fixed;
@@ -2643,15 +2561,6 @@ details > summary:has(.primo-presto) {
 .maiuscola::first-letter {
   text-transform: uppercase;
 }
-.giorno-riquadri .riquadri:not(.riquadri-menu-largo) > .riquadro:not(:last-child:nth-child(odd)) .piatto-riquadro {
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-}
-.giorno-riquadri .riquadri:not(.riquadri-menu-largo) > .riquadro:not(:last-child:nth-child(odd)) .piatto-riquadro .sigle {
-  flex-shrink: 0;
-}
 .riempi-vuoti.bottone.primario {
   background: var(--senape);
   border-color: var(--senape);
@@ -2674,11 +2583,6 @@ details > summary:has(.primo-presto) {
     flex-wrap: nowrap;
     gap: 6px;
   }
-  .comandi-menu:not(.largo) .scelte.segmenti button {
-    min-height: 40px;
-    padding: 0 9px;
-    font-size: 0.88rem;
-  }
   .comandi-menu:not(.largo) .torna-oggi {
     padding: 0 10px;
     font-size: 0.88rem;
@@ -2695,7 +2599,18 @@ details > summary:has(.primo-presto) {
   }
 }
 .settimana-griglia .testa-giorno:not(.scelto) {
-  background: transparent;
+  background: var(--sfondo);
+}
+/* La riga dei giorni resta sempre in vista: ancorata in cima alla griglia (che scorre lei, non la pagina, quando
+   i piatti sono tanti: vedi useFinoInFondo e .settimana-griglia.riempie più sotto). */
+.settimana-griglia .testa-giorno,
+.settimana-griglia .angolo {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+}
+.settimana-griglia .angolo {
+  background: var(--sfondo);
 }
 
 /* Menu senza titolo della settimana: si scorre col dito e i riquadri riempiono lo schermo (altezza da useFinoInFondo). */
@@ -2710,63 +2625,15 @@ details > summary:has(.primo-presto) {
   padding: 0 16px;
   background: var(--sfondo);
 }
-.comandi-menu .scelte.segmenti {
-  flex: 0 1 auto;
-  min-width: 0;
-  flex-wrap: nowrap;
-}
 .comandi-menu .torna-oggi {
   flex-shrink: 0;
 }
 .comandi-menu .torna-oggi:disabled {
   opacity: 0.4;
 }
-/* Giorni a carosello: ieri, oggi e domani affiancati a tutta larghezza; il binario lo muove il dito (useCarosello). */
-.carosello {
-  display: flex;
-  flex-direction: column;
-  margin: 0 -16px;
-  overflow: hidden;
-  touch-action: pan-y;
-}
-.binario {
-  flex: 1;
-  display: flex;
-  transform: translate3d(-100%, 0, 0);
-  will-change: transform;
-}
-.binario > .giorno-riquadri {
-  flex: 0 0 100%;
-  box-sizing: border-box;
-  min-width: 0;
-  padding: 0 16px;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-}
-.binario > .giorno-riquadri > .riquadri {
-  flex: 1;
-}
-.striscia-giorni button {
-  min-height: 54px;
-}
-.striscia-giorni strong {
-  font-size: 1.3rem;
-}
-.giorno-riquadri .titolo-giorno {
-  margin: 4px 0 8px;
-}
-.giorno-riquadri .piatto-riquadro {
-  font-size: 1.05rem;
-}
-.giorno-riquadri .testa-riquadro :is(h3, h4) {
-  font-size: 1.15rem;
-}
-.giorno-riquadri .riquadro .aggiungi-riquadro {
-  font-size: 1rem;
-}
 .settimana-griglia.riempie {
-  grid-template-rows: auto repeat(var(--pasti, 3), minmax(72px, 1fr));
+  overflow-y: auto;
+  grid-template-rows: auto repeat(var(--pasti, 3), minmax(76px, 1fr));
   row-gap: 4px;
   column-gap: 10px;
 }
@@ -2775,24 +2642,15 @@ details > summary:has(.primo-presto) {
   border-radius: 8px;
 }
 .settimana-griglia .riquadro.cella .piatto-riquadro {
-  font-size: 0.88rem;
+  font-size: 0.9rem;
 }
 @media (min-width: 900px),
   (orientation: landscape) and (min-width: 560px) and (max-height: 600px) {
-  .giorno-riquadri .piatto-riquadro {
-    font-size: 1.15rem;
-  }
-  .giorno-riquadri .testa-riquadro :is(h3, h4) {
-    font-size: 1.25rem;
-  }
-  .giorno-riquadri .emoji-pasto {
-    font-size: 1.7rem;
-  }
   .settimana-griglia .riquadro.cella .piatto-riquadro {
-    font-size: 0.92rem;
+    font-size: 0.96rem;
   }
   .settimana-griglia .testa-giorno {
-    font-size: 0.95rem;
+    font-size: 1rem;
   }
 }
 /* Due gruppi di bottoni sulla stessa riga (⭐/💫 accanto alle categorie o ai modi di suggerire). */

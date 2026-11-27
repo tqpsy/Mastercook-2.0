@@ -10,7 +10,6 @@ import { DriveFinto } from './google-finto';
 
 async function aggiungiCena(page: Page, cerca: string, titolo: string) {
   await page.getByRole('button', { name: 'Calendario', exact: true }).click();
-  await page.getByRole('group', { name: 'Vista' }).getByRole('button', { name: 'Giorni' }).click();
   await page.getByRole('button', { name: `Aggiungi a cena di ${dataLunga(oggi())}` }).click();
   await page.getByRole('dialog').getByLabel('Cosa si mangia').fill(cerca);
   await page.getByRole('dialog').getByRole('button', { name: new RegExp(titolo) }).first().click();

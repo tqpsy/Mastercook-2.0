@@ -1,6 +1,7 @@
 /** Aiuti condivisi dalle prove dell'interfaccia: utenti di prova, sessione nel browser, passi ricorrenti. */
 import { type Browser, type BrowserContext, expect, type Locator, type Page } from '@playwright/test';
 import { dataLunga } from '../../src/dominio/menu';
+import { oggi } from '../../src/dominio/scadenze';
 
 export const SERVER = `http://localhost:${process.env.MC_PORTA_SERVER ?? '14400'}`;
 
@@ -68,14 +69,22 @@ export async function scorri(elemento: Locator, verso: 'avanti' | 'indietro') {
   }, verso);
 }
 
-/** Menu, vista «Giorni»: si mostra un giorno alla volta, scelto dalla striscia (scorrendola alla settimana dopo o prima se serve). */
+/** Menu: scorre la griglia della settimana (settimana dopo o prima, finché serve) finché non mostra `data`. */
+export async function vaiAllaSettimanaDi(page: Page, data: string) {
+  const giorno = page.getByRole('button', { name: `Apri ${dataLunga(data)}` });
+  const griglia = page.getByRole('region', { name: 'Settimana' });
+  const verso: 'avanti' | 'indietro' = data < oggi() ? 'indietro' : 'avanti';
+  for (let i = 0; i < 8 && !(await giorno.count()); i++) {
+    // Sul telefono la griglia scorre lei i giorni: si cambia settimana solo quando è già al bordo (vedi useScorrimento).
+    await griglia.evaluate((el, v) => void (el.scrollLeft = v === 'avanti' ? el.scrollWidth : 0), verso);
+    await scorri(griglia, verso);
+  }
+}
+
+/** Apre la finestra di un giorno (il suo numero in cima alla griglia), scorrendo fino alla sua settimana se serve. */
 export async function scegliGiorno(page: Page, data: string) {
-  const giorno = page.getByRole('button', { name: `Mostra ${dataLunga(data)}` });
-  const striscia = page.locator('.striscia-giorni').first();
-  if (!(await giorno.count())) await scorri(striscia, 'avanti');
-  if (!(await giorno.count())) await scorri(striscia, 'indietro');
-  if (!(await giorno.count())) await scorri(striscia, 'indietro');
-  await giorno.click();
+  await vaiAllaSettimanaDi(page, data);
+  await page.getByRole('button', { name: `Apri ${dataLunga(data)}` }).click();
 }
 
 /** Apre una sezione delle Impostazioni (sono chiuse all'inizio); se è già aperta la lascia com'è. */

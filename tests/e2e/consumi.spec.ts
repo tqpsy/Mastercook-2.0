@@ -5,7 +5,7 @@
 import { expect, type Page, test } from '@playwright/test';
 import { dataLunga } from '../../src/dominio/menu';
 import { oggi, piuGiorni } from '../../src/dominio/scadenze';
-import { apri, creaFamiglia, nuovoUtente, scegliGiorno, sql } from './aiuti';
+import { apri, creaFamiglia, nuovoUtente, sql, vaiAllaSettimanaDi } from './aiuti';
 
 const famigliaDi = '(select famiglia_id from utente_famiglia where utente_id = $1)';
 const salvato = (page: Page) => expect(page.getByRole('button', { name: 'Impostazioni' })).toHaveAccessibleDescription('Stato del salvataggio: Tutto salvato');
@@ -29,7 +29,6 @@ test('pasti: «mangiato» con le porzioni avanzate, correzione a differenza, ava
   await salvato(page);
 
   await page.getByRole('button', { name: 'Calendario', exact: true }).click();
-  await page.getByRole('group', { name: 'Vista' }).getByRole('button', { name: 'Giorni' }).click();
   await page.getByRole('button', { name: `Aggiungi a cena di ${dataLunga(oggi())}` }).click();
   await page.getByRole('dialog').getByLabel('Cosa si mangia').fill('carbonara');
   await page.getByRole('dialog').getByRole('button', { name: /Spaghetti alla carbonara/ }).click();
@@ -162,8 +161,7 @@ test('l’avanzo di ieri, in casa, si mette nel menu di domani da «Aggiungi»',
   // Domani a cena: in «Aggiungi» c'è l'avanzo in casa, un tocco e il pasto lo prende.
   const domani = piuGiorni(oggi(), 1);
   await page.getByRole('button', { name: 'Calendario', exact: true }).click();
-  await page.getByRole('group', { name: 'Vista' }).getByRole('button', { name: 'Giorni' }).click();
-  await scegliGiorno(page, domani);
+  await vaiAllaSettimanaDi(page, domani);
   await page.getByRole('button', { name: `Aggiungi a cena di ${dataLunga(domani)}` }).click();
   const avanzi = page.getByRole('dialog').getByRole('group', { name: 'Avanzi in casa' });
   await expect(avanzi).toContainText('2 porzioni in frigo');

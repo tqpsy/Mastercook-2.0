@@ -1,4 +1,4 @@
-/** Menu: i riquadri dei pasti (vista Giorni), la griglia della settimana e la panoramica. */
+/** Menu: i riquadri dei pasti e la griglia della settimana. */
 import { useEffect, useRef, useState } from 'react';
 import { useVista } from '../../dati/contesto';
 import { NOME_ESITO } from '../../dominio/compatibilita';
@@ -83,8 +83,8 @@ export function RiquadroMenu({
         </div>
       )}
       {/* Telefono: «+» tondo in alto a destra; tablet: «+ Aggiungi» tratteggiato in fondo al riquadro. Nella settimana
-          le caselle piene non hanno il «+»: si aggiunge dal giorno. */}
-      {!vuoto && !cella && !largo && (
+          la cella piena ha il «+» in fondo, compatto: si aggiunge sempre, anche con piatti già messi. */}
+      {!vuoto && (cella || !largo) && (
         <button className="altro-riquadro piu" aria-label={etichetta} onClick={aggiungi}>
           +
         </button>
@@ -144,7 +144,9 @@ export function RiquadroMenu({
 
 /**
  * La settimana come griglia pasti × giorni, ogni casella un riquadro. Sul tablet tutta la settimana; sul
- * telefono due giorni e mezzo che scorrono di lato, con i pallini che dicono a che punto si è.
+ * telefono due giorni e mezzo che scorrono di lato, con i pallini che dicono a che punto si è. La riga dei
+ * giorni resta sempre in vista (anche quando, con tanti piatti, sono le celle sotto a scorrere); toccando un
+ * giorno si apre la sua finestra (`apriGiorno`).
  */
 export function SettimanaGriglia({
   riserva,
@@ -154,6 +156,7 @@ export function SettimanaGriglia({
   oggiData,
   scelto,
   cella,
+  apriGiorno,
 }: {
   riserva: number;
   largo: boolean;
@@ -162,6 +165,7 @@ export function SettimanaGriglia({
   oggiData: string;
   scelto: string;
   cella: (data: string, c: CategoriaPasto) => React.ReactNode;
+  apriGiorno: (data: string) => void;
 }) {
   const scorre = useRef<HTMLDivElement>(null);
   const [pagina, setPagina] = useState(0);
@@ -198,9 +202,15 @@ export function SettimanaGriglia({
       >
         <span className="angolo" />
         {giorni.map((g) => (
-          <span key={g} data-giorno={g} className={`testa-giorno${g === (largo ? oggiData : scelto) ? ' scelto' : ''}${g === oggiData ? ' oggi' : ''}`}>
+          <button
+            key={g}
+            data-giorno={g}
+            className={`testa-giorno${g === (largo ? oggiData : scelto) ? ' scelto' : ''}${g === oggiData ? ' oggi' : ''}`}
+            aria-label={`Apri ${dataLunga(g)}`}
+            onClick={() => apriGiorno(g)}
+          >
             {nomeGiorno(g, true)} <strong>{Number(g.slice(8))}</strong>
-          </span>
+          </button>
         ))}
         {categorie.map((c) => (
           <div key={c.valore} style={{ display: 'contents' }}>
@@ -225,65 +235,4 @@ export function SettimanaGriglia({
 
 export function formattaPorzioni(n: number) {
   return n === 1 ? '1 porzione' : `${n.toLocaleString('it-IT')} porzioni`;
-}
-
-export function Panoramica({
-  indice,
-  dati,
-  giorni,
-  categorie,
-  settimana,
-  apri,
-  oggiData,
-}: {
-  indice: Indice;
-  dati: DatiMenu;
-  giorni: string[];
-  categorie: CategoriaPasto[];
-  settimana: PortataMenu[];
-  apri: (id: string) => void;
-  oggiData: string;
-}) {
-  const esiti = settimana.map((p) => descrivi(indice, dati, p));
-  const problemi = esiti.filter((d) => d.valutazione && d.valutazione.esito !== 'adatta').length;
-  const vuoti = giorni.reduce((n, g) => n + categorie.filter((c) => !settimana.some((p) => p.data === g && p.categoria === c.valore)).length, 0);
-  return (
-    <>
-      <div className="scheda">
-        <p style={{ margin: 0 }}>
-          {settimana.length === 1 ? '1 piatto' : `${settimana.length} piatti`} in menu · {vuoti === 1 ? '1 pasto vuoto' : `${vuoti} pasti vuoti`}
-          {problemi > 0 && ` · ${problemi} da controllare`}
-        </p>
-      </div>
-      <div className="scheda">
-        <ul className="elenco">
-          {giorni.map((g) => {
-            const delGiorno = categorie.flatMap((c) => settimana.filter((p) => p.data === g && p.categoria === c.valore).map((p) => ({ c, p })));
-            return (
-              <li key={g} className={g === oggiData ? 'oggi' : undefined}>
-                <strong style={{ textTransform: 'capitalize' }}>{dataLunga(g)}</strong>
-                {delGiorno.length === 0 ? (
-                  <p className="tenue" style={{ margin: '4px 0 0' }}>
-                    Niente in menu.
-                  </p>
-                ) : (
-                  <div className="riga" style={{ flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
-                    {delGiorno.map(({ c, p }) => {
-                      const d = descrivi(indice, dati, p);
-                      return (
-                        <button key={p.id} className="etichetta" onClick={() => apri(p.id)} aria-label={`Apri ${d.titolo}`}>
-                          <span aria-hidden>{c.emoji}</span> {d.valutazione && d.valutazione.esito !== 'adatta' ? `${ICONA_ESITO[d.valutazione.esito]} ` : ''}
-                          {d.titolo}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-    </>
-  );
 }

@@ -30,7 +30,6 @@ test('cucinato oggi: ingredienti tolti subito, in frigo con il ripiano, poi mang
   await creaFamiglia(page, 'Casa Cucina');
   await preparaCasa(page);
   await page.getByRole('button', { name: 'Calendario', exact: true }).click();
-  await page.getByRole('group', { name: 'Vista' }).getByRole('button', { name: 'Giorni' }).click();
   await page.getByRole('button', { name: `Aggiungi a cena di ${dataLunga(oggi())}` }).click();
   await page.getByRole('dialog').getByLabel('Cosa si mangia').fill('carbonara');
   await page.getByRole('dialog').getByRole('button', { name: /Spaghetti alla carbonara/ }).click();
@@ -85,9 +84,8 @@ test('cucinato 3 giorni prima: l’avviso consiglia il freezer', async ({ browse
   );
   await page.reload();
   await page.getByRole('button', { name: 'Calendario', exact: true }).click();
-  await page.getByRole('group', { name: 'Vista' }).getByRole('button', { name: 'Giorni' }).click();
   await scegliGiorno(page, giorno);
-  await page.getByRole('region', { name: dataLunga(giorno) }).getByRole('button', { name: `Apri ${CARBONARA}` }).click();
+  await page.getByRole('dialog', { name: dataLunga(giorno) }).getByRole('button', { name: `Apri ${CARBONARA}` }).click();
   await page.getByRole('dialog', { name: CARBONARA }).getByRole('button', { name: `Cucinato: ${CARBONARA}` }).click();
   const avviso = page.getByRole('dialog', { name: 'Meglio congelarlo' });
   await expect(avviso).toContainText('fra 3 giorni');
