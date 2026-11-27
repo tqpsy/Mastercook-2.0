@@ -3,7 +3,7 @@ import Dexie from 'dexie';
 import { Activity, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { configurato } from './config';
 import { Archivio } from './dati/archivio';
-import { FamigliaAperta, nomeArchivio, type Sessione, useFamiglia, useVista } from './dati/contesto';
+import { FamigliaAperta, nomeArchivio, righeAttive, type Sessione, useFamiglia, useVista } from './dati/contesto';
 import { ErroreRete } from './dati/tipi';
 import { Accesso } from './pagine/Accesso';
 import { Casa } from './pagine/Casa';
@@ -215,7 +215,7 @@ type SchedaPrincipale = 'oggi' | 'menu' | 'spesa' | 'ricette' | 'casa' | 'scaden
  */
 function useSchedePreparate(attuale: Scheda): Set<SchedaPrincipale> {
   const vista = useVista();
-  const [preparate, setPreparate] = useState<Set<SchedaPrincipale>>(() => new Set(['oggi']));
+  const [preparate, setPreparate] = useState<Set<SchedaPrincipale>>(() => new Set(['menu']));
   if (attuale !== 'famiglia' && attuale !== 'impostazioni' && !preparate.has(attuale)) setPreparate(new Set([...preparate, attuale]));
   const pronta = vista.pronta;
   useEffect(() => {
@@ -253,11 +253,11 @@ function useAvvisi(): Partial<Record<Scheda, { n: number; testo: string }>> {
 }
 
 function Guscio({ email, apriFamiglia }: { email: string; apriFamiglia: (famiglia: string) => void }) {
-  const [scheda, setScheda] = useState<Scheda>('oggi');
+  const [scheda, setScheda] = useState<Scheda>('menu');
   // Ogni cambio di scheda è un passo: il tasto Indietro torna alla scheda di prima, nell'ordine visitato.
   const passiSchede = useRef<number[]>([]);
   // `vai` resta la stessa funzione: le schede montate non si ridisegnano solo perché è cambiata la scheda attiva.
-  const attuale = useRef<Scheda>('oggi');
+  const attuale = useRef<Scheda>('menu');
   const vai = useCallback((nuova: Scheda) => {
     const prima = attuale.current;
     if (nuova === prima) return;
@@ -282,16 +282,19 @@ function Guscio({ email, apriFamiglia }: { email: string; apriFamiglia: (famigli
   useEffect(() => {
     riprendiLettura(famiglia);
   }, [famiglia]);
+  // Il nome della famiglia aperta: sempre visibile, qualunque sia la scheda attuale (non solo su Oggi).
+  const vista = useVista();
+  const famigliaRiga = righeAttive(vista, 'famiglia')[0];
   const avvisi = useAvvisi();
   const schede = useMemo(
     () =>
       [
-        { id: 'oggi', nome: 'Oggi' },
         { id: 'menu', nome: 'Calendario' },
-        { id: 'spesa', nome: 'Spesa' },
+        { id: 'oggi', nome: 'Oggi' },
         { id: 'casa', nome: 'Casa' },
         { id: 'ricette', nome: 'Ricette' },
         { id: 'scadenze', nome: 'Scadenze' },
+        { id: 'spesa', nome: 'Spesa' },
       ] as const,
     [],
   );
@@ -336,6 +339,7 @@ function Guscio({ email, apriFamiglia }: { email: string; apriFamiglia: (famigli
       <main className="pagina">
         {/* Il nome della scheda si vede già evidenziato nella barra: qui resta solo per il lettore dello schermo. */}
         <h1 className="solo-lettore">{titoloScheda}</h1>
+        {famigliaRiga && <p className="tenue nome-famiglia-attiva">{String(famigliaRiga.nome)}</p>}
         <AvvisoSync />
         <AvvisoLetturaFoto vai={vai} />
         <AvvisoMancanti />

@@ -34,12 +34,12 @@ test('Indietro segue la navigazione, chiude i pannelli e alla fine chiede confer
   await indietro(page);
   await titolo(page, 'Spesa');
   await indietro(page);
-  await titolo(page, 'Oggi');
+  await titolo(page, 'Calendario');
 
   // Alla schermata iniziale: prima l'avviso, si resta nell'app.
   await indietro(page);
   await expect(page.getByText('Premi di nuovo Indietro per uscire')).toBeVisible();
-  await titolo(page, 'Oggi');
+  await titolo(page, 'Calendario');
   // Non c'è più nulla dell'app nella cronologia: la seconda pressione esce.
   expect(await page.evaluate(() => (history.state as { mc?: number } | null)?.mc ?? 0)).toBe(0);
 });

@@ -86,6 +86,7 @@ test('pasti: «mangiato» con le porzioni avanzate, correzione a differenza, ava
   );
   await page.reload();
   await expect(page.getByRole('button', { name: 'Oggi', exact: true })).toHaveAccessibleDescription('1 pasto da confermare');
+  await page.getByRole('button', { name: 'Oggi', exact: true }).click();
   const arretrati = page.getByRole('region', { name: 'Pasti da confermare' });
   await arretrati.getByRole('button', { name: 'Com’è andato: Pizza' }).click();
   await page.getByRole('dialog', { name: 'Com’è andato il pasto?' }).getByRole('radio', { name: 'Saltato' }).click();
@@ -149,6 +150,7 @@ test('l’avanzo di ieri, in casa, si mette nel menu di domani da «Aggiungi»',
     [luca.id],
   );
   await page.reload();
+  await page.getByRole('button', { name: 'Oggi', exact: true }).click();
   // Il pranzo di ieri si conferma oggi: avanzano 2 porzioni, in frigo.
   await page.getByRole('region', { name: 'Pasti da confermare' }).getByRole('button', { name: /Com’è andato: Lasagne/ }).click();
   const foglio = page.getByRole('dialog', { name: 'Com’è andato il pasto?' });
