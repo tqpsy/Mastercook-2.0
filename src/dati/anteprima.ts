@@ -117,6 +117,16 @@ const EFFETTI: Record<string, Effetto> = {
       return { ...r, impostazioni, in_attesa: true };
     });
   },
+  // La raccolta differenziata si vede subito (Impostazioni › Raccolta differenziata).
+  imposta_raccolta: (righe, d, famiglia) => {
+    righe.famiglia = (righe.famiglia ?? []).map((r) => {
+      if (r.id !== famiglia) return r;
+      const impostazioni = { ...((r.impostazioni as Record<string, unknown> | undefined) ?? {}) };
+      if (d.raccolta && typeof d.raccolta === 'object') impostazioni.raccolta = d.raccolta;
+      else delete impostazioni.raccolta;
+      return { ...r, impostazioni, in_attesa: true };
+    });
+  },
   antonino_regole: (righe, d, famiglia) => {
     righe.famiglia = (righe.famiglia ?? []).map((r) => {
       if (r.id !== famiglia) return r;

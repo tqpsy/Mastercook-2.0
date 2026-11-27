@@ -3,6 +3,7 @@ import { AntoninoImpostazioni } from './Antonino';
 import { VoceMioFrigo } from './MioFrigo';
 import { idDispositivo, righeAttive, useFamiglia, useVista } from '../dati/contesto';
 import { esporta, nomeFileEsportazione } from '../dati/esportazione';
+import { raccoltaDa, TIPI_RACCOLTA, type TipoRaccolta } from '../dominio/raccolta';
 import { oggi } from '../dominio/scadenze';
 import { spiegaMotivo } from '../dati/messaggi';
 import { VERSIONE_APP } from '../dati/tipi';
@@ -88,6 +89,7 @@ export function Impostazioni({
       </details>
 
       <VoceMioFrigo />
+      <RaccoltaDifferenziata />
       <Accessi amministratore={amministratore} io={utenteId} />
       <AntoninoImpostazioni />
       <ChiaveGemini amministratore={amministratore} />
@@ -95,6 +97,66 @@ export function Impostazioni({
       <IMieiDati nomeFamiglia={String(famiglia?.nome ?? 'famiglia')} apriFamiglia={apriFamiglia} />
       <PrivacyEAccount dimentica={dimentica} />
     </>
+  );
+}
+
+const GIORNI_RACCOLTA: { n: number; lettera: string; nome: string }[] = [
+  { n: 1, lettera: 'L', nome: 'lunedì' },
+  { n: 2, lettera: 'M', nome: 'martedì' },
+  { n: 3, lettera: 'M', nome: 'mercoledì' },
+  { n: 4, lettera: 'G', nome: 'giovedì' },
+  { n: 5, lettera: 'V', nome: 'venerdì' },
+  { n: 6, lettera: 'S', nome: 'sabato' },
+  { n: 0, lettera: 'D', nome: 'domenica' },
+];
+
+/** I giorni di ogni raccolta: toccando un giorno si accende o si spegne per quel tipo. Si vede subito in Oggi. */
+function RaccoltaDifferenziata() {
+  const { esegui } = useFamiglia();
+  const vista = useVista();
+  const famiglia = righeAttive(vista, 'famiglia')[0];
+  const raccolta = raccoltaDa(famiglia?.impostazioni);
+
+  function cambia(tipo: TipoRaccolta, giorno: number) {
+    const prima = raccolta[tipo] ?? [];
+    const dopo = prima.includes(giorno) ? prima.filter((g) => g !== giorno) : [...prima, giorno].sort((a, b) => a - b);
+    const nuova = { ...raccolta };
+    if (dopo.length) nuova[tipo] = dopo;
+    else delete nuova[tipo];
+    void esegui('imposta_raccolta', { raccolta: Object.keys(nuova).length ? nuova : null });
+  }
+
+  return (
+    <details className="sezione">
+      <summary>
+        <h2>Raccolta differenziata</h2>
+      </summary>
+      <div className="scheda">
+        <p className="tenue" style={{ marginTop: 0 }}>
+          I giorni di ogni raccolta: in Oggi lo ricordiamo la sera prima, per preparare i sacchetti, e il giorno stesso.
+        </p>
+        {TIPI_RACCOLTA.map((t) => (
+          <div key={t.valore} style={{ marginBottom: 14 }}>
+            <p style={{ marginTop: 0, marginBottom: 6 }}>
+              <span aria-hidden>{t.emoji}</span> {t.nome}
+            </p>
+            <div className="scelte" role="group" aria-label={`Giorni di raccolta: ${t.nome}`}>
+              {GIORNI_RACCOLTA.map((g) => (
+                <button
+                  key={g.n}
+                  className="bottone piccolo"
+                  aria-pressed={(raccolta[t.valore] ?? []).includes(g.n)}
+                  aria-label={g.nome}
+                  onClick={() => cambia(t.valore, g.n)}
+                >
+                  {g.lettera}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </details>
   );
 }
 
