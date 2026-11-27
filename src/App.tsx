@@ -27,10 +27,12 @@ import { aggiungiPasso, togliPasso } from './ui/indietro';
 import { AvvisoMancanti } from './ui/AvvisoMancanti';
 import { AvvisoSync, useStatoBreve } from './ui/StatoSync';
 import { AvvisoLetturaFoto } from './ui/AvvisoLetturaFoto';
+import { ModalitaSchermo } from './ui/ModalitaSchermo';
 import { riprendiLettura } from './piattaforma/letturaFoto';
 
 const CHIAVE_INVITO = 'mc-invito';
 const CHIAVE_FAMIGLIA = 'mc-famiglia';
+const CHIAVE_SCHERMO = 'mc-schermo';
 
 function leggi<T>(chiave: string): T | null {
   try {
@@ -254,6 +256,13 @@ function useAvvisi(): Partial<Record<Scheda, { n: number; testo: string }>> {
 
 function Guscio({ email, apriFamiglia }: { email: string; apriFamiglia: (famiglia: string) => void }) {
   const [scheda, setScheda] = useState<Scheda>('oggi');
+  // Modalità schermo: solo la settimana, a tutto schermo e in sola lettura (tablet in cucina, o telefono).
+  // Non è un passo della cronologia apposta: si entra ed esce solo toccando il logo, mai con Indietro.
+  const [schermo, setSchermo] = useState(() => leggi<boolean>(CHIAVE_SCHERMO) ?? false);
+  const attivaSchermo = (attivo: boolean) => {
+    setSchermo(attivo);
+    scrivi(CHIAVE_SCHERMO, attivo);
+  };
   // Ogni cambio di scheda è un passo: il tasto Indietro torna alla scheda di prima, nell'ordine visitato.
   const passiSchede = useRef<number[]>([]);
   // `vai` resta la stessa funzione: le schede montate non si ridisegnano solo perché è cambiata la scheda attiva.
@@ -360,8 +369,11 @@ function Guscio({ email, apriFamiglia }: { email: string; apriFamiglia: (famigli
           <Impostazioni email={email} esci={esciDaQui} apriFamiglia={apriFamiglia} dimentica={dimenticaDispositivo} vaiFamiglia={() => vai('famiglia')} />
         )}
       </main>
+      {schermo && <ModalitaSchermo esci={() => attivaSchermo(false)} />}
       <nav className="schede" aria-label="Schede">
-        <img className="logo-barra" src={`${import.meta.env.BASE_URL}icona.svg`} alt="" />
+        <button className="logo-barra" aria-label="Modalità schermo: la settimana a tutto schermo, in sola lettura" onClick={() => attivaSchermo(true)}>
+          <img src={`${import.meta.env.BASE_URL}icona.svg`} alt="" />
+        </button>
         {schede.map((s) => (
           <button
             key={s.id}

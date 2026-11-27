@@ -11,7 +11,7 @@ import { useFinoInFondo } from './gesti';
 import { EtichettaOspiti } from './ChiMangia';
 
 /** Le icone accanto al nome di un piatto del menu: esito per le esigenze, gusti, bloccato, già confermato. */
-function SegniPiatto({ d, portata: p, confermato }: { d: ReturnType<typeof descrivi>; portata: PortataMenu; confermato: boolean }) {
+export function SegniPiatto({ d, portata: p, confermato }: { d: ReturnType<typeof descrivi>; portata: PortataMenu; confermato: boolean }) {
   const esito = d.valutazione?.esito;
   return (
     <>
@@ -23,9 +23,9 @@ function SegniPiatto({ d, portata: p, confermato }: { d: ReturnType<typeof descr
   );
 }
 
-const chiMangia = (dati: DatiMenu, eccezioni: Eccezione[]) => dati.persone.filter((x) => !eccezioni.some((e) => e.membro_id === x.id)).map((x) => x.id);
+export const chiMangia = (dati: DatiMenu, eccezioni: Eccezione[]) => dati.persone.filter((x) => !eccezioni.some((e) => e.membro_id === x.id)).map((x) => x.id);
 
-function SigleDi({ sigle, chi }: { sigle: Map<string, SiglaPersona>; chi: string[] }) {
+export function SigleDi({ sigle, chi }: { sigle: Map<string, SiglaPersona>; chi: string[] }) {
   return (
     <span className="sigle">
       {[...chi]

@@ -255,8 +255,21 @@ p {
   display: grid;
   place-items: center;
 }
-.logo-barra {
-  display: none;
+.schede .logo-barra {
+  all: unset;
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.schede .logo-barra img {
+  width: 24px;
+  height: 24px;
+  display: block;
 }
 
 .scheda {
@@ -989,11 +1002,14 @@ button.etichetta {
     padding: 0 14px;
     font-size: 1rem;
   }
-  .logo-barra {
-    display: block;
+  .schede .logo-barra {
     width: 48px;
     height: 48px;
     margin: 0 0 18px 8px;
+  }
+  .schede .logo-barra img {
+    width: 32px;
+    height: 32px;
   }
   .testata,
   .pagina {
@@ -1041,8 +1057,10 @@ button.etichetta {
     justify-content: center;
     padding: 0;
   }
-  .logo-barra {
-    display: none;
+  .schede .logo-barra {
+    width: 40px;
+    height: 40px;
+    margin: 0 0 6px 2px;
   }
   /* Il nome resta per chi usa il lettore dello schermo. */
   .schede .nome-scheda {
@@ -4136,4 +4154,192 @@ details.sezione > summary > h2 {
 }
 details.sezione {
   margin-bottom: 8px;
+}
+
+/* Modalità schermo: la settimana a tutto schermo, in sola lettura (tablet appeso in cucina, o telefono). */
+.schermo-settimana {
+  position: fixed;
+  inset: 0;
+  /* Sotto il foglio del dettaglio giorno (z-index 20) e l'avviso «Premi di nuovo Indietro» (50): devono vedersi sopra. */
+  z-index: 15;
+  display: flex;
+  flex-direction: column;
+  background: var(--sfondo);
+  color: var(--testo);
+}
+.schermo-testata {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: calc(12px + env(safe-area-inset-top)) calc(20px + env(safe-area-inset-right)) 12px
+    calc(20px + env(safe-area-inset-left));
+  background: var(--superficie);
+  border-bottom: 1px solid var(--bordo);
+  flex: none;
+}
+.schermo-logo {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  width: 44px;
+  height: 44px;
+  border-radius: 13px;
+  background: var(--primario);
+  display: grid;
+  place-items: center;
+  flex: none;
+}
+.schermo-logo img {
+  width: 26px;
+  height: 26px;
+}
+.schermo-titolo {
+  flex: 1;
+  min-width: 0;
+}
+.schermo-titolo h1 {
+  margin: 2px 0 0;
+  font-family: var(--carattere-titoli);
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+.schermo-orologio {
+  text-align: right;
+  flex: none;
+}
+.schermo-orologio strong {
+  display: block;
+  font-family: var(--carattere-titoli);
+  font-size: 1.6rem;
+  line-height: 1;
+}
+.schermo-orologio span {
+  font-size: 0.8rem;
+  color: var(--testo-tenue);
+  text-transform: capitalize;
+}
+.schermo-corpo {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 16px calc(16px + env(safe-area-inset-right)) 16px calc(16px + env(safe-area-inset-left));
+  box-sizing: border-box;
+}
+.schermo-tocco {
+  all: unset;
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.schermo-settimana .settimana-griglia {
+  flex: 1;
+  min-height: 0;
+  grid-template-rows: auto repeat(var(--pasti), minmax(0, 1fr));
+}
+.schermo-settimana .riquadro.cella {
+  min-height: 0;
+  height: 100%;
+  border-radius: 16px;
+  padding: 10px;
+}
+.schermo-settimana .piatto-riquadro {
+  font-size: 0.98rem;
+}
+.schermo-settimana .testa-giorno {
+  font-size: 1rem;
+  padding: 8px 0;
+}
+.schermo-settimana .testa-giorno strong {
+  font-size: 1.3rem;
+}
+.schermo-settimana .testa-pasto-settimana span {
+  font-size: 1.7rem;
+}
+
+/* Telefono: un giorno sopra l'altro, non affiancati come nella griglia del tablet. */
+.schermo-giorni {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  -webkit-mask-image: linear-gradient(to bottom, #000 92%, transparent);
+  mask-image: linear-gradient(to bottom, #000 92%, transparent);
+}
+.schermo-giorno {
+  all: unset;
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  cursor: pointer;
+  touch-action: manipulation;
+  background: var(--superficie);
+  border: 1px solid var(--bordo);
+  border-radius: 16px;
+  padding: 10px 12px;
+  flex: none;
+}
+.schermo-giorno-testata {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  margin-bottom: 6px;
+  border-radius: 999px;
+  background: var(--superficie-2);
+  color: var(--testo-tenue);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+}
+.schermo-giorno-testata strong {
+  font-family: var(--carattere-titoli);
+  font-size: 0.85rem;
+  color: var(--testo);
+}
+.schermo-giorno-testata.oggi,
+.schermo-giorno-testata.oggi strong {
+  background: var(--primario);
+  color: var(--primario-testo);
+}
+.riquadro.riga {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 11px;
+  margin-top: 6px;
+}
+.riquadro.riga.vuoto {
+  background: transparent;
+  border: 1.5px dashed var(--bordo);
+}
+.riquadro.riga .nome-piatto {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.schermo-suggerimento {
+  flex: none;
+  text-align: center;
+  padding: 8px calc(8px + env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom))
+    calc(8px + env(safe-area-inset-left));
+  font-size: 0.8rem;
+  color: var(--testo-tenue);
+  background: var(--superficie);
+  border-top: 1px solid var(--bordo);
+}
+
+.schermo-dettaglio {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
