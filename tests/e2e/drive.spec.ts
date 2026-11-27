@@ -67,8 +67,11 @@ test('sul mio Drive: spiegazione, copia automatica, ritrovata su un altro telefo
   await salvaOra(b);
   await expect(b.getByRole('alert').getByText(/c’è una copia più recente/)).toBeVisible();
   await b.getByRole('button', { name: 'Usa quella del Drive' }).click();
-  // Il telefono passa alla copia del Drive (si riapre su «Oggi»): niente più avviso, c'è anche il minestrone.
+  // Il telefono passa alla copia del Drive (si riapre sul Calendario): niente più avviso, c'è anche il minestrone.
   await expect(b.getByRole('alert')).toHaveCount(0, { timeout: 60_000 });
+  // La famiglia nuova rimonta l'app da capo (si riparte dal Calendario): si aspetta l'avvio prima di cambiare scheda.
+  await expect(b.getByRole('button', { name: 'Calendario', exact: true })).toHaveAttribute('aria-current', 'page');
+  await b.getByRole('button', { name: 'Oggi', exact: true }).click();
   await expect(b.getByRole('region', { name: 'Cena' }).getByText('Minestrone di verdure')).toBeVisible({ timeout: 60_000 });
   expect(drive.copie()).toHaveLength(1);
 });
