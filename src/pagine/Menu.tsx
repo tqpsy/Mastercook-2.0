@@ -22,7 +22,7 @@ const MODI: { id: Modo; nome: string }[] = [
 ];
 const CHIAVE_MODO = 'mc-menu-modo';
 
-/** La scelta della vista è di questo dispositivo: sul telefono di base i giorni, sul tablet la settimana. */
+/** La scelta della vista è di questo dispositivo e si ricorda: finché non è ancora stata scelta si parte dalla Settimana. */
 function modoIniziale(): Modo {
   try {
     const v = localStorage.getItem(CHIAVE_MODO);
@@ -31,7 +31,7 @@ function modoIniziale(): Modo {
   } catch {
     // Archivio del browser non disponibile.
   }
-  return window.innerWidth >= 900 ? 'settimana' : 'giorni';
+  return 'settimana';
 }
 
 export function Menu() {
