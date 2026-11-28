@@ -4221,10 +4221,16 @@ details.sezione {
 .schermo-corpo {
   flex: 1;
   min-height: 0;
-  display: flex;
-  flex-direction: column;
+  /* Griglia (non flex): la riga della settimana a 1fr e la riga della raccolta alla sua altezza naturale,
+     così la prima ha davvero lo spazio che resta e non trabocca (un 1fr dentro un flex:1 non lo garantiva). */
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  row-gap: 8px;
   padding: 16px calc(16px + env(safe-area-inset-right)) 16px calc(16px + env(safe-area-inset-left));
   box-sizing: border-box;
+  overflow-y: auto;
+  /* Colonna delle icone dei pasti: al minimo, così resta più posto ai giorni. */
+  --schermo-gutter: 48px;
 }
 .schermo-tocco {
   all: unset;
@@ -4236,8 +4242,12 @@ details.sezione {
   touch-action: manipulation;
 }
 .schermo-settimana .settimana-griglia {
-  flex: 1;
-  min-height: 0;
+  /* `useFinoInFondo` (pensato per la pagina Menu normale) mette qui un min-height in linea, calcolato sulla
+     pagina scorrevole: non vale nella modalità schermo, dove questa griglia riempie la sua riga di griglia. */
+  min-height: 0 !important;
+  height: 100%;
+  margin-bottom: 0;
+  grid-template-columns: var(--schermo-gutter) repeat(var(--giorni, 7), minmax(0, 1fr));
   grid-template-rows: auto repeat(var(--pasti), minmax(0, 1fr));
 }
 .schermo-settimana .riquadro.cella {
@@ -4256,13 +4266,56 @@ details.sezione {
 .schermo-settimana .testa-giorno strong {
   font-size: 1.3rem;
 }
+.schermo-settimana .testa-pasto-settimana {
+  gap: 0;
+  padding: 0 2px;
+}
+/* Via l'etichetta sotto l'icona (colazione/pranzo/cena): la colonna resta larga solo quanto l'icona. */
+.schermo-settimana .testa-pasto-settimana small {
+  display: none;
+}
 .schermo-settimana .testa-pasto-settimana span {
-  font-size: 1.7rem;
+  font-size: 1.5rem;
+}
+
+/* Raccolta differenziata: una riga in più sotto la griglia, allineata alle stesse colonne (gutter + 7 giorni). */
+.schermo-raccolta {
+  flex: none;
+  display: grid;
+  grid-template-columns: var(--schermo-gutter) repeat(7, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+.schermo-raccolta-etichetta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.schermo-raccolta-cella {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 0;
+}
+.schermo-raccolta-icona {
+  display: inline-flex;
+  color: color-mix(in srgb, var(--testo-tenue) 55%, var(--superficie));
+}
+.schermo-raccolta-etichetta .schermo-raccolta-icona,
+.schermo-raccolta-cella .schermo-raccolta-icona {
+  color: color-mix(in srgb, var(--testo-tenue) 45%, var(--superficie));
+}
+/* Sul telefono: in fondo alla scheda del giorno, con un filo tratteggiato sopra. */
+.schermo-giorno .schermo-raccolta-icona {
+  display: flex;
+  justify-content: center;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--bordo);
 }
 
 /* Telefono: un giorno sopra l'altro, non affiancati come nella griglia del tablet. */
 .schermo-giorni {
-  flex: 1;
   min-height: 0;
   overflow-y: auto;
   display: flex;

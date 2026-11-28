@@ -17,7 +17,21 @@ import { oggi } from '../dominio/scadenze';
 import { useLargo } from '../pagine/menu/gesti';
 import { chiMangia, formattaPorzioni, SegniPiatto, SettimanaGriglia, SigleDi } from '../pagine/menu/Riquadri';
 import { Foglio } from './Foglio';
+import { Icona } from './Icona';
 import { sigleDi } from './Sigla';
+
+/**
+ * Riga della raccolta differenziata: solo grafica, grigio chiaro, uguale per ogni giorno — nessun dato
+ * vero finché non ci sarà da importare un calendario della raccolta (vedi il canvas «layout C»). Riserva
+ * solo lo spazio e fa vedere com'è, senza dire (per ora) cosa si raccoglie in un giorno piuttosto che in un altro.
+ */
+function RaccoltaDifferenziata() {
+  return (
+    <span className="schermo-raccolta-icona" aria-hidden="true">
+      <Icona nome="raccolta" grandezza={18} />
+    </span>
+  );
+}
 
 /** Due tocchi sullo stesso giorno entro poco: il primo si ricorda, il secondo apre. Una sola istanza per schermata. */
 function useDoppioTocco() {
@@ -173,7 +187,20 @@ export function ModalitaSchermo({ esci }: { esci: () => void }) {
               </button>
             )}
           />
-        ) : (
+        ) : null}
+        {largo && (
+          <div className="schermo-raccolta" role="group" aria-label="Raccolta differenziata: non ancora collegata a un calendario">
+            <span className="schermo-raccolta-etichetta" aria-hidden="true">
+              <Icona nome="raccolta" grandezza={16} />
+            </span>
+            {giorni.map((g) => (
+              <span key={g} className="schermo-raccolta-cella">
+                <RaccoltaDifferenziata />
+              </span>
+            ))}
+          </div>
+        )}
+        {!largo && (
           <div className="schermo-giorni">
             {giorni.map((g) => {
               const diOggi = g === giorno;
@@ -184,6 +211,7 @@ export function ModalitaSchermo({ esci }: { esci: () => void }) {
                     {diOggi && ' · oggi'}
                   </span>
                   {categorie.map((c) => rigaPastoTelefono(indice, dati, c, piatti(g, c.valore)))}
+                  <RaccoltaDifferenziata />
                 </button>
               );
             })}
