@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { promemoriaRaccolta, raccoltaDa } from './raccolta';
+import { promemoriaRaccolta, raccoltaDa, raccoltaDaLettura } from './raccolta';
 
 describe('raccolta differenziata', () => {
   it('senza impostazioni: niente; valori strani si scartano, giorni ordinati e senza doppioni', () => {
@@ -20,5 +20,15 @@ describe('raccolta differenziata', () => {
   it('senza niente oggi o domani: elenco vuoto', () => {
     expect(promemoriaRaccolta({ organico: [1] }, '2026-11-27')).toEqual([]);
     expect(promemoriaRaccolta({}, '2026-11-27')).toEqual([]);
+  });
+
+  it('il risultato della lettura con Gemini si pulisce come le impostazioni salvate', () => {
+    expect(
+      raccoltaDaLettura([
+        { tipo: 'organico', giorni: [1, 4] },
+        { tipo: 'vetro', giorni: [] },
+      ]),
+    ).toEqual({ organico: [1, 4] });
+    expect(raccoltaDaLettura([])).toEqual({});
   });
 });

@@ -34,6 +34,11 @@ export function raccoltaDa(impostazioni: unknown): GiorniRaccolta {
   return risultato;
 }
 
+/** Il risultato della lettura di un calendario con Gemini (src/piattaforma/fotoFrigo.ts), pronto da mostrare nella griglia. */
+export function raccoltaDaLettura(letta: { tipo: TipoRaccolta; giorni: number[] }[]): GiorniRaccolta {
+  return raccoltaDa({ raccolta: Object.fromEntries(letta.map((r) => [r.tipo, r.giorni])) });
+}
+
 export interface PromemoriaRaccolta {
   tipo: TipoRaccolta;
   /** Se passano oggi (da portare fuori la mattina) o domani (da preparare stasera). */

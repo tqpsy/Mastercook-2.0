@@ -13,7 +13,7 @@ Stack: TypeScript, React 19 + Vite (nessun router), CSS a mano, Dexie (copia loc
 - `src/ui/`: componenti riusabili (`Icona`, `IconaCibo` + `disegniCibo.ts`, `Foglio`, `Scanner`, `CampoQuantita` (unità + quante confezioni), `LivelloScorta` (pezzi e livello a occhio), `AggiornaAOcchio`, `ocr.ts` + `paddle.ts` (lettura scontrini)…).
 - `src/piattaforma/`: `supabase.ts`, `drive.ts` (solo `drive.file`), `fotoFrigo.ts`, `locale/` (PGlite in un worker).
 - `src/catalogo/`: `catalogo.json` (ricette e ingredienti di sistema), `ricette-nuove.json`.
-- `supabase/migrations/`: tutta la logica che vale per ogni dispositivo. `supabase/functions/foto-frigo/`: unica Edge Function (foto del frigo e lettura del piano del nutrizionista con Gemini, `piano.ts`).
+- `supabase/migrations/`: tutta la logica che vale per ogni dispositivo. `supabase/functions/foto-frigo/`: unica Edge Function (foto del frigo, lettura del piano del nutrizionista con Gemini `piano.ts`, e del calendario della raccolta differenziata `raccolta.ts`).
 - `tests/db/` (SQL su Postgres vero), `tests/e2e/` (Playwright telefono + tablet), `tests/sync/`. `docs/`: sviluppo, database, formati.
 
 ## Convenzioni
