@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { type ChangeEvent, useEffect, useState } from 'react';
 import { AntoninoImpostazioni } from './Antonino';
 import { VoceMioFrigo } from './MioFrigo';
 import { idDispositivo, righeAttive, useFamiglia, useVista } from '../dati/contesto';
@@ -130,7 +130,6 @@ function RaccoltaDifferenziata() {
   const vista = useVista();
   const rigaFamiglia = righeAttive(vista, 'famiglia')[0];
   const raccolta = raccoltaDa(rigaFamiglia?.impostazioni);
-  const file = useRef<HTMLInputElement>(null);
   const [leggo, setLeggo] = useState(false);
   const [esito, setEsito] = useState<string | null>(null);
 
@@ -170,8 +169,13 @@ function RaccoltaDifferenziata() {
       setEsito('Calendario aggiornato.');
     } finally {
       setLeggo(false);
-      if (file.current) file.current.value = '';
     }
+  }
+
+  function scegli(e: ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    e.target.value = '';
+    if (f) void leggiFile(f);
   }
 
   return (
@@ -183,24 +187,27 @@ function RaccoltaDifferenziata() {
         <p className="tenue" style={{ marginTop: 0 }}>
           I giorni di ogni raccolta: in Oggi lo ricordiamo la sera prima, per preparare i sacchetti, e il giorno stesso.
         </p>
-        <div className="riga" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
-          <button type="button" className="bottone piccolo" disabled={leggo} onClick={() => file.current?.click()}>
-            📄 {leggo ? 'Leggo il calendario…' : 'Leggi da una foto o un PDF'}
-          </button>
-          <input
-            ref={file}
-            type="file"
-            accept="application/pdf,image/*"
-            hidden
-            aria-label="File della raccolta"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              e.target.value = '';
-              if (f) void leggiFile(f);
-            }}
-          />
-        </div>
-        {esito && (
+        {leggo ? (
+          <p className="tenue" role="status" style={{ marginTop: 0 }}>
+            Leggo il calendario, mese per mese…
+          </p>
+        ) : (
+          <div className="riga" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+            <label className="bottone piccolo">
+              <span aria-hidden>📷</span> Fotografa il calendario
+              <input type="file" accept="image/*" capture="environment" hidden onChange={scegli} />
+            </label>
+            <label className="bottone piccolo">
+              <span aria-hidden>🖼️</span> Scegli una foto o uno screenshot
+              <input type="file" accept="image/*" hidden onChange={scegli} />
+            </label>
+            <label className="bottone piccolo">
+              <span aria-hidden>📄</span> Carica un PDF
+              <input type="file" accept="application/pdf" hidden onChange={scegli} />
+            </label>
+          </div>
+        )}
+        {esito && !leggo && (
           <p className="tenue" role="status" style={{ marginTop: 0 }}>
             {esito}
           </p>

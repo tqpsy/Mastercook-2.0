@@ -17,10 +17,16 @@ export interface RaccoltaLetta {
   giorni: number[];
 }
 
-export const ISTRUZIONI_RACCOLTA = `Sei l'aiuto di un'app di cucina italiana. Nel documento c'è il calendario della raccolta differenziata di un comune italiano, con i tipi: organico, carta e cartone, plastica e metalli (anche "multimateriale leggero"), vetro, indifferenziato (anche "secco" o "secco residuo").
-Per ogni tipo che riconosci, scrivi i giorni della settimana in cui passa di solito: 0 = domenica, 1 = lunedì, 2 = martedì, 3 = mercoledì, 4 = giovedì, 5 = venerdì, 6 = sabato.
+export const ISTRUZIONI_RACCOLTA = `Sei l'aiuto di un'app di cucina italiana. Nel documento c'è il calendario della raccolta differenziata di un comune italiano: di solito un calendario annuale con un riquadro per ogni mese, dove ogni giorno porta un colore o un simbolo (spesso con una legenda a parte che dice quale colore o simbolo corrisponde a quale tipo). I tipi possibili: organico, carta e cartone, plastica e metalli (anche "multimateriale leggero"), vetro, indifferenziato (anche "secco" o "secco residuo").
+
+Leggilo con questo metodo, con calma, mese per mese:
+1. Primo giro: per ogni mese, guarda ogni giorno uno per uno e annota il colore o il simbolo che porta, e a quale tipo corrisponde secondo la legenda.
+2. Secondo giro: per ogni mese, ricontrolla di aver guardato davvero tutti i giorni e tutti i colori o simboli diversi che compaiono nel calendario; se in un mese ne hai saltato uno, tornaci e leggilo.
+3. Terzo giro: confronta i mesi fra loro, giorno della settimana per giorno della settimana (tutti i lunedì, tutti i martedì…). Se un giorno della settimana porta sempre lo stesso tipo in tutti i mesi, è uno schema fisso. Se invece cambia da un mese all'altro (una festività, un cambio di stagione), non è uno schema fisso.
+
+Alla fine scrivi, solo per i tipi che hanno davvero uno schema fisso dopo il terzo giro, i giorni della settimana in cui passano sempre: 0 = domenica, 1 = lunedì, 2 = martedì, 3 = mercoledì, 4 = giovedì, 5 = venerdì, 6 = sabato.
 - Se vetro e metalli vengono raccolti insieme, in un unico giorno, usa il tipo vetro per quel giorno.
-- Metti un tipo nel risultato solo se i suoi giorni sono uno schema fisso uguale ogni settimana. Se il calendario alterna settimane diverse, cambia con le festività o con la stagione (estate/inverno), o non riesci a capire uno schema fisso per quel tipo, non metterlo: è meglio ometterlo che sbagliare.
+- È meglio omettere un tipo che scriverlo sbagliato: mettilo solo se sei sicuro dello schema fisso.
 Non inventare nulla che non sia scritto nel documento.`;
 
 const SCHEMA_RACCOLTA = {
@@ -62,7 +68,7 @@ export function leggiRaccoltaGemini(testo: string): RaccoltaLetta[] | null {
   return risultato;
 }
 
-/** Chiede a Gemini di leggere il calendario (PDF o immagine in base64). */
+/** Chiede a Gemini di leggere il calendario (PDF o immagine in base64): alla massima risoluzione, per distinguere bene colori e simboli piccoli. */
 export async function leggiRaccoltaDocumento(
   dati: string,
   mime: string,
@@ -71,7 +77,7 @@ export async function leggiRaccoltaDocumento(
   modelli = MODELLI,
 ): Promise<{ raccolta: RaccoltaLetta[]; modello: string } | { errore: 'quota' | 'chiave' | 'gemini' | 'illeggibile'; dettaglio?: string }> {
   const parti: Parte[] = [{ inline_data: { mime_type: mime, data: dati } }, { text: ISTRUZIONI_RACCOLTA }];
-  const r = await chiediGemini(parti, SCHEMA_RACCOLTA, chiave, chiama, modelli);
+  const r = await chiediGemini(parti, SCHEMA_RACCOLTA, chiave, chiama, modelli, { preciso: true });
   if ('errore' in r) return r;
   const raccolta = leggiRaccoltaGemini(r.testo);
   return raccolta ? { raccolta, modello: r.modello } : { errore: 'illeggibile' };

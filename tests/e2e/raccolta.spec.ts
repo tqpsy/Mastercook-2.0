@@ -52,8 +52,10 @@ test('calendario della raccolta da un PDF: lo legge Gemini, si conferma e compil
     void d.accept();
   });
 
+  const ingressoPdf = sezione.locator('input[type=file][accept="application/pdf"]');
+
   // Senza chiave Gemini l'app dice dove metterla.
-  await sezione.getByLabel('File della raccolta').setInputFiles(pdf);
+  await ingressoPdf.setInputFiles(pdf);
   await expect(sezione.getByRole('status')).toContainText('serve la chiave Gemini della famiglia');
 
   await apriSezione(page, 'Foto del frigo');
@@ -61,7 +63,7 @@ test('calendario della raccolta da un PDF: lo legge Gemini, si conferma e compil
   await page.getByRole('button', { name: 'Salva la chiave' }).click();
   await expect(page.getByLabel('Chiave Gemini', { exact: true })).toContainText('finisce con …1234');
 
-  await sezione.getByLabel('File della raccolta').setInputFiles(pdf);
+  await ingressoPdf.setInputFiles(pdf);
   await expect(sezione.getByRole('status')).toHaveText('Calendario aggiornato.');
   expect(domande.at(-1)).toContain('organico di lunedì e giovedì');
   expect(domande.at(-1)).toContain('plastica e metalli di mercoledì e sabato');
