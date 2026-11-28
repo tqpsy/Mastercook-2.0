@@ -79,6 +79,12 @@ describe('anteprima della coda', () => {
     expect(v.famiglia?.[0].impostazioni).toEqual({ frigo: { ripiani: 3 }, verifica: { zone: [{ id: 'r1', nome: 'Su', luogo: 'frigo' }] } });
   });
 
+  it('la raccolta differenziata si vede subito', () => {
+    const famiglia = { id: F, famiglia_id: F, seq: 1, impostazioni: {} };
+    const v = vistaConAnteprima({ famiglia: [famiglia] }, [voce('imposta_raccolta', { raccolta: { organico: [1, 4] } })]);
+    expect(v.famiglia?.[0].impostazioni).toEqual({ raccolta: { organico: [1, 4] } });
+  });
+
   it('casa: spostare una parte crea il lotto nuovo con le stesse date', () => {
     const lotto = { id: 'l1', famiglia_id: F, seq: 3, quantita: 800, luogo: 'frigo', data_limite: '2026-11-01', tipo_data: 'scadenza' };
     const v = vistaConAnteprima({ lotto: [lotto] }, [voce('sposta_lotto', { lotto_id: 'l1', luogo: 'freezer', quantita: 300, nuovo_id: 'l2' })]);

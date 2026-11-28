@@ -1,15 +1,17 @@
-import { useEffect, useState } from 'react';
+import { type ChangeEvent, useEffect, useState } from 'react';
 import { AntoninoImpostazioni } from './Antonino';
 import { VoceMioFrigo } from './MioFrigo';
 import { idDispositivo, righeAttive, useFamiglia, useVista } from '../dati/contesto';
 import { esporta, nomeFileEsportazione } from '../dati/esportazione';
+import { raccoltaDa, raccoltaDaLettura, TIPI_RACCOLTA, type TipoRaccolta } from '../dominio/raccolta';
 import { oggi } from '../dominio/scadenze';
 import { spiegaMotivo } from '../dati/messaggi';
 import { VERSIONE_APP } from '../dati/tipi';
-import { impostaChiave, type StatoChiave, statoChiave } from '../piattaforma/fotoFrigo';
+import { type ErroreRaccolta, impostaChiave, leggiRaccoltaConGemini, type StatoChiave, statoChiave } from '../piattaforma/fotoFrigo';
 import { cancellaLocale, famiglieLocali } from '../piattaforma/locale/motore';
 import { type AnteprimaEliminazione, anteprimaEliminazione, eliminaFamiglia, eliminaMioAccount, type FamigliaMia, mieFamiglie } from '../piattaforma/supabase';
 import { Foglio } from '../ui/Foglio';
+import { riduciFoto } from '../ui/Foto';
 import { VoceSalvataggio } from '../ui/StatoSync';
 import { Icona } from '../ui/Icona';
 import { leggiCollegamento, salvaSulDrive, scriviCollegamento } from '../dati/copiaDrive';
@@ -88,6 +90,7 @@ export function Impostazioni({
       </details>
 
       <VoceMioFrigo />
+      <RaccoltaDifferenziata />
       <Accessi amministratore={amministratore} io={utenteId} />
       <AntoninoImpostazioni />
       <ChiaveGemini amministratore={amministratore} />
@@ -95,6 +98,142 @@ export function Impostazioni({
       <IMieiDati nomeFamiglia={String(famiglia?.nome ?? 'famiglia')} apriFamiglia={apriFamiglia} />
       <PrivacyEAccount dimentica={dimentica} />
     </>
+  );
+}
+
+const GIORNI_RACCOLTA: { n: number; lettera: string; nome: string }[] = [
+  { n: 1, lettera: 'L', nome: 'lunedì' },
+  { n: 2, lettera: 'M', nome: 'martedì' },
+  { n: 3, lettera: 'M', nome: 'mercoledì' },
+  { n: 4, lettera: 'G', nome: 'giovedì' },
+  { n: 5, lettera: 'V', nome: 'venerdì' },
+  { n: 6, lettera: 'S', nome: 'sabato' },
+  { n: 0, lettera: 'D', nome: 'domenica' },
+];
+
+const SPIEGA_ERRORE_RACCOLTA: Record<ErroreRaccolta, string> = {
+  quota: 'Per oggi le letture gratuite di Gemini sono finite. Riprova domani.',
+  chiave: 'La chiave Gemini della famiglia non è valida: chi amministra la controlla in Impostazioni › Foto del frigo.',
+  non_configurata: 'Per leggere un PDF o una foto serve la chiave Gemini della famiglia: chi amministra la inserisce in Impostazioni › Foto del frigo.',
+  rete: 'Serve la connessione a internet per leggere il calendario. Riprova quando c’è rete.',
+  gemini: 'Gemini non è riuscito a leggere il calendario. Riprova, oppure con una foto più nitida.',
+  non_autorizzato: 'Non risulti in questa famiglia: esci e rientra, poi riprova.',
+  illeggibile: 'Non ho trovato un calendario della raccolta in questo file.',
+  formato: 'Questo file non lo so leggere: usa un PDF o una foto (JPEG o PNG).',
+};
+
+/** I giorni di ogni raccolta: toccando un giorno si accende o si spegne per quel tipo; si vede subito in Oggi.
+ * Si possono anche leggere da una foto o un PDF del calendario del comune (Gemini): una proposta da confermare,
+ * che poi compila la griglia in un colpo solo. */
+function RaccoltaDifferenziata() {
+  const { esegui, famiglia, dove, utenteId } = useFamiglia();
+  const vista = useVista();
+  const rigaFamiglia = righeAttive(vista, 'famiglia')[0];
+  const raccolta = raccoltaDa(rigaFamiglia?.impostazioni);
+  const [leggo, setLeggo] = useState(false);
+  const [esito, setEsito] = useState<string | null>(null);
+
+  function cambia(tipo: TipoRaccolta, giorno: number) {
+    const prima = raccolta[tipo] ?? [];
+    const dopo = prima.includes(giorno) ? prima.filter((g) => g !== giorno) : [...prima, giorno].sort((a, b) => a - b);
+    const nuova = { ...raccolta };
+    if (dopo.length) nuova[tipo] = dopo;
+    else delete nuova[tipo];
+    void esegui('imposta_raccolta', { raccolta: Object.keys(nuova).length ? nuova : null });
+  }
+
+  async function leggiFile(f: File) {
+    setEsito(null);
+    setLeggo(true);
+    try {
+      const mime = f.type || (f.name.toLowerCase().endsWith('.pdf') ? 'application/pdf' : '');
+      const immagine = mime.startsWith('image/');
+      const dati = immagine ? await riduciFoto(f) : f;
+      const r = await leggiRaccoltaConGemini(famiglia, dati, immagine ? 'image/jpeg' : mime, { dove, utenteId });
+      if ('errore' in r) {
+        setEsito(SPIEGA_ERRORE_RACCOLTA[r.errore] + (r.dettaglio ? ` (Risposta di Google: ${r.dettaglio})` : ''));
+        return;
+      }
+      const proposta = raccoltaDaLettura(r.raccolta);
+      const trovati = TIPI_RACCOLTA.filter((t) => proposta[t.valore]);
+      if (!trovati.length) {
+        setEsito('Non ho trovato giorni fissi per nessun tipo in questo calendario: magari cambia tra le settimane o con le festività. Impostali a mano qui sotto.');
+        return;
+      }
+      const mancanti = TIPI_RACCOLTA.filter((t) => !proposta[t.valore]).map((t) => t.nome);
+      const domanda = `Ho letto: ${trovati.map((t) => `${t.nome.toLowerCase()} di ${proposta[t.valore]!.map((g) => GIORNI_RACCOLTA.find((x) => x.n === g)!.nome).join(' e ')}`).join(', ')}.${
+        mancanti.length ? ` Non ho trovato giorni fissi per ${mancanti.join(', ').toLowerCase()}: resta da impostare a mano.` : ''
+      } Salvo questi giorni?`;
+      if (!window.confirm(domanda)) return;
+      await esegui('imposta_raccolta', { raccolta: { ...raccolta, ...proposta } });
+      setEsito('Calendario aggiornato.');
+    } finally {
+      setLeggo(false);
+    }
+  }
+
+  function scegli(e: ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    e.target.value = '';
+    if (f) void leggiFile(f);
+  }
+
+  return (
+    <details className="sezione">
+      <summary>
+        <h2>Raccolta differenziata</h2>
+      </summary>
+      <div className="scheda" role="region" aria-label="Raccolta differenziata">
+        <p className="tenue" style={{ marginTop: 0 }}>
+          I giorni di ogni raccolta: in Oggi lo ricordiamo la sera prima, per preparare i sacchetti, e il giorno stesso.
+        </p>
+        {leggo ? (
+          <p className="tenue" role="status" style={{ marginTop: 0 }}>
+            Leggo il calendario, mese per mese…
+          </p>
+        ) : (
+          <div className="riga" style={{ gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+            <label className="bottone piccolo">
+              <span aria-hidden>📷</span> Fotografa il calendario
+              <input type="file" accept="image/*" capture="environment" hidden onChange={scegli} />
+            </label>
+            <label className="bottone piccolo">
+              <span aria-hidden>🖼️</span> Scegli una foto o uno screenshot
+              <input type="file" accept="image/*" hidden onChange={scegli} />
+            </label>
+            <label className="bottone piccolo">
+              <span aria-hidden>📄</span> Carica un PDF
+              <input type="file" accept="application/pdf" hidden onChange={scegli} />
+            </label>
+          </div>
+        )}
+        {esito && !leggo && (
+          <p className="tenue" role="status" style={{ marginTop: 0 }}>
+            {esito}
+          </p>
+        )}
+        {TIPI_RACCOLTA.map((t) => (
+          <div key={t.valore} style={{ marginBottom: 14 }}>
+            <p style={{ marginTop: 0, marginBottom: 6 }}>
+              <span aria-hidden>{t.emoji}</span> {t.nome}
+            </p>
+            <div className="scelte" role="group" aria-label={`Giorni di raccolta: ${t.nome}`}>
+              {GIORNI_RACCOLTA.map((g) => (
+                <button
+                  key={g.n}
+                  className="bottone piccolo"
+                  aria-pressed={(raccolta[t.valore] ?? []).includes(g.n)}
+                  aria-label={g.nome}
+                  onClick={() => cambia(t.valore, g.n)}
+                >
+                  {g.lettera}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </details>
   );
 }
 

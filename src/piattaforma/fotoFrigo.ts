@@ -6,6 +6,7 @@
 import { riconosci, riconosciZona as riconosciZonaGemini, testoFrigo, type VistoInZona } from '../../supabase/functions/foto-frigo/nucleo';
 import { type DataGemini, leggiDataDocumento } from '../../supabase/functions/foto-frigo/data';
 import { leggiPianoDocumento, MIME_PIANO, type PianoLetto } from '../../supabase/functions/foto-frigo/piano';
+import { leggiRaccoltaDocumento, MIME_RACCOLTA, type RaccoltaLetta } from '../../supabase/functions/foto-frigo/raccolta';
 import type { Riconosciuto } from '../dominio/fotoFrigo';
 import { chiamaLocale, chiaveGeminiLocale } from './locale/motore';
 import { SUPABASE_CHIAVE, SUPABASE_URL } from '../config';
@@ -200,6 +201,40 @@ export async function leggiPianoConGemini(famiglia_id: string, file: Blob, mime:
       return { errore: e && ['quota', 'chiave', 'non_configurata', 'gemini', 'non_autorizzato', 'illeggibile'].includes(e) ? e : 'rete', dettaglio };
     }
     return data?.piano ? { piano: data.piano as PianoLetto } : { errore: 'illeggibile' };
+  } catch {
+    return { errore: 'rete' };
+  }
+}
+
+export type ErroreRaccolta = ErroreFoto | 'illeggibile' | 'formato';
+
+/**
+ * Il calendario della raccolta differenziata del comune (PDF o foto), letto da Gemini con la chiave della
+ * famiglia, come il piano del nutrizionista. Il file non si salva: passa a Google e basta.
+ */
+export async function leggiRaccoltaConGemini(famiglia_id: string, file: Blob, mime: string, luogo?: Luogo): Promise<{ raccolta: RaccoltaLetta[] } | { errore: ErroreRaccolta; dettaglio?: string }> {
+  if (!MIME_RACCOLTA.includes(mime)) return { errore: 'formato' };
+  if (!navigator.onLine) return { errore: 'rete' };
+  if (luogo?.dove === 'locale') {
+    try {
+      const chiave = await chiaveGeminiLocale(luogo.utenteId, famiglia_id);
+      if (!chiave) return { errore: 'non_configurata' };
+      const esito = await leggiRaccoltaDocumento(await base64(file), mime, chiave);
+      return 'errore' in esito ? { errore: esito.errore, dettaglio: esito.dettaglio } : { raccolta: esito.raccolta };
+    } catch {
+      return { errore: 'rete' };
+    }
+  }
+  try {
+    const { data, error } = await supabase().functions.invoke('foto-frigo', { body: { famiglia_id, tipo: 'raccolta', documento: await base64(file), mime } });
+    if (error) {
+      const risposta = (error as { context?: Response }).context;
+      const corpo = risposta && typeof risposta.json === 'function' ? await risposta.json().catch(() => null) : null;
+      const e = corpo?.errore as ErroreRaccolta | undefined;
+      const dettaglio = typeof corpo?.dettaglio === 'string' ? corpo.dettaglio.slice(0, 200) : undefined;
+      return { errore: e && ['quota', 'chiave', 'non_configurata', 'gemini', 'non_autorizzato', 'illeggibile'].includes(e) ? e : 'rete', dettaglio };
+    }
+    return data?.raccolta ? { raccolta: data.raccolta as RaccoltaLetta[] } : { errore: 'illeggibile' };
   } catch {
     return { errore: 'rete' };
   }

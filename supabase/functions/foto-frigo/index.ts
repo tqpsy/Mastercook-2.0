@@ -3,12 +3,14 @@
 // per le famiglie di chi gestisce l'app, il segreto del progetto (GEMINI_API_KEY): non arriva mai sui telefoni.
 // La foto non si salva: passa a Google e basta.
 // Con `tipo: 'piano'` legge invece il piano del nutrizionista (PDF o foto in `documento`, tipo in `mime`).
+// Con `tipo: 'raccolta'` legge il calendario della raccolta differenziata del comune (PDF o foto in `documento`, tipo in `mime`).
 // Con `lettura_id` (foto singola o zona della verifica) risponde subito 202 e lavora in background: il risultato si legge con `leggi_lettura_foto`.
 // Con `tipo: 'data'` legge la data di scadenza stampata sulla confezione (foto in `immagine`) e risponde subito.
 // Con `tipo: 'verifica'` guarda una zona (fino a 4 foto in `immagini`) e la confronta con il `contesto` mandato dall'app.
 import { MAX_FOTO_VERIFICA, riconosci, riconosciZona, testoContesto, testoFrigo } from './nucleo.ts';
 import { leggiDataDocumento } from './data.ts';
 import { leggiPianoDocumento, MIME_PIANO } from './piano.ts';
+import { leggiRaccoltaDocumento, MIME_RACCOLTA } from './raccolta.ts';
 
 const CORS = {
   'access-control-allow-origin': '*',
@@ -41,10 +43,12 @@ Deno.serve(async (req) => {
     return rispondi(400, { errore: 'dati_non_validi' });
   }
   const piano = d.tipo === 'piano';
+  const raccolta = d.tipo === 'raccolta';
+  const mimeDocumento = piano ? MIME_PIANO : raccolta ? MIME_RACCOLTA : null;
   const verifica = d.tipo === 'verifica';
   const immagini = verifica && Array.isArray(d.immagini) ? d.immagini : [];
-  const fileValido = piano
-    ? typeof d.documento === 'string' && d.documento.length <= 8_000_000 && MIME_PIANO.includes(d.mime ?? '')
+  const fileValido = mimeDocumento
+    ? typeof d.documento === 'string' && d.documento.length <= 8_000_000 && mimeDocumento.includes(d.mime ?? '')
     : verifica
       ? immagini.length >= 1 && immagini.length <= MAX_FOTO_VERIFICA && immagini.every((x) => typeof x === 'string' && x.length > 0 && x.length <= 2_000_000)
       : typeof d.immagine === 'string' && d.immagine.length <= 2_000_000;
@@ -79,7 +83,7 @@ Deno.serve(async (req) => {
   // L'app, tornata in primo piano, chiede com'è andata con `leggi_lettura_foto`. Lo stesso id non parte due volte.
   // Vale per la foto singola e per una zona della verifica. `ritardo` (secondi, al più 90) fa partire Gemini più tardi:
   // con molte zone non si chiede tutto insieme, e la quota gratuita (richieste al minuto) regge.
-  if (!piano && d.tipo !== 'data' && typeof d.lettura_id === 'string' && /^[0-9a-f-]{36}$/.test(d.lettura_id)) {
+  if (!piano && !raccolta && d.tipo !== 'data' && typeof d.lettura_id === 'string' && /^[0-9a-f-]{36}$/.test(d.lettura_id)) {
     const rpc = (nome: string, corpo: unknown) =>
       fetch(`${url}/rest/v1/rpc/${nome}`, { method: 'POST', headers: { ...accessoServizio(), 'content-type': 'application/json' }, body: JSON.stringify(corpo) });
     const nuova = await rpc('nuova_lettura_foto', { p_id: d.lettura_id, p_famiglia: d.famiglia_id });
@@ -114,8 +118,10 @@ Deno.serve(async (req) => {
   }
   const esito = piano
     ? await leggiPianoDocumento(d.documento!, d.mime!, chiave)
-    : verifica
-      ? await riconosciZona(immagini as string[], chiave, testoContesto(d.contesto))
-      : await riconosci(d.immagine!, chiave, fetch, undefined, testoFrigo(d.frigo));
+    : raccolta
+      ? await leggiRaccoltaDocumento(d.documento!, d.mime!, chiave)
+      : verifica
+        ? await riconosciZona(immagini as string[], chiave, testoContesto(d.contesto))
+        : await riconosci(d.immagine!, chiave, fetch, undefined, testoFrigo(d.frigo));
   return rispondi('errore' in esito ? (esito.errore === 'quota' ? 429 : 502) : 200, esito);
 });

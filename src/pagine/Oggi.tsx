@@ -6,6 +6,7 @@ import { useIndice } from '../dati/indice';
 import { type ConfermaPasto as Conferma, daConfermare, type EsitoPasto, NOME_ESITO } from '../dominio/consumi';
 import { type CategoriaPasto, type Eccezione, giorniDellaSettimana, lunedi, nomeGiorno, type PortataMenu, settimaneDelMese } from '../dominio/menu';
 import type { Indice, Ricetta } from '../dominio/ricette';
+import { promemoriaRaccolta, raccoltaDa, TIPI_RACCOLTA } from '../dominio/raccolta';
 import { daUsarePresto, giorniTra, oggi, piuGiorni, scadutoVero, statoData } from '../dominio/scadenze';
 import { spesaDelGiorno, type BisognoDelGiorno } from '../dominio/spesa';
 import { formatta, formattaGiorno } from '../dominio/unita';
@@ -184,6 +185,7 @@ export function Oggi({ vai }: { vai: (scheda: 'spesa' | 'casa' | 'menu') => void
   const bisogni = indice ? spesaDelGiorno(indice, daMangiare, dati.persone, dati.eccezioni, dati.portate, dati.ospiti, lotti.filter((l) => !scadutoVero(l, giorno))) : [];
   const mancano = bisogni.filter((b) => b.manca > 0).length;
   const presto = daUsarePresto(lotti, giorno);
+  const raccolta = promemoriaRaccolta(raccoltaDa(famiglia?.impostazioni), giorno);
   const data = adesso.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' });
   const nome = String(io?.nome ?? famiglia?.nome ?? '').split(' ')[0];
 
@@ -234,6 +236,22 @@ export function Oggi({ vai }: { vai: (scheda: 'spesa' | 'casa' | 'menu') => void
           </ul>
         </div>
       </section>
+
+      {raccolta.length > 0 && (
+        <section className="scheda oggi-raccolta" aria-label="Raccolta differenziata">
+          <p style={{ margin: 0 }}>
+            {raccolta.map((p, i) => {
+              const t = TIPI_RACCOLTA.find((x) => x.valore === p.tipo)!;
+              return (
+                <span key={p.tipo}>
+                  {i > 0 && ' · '}
+                  <span aria-hidden>{t.emoji}</span> {t.nome.toLowerCase()} {p.quando === 'oggi' ? 'oggi' : 'stasera, per domani'}
+                </span>
+              );
+            })}
+          </p>
+        </section>
+      )}
 
       {indice && presto.length > 0 && (
         // Una tendina chiusa di base, come in Casa: si vede subito quanti prodotti stanno per scadere.

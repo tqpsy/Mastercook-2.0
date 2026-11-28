@@ -124,7 +124,7 @@ createServer(async (req, res) => {
     if (percorso === '/functions/v1/foto-frigo' && req.method === 'POST') {
       const sub = utenteDalToken(req);
       const { famiglia_id, immagine, tipo, documento, immagini, contesto, lettura_id } = await corpo(req);
-      const file = tipo === 'piano' ? documento : tipo === 'verifica' ? immagini?.[0] : immagine;
+      const file = tipo === 'piano' || tipo === 'raccolta' ? documento : tipo === 'verifica' ? immagini?.[0] : immagine;
       const r = sub && typeof file === 'string' && file.length > 0 ? await comeUtente(sub, 'select 1 from famiglia where id = $1', [famiglia_id]) : { rowCount: 0 };
       if (!r.rowCount) return rispondi(res, 403, { errore: 'non_autorizzato' });
       // Come la funzione vera: serve la chiave della famiglia (o quella del progetto per chi gestisce l'app).
@@ -171,6 +171,15 @@ createServer(async (req, res) => {
               },
             ],
           },
+        });
+      // Il calendario della raccolta letto da un PDF o una foto: una risposta fissa nel formato di Gemini.
+      if (tipo === 'raccolta')
+        return rispondi(res, 200, {
+          modello: 'prova',
+          raccolta: [
+            { tipo: 'organico', giorni: [1, 4] },
+            { tipo: 'plastica', giorni: [3, 6] },
+          ],
         });
       const alimenti = [
         { nome: 'latte', quantita: 1000, unita: 'ml' },
